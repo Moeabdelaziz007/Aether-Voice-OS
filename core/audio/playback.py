@@ -2,8 +2,8 @@
 Aether Voice OS — Audio Playback.
 
 Consumes PCM audio from an asyncio.Queue and writes it
-to the system speaker via PyAudio. Supports interruption
-by draining the queue when the model is interrupted.
+to the system speaker via PyAudio using a high-performance 
+C-thread callback. Supports interruption by draining the queue.
 
 Output sample rate is 24kHz (Gemini native audio output).
 """
@@ -11,10 +11,12 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import queue
 from typing import Optional
 
 import pyaudio
 
+from core.audio.state import audio_state
 from core.config import AudioConfig
 from core.errors import AudioDeviceNotFoundError
 
@@ -23,10 +25,10 @@ logger = logging.getLogger(__name__)
 
 class AudioPlayback:
     """
-    asyncio.Queue → Speaker bridge.
+    asyncio.Queue (AI) → queue.Queue (Buffer) → Speaker (C-Callback).
 
     Supports instant interruption: when `interrupt()` is called,
-    the output queue is drained and playback stops immediately.
+    both the asyncio and thread-safe queues are drained.
     """
 
     def __init__(
@@ -35,13 +37,32 @@ class AudioPlayback:
         input_queue: asyncio.Queue[bytes],
     ) -> None:
         self._config = config
-        self._queue = input_queue
+        self._async_queue = input_queue
+        self._buffer: queue.Queue[bytes] = queue.Queue(maxsize=100)
         self._pya: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
 
+    def _callback(
+        self, in_data: bytes | None, frame_count: int, time_info: dict, status: int
+    ) -> tuple[bytes | None, int]:
+        """PyAudio callback running in a high-priority C-thread."""
+        try:
+            # Gemini typically sends chunks of 1024 or 2048 samples.
+            # We fetch one chunk from the buffer.
+            data = self._buffer.get_nowait()
+            audio_state.set_playing(True)
+            
+            # If the chunk size doesn't match frame_count exactly, 
+            # we might need to handle residue, but usually they align in this pipeline.
+            return (data, pyaudio.paContinue)
+        except queue.Empty:
+            audio_state.set_playing(False)
+            # Return silence (frame_count * 2 bytes for 16-bit mono)
+            return (b"\x00" * (frame_count * 2), pyaudio.paContinue)
+
     async def start(self) -> None:
-        """Open the speaker output stream."""
+        """Open the speaker output stream with callback."""
         self._pya = pyaudio.PyAudio()
 
         try:
@@ -52,59 +73,80 @@ class AudioPlayback:
                 cause=exc,
             ) from exc
 
-        self._stream = await asyncio.to_thread(
-            self._pya.open,
+        # Open stream in callback mode
+        self._stream = self._pya.open(
             format=pyaudio.paInt16,
             channels=self._config.channels,
             rate=self._config.receive_sample_rate,
             output=True,
+            stream_callback=self._callback,
+            frames_per_buffer=1024, # Standard Gemini buffer
         )
+        
         self._running = True
-        logger.info("Speaker output opened @ %dHz", self._config.receive_sample_rate)
+        logger.info(
+            "⚡ Thalamic Playback Active: Speaker opened @ %dHz (Callback Mode)", 
+            self._config.receive_sample_rate
+        )
 
     async def run(self) -> None:
-        """Continuous playback loop — blocks on queue, writes to speaker."""
+        """
+        Feeds the thread-safe buffer from the asyncio queue.
+        This provides backpressure to the AI session.
+        """
         if not self._stream:
             raise AudioDeviceNotFoundError("Call start() before run()")
 
-        logger.info("Audio playback running")
+        logger.info("Audio playback feeder running")
 
         while self._running:
             try:
-                audio_bytes = await asyncio.wait_for(
-                    self._queue.get(), timeout=1.0
-                )
-            except asyncio.TimeoutError:
-                continue  # Check self._running flag periodically
+                # 1. Get audio from AI session (asyncio)
+                audio_bytes = await self._async_queue.get()
+                
+                # 2. Push to thread-safe buffer (blocking if full)
+                # We use to_thread to avoid blocking the event loop on queue.put
+                await asyncio.to_thread(self._buffer.put, audio_bytes)
+                
             except asyncio.CancelledError:
                 break
-
-            try:
-                await asyncio.to_thread(self._stream.write, audio_bytes)
-            except IOError as exc:
-                logger.warning("Speaker write error: %s", exc)
+            except Exception as exc:
+                logger.error("Playback feeder error: %s", exc)
+                await asyncio.sleep(0.1)
 
     def interrupt(self) -> None:
         """
-        Drain the playback queue to stop audio immediately.
-
-        Called when Gemini sends `interrupted=True` (barge-in).
-        This is the WhisperFlow-style zero-latency cut.
+        Drain all queues to stop audio immediately.
+        Prevents 'zombie' audio chunks from playing after barge-in.
         """
         dropped = 0
-        while not self._queue.empty():
+        
+        # 1. Drain asyncio queue
+        while not self._async_queue.empty():
             try:
-                self._queue.get_nowait()
+                self._async_queue.get_nowait()
                 dropped += 1
             except asyncio.QueueEmpty:
                 break
+        
+        # 2. Drain thread-safe buffer
+        while not self._buffer.empty():
+            try:
+                self._buffer.get_nowait()
+                dropped += 1
+            except queue.Empty:
+                break
+                
+        audio_state.set_playing(False)
+        
         if dropped:
-            logger.info("Interrupted playback — drained %d chunks", dropped)
+            logger.info("⚡ Thalamic Drain: Dropped %d chunks", dropped)
 
     async def stop(self) -> None:
         """Release speaker resources."""
         self._running = False
         if self._stream:
+            self._stream.stop_stream()
             self._stream.close()
             self._stream = None
         if self._pya:

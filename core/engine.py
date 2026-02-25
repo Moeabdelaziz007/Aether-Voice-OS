@@ -37,6 +37,7 @@ from core.tools import system_tool, tasks_tool, memory_tool, vision_tool
 from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.search_tool import get_search_tool
+from core.admin_api import AdminAPIServer, SHARED_STATE
 
 logger = logging.getLogger(__name__)
 
@@ -85,6 +86,7 @@ class AetherEngine:
         )
         self._gateway = AetherGateway(self._config.gateway)
         self._registry = AetherRegistry(self._config.packages_dir)
+        self._admin_api = AdminAPIServer(port=18790)
 
         # ADK Tool Registry (legacy — kept for backward compat)
         self._tools: dict[str, Any] = {}
@@ -215,12 +217,16 @@ class AetherEngine:
             # Connect to Gemini
             await self._session.connect()
 
+            # Integrate Admin API locally
+            self._admin_api.start()
+
             # Run all tasks concurrently
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(self._capture.run(), name="audio-capture")
                 tg.create_task(self._playback.run(), name="audio-playback")
                 tg.create_task(self._session.run(), name="gemini-session")
                 tg.create_task(self._gateway.run(), name="gateway")
+                tg.create_task(self._admin_sync_loop(), name="admin-sync")
                 tg.create_task(self._wait_for_shutdown(), name="shutdown-watcher")
 
         except* KeyboardInterrupt:
@@ -242,6 +248,38 @@ class AetherEngine:
         await self._shutdown_event.wait()
         raise asyncio.CancelledError("Shutdown requested")
 
+    async def _admin_sync_loop(self) -> None:
+        """Background task to continually update Admin API shared state."""
+        import json
+        import os
+        synapse_path = os.path.expanduser("~/.aetheros/synapse/heartbeat.ath")
+        while True:
+            try:
+                # 1. Update Sessions from Firestore
+                if self._firebase.is_connected and self._firebase._db:
+                    query = self._firebase._db.collection("sessions").order_by(
+                        "started_at", direction="DESCENDING"
+                    ).limit(10)
+                    sessions = []
+                    async for doc in query.stream():
+                        d = doc.to_dict()
+                        if d:
+                            d["id"] = doc.id
+                            sessions.append(d)
+                    SHARED_STATE["sessions"] = sessions
+
+                # 2. Update L2 Synapse Status
+                if os.path.exists(synapse_path):
+                    with open(synapse_path, "r", encoding="utf-8") as f:
+                        SHARED_STATE["synapse"] = json.load(f)
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.debug("Admin sync error: %s", e)
+
+            await asyncio.sleep(2.0)
+
     async def _shutdown(self) -> None:
         """Graceful shutdown sequence."""
         logger.info("Starting graceful shutdown...")
@@ -251,6 +289,7 @@ class AetherEngine:
         await self._session.stop()
         await self._playback.stop()
         await self._gateway.stop()
+        self._admin_api.stop()
 
         # End Firebase session with summary
         if self._firebase.is_connected:

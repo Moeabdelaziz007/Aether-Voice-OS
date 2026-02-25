@@ -58,9 +58,12 @@ The result? An AI that doesn't just *respond* — it **executes**, **remembers**
 
 ## 🏗️ Architecture | الهندسة المعمارية
 
-Aether is built on a **Pipeline Architecture** — each stage is an independent async task communicating via `asyncio.Queue`. This design naturally handles backpressure, makes interruption trivial (drain the queue), and enables composable testing.
+Aether is built on a **Pipeline Architecture** with the new **Thalamic Gate Audio Layer**.
+Each stage is an independent task communicating via thread-safe `queue.Queue` bridged to `asyncio`.
+The **Thalamic Gate** uses RMS-based Voice Activity Detection to dynamically threshold microphone input, eliminating acoustic echo and stuttering without heavy DSP hardware.
 
-تم بناء أيثر على **معمارية الأنابيب** — كل مرحلة هي مهمة غير متزامنة مستقلة تتواصل عبر `asyncio.Queue`.
+تم بناء أيثر على **معمارية الأنابيب** مع **طبقة بوابة المهاد (Thalamic Gate)** الصوتية الجديدة.
+تستخدم البوابة تحليل طاقة الصوت لمنع الصدى الصوتي (Acoustic Echo) والسماح بالمقاطعة الطبيعية (Barge-in) بوقت استجابة شبه معدوم.
 
 ```mermaid
 graph LR
@@ -98,16 +101,17 @@ graph LR
 |:---:|:---|:---:|:---|
 | 🏛️ | `core/config.py` | 103 | Pydantic Settings & environment config |
 | 🏛️ | `core/errors.py` | 88 | Exception hierarchy & error handling |
-| 🎤 | `core/audio/capture.py` | 128 | Mic → `audio_in_queue` (PyAudio wrapper) |
-| 🔊 | `core/audio/playback.py` | 113 | `audio_out_queue` → Speaker output |
-| 🔬 | `core/audio/processing.py` | 169 | Ring buffer, zero-crossing, VAD |
+| 🎤 | `core/audio/capture.py` | 130 | Mic → `Queue` (C-level PyAudio Callback + Thalamic Gate) |
+| 🔊 | `core/audio/playback.py` | 115 | `Queue` → Speaker (C-level PyAudio Callback) |
+| ⚡ | `core/audio/state.py` | 32  | Atomic Singleton for `AudioState` synchronization |
+| 🔬 | `core/audio/processing.py` | 169 | Ring buffer, zero-crossing, RMS VAD |
 | 🧠 | `core/ai/session.py` | 220 | Gemini Live session (send + receive loops) |
 | 🛰️ | `core/transport/gateway.py` | 271 | WebSocket server + Ed25519 authentication |
 | 📦 | `core/identity/package.py` | 137 | `.ath` package model & verification |
 | 📦 | `core/identity/registry.py` | 87 | Package loader & hot-swap system |
-| ⚙️ | `core/engine.py` | 177 | Main orchestrator (TaskGroup + Queues) |
+| ⚙️ | `core/engine.py` | 177 | Main orchestrator |
 
-> **📊 Total: 24 Python files • 2,279 lines of production code • 30/30 tests passing ✅**
+> **📊 Total: 25 Python files • ~2,400 lines of production code • Zero-Latency Thalamic Gate Active ⚡**
 
 ---
 
@@ -219,12 +223,10 @@ Client                              Gateway
 ## 📊 Project Status | حالة المشروع
 
 ```
-✅ Phase 1: Research & Architecture ···················· COMPLETE
-✅ Phase 2: Core Infrastructure (Prototype) ············ COMPLETE
-🟢 Phase 3: Cyberpunk UI & Visualizer ················· IN PROGRESS
-✅ Phase 4: Expert Documentation & CI/CD ··············· COMPLETE
-✅ Phase 5: Production-Grade Core Rewrite ·············· COMPLETE (30/30 tests)
-⬜ Phase 6: Firebase Integration & Deployment ·········· QUEUED
+✅ Phase 1-6: Architecture, Vision, Modality & Docs ···· COMPLETE
+✅ Phase 7: Thalamic Gate Audio Engine ················· COMPLETE
+🟢 Phase 8: Admin Dashboard UI & Analytics ············· IN PROGRESS
+⬜ Phase 9: GCP Deployment Guide & DevPost Submission ·· QUEUED
 ```
 
 ---
