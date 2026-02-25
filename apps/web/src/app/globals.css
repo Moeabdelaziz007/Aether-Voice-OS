@@ -3,15 +3,19 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0a0a;
+  --background: transparent;
   --foreground: #ededed;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
+  background: transparent !important;
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
+}
+
+html {
+  background: transparent !important;
 }
 
 /* Custom Scrollbar for Sci-Fi look */

@@ -33,7 +33,7 @@ from core.ai.session import GeminiLiveSession
 from core.transport.gateway import AetherGateway
 from core.identity.registry import AetherRegistry
 from core.tools.router import ToolRouter
-from core.tools import system_tool, tasks_tool, memory_tool
+from core.tools import system_tool, tasks_tool, memory_tool, vision_tool
 from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.search_tool import get_search_tool
@@ -101,6 +101,7 @@ class AetherEngine:
         self._router.register_module(tasks_tool)
         self._router.register_module(memory_tool)
         self._router.register_module(voice_tool_mod)
+        self._router.register_module(vision_tool)
         logger.info(
             "Neural Dispatcher ready: %d tools registered",
             self._router.count,

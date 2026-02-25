@@ -21,12 +21,12 @@ logger = logging.getLogger(__name__)
 
 # Firebase SDK config (from firebase_get_sdk_config)
 FIREBASE_CONFIG = {
-    "projectId": "asiom-id",
-    "appId": "1:854639150351:web:9250068a53a83efb542a7a",
-    "storageBucket": "asiom-id.firebasestorage.app",
-    "apiKey": os.getenv("FIREBASE_API_KEY", ""),
-    "authDomain": "asiom-id.firebaseapp.com",
-    "messagingSenderId": "854639150351",
+    "projectId": "notional-armor-456623-e8",
+    "appId": "1:929157794401:web:b9c5fb492cb673cfc3f820",
+    "storageBucket": "notional-armor-456623-e8.firebasestorage.app",
+    "apiKey": os.getenv("FIREBASE_API_KEY", "AIzaSyCDI8Pue0B-_ktUDLbEstSMLTo9GyrBC0M"),
+    "authDomain": "notional-armor-456623-e8.firebaseapp.com",
+    "messagingSenderId": "929157794401",
 }
 
 
@@ -38,7 +38,7 @@ class FirebaseConnector:
     session logging, and remote configuration.
     """
 
-    def __init__(self, project_id: str = "asiom-id") -> None:
+    def __init__(self, project_id: str = "notional-armor-456623-e8") -> None:
         self._project_id = project_id
         self._db = None
         self._initialized = False

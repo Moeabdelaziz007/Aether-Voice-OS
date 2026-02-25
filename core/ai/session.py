@@ -216,6 +216,20 @@ class GeminiLiveSession:
                         and response.server_content.model_turn
                     ):
                         for part in response.server_content.model_turn.parts:
+                            # 1. Handle Text Transcript
+                            if part.text:
+                                try:
+                                    # Broadcast transcript segment directly to UI
+                                    asyncio.create_task(
+                                        self._gateway.broadcast(
+                                            "transcript",
+                                            {"text": part.text}
+                                        )
+                                    )
+                                except Exception as e:
+                                    logger.debug("Failed to broadcast transcript: %s", e)
+
+                            # 2. Handle Audio Output
                             if (
                                 part.inline_data
                                 and isinstance(part.inline_data.data, bytes)
@@ -282,6 +296,25 @@ class GeminiLiveSession:
                     response=result,
                 )
             )
+
+            # --- Multimodal Vision Injection ---
+            # If the tool returned a screenshot path, inject it as visual context into the stream.
+            if isinstance(result, dict) and "screenshot_path" in result:
+                import os
+                path = result["screenshot_path"]
+                if os.path.exists(path):
+                    try:
+                        with open(path, "rb") as f:
+                            image_bytes = f.read()
+                        
+                        logger.info("Injecting %s into multimodal session stream.", path)
+                        await session.send_realtime_input(
+                            parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
+                        )
+                        # Optionally delete the temp file
+                        os.remove(path)
+                    except Exception as e:
+                        logger.error("Failed to inject screenshot into stream: %s", e)
 
             # Fire analytics callback
             if self._on_tool_call:

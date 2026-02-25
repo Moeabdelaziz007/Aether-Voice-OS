@@ -1,46 +1,18 @@
-rules_version = '2';
+rules_version='2'
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ── Sessions ─────────────────────────────────────────
-    // Server-side Agent (Admin SDK) creates and manages sessions.
-    // Client-side (web UI) can only read their own sessions.
-    match /sessions/{sessionId} {
-      allow read: if request.auth != null
-        && request.auth.uid == resource.data.userId;
-      // Admin SDK bypasses rules — agent creates/updates freely
-    }
-
-    // ── Tasks ────────────────────────────────────────────
-    // Agent creates tasks via voice → tool_call → Firestore.
-    // Users can read/update their own tasks.
-    match /tasks/{taskId} {
-      allow read, update: if request.auth != null
-        && request.auth.uid == resource.data.userId;
-      // Admin SDK writes are unrestricted
-    }
-
-    // ── Notes ────────────────────────────────────────────
-    match /notes/{noteId} {
-      allow read: if request.auth != null
-        && request.auth.uid == resource.data.userId;
-    }
-
-    // ── Memory (Agent context persistence) ───────────────
-    match /memory/{key} {
-      allow read: if request.auth != null;
-      // Write-only via Admin SDK (server-side agent)
-    }
-
-    // ── Events (Audit log) ───────────────────────────────
-    // Write-only via Admin SDK. No client reads (analytics backend).
-    match /events/{eventId} {
-      allow read: if false;
-    }
-
-    // ── Agent State (Recovery) ───────────────────────────
-    match /agent_state/{doc} {
-      allow read: if false;
+    match /{document=**} {
+      // This rule allows anyone with your database reference to view, edit,
+      // and delete all data in your database. It is useful for getting
+      // started, but it is configured to expire after 30 days because it
+      // leaves your app open to attackers. At that time, all client
+      // requests to your database will be denied.
+      //
+      // Make sure to write security rules for your app before that time, or
+      // else all client requests to your database will be denied until you
+      // update your rules.
+      allow read, write: if request.time < timestamp.date(2026, 3, 27);
     }
   }
 }
