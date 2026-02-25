@@ -1,0 +1,54 @@
+# ═══════════════════════════════════════════════════════════
+# Aether Voice OS — Cloud Build (CI/CD)
+# Deploys to Google Cloud Run
+# ═══════════════════════════════════════════════════════════
+
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/aether-voice:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/aether-voice:latest'
+      - '.'
+
+  # Step 2: Push to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/aether-voice:$COMMIT_SHA'
+
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/aether-voice:latest'
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'aether-voice'
+      - '--image=gcr.io/$PROJECT_ID/aether-voice:$COMMIT_SHA'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--memory=2Gi'
+      - '--cpu=2'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--timeout=3600'
+      - '--port=18789'
+      - '--set-env-vars=AETHER_GW_PORT=18789'
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest'
+
+images:
+  - 'gcr.io/$PROJECT_ID/aether-voice:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/aether-voice:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'

@@ -1,0 +1,106 @@
+# ═══════════════════════════════════════════════════════════════════
+# 🧬 Aether Voice OS — CI Pipeline
+# Lint → Test → Security Check on every push and pull request
+# ═══════════════════════════════════════════════════════════════════
+
+name: "🧪 Aether CI"
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Stage 1: Code Quality (Lint)
+  # ─────────────────────────────────────────────────────────────────
+  lint:
+    name: "🔍 Lint & Style"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8
+
+      - name: Run flake8
+        run: |
+          flake8 core/ --max-line-length=120 --statistics --count
+
+  # ─────────────────────────────────────────────────────────────────
+  # Stage 2: Unit Tests
+  # ─────────────────────────────────────────────────────────────────
+  test:
+    name: "🧪 Test (Python ${{ matrix.python-version }})"
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}-${{ matrix.python-version }}
+          restore-keys: ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/ -v --cov=core --cov-report=term-missing --cov-fail-under=60
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+
+  # ─────────────────────────────────────────────────────────────────
+  # Stage 3: Security Scan
+  # ─────────────────────────────────────────────────────────────────
+  security:
+    name: "🛡️ Security Scan"
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install safety
+        run: pip install safety
+
+      - name: Check dependencies for vulnerabilities
+        run: safety check -r requirements.txt || true

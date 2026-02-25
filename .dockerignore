@@ -1,0 +1,47 @@
+# Dependencies
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.so
+*.dylib
+
+# Rust build artifacts (we copy the final .so from builder stage)
+aether-cortex/target/
+aether-cortex/.cargo/
+
+# Development files
+.git/
+.gitignore
+.env
+.env.local
+*.md
+*.txt
+!requirements.txt
+tests/
+benchmarks/
+docs/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# Web frontend (not needed in backend container)
+apps/
+node_modules/
+package.json
+package-lock.json
+yarn.lock
+
+# Gemini brain artifacts
+.idx/
+.gemini/

@@ -1,0 +1,98 @@
+# ═══════════════════════════════════════════════════════════════════
+# 🚀 Aether Voice OS — Auto-Sync & Deploy
+# Automated sync, build verification, and release tagging
+# ═══════════════════════════════════════════════════════════════════
+
+name: "🚀 Aether CD"
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Stage 1: Build Verification
+  # ─────────────────────────────────────────────────────────────────
+  build:
+    name: "📦 Build Verification"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify imports
+        run: |
+          python -c "from core.windowing import AudioWindow; print('✅ windowing OK')"
+          python -c "from core.registry import AetherRegistry; print('✅ registry OK')"
+          python -c "from core.gateway import AetherGateway; print('✅ gateway OK')"
+          python -c "from core.runner import AetherRunner; print('✅ runner OK')"
+
+      - name: Verify .ath package structure
+        run: |
+          test -f brain/packages/AetherCore/manifest.json && echo "✅ AetherCore manifest OK"
+          test -f brain/packages/AetherCore/Soul.md && echo "✅ AetherCore soul OK"
+
+  # ─────────────────────────────────────────────────────────────────
+  # Stage 2: Auto-Release (on tag push)
+  # ─────────────────────────────────────────────────────────────────
+  release:
+    name: "🏷️ Create Release"
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────────
+  # Stage 3: Docs Sync Check
+  # ─────────────────────────────────────────────────────────────────
+  docs-check:
+    name: "📚 Docs Freshness"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify critical docs exist
+        run: |
+          for doc in AGENTS.md README.md docs/agent.md docs/gateway_protocol.md docs/ath_package_spec.md; do
+            if [ ! -f "$doc" ]; then
+              echo "❌ Missing: $doc"
+              exit 1
+            fi
+            echo "✅ Found: $doc"
+          done
+
+      - name: Check AGENTS.md is under 300 lines
+        run: |
+          lines=$(wc -l < AGENTS.md)
+          echo "AGENTS.md: $lines lines"
+          if [ "$lines" -gt 300 ]; then
+            echo "⚠️ AGENTS.md exceeds 300 lines — consider splitting"
+          fi

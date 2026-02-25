@@ -1,0 +1,26 @@
+# Core Runtime
+google-genai>=1.0.0
+pyaudio>=0.2.14
+numpy>=2.0.0
+pydantic>=2.10.0
+pydantic-settings>=2.6.0
+python-dotenv>=1.0.0
+
+# Firebase / Firestore
+firebase-admin>=6.0.0
+google-cloud-firestore>=2.0.0
+
+# Transport
+websockets>=14.0
+cryptography>=43.0.0
+
+# Async Utilities
+watchdog>=5.0.0
+
+# Testing
+pytest>=8.0.0
+pytest-cov>=6.0.0
+pytest-asyncio>=0.24.0
+
+# Linting
+flake8>=7.0.0

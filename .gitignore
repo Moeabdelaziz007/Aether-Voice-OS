@@ -1,0 +1,49 @@
+# =============================================
+# Aether OS .gitignore
+# =============================================
+
+# --- Python ---
+venv/
+__pycache__/
+*.py[cod]
+*.so
+!core/audio/aether_*.py[cod]
+*.so
+*.dylib
+*.dll
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# --- Rust (aether-cortex) ---
+aether-cortex/target/
+aether-cortex/Cargo.lock
+
+# --- Environment & Secrets ---
+.env
+.env.*
+*.pem
+*.key
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# --- Node / Frontend (for Phase 3) ---
+node_modules/
+.next/
+out/
+
+# --- Logs ---
+*.log
+logs/
+
+# --- Aether Internal ---
+brain/packages/*/secrets/
