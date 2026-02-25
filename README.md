@@ -2,6 +2,10 @@
   <img src="assets/aether_banner.png" alt="Aether OS Banner" width="100%"/>
 </p>
 
+<p align="center">
+  <img src="assets/aether_avatar.png" alt="Aether Agent Avatar" width="300px" style="border-radius:20px; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);"/>
+</p>
+
 <h1 align="center">🌌 Aether Voice OS</h1>
 
 <p align="center">
