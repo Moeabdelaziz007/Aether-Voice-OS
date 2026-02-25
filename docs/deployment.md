@@ -1,51 +1,77 @@
-# ☁️ Aether OS Deployment: Cloud-Native Scaling
+# 🚀 Aether OS — Deployment Guide (Contest Build)
 
-## 🚀 Infrastructure Strategy
+This guide details how to deploy the **Aether Voice OS** stack to Google Cloud Platform (GCP) to achieve the scalable, low-latency performance required for the Gemini Live Agent Challenge.
 
-Aether OS is designed to be **Serverless-First**, utilizing Google Cloud Platform (GCP) for elastic scaling and zero-maintenance overhead.
+## ☁️ Architecture Overview
 
-## 📦 Containerization (Docker)
+Aether is designed as a **Cloud-Native Hybrid** system:
 
-The Aether Engine is packaged as a high-performance Python container.
+- **Edge Node (Local)**: Handles high-fidelity audio I/O via PyAudio C-threads.
+- **Brain (GCP)**: Aether Gateway and L2 Synapse Daemons running on Cloud Run.
+- **Memory (Firestore)**: Persistent session and knowledge storage.
 
-### Highlights
+---
 
-- **Base Image:** `python:3.11-slim`
-- **Dependencies:** `portaudio19-dev`, `build-essential` (for Rust cortex hooks).
-- **Optimization:** Multi-stage builds to keep the production image under 200MB.
+## 🛠️ Step 1: GCP Infrastructure Setup
 
-## 🏗️ Cloud Run (Gen 2)
+### 1. Enable APIs
 
-We deploy to Google Cloud Run for its native WebSocket support and request-based scaling.
+```bash
+gcloud services enable \
+    run.googleapis.com \
+    firestore.googleapis.com \
+    secretmanager.googleapis.com \
+    cloudbuild.googleapis.com
+```
 
-### Key Configurations
+### 2. Configure Firebase (Firestore)
 
-- **Concurrency:** Set to `1` (Each instance handles one high-fidelity voice session for deterministic latency).
-- **Session Affinity:** Enabled to maintain the stateful WebSocket connection.
-- **Resources:** 2 vCPU / 4GB RAM (Necessary for smooth audio buffer management and local DSP).
+Aether requires Firestore in Native Mode.
 
-## 🔐 Security & Secret Management
+1. Go to the [Firebase Console](https://console.firebase.google.com/).
+2. Initialize Firestore in your project.
+3. Add a service account to `core/tools/firebase_key.json` (Local) or use ADC (Cloud).
 
-- **API Keys:** Stored in **Google Secret Manager** and injected as environment variables (`GOOGLE_API_KEY`).
-- **Gateway Auth:** Ed25519 private keys are stored as secrets; only the public key is exposed for client verification.
+---
 
-## 🛠️ CI/CD Pipeline (Cloud Build)
+## 📦 Step 2: Containerization & Cloud Run
 
-Aether uses a "Push-to-Live" workflow:
+Aether is deployed as a stateless container that orchestrates the Gemini Live connection.
 
-1. `git push origin main`
-2. **Cloud Build** triggers:
-   - Linting & Unit Tests (`pytest`).
-   - Image Build (`docker build`).
-   - Push to **Artifact Registry**.
-   - Deploy to **Cloud Run** (Green-Blue deployment).
+### 1. Build the Docker Image
 
-## 📊 Monitoring & Observability
+```bash
+gcloud builds submit --tag gcr.io/[PROJECT_ID]/aether-engine .
+```
 
-- **Log Explorer:** Structured JSON logs for tracing agent thought processes.
-- **Cloud Trace:** Measuring end-to-end latency (Mic → Gemini → Speaker).
-- **Alerting:** PagerDuty integration for consecutive 502/504 WebSocket errors.
+### 2. Deploy to Cloud Run
 
-## 🌍 Global Distribution
+```bash
+gcloud run deploy aether-engine \
+    --image gcr.io/[PROJECT_ID]/aether-engine \
+    --platform managed \
+    --allow-unauthenticated \
+    --set-env-vars="GOOGLE_API_KEY=[YOUR_KEY],AETHER_AI_MODEL=gemini-2.0-flash-exp"
+```
 
-By leveraging **Firebase Hosting** for the Frontend and **GCP Regions** (e.g., `us-central1`, `asia-northeast1`) for the Engine, Aether achieves sub-200ms latency globally by routing users to the nearest neural node.
+---
+
+## 🔒 Step 3: Secret Management (V0.2)
+
+For production security, move keys into GCP Secret Manager:
+
+```bash
+echo -n "AIzaSy..." | gcloud secrets create GEMINI_KEY --data-file=-
+gcloud run deploy aether-engine --update-secrets=GOOGLE_API_KEY=GEMINI_KEY:latest
+```
+
+---
+
+## ⚡ Automated Deployment
+
+Run the included `deploy.sh` for a one-click deployment experience:
+
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
