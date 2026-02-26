@@ -181,6 +181,16 @@ class GeminiLiveSession:
             ) as session:
                 self._session = session
                 logger.info("✦ Gemini Live session established")
+                
+                # Wire in Thalamic Gate V2
+                try:
+                    from core.ai.thalamic import ThalamicGate
+                    from core.demo.fallback import DemoFallback
+                    self._thalamic_gate = ThalamicGate(session)
+                    self._demo_fallback = DemoFallback(self)
+                    await self._thalamic_gate.start()
+                except Exception as e:
+                    logger.error("Failed to wire Thalamic Gate: %s", e)
 
                 async with asyncio.TaskGroup() as tg:
                     tg.create_task(self._send_loop(session))
@@ -206,6 +216,8 @@ class GeminiLiveSession:
                         cause=exc,
                     ) from exc
         finally:
+            if hasattr(self, '_thalamic_gate'):
+                self._thalamic_gate.stop()
             self._session = None
             self._running = False
             logger.info("Gemini Live session closed")
