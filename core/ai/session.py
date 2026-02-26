@@ -92,10 +92,24 @@ class GeminiLiveSession:
             system_instruction = f"{self._soul.persona}\n\nPrimary Domain: {self._soul.manifest.expertise if hasattr(self._soul, 'manifest') else {}}\n\n{system_instruction}"
             logger.info("A2A [SESSION] Applying Expert Soul: %s", self._soul.name)
 
+        # ── Voice Preference Mapping ──
+        speech_config = None
+        if self._soul and hasattr(self._soul, "manifest") and self._soul.manifest.voice_id:
+            voice_name = self._soul.manifest.voice_id
+            logger.info("A2A [SESSION] Applying Expert Voice: %s", voice_name)
+            speech_config = types.SpeechConfig(
+                voice_config=types.VoiceConfig(
+                    prebuilt_voice_config=types.PrebuiltVoiceConfig(
+                        voice_name=voice_name
+                    )
+                )
+            )
+
         config = types.LiveConnectConfig(
             response_modalities=["AUDIO"],
             system_instruction=system_instruction,
             tools=tools,
+            speech_config=speech_config,
         )
 
         # Advanced features (v1alpha)

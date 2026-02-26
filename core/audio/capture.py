@@ -15,8 +15,9 @@ from typing import Optional
 import numpy as np
 import pyaudio
 
-from core.audio.processing import energy_vad, SilentAnalyzer, SilenceType
+from core.audio.processing import energy_vad, SilentAnalyzer, SilenceType, AdaptiveVAD
 from core.audio.state import audio_state
+from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.config import AudioConfig
 from core.errors import AudioDeviceNotFoundError
 
@@ -38,6 +39,8 @@ class AudioCapture:
         output_queue: asyncio.Queue[dict[str, object]],
         analyzer: Optional[SilentAnalyzer] = None,
         vad_engine: Optional[AdaptiveVAD] = None,
+        paralinguistic_analyzer: Optional[ParalinguisticAnalyzer] = None,
+        on_affective_data: Optional[Callable[[ParalinguisticFeatures], Any]] = None,
     ) -> None:
         self._config = config
         self._async_queue = output_queue
@@ -48,6 +51,8 @@ class AudioCapture:
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._analyzer = analyzer or SilentAnalyzer()
         self._vad = vad_engine
+        self._paralinguistic_analyzer = paralinguistic_analyzer
+        self._on_affective_data = on_affective_data
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
         """Thread-safe injection into the asyncio event loop."""
@@ -86,6 +91,12 @@ class AudioCapture:
             audio_state.silence_type = self._analyzer.classify(pcm_chunk, vad.energy_rms).value
         else:
             audio_state.silence_type = "speech"
+            
+            # Affective Analysis (Non-blocking trigger)
+            if self._paralinguistic_analyzer and self._on_affective_data:
+                features = self._paralinguistic_analyzer.analyze(pcm_chunk, vad.energy_rms)
+                if self._loop and not self._loop.is_closed():
+                    self._loop.call_soon_threadsafe(self._on_affective_data, features)
 
         # Push to queue if hard speech detected or AI is silent (ambient feed)
         if vad.is_hard or not is_playing:

@@ -40,6 +40,8 @@ from core.tools.search_tool import get_search_tool
 from core.ai import handoff
 from core.admin_api import AdminAPIServer, SHARED_STATE
 from core.audio.processing import AdaptiveVAD
+from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
+from core.ai.genetic import GeneticOptimizer
 from core.ai.hive import HiveCoordinator
 from core.tools import hive_memory
 
@@ -78,8 +80,17 @@ class AetherEngine:
         self._router.init_vector_store(self._config.ai.api_key)
         self._register_tools()
 
+        # Affective Computing: Paralinguistic Analyzer
+        self._paralinguistics = ParalinguisticAnalyzer(sample_rate=self._config.audio.send_sample_rate)
+
         # Components
-        self._capture = AudioCapture(self._config.audio, self._audio_in)
+        self._capture = AudioCapture(
+            self._config.audio, 
+            self._audio_in,
+            vad_engine=self._vad,
+            paralinguistic_analyzer=self._paralinguistics,
+            on_affective_data=self._on_affective_data
+        )
         self._gateway = AetherGateway(
             self._config.gateway,
             on_audio_rx=self._audio_in.put
@@ -107,6 +118,9 @@ class AetherEngine:
             default_soul_name="ArchitectExpert"
         )
         self._admin_api = AdminAPIServer(port=18790)
+
+        # Genetic Evolution Layer
+        self._optimizer = GeneticOptimizer(self._firebase, api_key=self._config.ai.api_key)
 
         # ADK Tool Registry (legacy — kept for backward compat)
         self._tools: dict[str, Any] = {}
@@ -194,6 +208,11 @@ class AetherEngine:
         asyncio.create_task(
             self._gateway.broadcast("vad.event", vad_payload)
         )
+
+    def _on_affective_data(self, features: ParalinguisticFeatures) -> None:
+        """Handle incoming affective metrics from the capture layer."""
+        if self._firebase.is_connected:
+            asyncio.create_task(self._firebase.log_affective_metrics(features))
 
     async def _on_tool_call(
         self, tool_name: str, args: dict, result: dict
@@ -321,6 +340,19 @@ class AetherEngine:
                 
                 if self._session_restart.is_set():
                     logger.info("🔄 Hive Handoff: Preparing next expert...")
+                    
+                    # TRIGGER GENETIC EVOLUTION
+                    # We evolve the 'soul' instructions based on the just-finished session performance
+                    mutation = await self._optimizer.evolve(
+                        current_instructions=active_soul.manifest.general_instructions,
+                        session_id=self._firebase._session_id
+                    )
+                    if mutation:
+                        logger.info("🧬 Genetic Leap: Soul '%s' instruction set evolved.", active_soul.manifest.name)
+                        # TODO: Hot-patch the in-memory registry if needed, or wait for next session
+                        # For now, we trust the registry watcher to handle file-system mutations
+                        # A higher-tier implementation would write back to the .ath file.
+
                     await self._session.stop()
                     # Brief delay for audio cross-fade (simulated)
                     await asyncio.sleep(1.0)

@@ -241,11 +241,15 @@ class ToolRouter:
 
         start_time = asyncio.get_event_loop().time()
         try:
-            # Support both sync and async handlers
+            # Support both sync and async handlers robustly
             if inspect.iscoroutinefunction(tool.handler):
                 result = await tool.handler(**args)
             else:
                 result = await asyncio.to_thread(tool.handler, **args)
+                
+            # If the result itself is still awaitable (e.g. from a mock or wrapper leak)
+            if inspect.isawaitable(result):
+                result = await result
 
             duration = asyncio.get_event_loop().time() - start_time
             await self._profiler.record(name, duration)
