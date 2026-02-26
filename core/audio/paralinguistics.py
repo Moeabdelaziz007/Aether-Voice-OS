@@ -30,7 +30,7 @@ class ParalinguisticFeatures:
 class ParalinguisticAnalyzer:
     """
     Analyzes PCM audio chunks to extract emotive signifiers.
-    Implementation focuses on sub-5ms processing to maintain Aether's zero-friction goal.
+    Implementation focuses on sub-5ms processing for zero-friction.
     """
 
     def __init__(self, sample_rate: int = 16000):
@@ -72,7 +72,7 @@ class ParalinguisticAnalyzer:
         return 0.0
 
     def _estimate_rate(self, pcm_chunk: NDArray[np.int16]) -> float:
-        """Estimate speech rate based on envelope peak counting (pseudo-syllabification)."""
+        """Estimate speech rate via envelope peak counting."""
         if len(pcm_chunk) < 512:
             return 0.0
 
@@ -137,8 +137,8 @@ class ParalinguisticAnalyzer:
         centroid = float(np.sum(magnitudes * freqs) / (np.sum(magnitudes) + 1e-10))
 
         # 5. Engagement Logic (Neuro-Darwinism Scoring)
-        # - Good: High Centroid (Brightness), moderate/high Pitch, expressiveness (Variance)
-        # - Bad: Monotone (Low variance), Low Pitch (Lethargy/Disinterest), Low Centroid (Dullness)
+        # - Good: High Centroid, high Pitch, expressiveness (Variance)
+        # - Bad: Monotone, Low Pitch (lethargy), Low Centroid (dullness)
         base_engagement = 0.5
 
         # Affective Weights

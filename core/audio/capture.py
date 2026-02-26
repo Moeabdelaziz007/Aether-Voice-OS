@@ -24,6 +24,65 @@ from core.errors import AudioDeviceNotFoundError
 logger = logging.getLogger(__name__)
 
 
+class SmoothMuter:
+    """Applies graceful, ramped gain modifications to avoid pops/clicks."""
+
+    def __init__(self, ramp_samples=256):
+        self._ramp_samples = ramp_samples
+        self._current_gain = 1.0
+        self._target_gain = 1.0
+
+    def process(self, pcm_chunk: np.ndarray) -> np.ndarray:
+        """Apply gain ramp smoothly over the chunk."""
+        if self._current_gain == self._target_gain:
+            if self._current_gain == 1.0:
+                return pcm_chunk.copy()
+            elif self._current_gain == 0.0:
+                return np.zeros_like(pcm_chunk)
+            return (pcm_chunk * self._current_gain).astype(np.int16)
+
+        chunk_len = len(pcm_chunk)
+        if chunk_len == 0:
+            return pcm_chunk
+            
+        step = 1.0 / self._ramp_samples
+        if self._current_gain > self._target_gain:
+            step = -step
+
+        # Generate a gain array for the chunk
+        gains = np.full(chunk_len, self._current_gain, dtype=np.float32)
+        
+        # Max steps remaining to reach target
+        steps_needed = int(abs(self._target_gain - self._current_gain) / abs(step))
+        ramp_len = min(chunk_len, steps_needed)
+        
+        if ramp_len > 0:
+            ramp = np.linspace(
+                self._current_gain, 
+                self._current_gain + (step * ramp_len), 
+                ramp_len, 
+                dtype=np.float32
+            )
+            gains[:ramp_len] = ramp
+            gains[ramp_len:] = gains[ramp_len-1] if ramp_len > 0 else self._target_gain
+            self._current_gain = float(gains[-1])
+            
+            # Snap to target if very close
+            if abs(self._current_gain - self._target_gain) < 0.05:
+                self._current_gain = self._target_gain
+        else:
+             self._current_gain = self._target_gain
+             gains[:] = self._current_gain
+
+        return (pcm_chunk * gains).astype(np.int16)
+
+    def mute(self):
+        self._target_gain = 0.0
+
+    def unmute(self):
+        self._target_gain = 1.0
+
+
 class AudioCapture:
     """
     Microphone (C-Callback) → asyncio.Queue (Downstream).
@@ -53,6 +112,19 @@ class AudioCapture:
         self._vad = vad_engine
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
+        
+        from core.audio.state import HysteresisGate
+        from core.audio.leakage import LeakageDetector
+        
+        self._hysteresis = HysteresisGate()
+        self._leakage = LeakageDetector()
+        self._smooth_muter = SmoothMuter()
+        
+        # Delay Compensation Counters
+        self._audio_latency_ms = 50  # hardware latency approximation
+        self._latency_samples = int(self._audio_latency_ms * self._config.send_sample_rate // 1000)
+        self._mute_delay_remaining = 0
+        self._unmute_delay_remaining = 0
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
         """Thread-safe injection into the asyncio event loop."""
@@ -70,12 +142,48 @@ class AudioCapture:
     ) -> tuple[bytes | None, int]:
         """
         High-priority Thalamic Gate callback.
-        Analyzes energy and gates microphone input based on AI state.
+        Analyzes energy and gates microphone input based on AI state and Leakage.
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
-        # Thalamic Mute / AEC Proxy:
-        # If the AI is playing, we mute the mic to prevent echo.
-        if audio_state.is_playing:
+        
+        # 1. Leakage & Correlation check (is it just echo?)
+        # Fetching spectrum from global state (updated by playback.py)
+        if audio_state.ai_spectrum is not None:
+            self._leakage._ai_spectrum = audio_state.ai_spectrum
+        is_user = self._leakage.is_user_speaking(pcm_chunk)
+        
+        # 2. Base Hysteresis update on AI state
+        ai_playing_base = self._hysteresis.update(audio_state.is_playing)
+        
+        # 3. Delay Compensation (Hardware Latency & Echo fade-out)
+        if audio_state.just_started_playing:
+            self._mute_delay_remaining = self._latency_samples
+        if audio_state.just_stopped_playing:
+            self._unmute_delay_remaining = int(self._latency_samples * 1.5)  # grace period for echo to die
+            
+        if self._mute_delay_remaining > 0:
+            self._mute_delay_remaining = max(0, self._mute_delay_remaining - frame_count)
+            ai_playing_compensated = False
+        elif self._unmute_delay_remaining > 0:
+            self._unmute_delay_remaining = max(0, self._unmute_delay_remaining - frame_count)
+            ai_playing_compensated = True
+        else:
+            ai_playing_compensated = ai_playing_base
+
+        # 4. Final Thalamic Mute Decision
+        # If AI is deemed playing AND we are sure it's not the user talking
+        should_mute = ai_playing_compensated and not is_user
+
+        if should_mute:
+            self._smooth_muter.mute()
+        else:
+            self._smooth_muter.unmute()
+            
+        # Apply Graceful Ramp
+        processed_chunk = self._smooth_muter.process(pcm_chunk)
+
+        # Update VAD logic
+        if should_mute and self._smooth_muter._current_gain < 0.1:
             # Force VAD to false and energy to 0 to prevent barge-in triggers
             from core.audio.processing import HyperVADResult
 
@@ -83,28 +191,31 @@ class AudioCapture:
                 is_soft=False,
                 is_hard=False,
                 energy_rms=0.0,
-                sample_count=len(pcm_chunk),
+                sample_count=len(processed_chunk),
             )
-            # Optional: Send zeros to the AI to maintain PCM continuity without noise
+            # Reconstruct in_data with zeros if fully muted
             in_data = b"\x00" * len(in_data)
         else:
-            # HyperVAD Logic: Dual-Threshold (mu + sigma)
-            vad = energy_vad(pcm_chunk, adaptive_engine=self._vad)
+            from core.audio.processing import energy_vad
+            
+            # HyperVAD Logic: Dual-Threshold (mu + sigma) + Multi-Feature
+            vad = energy_vad(processed_chunk, adaptive_engine=self._vad)
+            in_data = processed_chunk.tobytes()
 
         # Update shared state for brain-sync
         audio_state.last_rms = vad.energy_rms
         audio_state.is_soft = vad.is_soft
         audio_state.is_hard = vad.is_hard
 
-        zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
+        zero_crossings = np.where(np.diff(np.sign(processed_chunk)))[0]
         audio_state.last_zcr = (
-            len(zero_crossings) / len(pcm_chunk) if len(pcm_chunk) > 0 else 0
+            len(zero_crossings) / len(processed_chunk) if len(processed_chunk) > 0 else 0
         )
 
         # Architecture of Silence: Classify silence if no clear speech
         if not vad.is_hard:
             audio_state.silence_type = self._analyzer.classify(
-                pcm_chunk, vad.energy_rms
+                processed_chunk, vad.energy_rms
             ).value
         else:
             audio_state.silence_type = "speech"
@@ -112,15 +223,13 @@ class AudioCapture:
             # Affective Analysis (Non-blocking trigger)
             if self._paralinguistic_analyzer and self._on_affective_data:
                 features = self._paralinguistic_analyzer.analyze(
-                    pcm_chunk, vad.energy_rms
+                    processed_chunk, vad.energy_rms
                 )
                 if self._loop and not self._loop.is_closed():
                     self._loop.call_soon_threadsafe(self._on_affective_data, features)
 
         # Push to queue if hard speech detected or AI is silent (ambient feed)
-        # Note: If audio_state.is_playing is True, in_data is now silence (zeros),
-        # which satisfies the 'ambient feed' requirement safely.
-        if vad.is_hard or not audio_state.is_playing:
+        if vad.is_hard or not should_mute:
             msg = {
                 "data": in_data,
                 "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",

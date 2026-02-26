@@ -82,6 +82,10 @@ class AudioPlayback:
             pcm += heartbeat
             self._phase = (self._phase + t[-1]) % 1.0
 
+            # 3. Capture AI spectrum for Echo/Leakage detection in Thalamic Gate
+            if len(pcm) > 0:
+                audio_state.ai_spectrum = np.abs(np.fft.rfft(pcm))
+
             data = pcm.astype(np.int16).tobytes()
             return (data, pyaudio.paContinue)
         except queue.Empty:
@@ -139,7 +143,7 @@ class AudioPlayback:
                     except Exception as e:
                         logger.debug("Failed to mirror audio to UI: %s", e)
 
-                # 2. Push to thread-safe buffer with lightweight async spinlock (Zero thread overhead)
+                # 2. Push to thread-safe buffer with lightweight async spinlock.
                 while self._running:
                     try:
                         self._buffer.put_nowait(audio_bytes)
