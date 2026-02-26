@@ -15,7 +15,7 @@ from typing import Optional
 import numpy as np
 import pyaudio
 
-from core.audio.processing import energy_vad
+from core.audio.processing import energy_vad, SilentAnalyzer, SilenceType
 from core.audio.state import audio_state
 from core.config import AudioConfig
 from core.errors import AudioDeviceNotFoundError
@@ -36,6 +36,7 @@ class AudioCapture:
         self,
         config: AudioConfig,
         output_queue: asyncio.Queue[dict[str, object]],
+        analyzer: Optional[SilentAnalyzer] = None,
     ) -> None:
         self._config = config
         self._async_queue = output_queue
@@ -44,6 +45,7 @@ class AudioCapture:
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
+        self._analyzer = analyzer or SilentAnalyzer()
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
         """Thread-safe injection into the asyncio event loop."""
@@ -68,6 +70,17 @@ class AudioCapture:
         threshold = 0.15 if is_playing else 0.02
         vad = energy_vad(pcm_chunk, threshold=threshold)
         
+        # Update shared state for brain-sync (Engine uses this for Barge-in logic)
+        audio_state.last_rms = vad.energy_rms
+        zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
+        audio_state.last_zcr = len(zero_crossings) / len(pcm_chunk) if len(pcm_chunk) > 0 else 0
+        
+        # Architecture of Silence: Classify silence if no speech detected
+        if not vad.is_speech:
+            audio_state.silence_type = self._analyzer.classify(pcm_chunk, vad.energy_rms).value
+        else:
+            audio_state.silence_type = "speech"
+
         # We pass the audio forward if:
         # a) It contains clear speech
         # b) The AI is silent

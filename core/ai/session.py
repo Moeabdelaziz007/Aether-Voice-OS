@@ -61,6 +61,8 @@ class GeminiLiveSession:
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
+        self._frame_buffer: list[tuple[float, bytes]] = []  # Rolling history of screenshots
+        self._max_frames = 10  # ~10 seconds of visual history
 
     def _build_session_config(self) -> types.LiveConnectConfig:
         """Build the LiveConnectConfig with tool declarations."""
@@ -151,6 +153,9 @@ class GeminiLiveSession:
                     if self._config.enable_proactive_vision:
                         tg.create_task(self._vision_pulse_loop(session))
 
+                    # ── Architecture of Silence (Backchanneling) ────
+                    tg.create_task(self._backchannel_loop(session))
+
         except* Exception as eg:
             for exc in eg.exceptions:
                 if isinstance(exc, asyncio.CancelledError):
@@ -199,21 +204,20 @@ class GeminiLiveSession:
 
     async def _vision_pulse_loop(self, session) -> None:
         """
-        Periodically captures a screenshot and sends it to Gemini.
-        This provides 'eyes' to the agent without a direct prompt.
+        Maintains a rolling buffer of screen frames (1s resolution) for Indexical Sync.
+        Also sends proactive pulses every 10s if significant changes occur (Vision Delta).
         """
-        logger.info("Vision Pulse loop started (10s interval)")
+        logger.info("Vision Pulse loop started (1s Buffer / 10s Proactive)")
         import os
         import time
         from core.tools.vision_tool import capture_screenshot
         
+        last_proactive_pulse = 0
         while self._running:
             try:
-                # 10 second interval for proactive pulses
-                await asyncio.sleep(10.0)
+                # 1 second resolution for the rolling buffer
+                await asyncio.sleep(1.0)
                 
-                # Capture current screen content
-                # This uses the existing vision_tool infrastructure
                 res = await capture_screenshot()
                 if res.get("status") == "ok":
                     path = res["path"]
@@ -221,16 +225,57 @@ class GeminiLiveSession:
                         with open(path, "rb") as f:
                             image_bytes = f.read()
                         
-                        logger.debug("Proactive Vision: Sending screenshot to Gemini")
-                        await session.send_realtime_input(
-                            parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
-                        )
-                        # Cleanup
+                        # 1. Update rolling buffer (Spatio-Temporal Grounding)
+                        now = time.time()
+                        self._frame_buffer.append((now, image_bytes))
+                        if len(self._frame_buffer) > self._max_frames:
+                            self._frame_buffer.pop(0)
+
+                        # 2. Vision Delta & Proactive Pulse (10s)
+                        if now - last_proactive_pulse > 10.0:
+                            # TODO: Implement ImageHash for real Delta sensing
+                            logger.debug("Proactive Vision: Sending screenshot to Gemini")
+                            await session.send_realtime_input(
+                                parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
+                            )
+                            last_proactive_pulse = now
+                        
+                        # Cleanup temp file
                         os.remove(path)
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.debug("Vision pulse failed: %s", e)
+
+    async def _backchannel_loop(self, session) -> None:
+        """
+        Monitors Silence Architecture signals.
+        If user is 'Thinking' or 'Breathing', injects an empathetic
+        text part to trigger a model backchannel.
+        """
+        from core.audio.state import audio_state
+        logger.info("Backchannel loop active (Acoustic Empathy enabled)")
+        
+        thinking_streak = 0
+        while self._running:
+            await asyncio.sleep(0.2)
+            
+            stype = audio_state.silence_type
+            if stype in ("thinking", "breathing"):
+                thinking_streak += 1
+                if thinking_streak >= 15: # ~3 seconds of cognitive load
+                    logger.info("🧠 Empathy Trigger: User is thinking. Sending backchannel cue.")
+                    try:
+                        # Sending a tiny text hint can encourage Gemini to 
+                        # give a soft vocal affirmative without fully taking the turn.
+                        await session.send_realtime_input(
+                            parts=[types.Part.from_text(text="[user is thinking, give a soft Mhm or I'm listening]")]
+                        )
+                        thinking_streak = 0 # Reset to avoid spamming
+                    except Exception as e:
+                        logger.debug("Backchannel send failed: %s", e)
+            else:
+                thinking_streak = 0
 
     async def _receive_loop(self, session) -> None:
         """

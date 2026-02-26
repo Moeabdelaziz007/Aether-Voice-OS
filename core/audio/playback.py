@@ -44,19 +44,41 @@ class AudioPlayback:
         self._pya: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
+        self._gain = 1.0  # Linear gain for ducking (1.0 = Max, 0.2 = Ducked)
+        self._heartbeat_freq = 50.0  # Hz (Subliminal Hum)
+        self._phase = 0.0
+
+    def set_gain(self, gain: float) -> None:
+        """Adjust output volume level (0.0 to 1.0)."""
+        self._gain = max(0.0, min(gain, 1.0))
+        logger.debug("Playback Gain adjusted: %.2f", self._gain)
+
+    def set_heartbeat(self, freq: float) -> None:
+        """Adjust the subliminal heart rate (40Hz = Calm, 60Hz = Stress)."""
+        self._heartbeat_freq = freq
 
     def _callback(
         self, in_data: bytes | None, frame_count: int, time_info: dict, status: int
     ) -> tuple[bytes | None, int]:
         """PyAudio callback running in a high-priority C-thread."""
+        import numpy as np
         try:
-            # Gemini typically sends chunks of 1024 or 2048 samples.
-            # We fetch one chunk from the buffer.
             data = self._buffer.get_nowait()
             audio_state.set_playing(True)
             
-            # If the chunk size doesn't match frame_count exactly, 
-            # we might need to handle residue, but usually they align in this pipeline.
+            pcm = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+            
+            # 1. Apply linear gain for ducking
+            if self._gain < 0.99:
+                pcm *= self._gain
+
+            # 2. Mix Ambient Heartbeat (Subliminal status)
+            t = np.arange(len(pcm)) / 16000.0
+            heartbeat = 500.0 * np.sin(2 * np.pi * self._heartbeat_freq * (t + self._phase))
+            pcm += heartbeat
+            self._phase = (self._phase + t[-1]) % 1.0
+            
+            data = pcm.astype(np.int16).tobytes()
             return (data, pyaudio.paContinue)
         except queue.Empty:
             audio_state.set_playing(False)

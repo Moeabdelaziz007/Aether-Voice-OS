@@ -206,12 +206,19 @@ def find_zero_crossing(
     return len(pcm_data)
 
 
+@dataclass(frozen=True)
+class HyperVADResult:
+    """Refined VAD result with dual-threshold triggers."""
+    is_soft: bool   # User is breathing/thinking (Backchannel trigger)
+    is_hard: bool   # User is speaking clearly (Interrupt/Vision trigger)
+    energy_rms: float
+    sample_count: int
+
+
 class AdaptiveVAD:
     """
-    Tracks the environmental noise floor to dynamically adjust VAD thresholds.
-
-    Uses a rolling minimum of energy levels over a specific window
-    to estimate the base noise level.
+    HyperVAD: Tracks environmental noise statistics (mu, sigma) 
+    to dynamically calculate Soft and Hard thresholds.
     """
 
     def __init__(
@@ -219,46 +226,105 @@ class AdaptiveVAD:
         window_size_sec: float = 5.0, 
         sample_rate: int = 16_000,
         min_threshold: float = 0.01,
-        max_threshold: float = 0.15,
-        scaling_factor: float = 1.5,
+        max_threshold: float = 0.2,
     ) -> None:
         self.min_threshold = min_threshold
         self.max_threshold = max_threshold
-        self.scaling_factor = scaling_factor
         
-        # Track energy history for noise floor estimation (min-tracking)
-        # We store one value per 100ms
-        self._history_size = int(window_size_sec / 0.1)
+        # Track energy history for statistical noise floor estimation
+        self._history_size = int(window_size_sec / 0.1) # 100ms blocks
         self._history: list[float] = []
-        self._noise_floor = min_threshold
+        self._mu = min_threshold
+        self._sigma = 0.001
 
-    def update(self, current_rms: float) -> float:
+    def update(self, current_rms: float) -> tuple[float, float]:
         """
-        Update the noise floor estimate and return the new adaptive threshold.
+        Update noise statistics and return (soft_threshold, hard_threshold).
         """
         self._history.append(current_rms)
         if len(self._history) > self._history_size:
             self._history.pop(0)
 
-        # Noise floor is the minimum energy seen recently
-        self._noise_floor = min(self._history)
+        if len(self._history) > 10:
+            self._mu = float(np.mean(self._history))
+            self._sigma = float(np.std(self._history))
+        else:
+            self._mu = current_rms
+            
+        # RMS_soft = mu + 1.5 * sigma (Thinking/Breathing)
+        # RMS_hard = mu + 4.0 * sigma (Hard Interrupt)
+        soft = self._mu + (1.5 * self._sigma)
+        hard = self._mu + (4.0 * self._sigma)
         
-        # Adaptive threshold is noise_floor * scaling_factor, capped
-        adaptive = self._noise_floor * self.scaling_factor
-        return max(self.min_threshold, min(adaptive, self.max_threshold))
+        # Clamp to reasonable bounds
+        soft = max(self.min_threshold, min(soft, self.max_threshold * 0.5))
+        hard = max(self.min_threshold * 2, min(hard, self.max_threshold))
+        
+        return soft, hard
 
     @property
-    def noise_floor(self) -> float:
-        return self._noise_floor
+    def noise_stats(self) -> dict[str, float]:
+        return {"mu": self._mu, "sigma": self._sigma}
+
+
+from enum import Enum
+
+class SilenceType(Enum):
+    VOID = "void"           # Absolute silence, no human presence
+    BREATHING = "breathing" # Oscillatory micro-RMS, likely user thinking
+    THINKING = "thinking"   # Sustained low-RMS, indicates cognitive load
+
+
+class SilentAnalyzer:
+    """
+    Analyzes silence periods to detect human cognitive presence.
+    Uses Zero-Crossing Rate (ZCR) and RMS variance to find 'breathing' patterns.
+    """
+    def __init__(self, sample_rate: int = 16000):
+        self.sample_rate = sample_rate
+        self._history_rms: list[float] = []
+        self._history_zcr: list[float] = []
+        self._window_size = 20 # 2 seconds at 100ms chunks
+
+    def classify(self, pcm_chunk: NDArray[np.int16], current_rms: float) -> SilenceType:
+        """Classify the type of silence in the current chunk."""
+        if len(pcm_chunk) == 0:
+            return SilenceType.VOID
+
+        # 1. Calculate Zero-Crossing Rate
+        zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
+        zcr = len(zero_crossings) / len(pcm_chunk)
+        
+        self._history_rms.append(current_rms)
+        self._history_zcr.append(zcr)
+        if len(self._history_rms) > self._window_size:
+            self._history_rms.pop(0)
+            self._history_zcr.pop(0)
+
+        # 2. Logic:
+        # VOID: Extremely low RMS (< 0.001)
+        if current_rms < 0.001:
+            return SilenceType.VOID
+        
+        # BREATHING: RMS oscillates slightly (inhale/exhale) + Low ZCR
+        rms_var = np.var(self._history_rms) if len(self._history_rms) > 5 else 0
+        if 0.001 < current_rms < 0.005 and rms_var > 1e-7 and zcr < 0.05:
+            return SilenceType.BREATHING
+
+        # THINKING: Sustained low level, not quiet enough to be void
+        if current_rms < 0.01:
+            return SilenceType.THINKING
+            
+        return SilenceType.VOID
 
 
 def energy_vad(
     pcm_chunk: NDArray[np.int16],
     threshold: float = 0.02,
     adaptive_engine: Optional[AdaptiveVAD] = None,
-) -> VADResult:
+) -> HyperVADResult:
     """
-    RMS energy-based Voice Activity Detection.
+    RMS energy-based Voice Activity Detection with Hyper-Singularity Logic.
 
     Args:
         pcm_chunk: Raw PCM int16 audio samples.
@@ -266,36 +332,53 @@ def energy_vad(
         adaptive_engine: Optional AdaptiveVAD instance for dynamic thresholding.
 
     Returns:
-        VADResult with speech flag, energy level, and sample count.
+        HyperVADResult with dual-trigger flags, energy level, and sample count.
     """
     # ── Rust (Synapse) dispatch ──
+    # Note: Rust backend currently returns a dict. We adapt it.
     if _RUST_BACKEND:
-        # Note: If Rust backend exists, it should ideally handle the adaptive logic internally.
-        # For now, we use the Rust RMS calculation but apply Python adaptive logic if provided.
         result = aether_cortex.energy_vad(pcm_chunk, threshold)
         energy_rms = float(result["energy_rms"])
         
+        is_soft = False
+        is_hard = False
+        
         if adaptive_engine:
-            threshold = adaptive_engine.update(energy_rms)
+            soft_thr, hard_thr = adaptive_engine.update(energy_rms)
+            is_soft = energy_rms > soft_thr
+            is_hard = energy_rms > hard_thr
+        else:
+            is_hard = energy_rms > threshold
+            is_soft = is_hard # No soft distinction without adaptive engine
             
-        return VADResult(
-            is_speech=energy_rms > threshold,
+        return HyperVADResult(
+            is_soft=is_soft,
+            is_hard=is_hard,
             energy_rms=energy_rms,
             sample_count=int(result["sample_count"]),
         )
 
     # ── NumPy fallback ──
     if len(pcm_chunk) == 0:
-        return VADResult(is_speech=False, energy_rms=0.0, sample_count=0)
+        return HyperVADResult(is_soft=False, is_hard=False, energy_rms=0.0, sample_count=0)
 
     normalized = pcm_chunk.astype(np.float32) / 32768.0
     rms = float(np.sqrt(np.mean(normalized ** 2)))
     
+    is_soft = False
+    is_hard = False
+    
     if adaptive_engine:
-        threshold = adaptive_engine.update(rms)
+        soft_thr, hard_thr = adaptive_engine.update(rms)
+        is_soft = rms > soft_thr
+        is_hard = rms > hard_thr
+    else:
+        is_hard = rms > threshold
+        is_soft = is_hard
 
-    return VADResult(
-        is_speech=rms > threshold,
+    return HyperVADResult(
+        is_soft=is_soft,
+        is_hard=is_hard,
         energy_rms=rms,
         sample_count=len(pcm_chunk),
     )

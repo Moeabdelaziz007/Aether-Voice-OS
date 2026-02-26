@@ -17,6 +17,11 @@ class AudioState:
                 cls._instance = super(AudioState, cls).__new__(cls)
                 cls._instance.is_playing = False
                 cls._instance.is_capturing = False
+                cls._instance.last_rms = 0.0
+                cls._instance.last_zcr = 0.0
+                cls._instance.is_soft = False
+                cls._instance.is_hard = False
+                cls._instance.silence_type = "void" 
                 cls._instance._playing_lock = threading.Lock()
         return cls._instance
 

@@ -38,6 +38,7 @@ from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.search_tool import get_search_tool
 from core.admin_api import AdminAPIServer, SHARED_STATE
+from core.audio.processing import AdaptiveVAD
 
 logger = logging.getLogger(__name__)
 
@@ -129,31 +130,47 @@ class AetherEngine:
             datefmt="%H:%M:%S",
         )
 
+from core.audio.processing import AdaptiveVAD
+from core.audio.capture import AudioCapture
+# ... (rest of imports)
+
+class AetherEngine:
+    def __init__(self, config: Optional[AetherConfig] = None) -> None:
+        # ...
+        self._router = ToolRouter()
+        self._register_tools()
+
+        # Components
+        self._vad = AdaptiveVAD(
+            window_size_sec=self._config.audio.vad_window_sec if hasattr(self._config.audio, "vad_window_sec") else 5.0,
+            sample_rate=self._config.audio.send_sample_rate,
+        )
+        self._capture = AudioCapture(self._config.audio, self._audio_in, vad_engine=self._vad)
+        # ...
+
     def _on_interrupt(self) -> None:
         """
-        Called when Gemini signals barge-in — stop playback instantly.
-
-        Also samples the audio input for energy level via Rust VAD
-        and broadcasts the event to connected UI clients.
+        Called when Gemini signals barge-in — implements Cognitive Barge-in.
         """
-        self._playback.interrupt()
+        from core.audio.state import audio_state
+        
+        is_hard = audio_state.is_hard
+        rms = audio_state.last_rms
+        
+        vad_payload: dict[str, object] = {
+            "type": "interrupted",
+            "rms": rms,
+            "is_hard": is_hard
+        }
 
-        # Sample energy from the last audio chunk for UI reactivity
-        vad_payload: dict[str, object] = {"type": "interrupted"}
-        try:
-            from core.audio.processing import energy_vad
-            import numpy as np
-
-            # Peek at the most recent chunk in the input queue (non-blocking)
-            if not self._audio_in.empty():
-                last_msg = self._audio_in._queue[-1]  # type: ignore[attr-defined]
-                if isinstance(last_msg, dict) and "data" in last_msg:
-                    pcm = np.frombuffer(last_msg["data"], dtype=np.int16)
-                    result = energy_vad(pcm)
-                    vad_payload["energy_rms"] = result.energy_rms
-                    vad_payload["is_speech"] = result.is_speech
-        except Exception:
-            pass  # Non-critical — UI enhancement only
+        if is_hard:
+            logger.info("⚡ Hard Barge-in detected (RMS: %.2f) — Stopping playback.", rms)
+            self._playback.interrupt()
+            vad_payload["action"] = "hard_stop"
+        else:
+            logger.info("🌊 Collaborative Barge-in (Soft) — Ducking.", rms)
+            self._playback.set_gain(0.2)
+            vad_payload["action"] = "ducking"
 
         # Broadcast VAD event to connected UI clients
         asyncio.create_task(
