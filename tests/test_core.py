@@ -196,7 +196,8 @@ class TestVAD:
 
         silence = np.zeros(1024, dtype=np.int16)
         result = energy_vad(silence)
-        assert result.is_speech is False
+        assert result.is_hard is False
+        assert result.is_soft is False
         assert result.energy_rms == 0.0
         assert result.sample_count == 1024
 
@@ -206,7 +207,8 @@ class TestVAD:
         # Loud signal
         loud = np.full(1024, 10000, dtype=np.int16)
         result = energy_vad(loud, threshold=0.01)
-        assert result.is_speech is True
+        assert result.is_hard is True
+        assert result.is_soft is True
         assert result.energy_rms > 0.01
 
     def test_empty_input(self):
@@ -214,7 +216,8 @@ class TestVAD:
 
         empty = np.array([], dtype=np.int16)
         result = energy_vad(empty)
-        assert result.is_speech is False
+        assert result.is_hard is False
+        assert result.is_soft is False
         assert result.sample_count == 0
 
     def test_threshold_boundary(self):
@@ -224,8 +227,8 @@ class TestVAD:
         pcm = np.full(1024, 700, dtype=np.int16)  # ~0.021 normalized
         result_low = energy_vad(pcm, threshold=0.01)
         result_high = energy_vad(pcm, threshold=0.1)
-        assert result_low.is_speech is True
-        assert result_high.is_speech is False
+        assert result_low.is_hard is True
+        assert result_high.is_hard is False
 
 
 class TestZeroCrossing:
@@ -287,7 +290,7 @@ class TestToolDeclarations:
 
         tools = memory_tool.get_tools()
         assert isinstance(tools, list)
-        assert len(tools) == 3
+        assert len(tools) == 5
         names = [t["name"] for t in tools]
         assert "save_memory" in names
         assert "recall_memory" in names

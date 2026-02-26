@@ -43,7 +43,7 @@ async def test_tool_router_stress():
 
     # 3. Verify correctness
     assert len(results) == 1000
-    assert all(r["result"] == i * 2 for i, r in enumerate(results))
+    assert all(r["result"]["data"] == i * 2 for i, r in enumerate(results))
 
     # 4. Verify profiling
     stats = router.get_performance_report()["fast_tool"]

@@ -12,7 +12,7 @@ from core.audio.processing import AdaptiveVAD, energy_vad
 @pytest.mark.asyncio
 async def test_adaptive_vad_noise_climb():
     """Verify that AdaptiveVAD follows a rising noise floor."""
-    vad = AdaptiveVAD(window_size_sec=1.0, min_threshold=0.01, scaling_factor=2.0)
+    vad = AdaptiveVAD(window_size_sec=1.0, min_threshold=0.01)
 
     # 1. Quiet environment
     quiet_chunk = np.random.normal(0, 100, 1600).astype(np.int16)  # Low energy
@@ -27,7 +27,7 @@ async def test_adaptive_vad_noise_climb():
     final_threshold = vad.update(0.015)  # Still noisy
 
     assert final_threshold > initial_threshold
-    print(f"\nVAD Adaptation: {initial_threshold:.4f} -> {final_threshold:.4f}")
+    print(f"\nVAD Adaptation: {initial_threshold[1]:.4f} -> {final_threshold[1]:.4f}")
 
 
 @pytest.mark.asyncio

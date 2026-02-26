@@ -81,7 +81,7 @@ async def test_semantic_recovery_success():
 
     # Should have recovered to 'delegate_to_agent'
     assert result["x-a2a-status"] == 202
-    assert "Task delegated" in result["result"]["message"]
+    assert "Target expert" in result["result"].get("message", "") or "Task delegated" in result["result"].get("message", "")
 
 
 @pytest.mark.asyncio

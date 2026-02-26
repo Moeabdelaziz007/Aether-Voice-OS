@@ -63,9 +63,9 @@ class TestVAD:
     def test_silence_returns_false(self):
         silent = np.zeros(2400, dtype=np.int16)
         result = energy_vad(silent)
-        assert result.is_speech is False
+        assert result.is_hard is False
 
     def test_loud_signal_returns_true(self):
         loud = np.ones(2400, dtype=np.int16) * 10000
         result = energy_vad(loud)
-        assert result.is_speech is True
+        assert result.is_hard is True

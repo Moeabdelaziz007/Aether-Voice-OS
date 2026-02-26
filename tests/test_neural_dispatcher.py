@@ -81,7 +81,7 @@ class TestToolRouter:
         fc.name = "sync_fn"
         fc.args = {}
         result = await router.dispatch(fc)
-        assert result == {"result": "hello"}
+        assert result["result"] == {"data": "hello"}
 
     @pytest.mark.asyncio
     async def test_dispatch_async_handler(self):
@@ -99,7 +99,7 @@ class TestToolRouter:
         fc.name = "async_fn"
         fc.args = {}
         result = await router.dispatch(fc)
-        assert result == {"status": "ok"}
+        assert result["result"] == {"status": "ok"}
 
     @pytest.mark.asyncio
     async def test_dispatch_unknown_tool(self):
@@ -126,7 +126,7 @@ class TestToolRouter:
         fc.name = "greet"
         fc.args = {"name": "Aether"}
         result = await router.dispatch(fc)
-        assert result == {"greeting": "Hello, Aether!"}
+        assert result["result"] == {"greeting": "Hello, Aether!"}
 
     @pytest.mark.asyncio
     async def test_dispatch_handler_error(self):
@@ -261,27 +261,33 @@ class TestTasksTool:
 class TestEngineRouterIntegration:
     """Tests that the engine correctly wires the ToolRouter."""
 
-    def test_engine_has_router(self):
+    @pytest.mark.asyncio
+    async def test_engine_has_router(self):
         """Engine should create a ToolRouter with tools registered."""
         with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
             from core.engine import AetherEngine
 
             engine = AetherEngine()
+            engine._register_tools()
             assert hasattr(engine, "_router")
             assert engine._router.count >= 7  # 3 system + 4 tasks
 
-    def test_engine_router_has_system_tools(self):
+    @pytest.mark.asyncio
+    async def test_engine_router_has_system_tools(self):
         with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
             from core.engine import AetherEngine
 
             engine = AetherEngine()
+            engine._register_tools()
             assert "get_current_time" in engine._router.names
             assert "get_system_info" in engine._router.names
 
-    def test_engine_router_has_task_tools(self):
+    @pytest.mark.asyncio
+    async def test_engine_router_has_task_tools(self):
         with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
             from core.engine import AetherEngine
 
             engine = AetherEngine()
+            engine._register_tools()
             assert "create_task" in engine._router.names
             assert "list_tasks" in engine._router.names

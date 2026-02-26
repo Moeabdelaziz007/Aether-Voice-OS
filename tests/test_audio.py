@@ -4,10 +4,9 @@ Aether Voice OS — Tests for Audio Processing.
 Tests the pure-computation functions: RingBuffer,
 find_zero_crossing, and energy_vad.
 """
-
 import numpy as np
 
-from core.audio.processing import RingBuffer, VADResult, energy_vad, find_zero_crossing
+from core.audio.processing import RingBuffer, HyperVADResult, energy_vad, find_zero_crossing
 
 
 class TestRingBuffer:
@@ -101,31 +100,33 @@ class TestEnergyVAD:
     def test_silence_below_threshold(self):
         silence = np.zeros(1000, dtype=np.int16)
         result = energy_vad(silence)
-        assert result.is_speech is False
+        assert result.is_hard is False
+        assert result.is_soft is False
         assert result.energy_rms == 0.0
 
     def test_loud_signal_above_threshold(self):
         loud = np.full(1000, 10000, dtype=np.int16)
         result = energy_vad(loud)
-        assert result.is_speech is True
+        assert result.is_hard is True
+        assert result.is_soft is True
         assert result.energy_rms > 0.1
 
     def test_empty_input(self):
         result = energy_vad(np.array([], dtype=np.int16))
-        assert result.is_speech is False
+        assert result.is_hard is False
         assert result.sample_count == 0
 
     def test_returns_vad_result(self):
         data = np.random.randint(-32768, 32767, size=500, dtype=np.int16)
         result = energy_vad(data)
-        assert isinstance(result, VADResult)
+        assert isinstance(result, HyperVADResult)
         assert result.sample_count == 500
 
     def test_custom_threshold(self):
         quiet = np.full(1000, 500, dtype=np.int16)
         # With very low threshold, should detect as speech
         result = energy_vad(quiet, threshold=0.001)
-        assert result.is_speech is True
+        assert result.is_hard is True
         # With very high threshold, should not detect
         result = energy_vad(quiet, threshold=0.5)
-        assert result.is_speech is False
+        assert result.is_hard is False

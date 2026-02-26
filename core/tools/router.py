@@ -203,6 +203,7 @@ class ToolRouter:
                 "Unmatched tool called: %s. Attempting semantic recovery...", name
             )
 
+            was_recovered = False
             # --- Semantic Recovery Sequence ---
             if self._vector_store:
                 try:
@@ -217,6 +218,7 @@ class ToolRouter:
                             hits[0]["similarity"],
                         )
                         name = match  # Redirect to the closest tool
+                        was_recovered = True
                     else:
                         return {
                             "error": f"Tool '{name}' not found and no close semantic matches (>0.85).",
@@ -231,6 +233,8 @@ class ToolRouter:
                     "error": f"Unknown tool: {name}",
                     "available_tools": self.names,
                 }
+        else:
+            was_recovered = False
 
         tool = self._tools[name]
 
@@ -270,7 +274,7 @@ class ToolRouter:
 
             # ── A2A Protocol V3 Response Wrapping ───────────────────────
             # Standardizes output for multi-agent interoperability.
-            a2a_status = 200  # OK
+            a2a_status = 202 if was_recovered else 200  # OK
             if isinstance(result, dict) and "a2a_code" in result:
                 a2a_status = result.pop("a2a_code")
 
