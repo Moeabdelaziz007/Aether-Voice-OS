@@ -54,8 +54,13 @@ class AetherGateway:
     to receive audio levels, VAD events, and send control commands.
     """
 
-    def __init__(self, config: GatewayConfig) -> None:
+    def __init__(
+        self, 
+        config: GatewayConfig,
+        on_audio_rx: Optional[callable] = None
+    ) -> None:
         self._config = config
+        self._on_audio_rx = on_audio_rx
         self._clients: dict[str, ClientSession] = {}
         self._server: Optional[Server] = None
         self._running = False
@@ -88,14 +93,17 @@ class AetherGateway:
             logger.info("Client authenticated: %s", client_id)
 
             async for raw_msg in ws:
-                try:
-                    msg = json.loads(raw_msg)
-                    await self._route_message(client_id, msg)
-                except json.JSONDecodeError:
-                    await self._send_error(ws, 400, "Invalid JSON")
-                except Exception as exc:
-                    logger.error("Message handling error: %s", exc)
-                    await self._send_error(ws, 500, str(exc))
+                if isinstance(raw_msg, bytes):
+                    await self._route_binary(client_id, raw_msg)
+                else:
+                    try:
+                        msg = json.loads(raw_msg)
+                        await self._route_message(client_id, msg)
+                    except json.JSONDecodeError:
+                        await self._send_error(ws, 400, "Invalid JSON")
+                    except Exception as exc:
+                        logger.error("Message handling error: %s", exc)
+                        await self._send_error(ws, 500, str(exc))
 
         except HandshakeError as exc:
             logger.warning("Handshake failed: %s", exc)
@@ -180,6 +188,18 @@ class AetherGateway:
         # TODO: Implement real Ed25519 verification with cryptography lib
         return bool(signature)
 
+    async def _route_binary(self, client_id: str, data: bytes) -> None:
+        """Route incoming binary audio chunks."""
+        # Simple binary pass-through directly to the engine's audio queue
+        if self._on_audio_rx:
+            try:
+                # To maintain engine compatibility, we wrap the raw PCM bytes
+                # in the dict format expected by GeminiLiveSession's input queue.
+                # However, we skip JSON decoding overhead here.
+                await self._on_audio_rx({"data": data, "mime_type": f"audio/pcm;rate={self._config.receive_sample_rate}"})
+            except Exception as exc:
+                logger.error("Error routing binary audio: %s", exc)
+
     async def _route_message(self, client_id: str, msg: dict[str, Any]) -> None:
         """Route incoming messages by type."""
         msg_type = msg.get("type", "")
@@ -236,6 +256,18 @@ class AetherGateway:
         """Broadcast a message to all connected clients."""
         data = json.dumps({"type": msg_type, "payload": payload})
 
+        async with self._lock:
+            dead: list[str] = []
+            for cid, session in self._clients.items():
+                try:
+                    await session.ws.send(data)
+                except websockets.exceptions.ConnectionClosed:
+                    dead.append(cid)
+            for cid in dead:
+                self._clients.pop(cid, None)
+
+    async def broadcast_binary(self, data: bytes) -> None:
+        """Broadcast raw binary data to all connected clients."""
         async with self._lock:
             dead: list[str] = []
             for cid, session in self._clients.items():

@@ -75,7 +75,15 @@ class AetherEngine:
 
         # Components
         self._capture = AudioCapture(self._config.audio, self._audio_in)
-        self._playback = AudioPlayback(self._config.audio, self._audio_out)
+        self._gateway = AetherGateway(
+            self._config.gateway,
+            on_audio_rx=self._audio_in.put
+        )
+        self._playback = AudioPlayback(
+            self._config.audio, 
+            self._audio_out,
+            on_audio_tx=self._gateway.broadcast_binary
+        )
         self._session = GeminiLiveSession(
             self._config.ai,
             self._audio_in,
@@ -84,7 +92,6 @@ class AetherEngine:
             on_tool_call=self._on_tool_call,
             tool_router=self._router,
         )
-        self._gateway = AetherGateway(self._config.gateway)
         self._registry = AetherRegistry(self._config.packages_dir)
         self._admin_api = AdminAPIServer(port=18790)
 

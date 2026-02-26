@@ -35,9 +35,11 @@ class AudioPlayback:
         self,
         config: AudioConfig,
         input_queue: asyncio.Queue[bytes],
+        on_audio_tx: Optional[callable] = None,
     ) -> None:
         self._config = config
         self._async_queue = input_queue
+        self._on_audio_tx = on_audio_tx
         self._buffer: queue.Queue[bytes] = queue.Queue(maxsize=100)
         self._pya: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
@@ -103,6 +105,13 @@ class AudioPlayback:
             try:
                 # 1. Get audio from AI session (asyncio)
                 audio_bytes = await self._async_queue.get()
+                
+                # 1.5 Mirror to UI (WebSockets) if connected
+                if self._on_audio_tx:
+                    try:
+                        await self._on_audio_tx(audio_bytes)
+                    except Exception as e:
+                        logger.debug("Failed to mirror audio to UI: %s", e)
                 
                 # 2. Push to thread-safe buffer with lightweight async spinlock (Zero thread overhead)
                 while self._running:
