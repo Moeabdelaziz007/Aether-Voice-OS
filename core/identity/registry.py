@@ -8,8 +8,12 @@ via filesystem watching.
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 from core.errors import IdentityError, PackageNotFoundError
 from core.identity.package import AthPackage
@@ -17,69 +21,123 @@ from core.identity.package import AthPackage
 logger = logging.getLogger(__name__)
 
 
+class PackageChangeHandler(FileSystemEventHandler):
+    """Handles filesystem events for the packages directory."""
+
+    def __init__(self, registry: AetherRegistry) -> None:
+        self._registry = registry
+
+    def on_modified(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            return
+        if event.src_path.endswith("manifest.json"):
+            # A package manifest changed, trigger reload
+            pkg_path = Path(event.src_path).parent
+            self._registry._handle_fs_change(pkg_path)
+
+    def on_created(self, event: FileSystemEvent) -> None:
+        if event.is_directory:
+            # New directory might be a new package
+            self._registry._handle_fs_change(Path(event.src_path))
+
+
 class AetherRegistry:
     """
     Registry of loaded .ath agent packages.
 
     Scans a directory, validates each package, and provides
-    lookup by name. Corrupt packages are logged and skipped
-    (fail-open for resilience).
+    lookup by name. Supports hot-reloading via watchdog.
     """
 
-    def __init__(self, packages_dir: str) -> None:
+    def __init__(
+        self, 
+        packages_dir: str,
+        on_change: Optional[Callable[[str, Optional[AthPackage]], Any]] = None
+    ) -> None:
         self._dir = Path(packages_dir)
         self._packages: dict[str, AthPackage] = {}
+        self._on_change = on_change
+        self._observer: Optional[Observer] = None
 
     def scan(self) -> int:
-        """
-        Scan the packages directory and load all valid packages.
-
-        Returns the number of successfully loaded packages.
-        """
+        """Scan the packages directory and load all valid packages."""
         if not self._dir.exists():
-            logger.warning("Packages directory does not exist: %s", self._dir)
-            return 0
+            self._dir.mkdir(parents=True, exist_ok=True)
+            logger.info("Created missing packages directory: %s", self._dir)
 
         loaded = 0
         for entry in self._dir.iterdir():
             if not entry.is_dir():
                 continue
-            if not (entry / "manifest.json").exists():
-                continue
-
-            try:
-                package = AthPackage.load(entry)
-                self._packages[package.manifest.name] = package
+            
+            pkg = self.load_package(entry)
+            if pkg:
                 loaded += 1
-            except IdentityError as exc:
-                # Log and skip corrupt packages — don't crash the system
-                logger.error(
-                    "Failed to load package %s: %s", entry.name, exc
-                )
-
-        logger.info(
-            "Registry scan complete: %d/%d packages loaded",
-            loaded,
-            loaded + sum(1 for _ in self._dir.iterdir() if _.is_dir()) - loaded,
-        )
+        
         return loaded
 
+    def load_package(self, path: Path) -> Optional[AthPackage]:
+        """Load a single package from path."""
+        if not (path / "manifest.json").exists():
+            return None
+
+        try:
+            package = AthPackage.load(path)
+            self._packages[package.manifest.name] = package
+            return package
+        except IdentityError as exc:
+            logger.error("Failed to load package at %s: %s", path.name, exc)
+            return None
+
+    def start_watcher(self) -> None:
+        """Start the background filesystem observer."""
+        if self._observer:
+            return
+
+        self._observer = Observer()
+        self._observer.schedule(
+            PackageChangeHandler(self),
+            str(self._dir),
+            recursive=True
+        )
+        self._observer.start()
+        logger.info("📡 ADK Hot-Reloading Active: Watching %s", self._dir)
+
+    def stop_watcher(self) -> None:
+        """Stop the background filesystem observer."""
+        if self._observer:
+            self._observer.stop()
+            self._observer.join()
+            self._observer = None
+
+    def _handle_fs_change(self, path: Path) -> None:
+        """Internal handler for filesystem changes."""
+        logger.info("Detected change in package directory: %s", path.name)
+        # We perform a small delay to let file writes finish
+        import time
+        time.sleep(0.5)
+
+        old_pkg = None
+        # Try to find which package this path belongs to
+        for name, pkg in self._packages.items():
+            if pkg.path == path:
+                old_pkg = pkg
+                break
+        
+        new_pkg = self.load_package(path)
+        if self._on_change:
+            # Notify callback (e.g. engine) to update tool registration
+            pkg_name = new_pkg.manifest.name if new_pkg else (old_pkg.manifest.name if old_pkg else path.name)
+            self._on_change(pkg_name, new_pkg)
+
     def get(self, name: str) -> AthPackage:
-        """Get a package by name. Raises PackageNotFoundError if not found."""
+        """Get a package by name."""
         pkg = self._packages.get(name)
         if not pkg:
-            raise PackageNotFoundError(
-                f"Package '{name}' not found in registry",
-                context={"available": list(self._packages.keys())},
-            )
+            raise PackageNotFoundError(f"Package '{name}' not found")
         return pkg
 
-    def get_optional(self, name: str) -> Optional[AthPackage]:
-        """Get a package by name, returning None if not found."""
-        return self._packages.get(name)
-
     def list_packages(self) -> list[str]:
-        """List all loaded package names."""
         return list(self._packages.keys())
 
     @property

@@ -92,7 +92,10 @@ class AetherEngine:
             on_tool_call=self._on_tool_call,
             tool_router=self._router,
         )
-        self._registry = AetherRegistry(self._config.packages_dir)
+        self._registry = AetherRegistry(
+            self._config.packages_dir,
+            on_change=self._on_package_change
+        )
         self._admin_api = AdminAPIServer(port=18790)
 
         # ADK Tool Registry (legacy — kept for backward compat)
@@ -177,6 +180,20 @@ class AetherEngine:
         except Exception as exc:
             logger.debug("Analytics log failed: %s", exc)
 
+    async def _on_package_change(self, name: str, package: Optional[AthPackage]) -> None:
+        """Handle dynamic package loading/unloading."""
+        if package:
+            logger.info("Hot-Reloading package: %s", name)
+            # 1. Un-register old tools first if they exist
+            # Note: In a production version, we'd track which tools belong to which package.
+            # For now, we assume tool names are unique.
+            # 2. Register tools from package
+            # TODO: Implement dynamic module import for .ath packages
+            pass
+        else:
+            logger.info("Unloading package: %s", name)
+            # TODO: Clean up tools associated with this package
+
     def register_tool(self, name: str, tool: Any) -> None:
         """Register an ADK-compatible tool with the engine."""
         self._tools[name] = tool
@@ -197,6 +214,7 @@ class AetherEngine:
 
         # Load identity packages
         self._registry.scan()
+        self._registry.start_watcher()
 
         # Initialize Firebase (non-blocking — engine runs even if Firebase fails)
         firebase_ok = await self._firebase.initialize()
@@ -296,6 +314,7 @@ class AetherEngine:
         await self._session.stop()
         await self._playback.stop()
         await self._gateway.stop()
+        self._registry.stop_watcher()
         self._admin_api.stop()
 
         # End Firebase session with summary

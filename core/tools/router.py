@@ -36,6 +36,39 @@ class ToolRegistration:
     handler: Callable[..., Any]
 
 
+class ToolExecutionProfiler:
+    """Tracks performance metrics for tool executions."""
+    
+    def __init__(self) -> None:
+        self._execution_times: dict[str, list[float]] = {}
+        self._lock = asyncio.Lock()
+
+    async def record(self, tool_name: str, duration: float) -> None:
+        """Record an execution duration for a tool."""
+        async with self._lock:
+            if tool_name not in self._execution_times:
+                self._execution_times[tool_name] = []
+            # Keep only the last 1000 samples per tool to prevent memory leak
+            self._execution_times[tool_name].append(duration)
+            if len(self._execution_times[tool_name]) > 1000:
+                self._execution_times[tool_name].pop(0)
+
+    def get_stats(self, tool_name: str) -> dict[str, float]:
+        """Calculate p50, p95, and p99 latencies for a tool."""
+        times = sorted(self._execution_times.get(tool_name, []))
+        if not times:
+            return {"p50": 0.0, "p95": 0.0, "p99": 0.0, "avg": 0.0, "count": 0}
+        
+        count = len(times)
+        return {
+            "p50": times[int(count * 0.5)],
+            "p95": times[int(count * 0.95)] if count >= 20 else times[-1],
+            "p99": times[int(count * 0.99)] if count >= 100 else times[-1],
+            "avg": sum(times) / count,
+            "count": count,
+        }
+
+
 class ToolRouter:
     """
     Central dispatcher for Gemini Live function calling.
@@ -58,6 +91,7 @@ class ToolRouter:
 
     def __init__(self) -> None:
         self._tools: dict[str, ToolRegistration] = {}
+        self._profiler = ToolExecutionProfiler()
 
     def register(
         self,
@@ -74,6 +108,12 @@ class ToolRouter:
             handler=handler,
         )
         logger.info("Tool registered: %s", name)
+
+    def un_register(self, name: str) -> None:
+        """Remove a tool from the registry."""
+        if name in self._tools:
+            del self._tools[name]
+            logger.info("Tool un-registered: %s", name)
 
     def register_module(self, module: Any) -> None:
         """
@@ -157,6 +197,7 @@ class ToolRouter:
             json.dumps(args, default=str)[:200],
         )
 
+        start_time = asyncio.get_event_loop().time()
         try:
             # Support both sync and async handlers
             if inspect.iscoroutinefunction(tool.handler):
@@ -164,7 +205,10 @@ class ToolRouter:
             else:
                 result = await asyncio.to_thread(tool.handler, **args)
 
-            logger.info("✓ Tool %s completed successfully", name)
+            duration = asyncio.get_event_loop().time() - start_time
+            await self._profiler.record(name, duration)
+
+            logger.info("✓ Tool %s completed successfully (%.3fs)", name, duration)
             return result if isinstance(result, dict) else {"result": result}
 
         except TypeError as exc:
@@ -173,3 +217,7 @@ class ToolRouter:
         except Exception as exc:
             logger.error("Tool %s execution failed: %s", name, exc, exc_info=True)
             return {"error": f"Tool {name} failed: {exc}"}
+
+    def get_performance_report(self) -> dict[str, dict[str, float]]:
+        """Return performance stats for all tools."""
+        return {name: self._profiler.get_stats(name) for name in self.names}
