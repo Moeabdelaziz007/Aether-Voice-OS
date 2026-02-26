@@ -245,6 +245,8 @@ def get_tools() -> list[dict]:
                 "required": ["title"],
             },
             "handler": create_task,
+            "latency_tier": "p95_sub_500ms",
+            "idempotent": False,
         },
         {
             "name": "list_tasks",
@@ -267,6 +269,8 @@ def get_tools() -> list[dict]:
                 },
             },
             "handler": list_tasks,
+            "latency_tier": "p95_sub_500ms",
+            "idempotent": True,
         },
         {
             "name": "complete_task",
@@ -285,6 +289,8 @@ def get_tools() -> list[dict]:
                 "required": ["task_id"],
             },
             "handler": complete_task,
+            "latency_tier": "p95_sub_500ms",
+            "idempotent": False,
         },
         {
             "name": "add_note",
@@ -307,5 +313,7 @@ def get_tools() -> list[dict]:
                 "required": ["content"],
             },
             "handler": add_note,
+            "latency_tier": "p95_sub_500ms",
+            "idempotent": False,
         },
     ]

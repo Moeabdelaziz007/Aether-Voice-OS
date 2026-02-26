@@ -37,6 +37,7 @@ from core.tools import system_tool, tasks_tool, memory_tool, vision_tool
 from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.search_tool import get_search_tool
+from core.ai import handoff
 from core.admin_api import AdminAPIServer, SHARED_STATE
 from core.audio.processing import AdaptiveVAD
 
@@ -115,6 +116,7 @@ class AetherEngine:
         self._router.register_module(memory_tool)
         self._router.register_module(voice_tool_mod)
         self._router.register_module(vision_tool)
+        self._router.register_module(handoff)
         logger.info(
             "Neural Dispatcher ready: %d tools registered",
             self._router.count,
@@ -147,24 +149,29 @@ class AetherEngine:
     def _on_interrupt(self) -> None:
         """
         Called when Gemini signals barge-in — implements Cognitive Barge-in.
+        Refined with Hybrid Cognition: System 1 (Reflex) & System 2 (Semantic).
         """
         from core.audio.state import audio_state
         
         is_hard = audio_state.is_hard
         rms = audio_state.last_rms
+        stype = audio_state.silence_type
         
         vad_payload: dict[str, object] = {
             "type": "interrupted",
             "rms": rms,
-            "is_hard": is_hard
+            "is_hard": is_hard,
+            "silence_type": stype
         }
 
-        if is_hard:
-            logger.info("⚡ Hard Barge-in detected (RMS: %.2f) — Stopping playback.", rms)
+        # Cognitive Guard: If it's a hard signal but classified as non-speech, it's likely noise.
+        # We duck instead of stop to maintain Aether's "presence".
+        if is_hard and stype not in ("thinking", "breathing", "void"):
+            logger.info("⚡ Hard Barge-in (Speech detected, RMS: %.2f) — Stopping playback.", rms)
             self._playback.interrupt()
             vad_payload["action"] = "hard_stop"
         else:
-            logger.info("🌊 Collaborative Barge-in (Soft) — Ducking.", rms)
+            logger.info("🌊 Semantic Ducking (Type: %s, RMS: %.2f) — Maintaining presence.", stype, rms)
             self._playback.set_gain(0.2)
             vad_payload["action"] = "ducking"
 

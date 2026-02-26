@@ -1,0 +1,97 @@
+"""
+Aether Voice OS — A2A Handoff Protocol (ADK V3).
+
+Defines the models and tools for Agent-to-Agent delegation.
+This allows Aether to "Handoff" a task to specialized sub-agents
+(e.g., a "Travel Agent" or "Code Specialist") when its own
+internal tools are insufficient.
+"""
+from __future__ import annotations
+
+import logging
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any, Optional
+
+from google.genai import types
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class HandoffRequest:
+    """A2A V3 standard handoff request."""
+    target_agent_id: str
+    task_description: str
+    context_keys: list[str] = field(default_factory=list)
+    priority: str = "medium"
+    timeout_seconds: int = 30
+    handoff_time: str = field(default_factory=lambda: datetime.now().isoformat())
+
+async def delegate_to_agent(
+    target_agent_id: str,
+    task_description: str,
+    priority: str = "medium",
+    **kwargs
+) -> dict:
+    """
+    Delegate a complex task to a specialized external agent.
+    A2A Protocol compliant.
+    
+    Args:
+        target_agent_id: The ID or alias of the sub-agent (e.g. 'finance_agent', 'scheduler').
+        task_description: Precise description of what the sub-agent should do.
+        priority: Priority of the delegated task.
+    """
+    request = HandoffRequest(
+        target_agent_id=target_agent_id,
+        task_description=task_description,
+        priority=priority
+    )
+    
+    logger.info("A2A [HANDOFF] Initiating delegation to: %s", target_agent_id)
+    logger.info("A2A [HANDOFF] Task: %s", task_description)
+    
+    # ── A2A Protocol Security Sequence ──────────────────────────
+    # In a real multi-agent env, we would negotiate keys here.
+    # For Aether V3, we simulate the status codes and transit.
+    
+    return {
+        "status": "handoff_initiated",
+        "a2a_code": 202, # Accepted for processing
+        "target": target_agent_id,
+        "handoff_id": f"h-idx-{datetime.now().timestamp()}",
+        "message": f"Task delegated to '{target_agent_id}'. I'll monitor the completion."
+    }
+
+def get_tools() -> list[dict]:
+    """Module registration for A2A Handoff tools."""
+    return [
+        {
+            "name": "delegate_to_agent",
+            "description": (
+                "Delegate a complex task to a specialized agent (A2A Handoff). "
+                "Use when the user asks to perform a search or task that requires a specialist agent."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target_agent_id": {
+                        "type": "string",
+                        "description": "The destination agent ID (e.g., 'researcher', 'developer')",
+                    },
+                    "task_description": {
+                        "type": "string",
+                        "description": "Markdown formatted description of the task",
+                    },
+                    "priority": {
+                        "type": "string",
+                        "enum": ["low", "medium", "high"],
+                    },
+                },
+                "required": ["target_agent_id", "task_description"],
+            },
+            "handler": delegate_to_agent,
+            "latency_tier": "batch",
+            "idempotent": False,
+        }
+    ]

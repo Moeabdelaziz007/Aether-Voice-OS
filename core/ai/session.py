@@ -63,6 +63,7 @@ class GeminiLiveSession:
         self._running = False
         self._frame_buffer: list[tuple[float, bytes]] = []  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
+        self._active_handoffs: dict[str, dict] = {} # A2A V3 Handoff Tracking
 
     def _build_session_config(self) -> types.LiveConnectConfig:
         """Build the LiveConnectConfig with tool declarations."""
@@ -415,6 +416,16 @@ class GeminiLiveSession:
             # Fire analytics
             if self._on_tool_call:
                 asyncio.create_task(self._on_tool_call(fc.name, fc.args, result))
+
+            # --- A2A Handoff State Injection ---
+            if fc.name == "delegate_to_agent" and result.get("status") == "handoff_initiated":
+                handoff_id = result.get("handoff_id")
+                self._active_handoffs[handoff_id] = {
+                    "target": fc.args.get("target_agent_id"),
+                    "task": fc.args.get("task_description"),
+                    "timestamp": result.get("handoff_time")
+                }
+                logger.info("A2A [STATE] Tracking handoff: %s", handoff_id)
 
         # 4. Final step: Send all responses back in a single turn
         try:

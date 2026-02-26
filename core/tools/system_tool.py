@@ -84,6 +84,8 @@ def get_tools() -> list[dict]:
             ),
             "parameters": {},
             "handler": get_current_time,
+            "latency_tier": "low_latency",
+            "idempotent": True,
         },
         {
             "name": "get_system_info",
@@ -93,6 +95,8 @@ def get_tools() -> list[dict]:
             ),
             "parameters": {},
             "handler": get_system_info,
+            "latency_tier": "low_latency",
+            "idempotent": True,
         },
         {
             "name": "run_timer",
@@ -115,5 +119,7 @@ def get_tools() -> list[dict]:
                 "required": ["minutes"],
             },
             "handler": run_timer,
+            "latency_tier": "low_latency",
+            "idempotent": True,
         },
     ]
