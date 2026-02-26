@@ -190,7 +190,7 @@ class ToolRouter:
 
     async def dispatch(
         self,
-        function_call: Any,
+        function_call: types.FunctionCall,
     ) -> dict[str, Any]:
         """
         Neural Dispatcher: Routes tool_calls with Biometric Soul-Lock middleware.

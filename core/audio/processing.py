@@ -102,15 +102,20 @@ class VADResult:
 
 
 class RingBuffer:
-    """
-    Pre-allocated circular buffer for PCM int16 audio.
+    """Pre-allocated circular buffer for PCM int16 audio.
 
-    O(1) writes, O(n) reads (memcpy). Fixed memory footprint.
-    Used for windowed analysis without the O(n²) cost of
-    np.concatenate on every chunk.
+    This data structure provides O(1) writes and O(n) reads (via memcpy),
+    maintaining a fixed memory footprint. It is ideal for windowed analysis
+    of audio streams, avoiding the performance cost of re-allocating or
+    concatenating arrays on every new chunk.
     """
 
     def __init__(self, capacity_samples: int) -> None:
+        """Initializes the RingBuffer.
+
+        Args:
+            capacity_samples: The maximum number of int16 samples the buffer can hold.
+        """
         self._buf: NDArray[np.int16] = np.zeros(capacity_samples, dtype=np.int16)
         self._capacity = capacity_samples
         self._write_pos = 0
@@ -123,14 +128,19 @@ class RingBuffer:
 
     @property
     def capacity(self) -> int:
+        """The total capacity of the buffer in samples."""
         return self._capacity
 
     def write(self, data: NDArray[np.int16]) -> None:
-        """
-        Append samples to the ring buffer.
+        """Append samples to the ring buffer.
 
-        If data exceeds remaining capacity, the oldest samples
-        are overwritten (circular behavior).
+        If the data to be written is larger than the buffer's capacity,
+        only the most recent `capacity` samples from the data will be stored.
+        If the write operation would exceed the remaining space, it wraps
+        around, overwriting the oldest samples.
+
+        Args:
+            data: A numpy array of int16 PCM samples to write.
         """
         n = len(data)
         if n == 0:
@@ -156,10 +166,18 @@ class RingBuffer:
         self._count = min(self._count + n, self._capacity)
 
     def read_last(self, n: int) -> NDArray[np.int16]:
-        """
-        Read the last `n` samples from the buffer (newest data).
+        """Read the last `n` samples from the buffer.
 
-        Returns a contiguous copy (safe to use after further writes).
+        This method retrieves the most recently written samples from the buffer.
+        It returns a contiguous copy, ensuring that the returned array is
+        safe from modification by subsequent writes to the buffer.
+
+        Args:
+            n: The number of samples to read.
+
+        Returns:
+            A numpy array containing the last `n` samples, or fewer if the
+            buffer contains less than `n` samples.
         """
         n = min(n, self._count)
         if n == 0:
@@ -185,14 +203,21 @@ def find_zero_crossing(
     sample_rate: int = 16_000,
     max_lookahead_ms: float = 20.0,
 ) -> int:
-    """
-    Find the nearest zero-crossing point for click-free audio cuts.
+    """Find the nearest zero-crossing point for click-free audio cuts.
 
-    Used during barge-in to find the cleanest point to cut
-    the outgoing audio, avoiding audible pops/clicks.
+    Used during barge-in to find the cleanest point to cut the outgoing audio,
+    avoiding audible pops/clicks. The search is performed within a limited
+    lookahead window for performance.
 
-    Returns the sample index of the first zero-crossing found,
-    or len(pcm_data) if none found within the lookahead window.
+    Args:
+        pcm_data: Numpy array of PCM audio data.
+        sample_rate: The sample rate of the audio data.
+        max_lookahead_ms: The maximum time in milliseconds to search for a
+            zero-crossing.
+
+    Returns:
+        The sample index of the first zero-crossing found within the lookahead
+        window. If none is found, returns the length of the input data.
     """
     # ── Rust (Axon) dispatch ──
     if _RUST_BACKEND:
@@ -226,9 +251,12 @@ class HyperVADResult:
 
 
 class AdaptiveVAD:
-    """
-    HyperVAD: Tracks environmental noise statistics (mu, sigma)
-    to dynamically calculate Soft and Hard thresholds.
+    """HyperVAD engine that tracks environmental noise statistics.
+
+    This VAD dynamically calculates "soft" and "hard" thresholds for voice
+    activity by maintaining a running statistical model (mean and standard
+    deviation) of the recent audio energy. This allows it to adapt to
+    changing background noise levels.
     """
 
     def __init__(
@@ -238,6 +266,14 @@ class AdaptiveVAD:
         min_threshold: float = 0.01,
         max_threshold: float = 0.2,
     ) -> None:
+        """Initializes the AdaptiveVAD engine.
+
+        Args:
+            window_size_sec: The duration of the energy history window in seconds.
+            sample_rate: The sample rate of the audio being processed.
+            min_threshold: The minimum allowable VAD threshold.
+            max_threshold: The maximum allowable VAD threshold.
+        """
         self.min_threshold = min_threshold
         self.max_threshold = max_threshold
 
@@ -248,8 +284,13 @@ class AdaptiveVAD:
         self._sigma = 0.001
 
     def update(self, current_rms: float) -> tuple[float, float]:
-        """
-        Update noise statistics and return (soft_threshold, hard_threshold).
+        """Update noise statistics and return new (soft, hard) thresholds.
+
+        Args:
+            current_rms: The RMS energy of the latest audio chunk.
+
+        Returns:
+            A tuple containing the new soft and hard VAD thresholds.
         """
         self._history.append(current_rms)
         if len(self._history) > self._history_size:
@@ -274,6 +315,7 @@ class AdaptiveVAD:
 
     @property
     def noise_stats(self) -> dict[str, float]:
+        """Returns the current noise floor statistics (mu and sigma)."""
         return {"mu": self._mu, "sigma": self._sigma}
 
 
@@ -284,19 +326,33 @@ class SilenceType(Enum):
 
 
 class SilentAnalyzer:
-    """
-    Analyzes silence periods to detect human cognitive presence.
-    Uses Zero-Crossing Rate (ZCR) and RMS variance to find 'breathing' patterns.
+    """Analyzes silence periods to detect human cognitive presence.
+
+    Uses Zero-Crossing Rate (ZCR) and RMS energy variance to differentiate
+    between absolute silence ("void"), breathing, and thinking states.
     """
 
-    def __init__(self, sample_rate: int = 16000):
+    def __init__(self, sample_rate: int = 16000) -> None:
+        """Initializes the SilentAnalyzer.
+
+        Args:
+            sample_rate: The sample rate of the audio to be analyzed.
+        """
         self.sample_rate = sample_rate
         self._history_rms: list[float] = []
         self._history_zcr: list[float] = []
         self._window_size = 20  # 2 seconds at 100ms chunks
 
     def classify(self, pcm_chunk: NDArray[np.int16], current_rms: float) -> SilenceType:
-        """Classify the type of silence in the current chunk."""
+        """Classify the type of silence in the current chunk.
+
+        Args:
+            pcm_chunk: The numpy array of PCM audio data to analyze.
+            current_rms: The pre-calculated RMS energy of the chunk.
+
+        Returns:
+            A `SilenceType` enum member indicating the classification.
+        """
         if len(pcm_chunk) == 0:
             return SilenceType.VOID
 
@@ -332,9 +388,21 @@ def energy_vad(
     threshold: float = 0.02,
     adaptive_engine: Optional[AdaptiveVAD] = None,
 ) -> HyperVADResult:
-    """
-    RMS energy-based Voice Activity Detection with Hyper-Singularity Logic.
-    Fallbacks to enhanced_vad for multi-feature analysis if not using Rust.
+    """RMS energy-based Voice Activity Detection with adaptive thresholds.
+
+    If a Rust backend (`aether_cortex`) is available, it is used for a
+    high-performance calculation. Otherwise, this function falls back to
+    `enhanced_vad`.
+
+    Args:
+        pcm_chunk: Numpy array of PCM audio data.
+        threshold: The base energy threshold for VAD if no adaptive engine
+            is provided.
+        adaptive_engine: An optional `AdaptiveVAD` instance to provide
+            dynamic soft and hard thresholds.
+
+    Returns:
+        A `HyperVADResult` object with the VAD decision and energy stats.
     """
     # ── Rust (Synapse) dispatch ──
     if _RUST_BACKEND:
@@ -368,9 +436,21 @@ def enhanced_vad(
     threshold: float = 0.02,
     adaptive_engine: Optional[AdaptiveVAD] = None,
 ) -> HyperVADResult:
-    """
-    Multi-Feature VAD combining RMS Energy, Zero-Crossing Rate, and Spectral Centroid.
-    Provides ~25% accuracy boost over simple RMS by ignoring breathing and keyboard clicks.
+    """Multi-feature VAD combining RMS, ZCR, and Spectral Centroid.
+
+    This provides a more robust VAD decision than simple RMS energy by
+    incorporating features that help distinguish speech from noise like
+    breathing or keyboard clicks.
+
+    Args:
+        pcm_chunk: Numpy array of PCM audio data.
+        threshold: The base energy threshold for VAD if no adaptive engine
+            is provided.
+        adaptive_engine: An optional `AdaptiveVAD` instance to provide
+            dynamic soft and hard thresholds.
+
+    Returns:
+        A `HyperVADResult` object with the VAD decision and energy stats.
     """
     if len(pcm_chunk) == 0:
         return HyperVADResult(

@@ -28,13 +28,30 @@ logger = logging.getLogger(__name__)
 class SmoothMuter:
     """Applies graceful, ramped gain modifications to avoid pops/clicks."""
 
-    def __init__(self, ramp_samples=256):
+    def __init__(self, ramp_samples: int = 256) -> None:
+        """Initializes the SmoothMuter.
+
+        Args:
+            ramp_samples (int): The number of samples over which to apply the
+                gain ramp, controlling the speed of the fade in/out.
+        """
         self._ramp_samples = ramp_samples
         self._current_gain = 1.0
         self._target_gain = 1.0
 
     def process(self, pcm_chunk: np.ndarray) -> np.ndarray:
-        """Apply gain ramp smoothly over the chunk."""
+        """Apply gain ramp smoothly over the chunk.
+
+        This method calculates and applies a linear gain ramp to the incoming
+        audio chunk to smoothly transition between volume levels, preventing
+        audible clicks or pops.
+
+        Args:
+            pcm_chunk: A numpy array of int16 PCM audio data.
+
+        Returns:
+            A numpy array of int16 PCM audio data with the gain applied.
+        """
         if self._current_gain == self._target_gain:
             if self._current_gain == 1.0:
                 return pcm_chunk.copy()
@@ -79,10 +96,12 @@ class SmoothMuter:
 
         return (pcm_chunk * gains).astype(np.int16)
 
-    def mute(self):
+    def mute(self) -> None:
+        """Initiates a smooth fade-out to silence."""
         self._target_gain = 0.0
 
-    def unmute(self):
+    def unmute(self) -> None:
+        """Initiates a smooth fade-in to full volume."""
         self._target_gain = 1.0
 
 
@@ -104,6 +123,20 @@ class AudioCapture:
         paralinguistic_analyzer: Optional[ParalinguisticAnalyzer] = None,
         on_affective_data: Optional[Callable[[ParalinguisticFeatures], Any]] = None,
     ) -> None:
+        """Initializes the AudioCapture service.
+
+        This class is responsible for capturing audio from the microphone,
+        running the "Thalamic Gate" AEC logic, and pushing the resulting
+        audio data to a queue for downstream processing.
+
+        Args:
+            config: The audio configuration object.
+            output_queue: The asyncio queue to which captured audio chunks are sent.
+            analyzer: An optional SilentAnalyzer for classifying silence types.
+            vad_engine: An optional AdaptiveVAD engine for voice activity detection.
+            paralinguistic_analyzer: An optional analyzer for affective computing.
+            on_affective_data: An optional callback to handle affective features.
+        """
         self._config = config
         self._async_queue = output_queue
         # We no longer need an intermediate queue.Queue

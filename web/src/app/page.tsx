@@ -35,8 +35,8 @@ export default function Home() {
 
     return (
         <main className="min-h-screen p-8 flex items-center justify-center bg-transparent">
-            {/* 
-        This is the floating widget boundary. 
+            {/*
+        This is the floating widget boundary.
         In Tauri, the window will be transparent and frameless around this.
       */}
             <WidgetContainer isExpanded={isExpanded}>
