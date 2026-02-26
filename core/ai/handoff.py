@@ -11,11 +11,21 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
+import asyncio
 
-from google.genai import types
+if TYPE_CHECKING:
+    from core.ai.hive import HiveCoordinator
 
 logger = logging.getLogger(__name__)
+
+_hive: Optional[HiveCoordinator] = None
+_restart_event: Optional[asyncio.Event] = None
+
+def set_hive_params(hive: HiveCoordinator, restart_event: asyncio.Event) -> None:
+    global _hive, _restart_event
+    _hive = hive
+    _restart_event = restart_event
 
 @dataclass
 class HandoffRequest:
@@ -51,16 +61,26 @@ async def delegate_to_agent(
     logger.info("A2A [HANDOFF] Initiating delegation to: %s", target_agent_id)
     logger.info("A2A [HANDOFF] Task: %s", task_description)
     
-    # ── A2A Protocol Security Sequence ──────────────────────────
-    # In a real multi-agent env, we would negotiate keys here.
-    # For Aether V3, we simulate the status codes and transit.
-    
+    if _hive and _restart_event:
+        success = _hive.request_handoff(target_agent_id, task_description)
+        if success:
+            _restart_event.set()
+            return {
+                "status": "handoff_initiated",
+                "a2a_code": 202,
+                "target": target_agent_id,
+                "handoff_id": f"h-idx-{datetime.now().timestamp()}",
+                "message": f"Handoff to Expert '{target_agent_id}' successful. Restarting session..."
+            }
+        else:
+            return {"status": "error", "message": f"Target expert '{target_agent_id}' not found in registry."}
+
     return {
-        "status": "handoff_initiated",
+        "status": "handoff_simulated",
         "a2a_code": 202, # Accepted for processing
         "target": target_agent_id,
         "handoff_id": f"h-idx-{datetime.now().timestamp()}",
-        "message": f"Task delegated to '{target_agent_id}'. I'll monitor the completion."
+        "message": f"Task delegated to '{target_agent_id}' (Simulation). I'll monitor the completion."
     }
 
 def get_tools() -> list[dict]:

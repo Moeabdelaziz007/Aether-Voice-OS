@@ -41,6 +41,7 @@ from core.ai import handoff
 from core.admin_api import AdminAPIServer, SHARED_STATE
 from core.audio.processing import AdaptiveVAD
 from core.ai.hive import HiveCoordinator
+from core.tools import hive_memory
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,12 @@ class AetherEngine:
         self._router.register_module(voice_tool_mod)
         self._router.register_module(vision_tool)
         self._router.register_module(handoff)
+        self._router.register_module(hive_memory)
+        
+        # Connect Hive to tools
+        handoff.set_hive_params(self._hive, self._session_restart)
+        hive_memory.set_firebase_connector(self._firebase)
+
         logger.info(
             "Neural Dispatcher ready: %d tools registered",
             self._router.count,
@@ -267,20 +274,61 @@ class AetherEngine:
             await self._capture.start()
             await self._playback.start()
 
-            # Connect to Gemini
-            await self._session.connect()
-
             # Integrate Admin API locally
             self._admin_api.start()
 
-            # Run all tasks concurrently
-            async with asyncio.TaskGroup() as tg:
-                tg.create_task(self._capture.run(), name="audio-capture")
-                tg.create_task(self._playback.run(), name="audio-playback")
-                tg.create_task(self._session.run(), name="gemini-session")
-                tg.create_task(self._gateway.run(), name="gateway")
-                tg.create_task(self._admin_sync_loop(), name="admin-sync")
-                tg.create_task(self._wait_for_shutdown(), name="shutdown-watcher")
+            # The Hive Loop: Manages the Gemini session lifecycle and soul handoffs
+            while not self._shutdown_event.is_set():
+                self._session_restart.clear()
+                
+                # Create a fresh session with the active expert soul
+                active_soul = self._hive.active_soul
+                self._session = GeminiLiveSession(
+                    self._config.ai,
+                    self._audio_in,
+                    self._audio_out,
+                    on_interrupt=self._on_interrupt,
+                    on_tool_call=self._on_tool_call,
+                    tool_router=self._router,
+                    soul_manifest=active_soul.manifest
+                )
+                
+                await self._session.connect()
+                
+                logger.info("✦ Hive Active: Expert '%s' taking control", active_soul.manifest.name)
+
+                # Run session alongside other background tasks
+                async with asyncio.TaskGroup() as tg:
+                    tg.create_task(self._capture.run(), name="audio-capture")
+                    tg.create_task(self._playback.run(), name="audio-playback")
+                    session_task = tg.create_task(self._session.run(), name="gemini-session")
+                    tg.create_task(self._gateway.run(), name="gateway")
+                    tg.create_task(self._admin_sync_loop(), name="admin-sync")
+                    
+                    # Watcher for shutdown or restart
+                    restart_waiter = tg.create_task(self._session_restart.wait(), name="restart-waiter")
+                    shutdown_waiter = tg.create_task(self._shutdown_event.wait(), name="shutdown-waiter")
+                    
+                    # Wait for either session to end, restart triggered, or shutdown
+                    done, pending = await asyncio.wait(
+                        [session_task, restart_waiter, shutdown_waiter],
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
+                    
+                    # Clean up pending tasks in the group
+                    for p in pending:
+                        p.cancel()
+                
+                if self._session_restart.is_set():
+                    logger.info("🔄 Hive Handoff: Preparing next expert...")
+                    await self._session.stop()
+                    # Brief delay for audio cross-fade (simulated)
+                    await asyncio.sleep(1.0)
+                else:
+                    # If sesson ended naturally and not because of restart/shutdown
+                    if not self._shutdown_event.is_set():
+                        logger.warning("Gemini session ended unexpectedly. Restarting in 5s...")
+                        await asyncio.sleep(5.0)
 
         except* KeyboardInterrupt:
             logger.info("Keyboard interrupt received")

@@ -30,7 +30,7 @@ class HiveCoordinator:
         self, 
         registry: AetherRegistry, 
         router: ToolRouter,
-        default_soul_name: str = "AetherArchitect" 
+        default_soul_name: str = "ArchitectExpert" 
     ) -> None:
         self._registry = registry
         self._router = router
