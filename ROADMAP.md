@@ -17,32 +17,32 @@ We have successfully built the highly complicated backend. Aether now "listens a
 
 ---
 
-## 🎨 Phase 2: The "Wispr Flow" Visual UX (🚧 NEXT UP)
+## 🎨 Phase 2: The "Wispr Flow" Visual UX (✅ COMPLETED)
 
 The goal is an interface that feels "alive and always with you" — a sleek, floating widget design that visualizes thought and speech.
 
 - **2.1 Global Floating Widget (Tauri/Next.js)**
-  - [ ] Initialize Next.js 15 Monorepo/Workspace for the frontend UI.
-  - [ ] Set up Tauri V2 to wrap the Next.js app natively.
-  - [ ] Configure `tauri.conf.json` for a borderless, transparent, floating window constraint (always on top).
-  - [ ] Implement MacOS-like global hotkey listener (`Cmd+Option+Space`) in Tauri Rust backend.
-  - [ ] Build the base "pill" React container with TailwindCSS (dark mode, glassmorphism `backdrop-blur-md`, carbon fiber aesthetics).
+  - [x] Initialize Next.js 15 Monorepo/Workspace for the frontend UI.
+  - [x] Set up Tauri V2 to wrap the Next.js app natively.
+  - [x] Configure `tauri.conf.json` for a borderless, transparent, floating window constraint (always on top).
+  - [x] Implement MacOS-like global hotkey listener (`Cmd+Option+Space`) in Tauri Rust backend.
+  - [x] Build the base "pill" React container with TailwindCSS (dark mode, glassmorphism `backdrop-blur-md`, carbon fiber aesthetics).
 
 - **2.2 The "Moving Line" Audio Visualizer**
-  - [ ] Set up WebGL canvas or Framer Motion wrapper for high-FPS rendering.
-  - [ ] Write `LiveWaveLine.tsx` React Component accepting dynamic PCM buffers.
-  - [ ] Connect `LiveWaveLine` to real-time `AnalyzerNode` from the browser's audio context (or via WebSocket telemetry from the Python engine).
-  - [ ] Implement visual state machine triggers:
-    - [ ] **Idle:** thin grey pulse.
-    - [ ] **Listening:** cyan glowing expanding string (`box-shadow: 0 0 15px cyan`).
-    - [ ] **Thinking:** fast pulsating geometric shifts.
-    - [ ] **Speaking:** aggressive dynamic waveform matching Gemini's output decibel array.
+  - [x] Set up WebGL canvas or Framer Motion wrapper for high-FPS rendering.
+  - [x] Write `LiveWaveLine.tsx` React Component accepting dynamic PCM buffers.
+  - [x] Connect `LiveWaveLine` to real-time `AnalyzerNode` from the browser's audio context (or via WebSocket telemetry from the Python engine).
+  - [x] Implement visual state machine triggers:
+    - [x] **Idle:** thin grey pulse.
+    - [x] **Listening:** cyan glowing expanding string (`box-shadow: 0 0 15px cyan`).
+    - [x] **Thinking:** fast pulsating geometric shifts.
+    - [x] **Speaking:** aggressive dynamic waveform matching Gemini's output decibel array.
 
 - **2.3 The Conversation Log UX**
-  - [ ] Create an expandable, hidden transcription drawer in the DOM (`framer-motion` height animation).
-  - [ ] Connect UI to OpenClaw WebSocket to receive `ModelTurn` text chunks in real-time.
-  - [ ] Implement `MarkdownRenderer` for token streaming with smooth simulated typing.
-  - [ ] Add auto-scroll-to-bottom logic for continuous conversation logs.
+  - [x] Create an expandable, hidden transcription drawer in the DOM (`framer-motion` height animation).
+  - [x] Connect UI to OpenClaw WebSocket to receive `ModelTurn` text chunks in real-time.
+  - [x] Implement `MarkdownRenderer` for token streaming with smooth simulated typing.
+  - [x] Add auto-scroll-to-bottom logic for continuous conversation logs.
 
 ---
 

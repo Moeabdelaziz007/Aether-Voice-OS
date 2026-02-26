@@ -1,86 +1,105 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef } from 'react';
+
+type AudioState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 interface LiveWaveLineProps {
-    isListening: boolean;
-    audioData?: number[]; // Array of values 0-1
+    state: AudioState;
 }
 
-export const LiveWaveLine: React.FC<LiveWaveLineProps> = ({ isListening, audioData = [] }) => {
-    const [bars, setBars] = useState<number[]>(Array(40).fill(0.1));
+export function LiveWaveLine({ state }: LiveWaveLineProps) {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
-        let animationFrame: number;
-        let isActive = true;
+        const canvas = canvasRef.current;
+        if (!canvas) return;
 
-        const animate = () => {
-            if (!isActive) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
 
-            setBars((prevBars) => {
-                return prevBars.map((_, i) => {
-                    if (!isListening) {
-                        // Idle state: smooth small sine wave
-                        const time = Date.now() / 1000;
-                        return 0.1 + Math.sin(time * 2 + i * 0.2) * 0.05;
-                    }
+        let animationFrameId: number;
+        let time = 0;
 
-                    // Active speaking state
-                    if (audioData.length > 0) {
-                        // Map actual audio data if provided
-                        const value = audioData[i % audioData.length] || 0;
-                        return 0.1 + value * 0.8; // scale to 0.1 - 0.9
-                    } else {
-                        // Simulated active speaking state if no data provided
-                        const randomJitter = Math.random() * 0.4;
-                        const centerPeak = 1 - Math.abs(i - 20) / 20; // 0 to 1 peak in center
-                        return 0.1 + centerPeak * 0.6 + randomJitter;
-                    }
-                });
-            });
+        const render = () => {
+            time += 0.05;
 
-            animationFrame = requestAnimationFrame(animate);
+            // Clear canvas with transparent background
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Define visual properties based on state
+            let color = '#333333';
+            let amplitude = 2;
+            let frequency = 0.02;
+            let glow = 0;
+
+            switch (state) {
+                case 'listening':
+                    color = '#00f3ff';
+                    amplitude = 15;
+                    frequency = 0.05;
+                    glow = 15;
+                    break;
+                case 'thinking':
+                    color = '#ff00ff'; // neon purple/pink
+                    amplitude = 20;
+                    frequency = 0.1;
+                    glow = 20;
+                    break;
+                case 'speaking':
+                    color = '#00f3ff';
+                    amplitude = 30 + Math.sin(time) * 10; // Dynamic amplitude mock
+                    frequency = 0.08;
+                    glow = 25;
+                    break;
+                case 'idle':
+                default:
+                    color = '#555555';
+                    amplitude = 3;
+                    frequency = 0.01;
+                    glow = 2;
+                    break;
+            }
+
+            ctx.beginPath();
+            ctx.moveTo(0, canvas.height / 2);
+
+            for (let x = 0; x < canvas.width; x++) {
+                // Create a sine wave combined with some noise/secondary wave for organic feel
+                const y = canvas.height / 2 +
+                    Math.sin(x * frequency + time) * amplitude *
+                    Math.sin(x * 0.01);
+                ctx.lineTo(x, y);
+            }
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+
+            // Add glow effect
+            ctx.shadowBlur = glow;
+            ctx.shadowColor = color;
+
+            ctx.stroke();
+
+            animationFrameId = requestAnimationFrame(render);
         };
 
-        animate();
+        render();
 
         return () => {
-            isActive = false;
-            cancelAnimationFrame(animationFrame);
+            cancelAnimationFrame(animationFrameId);
         };
-    }, [isListening, audioData]);
+    }, [state]);
 
+    // Make canvas responsive to its container width using 100% width, fixed internal resolution
     return (
-        <div className="flex items-center justify-center gap-[3px] h-24 w-full px-4 overflow-hidden relative">
-            {/* Glow effect back layer */}
-            <div className="absolute inset-0 bg-blue-500/10 blur-3xl rounded-full" />
-
-            {bars.map((height, i) => (
-                <motion.div
-                    key={i}
-                    animate={{
-                        height: `${Math.max(10, height * 100)}%`,
-                        backgroundColor: isListening
-                            ? i % 3 === 0
-                                ? "#60A5FA" // blue-400
-                                : i % 3 === 1
-                                    ? "#A78BFA" // violet-400
-                                    : "#F472B6" // pink-400
-                            : "#4B5563", // gray-600
-                    }}
-                    transition={{
-                        type: "spring",
-                        damping: 15,
-                        stiffness: 200,
-                        mass: 0.5,
-                    }}
-                    className="w-1.5 rounded-full"
-                    style={{
-                        boxShadow: isListening ? "0 0 10px rgba(96, 165, 250, 0.5)" : "none",
-                    }}
-                />
-            ))}
+        <div className="w-full h-16 flex items-center justify-center">
+            <canvas
+                ref={canvasRef}
+                width={300}
+                height={64}
+                className="w-full h-full object-contain"
+            />
         </div>
     );
-};
+}
