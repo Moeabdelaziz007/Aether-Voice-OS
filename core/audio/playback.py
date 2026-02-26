@@ -104,9 +104,13 @@ class AudioPlayback:
                 # 1. Get audio from AI session (asyncio)
                 audio_bytes = await self._async_queue.get()
                 
-                # 2. Push to thread-safe buffer (blocking if full)
-                # We use to_thread to avoid blocking the event loop on queue.put
-                await asyncio.to_thread(self._buffer.put, audio_bytes)
+                # 2. Push to thread-safe buffer with lightweight async spinlock (Zero thread overhead)
+                while self._running:
+                    try:
+                        self._buffer.put_nowait(audio_bytes)
+                        break
+                    except queue.Full:
+                        await asyncio.sleep(0.005)
                 
             except asyncio.CancelledError:
                 break

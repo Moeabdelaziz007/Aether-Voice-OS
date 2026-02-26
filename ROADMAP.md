@@ -12,8 +12,9 @@ We have successfully built the highly complicated backend. Aether now "listens a
 
 - [x] **1.1 Gemini Live Audio Integration:** Bidirectional PCM audio streaming using `google-genai` and Gemini 2.5 Flash Native Audio.
 - [x] **1.2 Tumbling Window Buffer:** Advanced digital signal processing (VAD, Zero-Crossing detection) for ultra-low latency & click-free interruptions.
-- [x] **1.3 The `.ath` Package System:** Agent DNA encapsulated into portable packages (`Soul.md`, `Skills.md`, `manifest.json`, `heartbeat.md`).
-- [x] **1.4 OpenClaw Gateway Base:** A secure WebSocket gateway orchestrating connections between the UI and the ADK logic layer.
+- [x] **1.3 PyAudio Optimizations:** Replaced thread-pool queues with direct `asyncio.call_soon_threadsafe` and lightweight async spinlocks for zero-overhead capture/playback.
+- [x] **1.4 The `.ath` Package System:** Agent DNA encapsulated into portable packages (`Soul.md`, `Skills.md`, `manifest.json`, `heartbeat.md`).
+- [x] **1.5 OpenClaw Gateway Base:** A secure WebSocket gateway orchestrating connections between the UI and the ADK logic layer.
 
 ---
 

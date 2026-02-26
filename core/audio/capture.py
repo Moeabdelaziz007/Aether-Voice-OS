@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 class AudioCapture:
     """
-    Microphone (C-Callback) → queue.Queue (Buffer) → asyncio.Queue (Downstream).
+    Microphone (C-Callback) → asyncio.Queue (Downstream).
+    Direct Event-Loop Injection architecture eliminates thread-hopping latency.
 
     The "Thalamic Gate" logic resides in the callback to minimize 
     latency between echo detection and suppression.
@@ -38,10 +39,22 @@ class AudioCapture:
     ) -> None:
         self._config = config
         self._async_queue = output_queue
-        self._buffer: queue.Queue[bytes] = queue.Queue(maxsize=100)
+        # We no longer need an intermediate queue.Queue
         self._pya: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
+        self._loop: Optional[asyncio.AbstractEventLoop] = None
+
+    def _push_to_async_queue(self, msg: dict[str, object]) -> None:
+        """Thread-safe injection into the asyncio event loop."""
+        try:
+            self._async_queue.put_nowait(msg)
+        except asyncio.QueueFull:
+            try:
+                self._async_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                pass
+            self._async_queue.put_nowait(msg)
 
     def _callback(
         self, in_data: bytes, frame_count: int, time_info: dict, status: int
@@ -50,36 +63,27 @@ class AudioCapture:
         High-priority Thalamic Gate callback.
         Analyzes energy and gates microphone input based on AI state.
         """
-        # 1. Convert byte buffer to NumPy for DSP analysis
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
-        
-        # 2. Check Thalamic State (is the AI currently speaking?)
         is_playing = audio_state.is_playing
-        
-        # 3. Dynamic Thresholding (AEC Simulation)
-        # Normal threshold: 0.02 (Standard sensitivity)
-        # Busy threshold: 0.15 (Suppresses AI echo from speakers)
         threshold = 0.15 if is_playing else 0.02
-        
         vad = energy_vad(pcm_chunk, threshold=threshold)
         
-        # 4. Gate Control
         # We pass the audio forward if:
-        # a) It contains clear speech (突破 thershold)
-        # b) The AI is silent (Thalamu is clear)
+        # a) It contains clear speech
+        # b) The AI is silent
         if vad.is_speech or not is_playing:
-            try:
-                self._buffer.put_nowait(in_data)
-            except queue.Full:
-                # Overflow protection
-                pass
+            msg = {
+                "data": in_data,
+                "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}"
+            }
+            if self._loop and not self._loop.is_closed():
+                self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
         
-        # We always return (None, paContinue) because we handle the 
-        # actual data transfer via the thread-safe buffer queue.
         return (None, pyaudio.paContinue)
 
     async def start(self) -> None:
         """Open the microphone with high-performance callback."""
+        self._loop = asyncio.get_running_loop()
         self._pya = pyaudio.PyAudio()
 
         try:
@@ -92,7 +96,7 @@ class AudioCapture:
             ) from exc
 
         logger.info(
-            "⚡ Thalamic Capture Active: %s @ %dHz (Callback Mode)",
+            "⚡ Thalamic Capture Active: %s @ %dHz (Direct Async Injection)",
             mic_info.get("name", "unknown"),
             self._config.send_sample_rate,
         )
@@ -110,37 +114,16 @@ class AudioCapture:
 
     async def run(self) -> None:
         """
-        Feeds processed audio from the buffer to the asyncio queue.
+        Keeps the capture lifecycle active for the TaskGroup.
+        Audio routing is now handled natively via call_soon_threadsafe.
         """
         if not self._stream:
             raise AudioDeviceNotFoundError("Call start() before run()")
 
-        logger.info("Audio capture feeder running")
+        logger.info("Audio capture task active (Zero-latency direct injection)")
 
         while self._running:
-            try:
-                # 1. Wait for gated audio from callback
-                data = await asyncio.to_thread(self._buffer.get)
-                
-                # 2. Package for AI session (Blob format)
-                msg = {"data": data, "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}"}
-                
-                # 3. Push to asyncio queue with overflow protection
-                try:
-                    self._async_queue.put_nowait(msg)
-                except asyncio.QueueFull:
-                    # Drop oldest to maintain real-time flow
-                    try:
-                        self._async_queue.get_nowait()
-                    except asyncio.QueueEmpty:
-                        pass
-                    self._async_queue.put_nowait(msg)
-                    
-            except asyncio.CancelledError:
-                break
-            except Exception as exc:
-                logger.error("Capture feeder error: %s", exc)
-                await asyncio.sleep(0.1)
+            await asyncio.sleep(1.0)
 
     async def stop(self) -> None:
         """Release audio resources."""
