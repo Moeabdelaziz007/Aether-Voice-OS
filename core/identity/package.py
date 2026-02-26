@@ -36,6 +36,10 @@ class SoulManifest(BaseModel):
         default_factory=list, 
         description="Memory namespaces this agent is optimized for"
     )
+    expertise: dict[str, float] = Field(
+        default_factory=dict,
+        description="Domain-specific expertise scores (0.0 to 1.0)"
+    )
     author: Optional[str] = None
     checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
 

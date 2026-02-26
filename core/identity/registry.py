@@ -140,6 +140,32 @@ class AetherRegistry:
     def list_packages(self) -> list[str]:
         return list(self._packages.keys())
 
+    def find_expert(self, query: str) -> Optional[AthPackage]:
+        """
+        Find the best Expert Soul for a given query based on Expertise Matrix.
+        
+        Simple keyword-based implementation for now. In Phase 3.3, 
+        this will use Vector Search.
+        """
+        query = query.lower()
+        candidates: list[tuple[AthPackage, float]] = []
+
+        for name, pkg in self._packages.items():
+            best_domain_score = 0.0
+            for domain, score in pkg.manifest.expertise.items():
+                if domain.lower() in query:
+                    best_domain_score = max(best_domain_score, score)
+            
+            if best_domain_score > 0:
+                candidates.append((pkg, best_domain_score))
+
+        if not candidates:
+            return None
+
+        # Return the one with the highest expertise score
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return candidates[0][0]
+
     @property
     def count(self) -> int:
         return len(self._packages)

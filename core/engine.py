@@ -40,6 +40,7 @@ from core.tools.search_tool import get_search_tool
 from core.ai import handoff
 from core.admin_api import AdminAPIServer, SHARED_STATE
 from core.audio.processing import AdaptiveVAD
+from core.ai.hive import HiveCoordinator
 
 logger = logging.getLogger(__name__)
 
@@ -73,6 +74,7 @@ class AetherEngine:
 
         # Neural Dispatcher — routes Gemini tool_calls to handlers
         self._router = ToolRouter()
+        self._router.init_vector_store(self._config.ai.api_key)
         self._register_tools()
 
         # Components
@@ -98,12 +100,18 @@ class AetherEngine:
             self._config.packages_dir,
             on_change=self._on_package_change
         )
+        self._hive = HiveCoordinator(
+            registry=self._registry,
+            router=self._router,
+            default_soul_name="ArchitectExpert"
+        )
         self._admin_api = AdminAPIServer(port=18790)
 
         # ADK Tool Registry (legacy — kept for backward compat)
         self._tools: dict[str, Any] = {}
 
         self._shutdown_event = asyncio.Event()
+        self._session_restart = asyncio.Event()
 
     def _register_tools(self) -> None:
         """Register all tool modules with the Neural Dispatcher."""

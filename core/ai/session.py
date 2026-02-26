@@ -51,8 +51,10 @@ class GeminiLiveSession:
         on_interrupt: Optional[callable] = None,
         on_tool_call: Optional[callable] = None,
         tool_router: Optional["ToolRouter"] = None,
+        soul_manifest: Optional["SoulManifest"] = None,
     ) -> None:
         self._config = config
+        self._soul = soul_manifest
         self._in_queue = audio_in_queue
         self._out_queue = audio_out_queue
         self._on_interrupt = on_interrupt
@@ -84,9 +86,15 @@ class GeminiLiveSession:
             tools.append(types.Tool(google_search=types.GoogleSearch()))
             logger.info("Google Search grounding enabled")
 
+        # ── Hive expert logic ──
+        system_instruction = self._config.system_instruction
+        if self._soul:
+            system_instruction = f"{self._soul.persona}\n\nPrimary Domain: {self._soul.manifest.expertise if hasattr(self._soul, 'manifest') else {}}\n\n{system_instruction}"
+            logger.info("A2A [SESSION] Applying Expert Soul: %s", self._soul.name)
+
         config = types.LiveConnectConfig(
             response_modalities=["AUDIO"],
-            system_instruction=self._config.system_instruction,
+            system_instruction=system_instruction,
             tools=tools,
         )
 

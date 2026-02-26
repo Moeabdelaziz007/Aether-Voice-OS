@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
 from google.genai import types
+from core.tools.vector_store import LocalVectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +35,8 @@ class ToolRegistration:
     description: str
     parameters: dict[str, Any]
     handler: Callable[..., Any]
+    latency_tier: str = "p95_sub_500ms"
+    idempotent: bool = True
 
 
 class ToolExecutionProfiler:
@@ -87,6 +90,12 @@ class ToolRouter:
     def __init__(self) -> None:
         self._tools: dict[str, ToolRegistration] = {}
         self._profiler = ToolExecutionProfiler()
+        self._vector_store: Optional[LocalVectorStore] = None
+
+    def init_vector_store(self, api_key: str) -> None:
+        """Initialize the semantic search engine."""
+        self._vector_store = LocalVectorStore(api_key=api_key)
+        logger.info("Neural Dispatcher: Semantic indexing engine initialized.")
 
     def register(
         self,
@@ -106,6 +115,17 @@ class ToolRouter:
             latency_tier=latency_tier,
             idempotent=idempotent
         )
+        
+        # Async indexing (Best effort)
+        if self._vector_store:
+            asyncio.create_task(
+                self._vector_store.add_text(
+                    key=name,
+                    text=f"Title: {name}; Description: {description}",
+                    metadata={"name": name}
+                )
+            )
+            
         logger.info("Tool registered: %s [Tier: %s]", name, latency_tier)
 
     def un_register(self, name: str) -> None:
@@ -176,11 +196,31 @@ class ToolRouter:
         args = function_call.args or {}
 
         if name not in self._tools:
-            logger.error("Unknown tool called: %s", name)
-            return {
-                "error": f"Unknown tool: {name}",
-                "available_tools": self.names,
-            }
+            logger.warning("Unmatched tool called: %s. Attempting semantic recovery...", name)
+            
+            # --- Semantic Recovery Sequence ---
+            if self._vector_store:
+                try:
+                    query_vec = await self._vector_store.get_query_embedding(name)
+                    hits = self._vector_store.search(query_vec, limit=1)
+                    if hits and hits[0]["similarity"] > 0.85:
+                        match = hits[0]["key"]
+                        logger.info("🎯 Semantic Match Found: %s -> %s (Sim: %.2f)", name, match, hits[0]["similarity"])
+                        name = match # Redirect to the closest tool
+                    else:
+                        return {
+                            "error": f"Tool '{name}' not found and no close semantic matches (>0.85).",
+                            "available_tools": self.names,
+                            "x-a2a-status": 404
+                        }
+                except Exception as e:
+                    logger.error("Semantic recovery failed: %s", e)
+            
+            if name not in self._tools:
+                return {
+                    "error": f"Unknown tool: {name}",
+                    "available_tools": self.names,
+                }
 
         tool = self._tools[name]
         
