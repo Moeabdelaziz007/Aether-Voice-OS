@@ -38,9 +38,9 @@ class HiveCoordinator:
         self._router = router
         self._active_soul: Optional[AthPackage] = None
         self._default_soul_name = default_soul_name
-        self._context_bridge: Dict[
-            str, str
-        ] = {}  # Key-value store for cross-soul state
+        self._context_bridge: Dict[str, str] = (
+            {}
+        )  # Key-value store for cross-soul state
 
     @property
     def active_soul(self) -> AthPackage:

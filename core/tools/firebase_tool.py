@@ -251,9 +251,11 @@ class FirebaseConnector:
                     "avg_engagement": round(avg_engagement, 2),
                     "avg_pitch": round(avg_pitch, 1),
                     "interaction_count": len(docs),
-                    "trend": "improving"
-                    if docs[-1]["engagement_score"] > docs[0]["engagement_score"]
-                    else "stable/declining",
+                    "trend": (
+                        "improving"
+                        if docs[-1]["engagement_score"] > docs[0]["engagement_score"]
+                        else "stable/declining"
+                    ),
                 },
             }
         except Exception as exc:

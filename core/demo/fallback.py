@@ -2,11 +2,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 class DemoFallback:
     """
     Ensures the demo always succeeds by providing manual intervention triggers.
     In high-stakes presentations, acoustics might fail; this is the safety net.
     """
+
     def __init__(self, engine):
         self._engine = engine
         self._manual_trigger = False

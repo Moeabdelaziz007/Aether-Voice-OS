@@ -378,30 +378,30 @@ def enhanced_vad(
         )
 
     normalized = pcm_chunk.astype(np.float32) / 32768.0
-    
+
     # 1. RMS Energy
     rms = float(np.sqrt(np.mean(normalized**2)))
-    
+
     # 2. Zero-Crossing Rate (speech = low/medium, noise = high)
     zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
     zcr = len(zero_crossings) / len(pcm_chunk)
-    
+
     # 3. Spectral Centroid
     spectrum = np.abs(np.fft.rfft(normalized))
-    freqs = np.fft.rfftfreq(len(pcm_chunk), 1/16000)
+    freqs = np.fft.rfftfreq(len(pcm_chunk), 1 / 16000)
     spec_sum = np.sum(spectrum)
     if spec_sum > 0:
         centroid = np.sum(freqs * spectrum) / spec_sum
     else:
         centroid = 0.0
-        
+
     # Combine with weights
     # Energy is normalized against a typical strong speech RMS (0.1)
     # Centroid is normalized against typical speech range max (4000Hz)
     speech_score = (
-        (min(rms / 0.1, 1.0)) * 0.4 + 
-        (1.0 - zcr) * 0.3 + 
-        (min(centroid / 4000.0, 1.0)) * 0.3
+        (min(rms / 0.1, 1.0)) * 0.4
+        + (1.0 - zcr) * 0.3
+        + (min(centroid / 4000.0, 1.0)) * 0.3
     )
 
     is_soft = False

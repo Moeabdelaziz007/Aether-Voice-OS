@@ -1,18 +1,20 @@
-import logging
 import asyncio
+import logging
 from typing import Optional
 
-from core.emotion.calibrator import EmotionCalibrator
 from core.analytics.demo_metrics import DemoMetrics
 from core.audio.state import audio_state
+from core.emotion.calibrator import EmotionCalibrator
 
 logger = logging.getLogger(__name__)
+
 
 class ThalamicGate:
     """
     Central routing hub for proactive interventions (Software-Defined AEC and Emotional Triggering).
     Monitors emotional indices (frustration) and decides when to trigger a barge-in.
     """
+
     def __init__(self, gemini_session):
         self._gemini_session = gemini_session
         self._calibrator = EmotionCalibrator()
@@ -50,8 +52,13 @@ class ThalamicGate:
 
             if self._calibrator.should_intervene({"frustration": frustration_score}):
                 self._frustration_streak += 1
-                if self._frustration_streak >= 15:  # ~1.5 seconds of sustained frustration
-                    logger.warning("🚨 THALAMIC GATE: Proactive Intervention Triggered! (Score: %.2f)", frustration_score)
+                if (
+                    self._frustration_streak >= 15
+                ):  # ~1.5 seconds of sustained frustration
+                    logger.warning(
+                        "🚨 THALAMIC GATE: Proactive Intervention Triggered! (Score: %.2f)",
+                        frustration_score,
+                    )
                     self._metrics.start_timer("intervention_latency")
                     await self._trigger_intervention()
                     self._frustration_streak = 0
@@ -64,21 +71,24 @@ class ThalamicGate:
         """
         score = 0.0
         # If user is heavily "breathing" or "sighing" loudly
-        if hasattr(audio_state, 'silence_type') and audio_state.silence_type in ("breathing", "sighing"):
+        if hasattr(audio_state, "silence_type") and audio_state.silence_type in (
+            "breathing",
+            "sighing",
+        ):
             score += 0.5
-        
+
         # Correlate with RMS (loud sigh)
-        if hasattr(audio_state, 'last_rms'):
+        if hasattr(audio_state, "last_rms"):
             if audio_state.last_rms > 0.05:
                 score += 0.4
-                
+
         return score
 
     async def _trigger_intervention(self):
         """Forces the Gemini session to speak proactively."""
         try:
             from google.genai import types
-            
+
             # This triggers the prompt directly into the current Live Session context window
             await self._gemini_session.send_realtime_input(
                 parts=[
@@ -88,6 +98,6 @@ class ThalamicGate:
                 ]
             )
             self._metrics.stop_timer("intervention_latency")
-            self._metrics.record_accuracy(True) 
+            self._metrics.record_accuracy(True)
         except Exception as e:
             logger.error("Thalamic Gate intervention failed: %s", e)

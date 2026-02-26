@@ -4,7 +4,7 @@ Aether Voice OS — Zero-Friction Entry Point.
 
 Launch the standalone voice agent with a single command:
 
-    python run_aether.py
+    python main.py
 
 The agent will:
   1. Load configuration from .env
@@ -44,7 +44,8 @@ def print_banner() -> None:
     BOLD = "\033[1m"
     RESET = "\033[0m"
 
-    print(f"""
+    print(
+        f"""
 {CYAN}╔══════════════════════════════════════════════════════════╗
 ║                                                          ║
 ║   {BOLD}⟡  AETHER VOICE OS  ⟡{RESET}{CYAN}                                ║
@@ -53,7 +54,8 @@ def print_banner() -> None:
 ║   {DIM}Voice-first • Always listening • Tool-integrated{RESET}{CYAN}        ║
 ║                                                          ║
 ╚══════════════════════════════════════════════════════════╝{RESET}
-""")
+"""
+    )
 
 
 def check_api_key() -> None:
@@ -63,7 +65,8 @@ def check_api_key() -> None:
         YELLOW = "\033[93m"
         RED = "\033[91m"
         RESET = "\033[0m"
-        print(f"""
+        print(
+            f"""
 {RED}✗ No API key found.{RESET}
 
 {YELLOW}Set your Gemini API key in one of these ways:{RESET}
@@ -75,7 +78,8 @@ def check_api_key() -> None:
      export GOOGLE_API_KEY='your-key-here'
 
   Get a key at: https://aistudio.google.com/apikey
-""")
+"""
+        )
         sys.exit(1)
 
 

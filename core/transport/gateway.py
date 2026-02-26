@@ -21,12 +21,8 @@ from websockets.asyncio.server import Server, ServerConnection
 
 from core.config import GatewayConfig
 from core.errors import HandshakeError, HandshakeTimeoutError
-from core.transport.messages import (
-    AckMessage,
-    ChallengeMessage,
-    ErrorMessage,
-    MessageType,
-)
+from core.transport.messages import (AckMessage, ChallengeMessage,
+                                     ErrorMessage, MessageType)
 
 logger = logging.getLogger(__name__)
 

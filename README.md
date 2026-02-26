@@ -16,7 +16,9 @@
 <p align="center">
   <a href="https://geminiliveagentchallenge.devpost.com"><img src="https://img.shields.io/badge/🏆_Challenge-Gemini_Live_Agent_2026-blueviolet?style=for-the-badge" alt="Challenge"/></a>
   <a href="#"><img src="https://img.shields.io/badge/Version-2.0--Alpha-00f3ff?style=for-the-badge" alt="Version"/></a>
-  <a href="#"><img src="https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Python"/></a>
+  <a href="https://github.com/Moeabdelaziz007/Aether-Voice-OS/actions/workflows/tests.yml"><img src="https://github.com/Moeabdelaziz007/Aether-Voice-OS/actions/workflows/tests.yml/badge.svg?style=for-the-badge" alt="Tests"/></a>
+  <a href="https://codecov.io/gh/Moeabdelaziz007/Aether-Voice-OS"><img src="https://codecov.io/gh/Moeabdelaziz007/Aether-Voice-OS/branch/main/graph/badge.svg?style=for-the-badge" alt="codecov"/></a>
+  <a href="#"><img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Test Matrix"/></a>
   <a href="#"><img src="https://img.shields.io/badge/Next.js-15-000?style=for-the-badge&logo=nextdotjs" alt="Next.js"/></a>
   <a href="#"><img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/></a>
 </p>
@@ -304,13 +306,13 @@ Client                              Gateway
 
 ## ❓ FAQ
 
-**Q: Why not just use WebRTC's built-in AEC?**  
+**Q: Why not just use WebRTC's built-in AEC?**
 **A:** WebRTC AEC operates at the browser/system level with 20-50ms latency. The Thalamic Gate v2 works directly on raw PCM chunks at <2ms latency, granting absolute control over when barge-ins occur without clipping emotional undertones.
 
-**Q: Can it run on a Raspberry Pi?**  
+**Q: Can it run on a Raspberry Pi?**
 **A:** Yes! The entire capture/playback loop is extremely efficient in Python/C. We've successfully tested it on Pi 4, Mac, Windows, and Linux.
 
-**Q: How accurate is the emotion detection?**  
+**Q: How accurate is the emotion detection?**
 **A:** We hit a 92% F1 score on a test set of 1000 audio samples, primarily mapping frustration and cognitive load signatures (sighs, breathing patterns, voice pitch).
 
 ---
@@ -318,7 +320,7 @@ Client                              Gateway
 ## 🔧 Troubleshooting
 
 <details>
-<summary><b>Issue: "No microphone found" or ALSA errors (Linux)</b></summary>  
+<summary><b>Issue: "No microphone found" or ALSA errors (Linux)</b></summary>
 
 **Solution:** List your audio devices first, then explicitly set your config or environment variable `AETHER_AUDIO_INPUT_DEVICE`.
 
@@ -329,13 +331,13 @@ python -c "import pyaudio; p=pyaudio.PyAudio(); [print(i, p.get_device_info_by_i
 </details>
 
 <details>
-<summary><b>Issue: "Firebase connection failed / Default Credentials"</b></summary>  
+<summary><b>Issue: "Firebase connection failed / Default Credentials"</b></summary>
 
 **Solution:** The Firebase module is designed to gracefully degrade if not present. However, if you require persistent memory, ensure you have exported `GOOGLE_APPLICATION_CREDENTIALS` pointing to your service account JSON.
 </details>
 
 <details>
-<summary><b>Issue: "High CPU usage or Audio Stutter"</b></summary>  
+<summary><b>Issue: "High CPU usage or Audio Stutter"</b></summary>
 
 **Solution:** Verify your system has PyAudio compiled with C extensions and check that your Python process has high scheduling priority. Reduce the visualizer FPS on the Next.js dashboard if experiencing frontend lag.
 </details>

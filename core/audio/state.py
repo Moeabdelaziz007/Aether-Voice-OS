@@ -8,27 +8,26 @@ across C-callback threads and the main asyncio event loop.
 import threading
 
 
-import threading
-
 class HysteresisGate:
     """Adaptive hysteresis for audio gating to prevent rapid toggling (clicks)."""
+
     def __init__(self):
         self._mute_state = False
         self._mute_confidence = 0.0  # 0.0 to 1.0
-    
+
     def update(self, is_playing: bool) -> bool:
         """Update confidence with hysteresis and return the target mute state."""
         if is_playing:
             self._mute_confidence += 0.3  # Fast attack (mute quickly)
         else:
             self._mute_confidence -= 0.1  # Slow release (unmute slowly)
-        
+
         # Clamp between 0.0 and 1.0
         self._mute_confidence = max(0.0, min(1.0, self._mute_confidence))
-        
+
         # Apply Thresholding
         self._mute_state = self._mute_confidence > 0.5
-        
+
         return self._mute_state
 
 
@@ -67,7 +66,7 @@ class AudioState:
             else:
                 self.just_started_playing = False
                 self.just_stopped_playing = False
-                
+
             self.is_playing = playing
 
 

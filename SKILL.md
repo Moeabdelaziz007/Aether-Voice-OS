@@ -15,7 +15,7 @@ requires:
   - google-genai>=1.0.0
   - pydantic-settings>=2.0.0
   - python-dotenv>=1.0.0
-entry: run_aether.py
+entry: main.py
 ---
 
 # Aether Voice — Live Agent Skill

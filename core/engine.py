@@ -33,13 +33,15 @@ from core.ai.genetic import GeneticOptimizer
 from core.ai.hive import HiveCoordinator
 from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
-from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
+from core.audio.paralinguistics import (ParalinguisticAnalyzer,
+                                        ParalinguisticFeatures)
 from core.audio.playback import AudioPlayback
 from core.audio.processing import AdaptiveVAD
 from core.config import AetherConfig, load_config
 from core.identity.package import AthPackage
 from core.identity.registry import AetherRegistry
-from core.tools import hive_memory, memory_tool, system_tool, tasks_tool, vision_tool
+from core.tools import (hive_memory, memory_tool, system_tool, tasks_tool,
+                        vision_tool)
 from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.router import ToolRouter
@@ -86,9 +88,11 @@ class AetherEngine:
 
         # Components
         self._vad = AdaptiveVAD(
-            window_size_sec=self._config.audio.vad_window_sec
-            if hasattr(self._config.audio, "vad_window_sec")
-            else 5.0,
+            window_size_sec=(
+                self._config.audio.vad_window_sec
+                if hasattr(self._config.audio, "vad_window_sec")
+                else 5.0
+            ),
             sample_rate=self._config.audio.send_sample_rate,
         )
         self._capture = AudioCapture(

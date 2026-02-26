@@ -15,7 +15,8 @@ from typing import Any, Callable, Optional
 import numpy as np
 import pyaudio
 
-from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
+from core.audio.paralinguistics import (ParalinguisticAnalyzer,
+                                        ParalinguisticFeatures)
 from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad
 from core.audio.state import audio_state
 from core.config import AudioConfig
@@ -44,35 +45,37 @@ class SmoothMuter:
         chunk_len = len(pcm_chunk)
         if chunk_len == 0:
             return pcm_chunk
-            
+
         step = 1.0 / self._ramp_samples
         if self._current_gain > self._target_gain:
             step = -step
 
         # Generate a gain array for the chunk
         gains = np.full(chunk_len, self._current_gain, dtype=np.float32)
-        
+
         # Max steps remaining to reach target
         steps_needed = int(abs(self._target_gain - self._current_gain) / abs(step))
         ramp_len = min(chunk_len, steps_needed)
-        
+
         if ramp_len > 0:
             ramp = np.linspace(
-                self._current_gain, 
-                self._current_gain + (step * ramp_len), 
-                ramp_len, 
-                dtype=np.float32
+                self._current_gain,
+                self._current_gain + (step * ramp_len),
+                ramp_len,
+                dtype=np.float32,
             )
             gains[:ramp_len] = ramp
-            gains[ramp_len:] = gains[ramp_len-1] if ramp_len > 0 else self._target_gain
+            gains[ramp_len:] = (
+                gains[ramp_len - 1] if ramp_len > 0 else self._target_gain
+            )
             self._current_gain = float(gains[-1])
-            
+
             # Snap to target if very close
             if abs(self._current_gain - self._target_gain) < 0.05:
                 self._current_gain = self._target_gain
         else:
-             self._current_gain = self._target_gain
-             gains[:] = self._current_gain
+            self._current_gain = self._target_gain
+            gains[:] = self._current_gain
 
         return (pcm_chunk * gains).astype(np.int16)
 
@@ -112,17 +115,19 @@ class AudioCapture:
         self._vad = vad_engine
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
-        
-        from core.audio.state import HysteresisGate
+
         from core.audio.leakage import LeakageDetector
-        
+        from core.audio.state import HysteresisGate
+
         self._hysteresis = HysteresisGate()
         self._leakage = LeakageDetector()
         self._smooth_muter = SmoothMuter()
-        
+
         # Delay Compensation Counters
         self._audio_latency_ms = 50  # hardware latency approximation
-        self._latency_samples = int(self._audio_latency_ms * self._config.send_sample_rate // 1000)
+        self._latency_samples = int(
+            self._audio_latency_ms * self._config.send_sample_rate // 1000
+        )
         self._mute_delay_remaining = 0
         self._unmute_delay_remaining = 0
 
@@ -145,27 +150,33 @@ class AudioCapture:
         Analyzes energy and gates microphone input based on AI state and Leakage.
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
-        
+
         # 1. Leakage & Correlation check (is it just echo?)
         # Fetching spectrum from global state (updated by playback.py)
         if audio_state.ai_spectrum is not None:
             self._leakage._ai_spectrum = audio_state.ai_spectrum
         is_user = self._leakage.is_user_speaking(pcm_chunk)
-        
+
         # 2. Base Hysteresis update on AI state
         ai_playing_base = self._hysteresis.update(audio_state.is_playing)
-        
+
         # 3. Delay Compensation (Hardware Latency & Echo fade-out)
         if audio_state.just_started_playing:
             self._mute_delay_remaining = self._latency_samples
         if audio_state.just_stopped_playing:
-            self._unmute_delay_remaining = int(self._latency_samples * 1.5)  # grace period for echo to die
-            
+            self._unmute_delay_remaining = int(
+                self._latency_samples * 1.5
+            )  # grace period for echo to die
+
         if self._mute_delay_remaining > 0:
-            self._mute_delay_remaining = max(0, self._mute_delay_remaining - frame_count)
+            self._mute_delay_remaining = max(
+                0, self._mute_delay_remaining - frame_count
+            )
             ai_playing_compensated = False
         elif self._unmute_delay_remaining > 0:
-            self._unmute_delay_remaining = max(0, self._unmute_delay_remaining - frame_count)
+            self._unmute_delay_remaining = max(
+                0, self._unmute_delay_remaining - frame_count
+            )
             ai_playing_compensated = True
         else:
             ai_playing_compensated = ai_playing_base
@@ -178,7 +189,7 @@ class AudioCapture:
             self._smooth_muter.mute()
         else:
             self._smooth_muter.unmute()
-            
+
         # Apply Graceful Ramp
         processed_chunk = self._smooth_muter.process(pcm_chunk)
 
@@ -197,7 +208,7 @@ class AudioCapture:
             in_data = b"\x00" * len(in_data)
         else:
             from core.audio.processing import energy_vad
-            
+
             # HyperVAD Logic: Dual-Threshold (mu + sigma) + Multi-Feature
             vad = energy_vad(processed_chunk, adaptive_engine=self._vad)
             in_data = processed_chunk.tobytes()
@@ -209,7 +220,9 @@ class AudioCapture:
 
         zero_crossings = np.where(np.diff(np.sign(processed_chunk)))[0]
         audio_state.last_zcr = (
-            len(zero_crossings) / len(processed_chunk) if len(processed_chunk) > 0 else 0
+            len(zero_crossings) / len(processed_chunk)
+            if len(processed_chunk) > 0
+            else 0
         )
 
         # Architecture of Silence: Classify silence if no clear speech

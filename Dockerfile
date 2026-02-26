@@ -44,7 +44,7 @@ COPY --from=rust-builder /build/aether_cortex.so /app/core/audio/aether_cortex.s
 # Copy application code
 COPY core/ ./core/
 COPY brain/ ./brain/
-COPY run_aether.py .
+COPY main.py .
 COPY .env.example .env
 
 # Non-root user for security

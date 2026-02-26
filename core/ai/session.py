@@ -64,9 +64,9 @@ class GeminiLiveSession:
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
-        self._frame_buffer: list[
-            tuple[float, bytes]
-        ] = []  # Rolling history of screenshots
+        self._frame_buffer: list[tuple[float, bytes]] = (
+            []
+        )  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
         self._active_handoffs: dict[str, dict] = {}  # A2A V3 Handoff Tracking
 
@@ -93,9 +93,7 @@ class GeminiLiveSession:
         system_instruction = self._config.system_instruction
         if self._soul:
             expertise = (
-                self._soul.manifest.expertise
-                if hasattr(self._soul, "manifest")
-                else {}
+                self._soul.manifest.expertise if hasattr(self._soul, "manifest") else {}
             )
             system_instruction = (
                 f"{self._soul.persona}\n\n"
@@ -181,11 +179,12 @@ class GeminiLiveSession:
             ) as session:
                 self._session = session
                 logger.info("✦ Gemini Live session established")
-                
+
                 # Wire in Thalamic Gate V2
                 try:
                     from core.ai.thalamic import ThalamicGate
                     from core.demo.fallback import DemoFallback
+
                     self._thalamic_gate = ThalamicGate(session)
                     self._demo_fallback = DemoFallback(self)
                     await self._thalamic_gate.start()
@@ -216,7 +215,7 @@ class GeminiLiveSession:
                         cause=exc,
                     ) from exc
         finally:
-            if hasattr(self, '_thalamic_gate'):
+            if hasattr(self, "_thalamic_gate"):
                 self._thalamic_gate.stop()
             self._session = None
             self._running = False
@@ -352,9 +351,7 @@ class GeminiLiveSession:
                         # give a soft vocal affirmative without fully taking the turn.
                         await session.send_realtime_input(
                             parts=[
-                                types.Part.from_text(
-                                    text="[user thinking, soft 'Mhm']"
-                                )
+                                types.Part.from_text(text="[user thinking, soft 'Mhm']")
                             ]
                         )
                         thinking_streak = 0  # Reset to avoid spamming

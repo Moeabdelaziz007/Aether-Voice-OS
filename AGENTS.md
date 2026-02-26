@@ -14,7 +14,7 @@ graph TD
     B <-->|Hot-Reloading| C[AetherRegistry: .ath Packages]
     B <-->|Synapse Layer| D[Firestore Persistent Memory]
     B -->|Audio Rendering| E[AetherPlayback]
-    
+
     subgraph Synapse_Memory
         D1[L1: Session Context]
         D2[L2: Semantic Tags]
@@ -81,7 +81,7 @@ Agents use **Tag-based Synapses** to query long-term memory.
 # Clone and ignite the environment
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
-python run_aether.py --mode production
+python main.py --mode production
 ```
 
 ### 2. Crafting a New Agent (.ath)

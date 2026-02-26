@@ -1,19 +1,22 @@
 import logging
-import numpy as np
 from datetime import datetime
 
+import numpy as np
+
 logger = logging.getLogger(__name__)
+
 
 class DemoMetrics:
     """
     Captures high-fidelity metrics to demonstrate technical performance to judges.
     Focuses on 'Sigh-to-Intervention' latency and emotional accuracy.
     """
+
     def __init__(self):
         self._metrics = {
             "detection_latency": [],  # ms
-            "emotion_accuracy": [],    # boolean list
-            "total_interventions": 0
+            "emotion_accuracy": [],  # boolean list
+            "total_interventions": 0,
         }
         self.start_times = {}
 
@@ -34,11 +37,13 @@ class DemoMetrics:
         """Returns JSON report for the Dashboard."""
         latencies = self._metrics["detection_latency"]
         accuracy = self._metrics["emotion_accuracy"]
-        
+
         return {
             "avg_latency_ms": float(np.mean(latencies)) if latencies else 0.0,
             "min_latency_ms": float(np.min(latencies)) if latencies else 0.0,
-            "accuracy_percent": (sum(accuracy) / len(accuracy) * 100) if accuracy else 100.0,
+            "accuracy_percent": (
+                (sum(accuracy) / len(accuracy) * 100) if accuracy else 100.0
+            ),
             "total_interventions": self._metrics["total_interventions"],
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
