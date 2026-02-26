@@ -205,12 +205,14 @@ class GeminiLiveSession:
     async def _vision_pulse_loop(self, session) -> None:
         """
         Maintains a rolling buffer of screen frames (1s resolution) for Indexical Sync.
-        Also sends proactive pulses every 10s if significant changes occur (Vision Delta).
+        Also sends proactive pulses every 10s or on Hard-Interrupt (Camera Pulse).
         """
-        logger.info("Vision Pulse loop started (1s Buffer / 10s Proactive)")
+        logger.info("Vision Pulse loop started (Reflex-Triggered Camera active)")
         import os
         import time
         from core.tools.vision_tool import capture_screenshot
+        from core.tools.camera_tool import camera_instance
+        from core.audio.state import audio_state
         
         last_proactive_pulse = 0
         while self._running:
@@ -218,6 +220,10 @@ class GeminiLiveSession:
                 # 1 second resolution for the rolling buffer
                 await asyncio.sleep(1.0)
                 
+                now = time.time()
+                is_hard = audio_state.is_hard
+                
+                # ── Pulse 1: Screen Capture (Rolling Buffer) ──
                 res = await capture_screenshot()
                 if res.get("status") == "ok":
                     path = res["path"]
@@ -225,23 +231,29 @@ class GeminiLiveSession:
                         with open(path, "rb") as f:
                             image_bytes = f.read()
                         
-                        # 1. Update rolling buffer (Spatio-Temporal Grounding)
-                        now = time.time()
                         self._frame_buffer.append((now, image_bytes))
                         if len(self._frame_buffer) > self._max_frames:
                             self._frame_buffer.pop(0)
 
-                        # 2. Vision Delta & Proactive Pulse (10s)
+                        # Proactive Pulse (10s)
                         if now - last_proactive_pulse > 10.0:
-                            # TODO: Implement ImageHash for real Delta sensing
                             logger.debug("Proactive Vision: Sending screenshot to Gemini")
                             await session.send_realtime_input(
                                 parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
                             )
                             last_proactive_pulse = now
                         
-                        # Cleanup temp file
                         os.remove(path)
+
+                # ── Pulse 2: Camera Capture (Hard Interrupt Grounding) ──
+                if is_hard:
+                    logger.info("📸 Camera Pulse: Capturing user reaction to hard-interrupt.")
+                    cam_bytes = camera_instance.capture_frame()
+                    if cam_bytes:
+                        await session.send_realtime_input(
+                            parts=[types.Part.from_bytes(data=cam_bytes, mime_type="image/jpeg")]
+                        )
+
             except asyncio.CancelledError:
                 break
             except Exception as e:

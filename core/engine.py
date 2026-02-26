@@ -130,10 +130,6 @@ class AetherEngine:
             datefmt="%H:%M:%S",
         )
 
-from core.audio.processing import AdaptiveVAD
-from core.audio.capture import AudioCapture
-# ... (rest of imports)
-
 class AetherEngine:
     def __init__(self, config: Optional[AetherConfig] = None) -> None:
         # ...

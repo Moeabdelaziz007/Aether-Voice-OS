@@ -37,6 +37,7 @@ class AudioCapture:
         config: AudioConfig,
         output_queue: asyncio.Queue[dict[str, object]],
         analyzer: Optional[SilentAnalyzer] = None,
+        vad_engine: Optional[AdaptiveVAD] = None,
     ) -> None:
         self._config = config
         self._async_queue = output_queue
@@ -46,6 +47,7 @@ class AudioCapture:
         self._running = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._analyzer = analyzer or SilentAnalyzer()
+        self._vad = vad_engine
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
         """Thread-safe injection into the asyncio event loop."""
@@ -67,24 +69,26 @@ class AudioCapture:
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
         is_playing = audio_state.is_playing
-        threshold = 0.15 if is_playing else 0.02
-        vad = energy_vad(pcm_chunk, threshold=threshold)
         
-        # Update shared state for brain-sync (Engine uses this for Barge-in logic)
+        # HyperVAD Logic: Dual-Threshold (mu + sigma)
+        vad = energy_vad(pcm_chunk, adaptive_engine=self._vad)
+        
+        # Update shared state for brain-sync
         audio_state.last_rms = vad.energy_rms
+        audio_state.is_soft = vad.is_soft
+        audio_state.is_hard = vad.is_hard
+        
         zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
         audio_state.last_zcr = len(zero_crossings) / len(pcm_chunk) if len(pcm_chunk) > 0 else 0
         
-        # Architecture of Silence: Classify silence if no speech detected
-        if not vad.is_speech:
+        # Architecture of Silence: Classify silence if no clear speech
+        if not vad.is_hard:
             audio_state.silence_type = self._analyzer.classify(pcm_chunk, vad.energy_rms).value
         else:
             audio_state.silence_type = "speech"
 
-        # We pass the audio forward if:
-        # a) It contains clear speech
-        # b) The AI is silent
-        if vad.is_speech or not is_playing:
+        # Push to queue if hard speech detected or AI is silent (ambient feed)
+        if vad.is_hard or not is_playing:
             msg = {
                 "data": in_data,
                 "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}"
