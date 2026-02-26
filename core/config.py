@@ -44,6 +44,7 @@ class AIConfig(BaseSettings):
     api_version: str = Field("v1alpha", description="API version for advanced features")
     enable_affective_dialog: bool = Field(True, description="Emotion-aware responses")
     proactive_audio: bool = Field(True, description="Model decides when to respond")
+    enable_proactive_vision: bool = Field(False, description="Enable proactive vision context")
     enable_search_grounding: bool = Field(True, description="Google Search grounding for fact-checking")
     thinking_budget: Optional[int] = Field(0, description="Thinking token budget (0 disables for minimal latency)")
     system_instruction: str = Field(

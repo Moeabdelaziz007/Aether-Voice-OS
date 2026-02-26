@@ -302,17 +302,17 @@ class SilentAnalyzer:
             self._history_zcr.pop(0)
 
         # 2. Logic:
-        # VOID: Extremely low RMS (< 0.001)
-        if current_rms < 0.001:
+        # VOID: Extremely low RMS (< 0.005)
+        if current_rms < 0.005:
             return SilenceType.VOID
         
         # BREATHING: RMS oscillates slightly (inhale/exhale) + Low ZCR
         rms_var = np.var(self._history_rms) if len(self._history_rms) > 5 else 0
-        if 0.001 < current_rms < 0.005 and rms_var > 1e-7 and zcr < 0.05:
+        if 0.005 <= current_rms < 0.01 and rms_var > 1e-7 and zcr < 0.05:
             return SilenceType.BREATHING
 
         # THINKING: Sustained low level, not quiet enough to be void
-        if current_rms < 0.01:
+        if current_rms < 0.02:
             return SilenceType.THINKING
             
         return SilenceType.VOID

@@ -78,12 +78,15 @@ class AetherEngine:
         # Neural Dispatcher — routes Gemini tool_calls to handlers
         self._router = ToolRouter()
         self._router.init_vector_store(self._config.ai.api_key)
-        self._register_tools()
 
         # Affective Computing: Paralinguistic Analyzer
         self._paralinguistics = ParalinguisticAnalyzer(sample_rate=self._config.audio.send_sample_rate)
 
         # Components
+        self._vad = AdaptiveVAD(
+            window_size_sec=self._config.audio.vad_window_sec if hasattr(self._config.audio, "vad_window_sec") else 5.0,
+            sample_rate=self._config.audio.send_sample_rate,
+        )
         self._capture = AudioCapture(
             self._config.audio, 
             self._audio_in,
@@ -161,19 +164,7 @@ class AetherEngine:
             datefmt="%H:%M:%S",
         )
 
-class AetherEngine:
-    def __init__(self, config: Optional[AetherConfig] = None) -> None:
-        # ...
-        self._router = ToolRouter()
-        self._register_tools()
 
-        # Components
-        self._vad = AdaptiveVAD(
-            window_size_sec=self._config.audio.vad_window_sec if hasattr(self._config.audio, "vad_window_sec") else 5.0,
-            sample_rate=self._config.audio.send_sample_rate,
-        )
-        self._capture = AudioCapture(self._config.audio, self._audio_in, vad_engine=self._vad)
-        # ...
 
     def _on_interrupt(self) -> None:
         """
@@ -277,6 +268,9 @@ class AetherEngine:
             logger.info("  Firebase: ✦ Connected — session %s", self._firebase._session_id)
         else:
             logger.warning("  Firebase: ✗ Offline — tasks will not persist")
+
+        # Register tools now that we have an active event loop
+        self._register_tools()
 
         logger.info("═" * 60)
         logger.info("  AETHER VOICE OS — Starting Engine")

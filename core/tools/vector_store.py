@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class LocalVectorStore:
     """A lightweight, local-first vector store for semantic routing."""
     
-    def __init__(self, api_key: str, model: str = "text-embedding-004") -> None:
+    def __init__(self, api_key: str, model: str = "gemini-embedding-001") -> None:
         self._client = genai.Client(api_key=api_key)
         self._model = model
         self._vectors: dict[str, np.ndarray] = {}

@@ -295,10 +295,15 @@ class GeminiLiveSession:
         while self._running:
             await asyncio.sleep(0.2)
             
+            # Reset empathy if model is currently playing audio
+            if audio_state.is_playing:
+                thinking_streak = 0
+                continue
+            
             stype = audio_state.silence_type
             if stype in ("thinking", "breathing"):
                 thinking_streak += 1
-                if thinking_streak >= 15: # ~3 seconds of cognitive load
+                if thinking_streak >= 25: # ~5 seconds of cognitive load
                     logger.info("🧠 Empathy Trigger: User is thinking. Sending backchannel cue.")
                     try:
                         # Sending a tiny text hint can encourage Gemini to 

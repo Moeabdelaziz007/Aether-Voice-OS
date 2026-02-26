@@ -1,6 +1,6 @@
 {
-    "GOOGLE_API_KEY": "AIzaSyBABHXP47ymXtaIi9HjJHbi4Hv85Zt-4Z4",
-    "NEXT_PUBLIC_GEMINI_KEY": "AIzaSyBABHXP47ymXtaIi9HjJHbi4Hv85Zt-4Z4",
+    "GOOGLE_API_KEY": "AIzaSyDYiZDepdqVUgkiZHVflEzO4aqu4JGVy3k",
+    "NEXT_PUBLIC_GEMINI_KEY": "AIzaSyDYiZDepdqVUgkiZHVflEzO4aqu4JGVy3k",
     "AETHER_AI_MODEL": "gemini-2.5-flash-native-audio-preview-12-2025",
     "AETHER_AI_API_VERSION": "v1alpha",
     "AETHER_GW_PORT": 18789

@@ -73,10 +73,17 @@ class AudioCapture:
         Analyzes energy and gates microphone input based on AI state.
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
-        is_playing = audio_state.is_playing
-        
-        # HyperVAD Logic: Dual-Threshold (mu + sigma)
-        vad = energy_vad(pcm_chunk, adaptive_engine=self._vad)
+        # Thalamic Mute / AEC Proxy: 
+        # If the AI is playing, we mute the microphone to prevent self-interruption (Echo).
+        if is_playing:
+            # Force VAD to false and energy to 0 to prevent barge-in triggers
+            from core.audio.processing import HyperVADResult
+            vad = HyperVADResult(is_soft=False, is_hard=False, energy_rms=0.0, sample_count=len(pcm_chunk))
+            # Optional: Send zeros to the AI to maintain PCM continuity without noise
+            in_data = b"\x00" * len(in_data)
+        else:
+            # HyperVAD Logic: Dual-Threshold (mu + sigma)
+            vad = energy_vad(pcm_chunk, adaptive_engine=self._vad)
         
         # Update shared state for brain-sync
         audio_state.last_rms = vad.energy_rms
@@ -99,6 +106,8 @@ class AudioCapture:
                     self._loop.call_soon_threadsafe(self._on_affective_data, features)
 
         # Push to queue if hard speech detected or AI is silent (ambient feed)
+        # Note: If is_playing is True, in_data is now silence (zeros), 
+        # which satisfies the 'ambient feed' requirement safely.
         if vad.is_hard or not is_playing:
             msg = {
                 "data": in_data,
