@@ -8,6 +8,8 @@ Uses numpy for cosine similarity and Gemini for embedding generation.
 from __future__ import annotations
 
 import logging
+import pickle
+from pathlib import Path
 from typing import Optional
 
 import numpy as np
@@ -24,6 +26,42 @@ class LocalVectorStore:
         self._model = model
         self._vectors: dict[str, np.ndarray] = {}
         self._metadata: dict[str, dict] = {}
+
+    def load(self, filepath: str | Path) -> bool:
+        """Load the vector store from a local pickle file."""
+        try:
+            with open(filepath, "rb") as f:
+                data = pickle.load(f)
+                self._vectors = data.get("vectors", {})
+                self._metadata = data.get("metadata", {})
+            logger.info(
+                "Vector index loaded from %s (Entries: %d)",
+                filepath,
+                len(self._vectors),
+            )
+            return True
+        except FileNotFoundError:
+            logger.info("No local vector index found at %s. Starting fresh.", filepath)
+            return False
+        except Exception as e:
+            logger.error("Failed to load vector index from %s: %s", filepath, e)
+            return False
+
+    def save(self, filepath: str | Path) -> None:
+        """Save the vector store to a local pickle file."""
+        try:
+            with open(filepath, "wb") as f:
+                pickle.dump(
+                    {
+                        "vectors": self._vectors,
+                        "metadata": self._metadata,
+                    },
+                    f,
+                    protocol=min(5, pickle.HIGHEST_PROTOCOL),
+                )
+            logger.info("Vector index saved to %s", filepath)
+        except Exception as e:
+            logger.error("Failed to save vector index to %s: %s", filepath, e)
 
     async def add_text(
         self, key: str, text: str, metadata: Optional[dict] = None

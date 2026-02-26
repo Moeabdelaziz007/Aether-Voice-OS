@@ -1,341 +1,146 @@
-"""
-Aether Voice OS — Firebase Integration.
-
-Connects Aether to Firebase for:
-  - Agent state persistence (Firestore)
-  - Session logging and analytics
-  - Remote configuration
-  - User authentication (future)
-
-Uses the Firebase Admin SDK for server-side operations.
-All Firebase config is loaded from environment variables.
-"""
-
-from __future__ import annotations
-
+import asyncio
 import logging
-import os
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
 
-logger = logging.getLogger(__name__)
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-# Firebase SDK config (from firebase_get_sdk_config)
-FIREBASE_CONFIG = {
-    "projectId": "notional-armor-456623-e8",
-    "appId": "1:929157794401:web:b9c5fb492cb673cfc3f820",
-    "storageBucket": "notional-armor-456623-e8.firebasestorage.app",
-    "apiKey": os.getenv("FIREBASE_API_KEY", "AIzaSyCDI8Pue0B-_ktUDLbEstSMLTo9GyrBC0M"),
-    "authDomain": "notional-armor-456623-e8.firebaseapp.com",
-    "messagingSenderId": "929157794401",
-}
+from core.utils.config import get_firebase_cert, load_config
+
+logger = logging.getLogger(__name__)
 
 
 class FirebaseConnector:
     """
-    Firebase integration layer for Aether Voice OS.
+    The Cloud Native Persistence Layer.
 
-    Manages Firestore connections for agent state persistence,
-    session logging, and remote configuration.
+    Architected for Real-Time Frontend Sync:
+    1. Sessions: Stores high-level metadata.
+    2. Messages (Subcollection): Stores chat logs. Frontend listens via onSnapshot().
+    3. Metrics (Subcollection): Stores affective computing data points.
     """
 
-    def __init__(self, project_id: str = "notional-armor-456623-e8") -> None:
-        self._project_id = project_id
-        self._db = None
-        self._initialized = False
+    def __init__(self) -> None:
+        self._db: Optional[firestore.client] = None
         self._session_id: Optional[str] = None
+        self.is_connected: bool = False
 
     async def initialize(self) -> bool:
         """
-        Initialize Firebase Admin SDK.
-
-        Returns True if successfully connected, False otherwise.
+        Initializes connection to Firestore using secure Base64 credentials if available.
         """
         try:
-            import firebase_admin
-            from firebase_admin import credentials, firestore
+            config = load_config()
+            cert_dict = get_firebase_cert(config)
 
-            # Check if already initialized
-            try:
-                app = firebase_admin.get_app()
-                logger.info("Firebase already initialized: %s", app.project_id)
-            except ValueError:
-                # Initialize with default credentials or service account
-                cred_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-                if cred_path and os.path.exists(cred_path):
-                    cred = credentials.Certificate(cred_path)
+            # Avoid re-initializing if app already exists
+            if not firebase_admin._apps:
+                if cert_dict:
+                    cred = credentials.Certificate(cert_dict)
                     firebase_admin.initialize_app(cred)
-                    logger.info("Firebase initialized with service account")
+                    logger.info(
+                        "🔥 Firebase: Initialized with Secure Base64 Credentials"
+                    )
                 else:
-                    # Try application default credentials
+                    # Fallback to standard Google Application Credentials (local dev)
                     firebase_admin.initialize_app()
-                    logger.info("Firebase initialized with default credentials")
+                    logger.info("🔥 Firebase: Initialized with Default Credentials")
 
-            self._db = firestore.AsyncClient(project=self._project_id)
-            self._initialized = True
-            logger.info("Firestore connected: project=%s", self._project_id)
+            self._db = firestore.client()
+            self.is_connected = True
             return True
-
-        except ImportError:
-            logger.warning(
-                "firebase-admin not installed. Run: pip install firebase-admin"
-            )
-            return False
-        except Exception as exc:
-            logger.error("Firebase initialization failed: %s", exc)
+        except Exception as e:
+            logger.warning(f"🔥 Firebase: Connection Failed (Offline Mode) - {e}")
+            self.is_connected = False
             return False
 
-    @property
-    def is_connected(self) -> bool:
-        """Check if Firebase is initialized and ready."""
-        return self._initialized and self._db is not None
+    async def start_session(self) -> None:
+        """Creates a new session document to track this interaction."""
+        if not self.is_connected or not self._db:
+            return
 
-    # ── Session Management ──────────────────────────────────
-
-    async def start_session(self, agent_id: str = "aether-voice") -> str:
-        """
-        Create a new session document in Firestore.
-
-        Returns the session ID.
-        """
-        if not self.is_connected:
-            logger.warning("Firebase not connected — session not tracked")
-            return "local-session"
-
-        import uuid
-        from datetime import datetime, timezone
-
-        self._session_id = str(uuid.uuid4())[:8]
-        session_data = {
-            "agent_id": agent_id,
-            "session_id": self._session_id,
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "status": "active",
-            "model": os.getenv("AETHER_AI_MODEL", "gemini-2.5-flash-native-audio"),
-            "platform": "standalone-cli",
-        }
-
+        self._session_id = str(uuid.uuid4())
         try:
             doc_ref = self._db.collection("sessions").document(self._session_id)
-            await doc_ref.set(session_data)
-            logger.info("Session started: %s", self._session_id)
-        except Exception as exc:
-            logger.error("Failed to write session: %s", exc)
+            doc_ref.set(
+                {
+                    "started_at": datetime.now(timezone.utc),
+                    "status": "active",
+                    "agent_version": "2.0-alpha",
+                    "device": "desktop-mac",
+                }
+            )
+            logger.info(f"Session ID: {self._session_id}")
+        except Exception as e:
+            logger.error(f"Failed to create session doc: {e}")
 
-        return self._session_id
+    async def log_message(self, role: str, content: str) -> None:
+        """
+        Logs a message to the 'messages' subcollection.
 
-    async def end_session(self, summary: Optional[dict] = None) -> None:
-        """Update session document as ended."""
+        Frontend Architecture:
+        The Next.js app listens to `sessions/{id}/messages` using `onSnapshot`.
+        When this function runs, the UI updates instantly.
+        """
         if not self.is_connected or not self._session_id:
             return
 
-        update_data = {
-            "status": "ended",
-            "ended_at": datetime.now(timezone.utc).isoformat(),
-        }
-        if summary:
-            update_data["summary"] = summary
+        try:
+            msg_data = {
+                "role": role,  # 'user' or 'assistant'
+                "content": content,
+                "timestamp": datetime.now(timezone.utc),
+            }
+
+            # Add to subcollection
+            (
+                self._db.collection("sessions")
+                .document(self._session_id)
+                .collection("messages")
+                .add(msg_data)
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to log message: {e}")
+
+    async def log_affective_metrics(self, features: Any) -> None:
+        """Logs emotional telemetry for the dashboard visualizer."""
+        if not self.is_connected or not self._session_id:
+            return
+
+        try:
+            data = {
+                "timestamp": datetime.now(timezone.utc),
+                "valence": getattr(features, "valence", 0.0),
+                "arousal": getattr(features, "arousal", 0.0),
+                "emotion": getattr(features, "emotion", "neutral"),
+            }
+
+            (
+                self._db.collection("sessions")
+                .document(self._session_id)
+                .collection("metrics")
+                .add(data)
+            )
+        except Exception as e:
+            # Debug level to avoid spamming logs
+            logger.debug(f"Failed to log metrics: {e}")
+
+    async def end_session(self, summary: dict) -> None:
+        """Closes the session."""
+        if not self.is_connected or not self._session_id:
+            return
 
         try:
             doc_ref = self._db.collection("sessions").document(self._session_id)
-            await doc_ref.update(update_data)
-            logger.info("Session ended: %s", self._session_id)
-        except Exception as exc:
-            logger.error("Failed to update session: %s", exc)
-
-    # ── State Persistence ───────────────────────────────────
-
-    async def save_agent_state(self, state: dict[str, Any]) -> None:
-        """Persist agent state to Firestore for recovery."""
-        if not self.is_connected:
-            return
-
-        state["updated_at"] = datetime.now(timezone.utc).isoformat()
-
-        try:
-            doc_ref = self._db.collection("agent_state").document("current")
-            await doc_ref.set(state, merge=True)
-        except Exception as exc:
-            logger.error("Failed to save agent state: %s", exc)
-
-    async def load_agent_state(self) -> Optional[dict[str, Any]]:
-        """Load agent state from Firestore."""
-        if not self.is_connected:
-            return None
-
-        try:
-            doc_ref = self._db.collection("agent_state").document("current")
-            doc = await doc_ref.get()
-            if doc.exists:
-                return doc.to_dict()
-        except Exception as exc:
-            logger.error("Failed to load agent state: %s", exc)
-        return None
-
-    # ── Event Logging ───────────────────────────────────────
-
-    async def log_event(
-        self,
-        event_type: str,
-        data: Optional[dict] = None,
-    ) -> None:
-        """Log an agent event to Firestore for analytics."""
-        if not self.is_connected:
-            return
-
-        event = {
-            "type": event_type,
-            "session_id": self._session_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "data": data or {},
-        }
-
-        try:
-            await self._db.collection("events").add(event)
-        except Exception as exc:
-            logger.debug("Event logging failed: %s", exc)
-
-    async def log_affective_metrics(self, features: Any) -> None:
-        """
-        Log paralinguistic features to the affective_telemetry collection.
-        Used by the Genetic Optimizer to calculate session fitness.
-        """
-        if not self.is_connected:
-            return
-
-        telemetry = {
-            "session_id": self._session_id,
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "pitch_estimate": features.pitch_estimate,
-            "speech_rate": features.speech_rate,
-            "rms_variance": features.rms_variance,
-            "spectral_centroid": features.spectral_centroid,
-            "engagement_score": features.engagement_score,
-        }
-
-        try:
-            await self._db.collection("affective_telemetry").add(telemetry)
-            logger.debug("Affective telemetry synced for session: %s", self._session_id)
-        except Exception as exc:
-            logger.error("Affective logging failed: %s", exc)
-
-    async def get_session_affective_summary(self, session_id: str) -> dict:
-        """
-        Query affective telemetry and return a summary of engagement trends.
-        """
-        if not self.is_connected:
-            return {"status": "error", "message": "Firebase offline"}
-
-        try:
-            query = (
-                self._db.collection("affective_telemetry")
-                .where("session_id", "==", session_id)
-                .order_by("timestamp")
+            doc_ref.update(
+                {
+                    "status": "completed",
+                    "ended_at": datetime.now(timezone.utc),
+                    "summary": summary,
+                }
             )
-
-            docs = []
-            async for doc in query.stream():
-                docs.append(doc.to_dict())
-
-            if not docs:
-                return {"status": "success", "summary": "No telemetry data found."}
-
-            avg_engagement = sum(d["engagement_score"] for d in docs) / len(docs)
-            avg_pitch = sum(
-                d["pitch_estimate"] for d in docs if d["pitch_estimate"] > 0
-            ) / max(1, len([d for d in docs if d["pitch_estimate"] > 0]))
-
-            return {
-                "status": "success",
-                "summary": {
-                    "avg_engagement": round(avg_engagement, 2),
-                    "avg_pitch": round(avg_pitch, 1),
-                    "interaction_count": len(docs),
-                    "trend": (
-                        "improving"
-                        if docs[-1]["engagement_score"] > docs[0]["engagement_score"]
-                        else "stable/declining"
-                    ),
-                },
-            }
-        except Exception as exc:
-            logger.error("Failed to generate affective summary: %s", exc)
-            return {"status": "error", "message": str(exc)}
-
-    # ── Tool Declaration ────────────────────────────────────
-
-    def to_adk_declaration(self) -> dict:
-        """ADK-compatible tool declaration for Firebase operations."""
-        return {
-            "name": "aether_firebase",
-            "description": (
-                "Manages Firebase integration: session tracking, "
-                "state persistence, and affective analytics report generation."
-            ),
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "action": {
-                        "type": "string",
-                        "enum": [
-                            "start_session",
-                            "end_session",
-                            "save_state",
-                            "status",
-                            "affective_summary",
-                        ],
-                        "description": "Firebase action to perform",
-                    },
-                    "session_id": {
-                        "type": "string",
-                        "description": "Optional session ID for reports (defaults to current)",
-                    },
-                },
-                "required": ["action"],
-            },
-        }
-
-
-async def aether_firebase(action: str, session_id: Optional[str] = None) -> dict:
-    """Neural Dispatcher entry point for Firebase operations."""
-
-    # Instance is typically managed by the engine, but we can use a singleton or global
-    # For now, we'll use a globally accessible instance if available, otherwise create one
-    global _global_firebase_connector
-    if "_global_firebase_connector" not in globals():
-        _global_firebase_connector = FirebaseConnector()
-        await _global_firebase_connector.initialize()
-
-    connector = _global_firebase_connector
-
-    if action == "status":
-        return {
-            "status": "connected" if connector.is_connected else "disconnected",
-            "session_id": connector._session_id,
-            "project_id": connector._project_id,
-        }
-
-    elif action == "start_session":
-        sid = await connector.start_session()
-        return {"status": "success", "session_id": sid}
-
-    elif action == "end_session":
-        await connector.end_session()
-        return {"status": "success"}
-
-    elif action == "affective_summary":
-        sid = session_id or connector._session_id
-        if not sid:
-            return {"status": "error", "message": "No active session ID"}
-        return await connector.get_session_affective_summary(sid)
-
-    return {"status": "error", "message": f"Unknown action: {action}"}
-
-
-_global_firebase_connector: FirebaseConnector = None
-
-
-def set_firebase_connector(connector: FirebaseConnector) -> None:
-    """Injected by AetherEngine during setup."""
-    global _global_firebase_connector
-    _global_firebase_connector = connector
+        except Exception as e:
+            logger.error(f"Failed to end session: {e}")

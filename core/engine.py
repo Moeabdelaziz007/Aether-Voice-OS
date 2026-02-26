@@ -29,19 +29,20 @@ from typing import Any, Optional
 
 from core.admin_api import SHARED_STATE, AdminAPIServer
 from core.ai import handoff
-from core.ai.agents.proactive import CodeAwareProactiveAgent, ProactiveInterventionEngine
+from core.ai.agents.proactive import (
+    CodeAwareProactiveAgent,
+    ProactiveInterventionEngine,
+)
 from core.ai.genetic import GeneticOptimizer
 from core.ai.hive import HiveCoordinator
 from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
-from core.audio.paralinguistics import (ParalinguisticAnalyzer,
-                                        ParalinguisticFeatures)
+from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.playback import AudioPlayback
 from core.audio.processing import AdaptiveVAD
 from core.identity.package import AthPackage
 from core.identity.registry import AetherRegistry
-from core.tools import (hive_memory, memory_tool, system_tool, tasks_tool,
-                        vision_tool)
+from core.tools import hive_memory, memory_tool, system_tool, tasks_tool, vision_tool
 from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.router import ToolRouter
@@ -79,8 +80,20 @@ class AetherEngine:
         self._firebase = FirebaseConnector()
 
         # Neural Dispatcher — routes Gemini tool_calls to handlers
+        from pathlib import Path
+
+        from core.tools.vector_store import LocalVectorStore
+
         self._router = ToolRouter()
-        self._router.init_vector_store(self._config.ai.api_key)
+
+        # Load local index for semantic routing and RAG
+        root_dir = Path(__file__).resolve().parent.parent
+        index_path = root_dir / ".aether_index.pkl"
+        global_index = LocalVectorStore(api_key=self._config.ai.api_key)
+        global_index.load(index_path)
+
+        # Inject global index into router for semantic recovery
+        self._router._vector_store = global_index
 
         # Affective Computing: Paralinguistic Analyzer
         self._paralinguistics = ParalinguisticAnalyzer(
@@ -133,7 +146,7 @@ class AetherEngine:
         self._optimizer = GeneticOptimizer(
             self._firebase, api_key=self._config.ai.api_key
         )
-        
+
         # Phase 4: Proactive Intelligence Engine
         self._proactive_engine = ProactiveInterventionEngine()
         self._proactive_agent = CodeAwareProactiveAgent()
@@ -146,6 +159,11 @@ class AetherEngine:
 
     def _register_tools(self) -> None:
         """Register all tool modules with the Neural Dispatcher."""
+        from core.tools import rag_tool
+
+        # Inject vector index to RAG tool
+        rag_tool.set_shared_index(self._router._vector_store)
+
         # Inject Firebase connector into persistence tools
         tasks_tool.set_firebase_connector(self._firebase)
         memory_tool.set_firebase_connector(self._firebase)
@@ -157,6 +175,7 @@ class AetherEngine:
         self._router.register_module(vision_tool)
         self._router.register_module(handoff)
         self._router.register_module(hive_memory)
+        self._router.register_module(rag_tool)
 
         # Connect Hive to tools
         handoff.set_hive_params(self._hive, self._session_restart)
@@ -228,12 +247,12 @@ class AetherEngine:
         """Handle incoming affective metrics from the capture layer."""
         if self._firebase.is_connected:
             asyncio.create_task(self._firebase.log_affective_metrics(features))
-            
+
         # Phase 4: Proactive Intervention Trigger
         # Check if frustration levels warrant a system intervention
         valence = getattr(features, "valence", 0.0)
         arousal = getattr(features, "arousal", 0.0)
-        
+
         if self._proactive_engine.should_intervene(valence, arousal):
             asyncio.create_task(self._trigger_intervention())
 
@@ -245,15 +264,15 @@ class AetherEngine:
         empathy_msg = self._proactive_engine.generate_empathetic_message()
         tools = await self._proactive_agent.get_investigation_tools()
         tool_names = [t["tool"] for t in tools]
-        
+
         system_note = (
             f"SYSTEM_ALERT: High user frustration detected. "
             f"Suggested Action: {empathy_msg} "
             f"Available Diagnostic Tools: {tool_names}"
         )
-        
+
         logger.info("🚨 Proactive Intervention: %s", system_note)
-        
+
         # Inject into session so Gemini knows to speak/act
         if hasattr(self._session, "send_text"):
             await self._session.send_text(system_note)

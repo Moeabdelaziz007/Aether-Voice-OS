@@ -47,6 +47,17 @@ class ThalamicGate:
                 self._frustration_streak = 0
                 continue
 
+            # Record acoustic state for baseline generation
+            is_speaking = False
+            rms = getattr(audio_state, "last_rms", 0.0)
+
+            if hasattr(audio_state, "silence_type"):
+                is_speaking = audio_state.silence_type not in ["absolute", "breathing"]
+
+            self._calibrator.baseline_manager.record_acoustic_state(
+                rms=rms, is_speaking=is_speaking
+            )
+
             # For the demo MVP, we synthesize a frustration score based on silence type + acoustic features.
             frustration_score = self._compute_frustration_score()
 

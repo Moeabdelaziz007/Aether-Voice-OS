@@ -4,7 +4,8 @@ import { useState } from 'react';
 import { WidgetContainer } from '../components/WidgetContainer';
 import { LiveWaveLine } from '../components/LiveWaveLine';
 import { TranscriptionDrawer } from '../components/TranscriptionDrawer';
-import { Mic, Activity, AlignLeft } from 'lucide-react';
+import { NeuralWeb } from '../components/NeuralWeb';
+import { Mic, Activity, AlignLeft, Network } from 'lucide-react';
 
 export default function Home() {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -56,6 +57,8 @@ export default function Home() {
 
                     <div className="flex gap-2">
                         <button
+                            title="Expand Menu"
+                            aria-label="Expand Menu"
                             onClick={() => setIsExpanded(!isExpanded)}
                             className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/50 hover:text-white"
                         >
@@ -68,7 +71,15 @@ export default function Home() {
                 <div className="flex-1 flex flex-col justify-center relative z-10">
                     <LiveWaveLine state={audioState} />
 
-                    <div className="absolute inset-x-0 bottom-0 flex justify-center -mb-2">
+                    {/* ADK Visualization */}
+                    <div className="px-4 mt-6">
+                        <NeuralWeb events={[
+                            { id: '1', fromAgent: 'Orchestrator', toAgent: 'Architect', task: 'Analyze task requirements', status: 'completed' },
+                            { id: '2', fromAgent: 'Architect', toAgent: 'Debugger', task: 'Verify code blueprint', status: 'active' }
+                        ]} />
+                    </div>
+
+                    <div className="absolute inset-x-0 bottom-0 flex justify-center -mb-2 mt-4">
                         <button
                             onClick={toggleListening}
                             className={`p-3 rounded-full transition-all duration-300 ${audioState !== 'idle'

@@ -8,13 +8,20 @@ logger = logging.getLogger(__name__)
 class EmotionCalibrator:
     """
     Learns from user feedback and interaction history to adjust
-    emotion sensitivity thresholds dynamically.
+    emotion sensitivity thresholds dynamically, factoring in acoustic baselines.
     """
 
     def __init__(self):
+        from core.emotion.baseline import EmotionBaselineManager
+
         self._thresholds = {"frustration": 0.85}  # Initial baseline for intervention
+        self._baseline_mgr = EmotionBaselineManager(calibration_duration_seconds=30)
         self._feedback_history = []
         logger.info("🧠 EmotionCalibrator: System online (Frustration Baseline: 0.85)")
+
+    @property
+    def baseline_manager(self):
+        return self._baseline_mgr
 
     def update_threshold(self, predicted: bool, actual: bool):
         """
@@ -42,9 +49,15 @@ class EmotionCalibrator:
         )
 
     def should_intervene(self, emotion_state: dict) -> bool:
-        """Adaptive decision logic based on live threshold."""
+        """Adaptive decision logic based on live threshold and baselines."""
         score = emotion_state.get("frustration", 0.0)
-        return score > self._thresholds["frustration"]
+
+        # If still calibrating, we require a stronger signal to avoid false positives
+        effective_threshold = self._thresholds["frustration"]
+        if not self._baseline_mgr.is_calibrated:
+            effective_threshold += 0.1  # Stricter during first 30s
+
+        return score > effective_threshold
 
     @property
     def current_threshold(self) -> float:

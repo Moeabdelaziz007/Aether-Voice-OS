@@ -4,9 +4,11 @@
 
 # --- Python ---
 venv/
+.venv/
 __pycache__/
 *.py[cod]
 *.so
+*.pkl
 !core/audio/aether_*.py[cod]
 *.so
 *.dylib

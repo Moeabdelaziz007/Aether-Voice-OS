@@ -18,6 +18,7 @@ import pytest
 
 from core.ai import handoff
 from core.ai.hive import HiveCoordinator
+
 # Aether Core Imports
 from core.audio.processing import AdaptiveVAD, energy_vad
 from core.identity.registry import AetherRegistry
@@ -78,9 +79,7 @@ async def test_e2e_singularity():
         np.int16
     )  # Very Loud speech
     vad_res = energy_vad(speech_signal, adaptive_engine=vad)
-    assert (
-        vad_res.is_hard is True
-    ), f"Failed to detect speech. RMS: {vad_res.energy_rms}"
+    assert vad_res.is_hard, f"Failed to detect speech. RMS: {vad_res.energy_rms}"
 
     assert (
         hive.active_soul.manifest.name == "ArchitectExpert"

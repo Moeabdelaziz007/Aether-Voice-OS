@@ -13,3 +13,7 @@ line-length = 88
 # Enable formatting.
 quote-style = "double"
 indent-style = "space"
+
+[tool.isort]
+profile = "black"
+line_length = 88
