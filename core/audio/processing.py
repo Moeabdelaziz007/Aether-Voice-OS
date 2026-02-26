@@ -206,30 +206,81 @@ def find_zero_crossing(
     return len(pcm_data)
 
 
+class AdaptiveVAD:
+    """
+    Tracks the environmental noise floor to dynamically adjust VAD thresholds.
+
+    Uses a rolling minimum of energy levels over a specific window
+    to estimate the base noise level.
+    """
+
+    def __init__(
+        self, 
+        window_size_sec: float = 5.0, 
+        sample_rate: int = 16_000,
+        min_threshold: float = 0.01,
+        max_threshold: float = 0.15,
+        scaling_factor: float = 1.5,
+    ) -> None:
+        self.min_threshold = min_threshold
+        self.max_threshold = max_threshold
+        self.scaling_factor = scaling_factor
+        
+        # Track energy history for noise floor estimation (min-tracking)
+        # We store one value per 100ms
+        self._history_size = int(window_size_sec / 0.1)
+        self._history: list[float] = []
+        self._noise_floor = min_threshold
+
+    def update(self, current_rms: float) -> float:
+        """
+        Update the noise floor estimate and return the new adaptive threshold.
+        """
+        self._history.append(current_rms)
+        if len(self._history) > self._history_size:
+            self._history.pop(0)
+
+        # Noise floor is the minimum energy seen recently
+        self._noise_floor = min(self._history)
+        
+        # Adaptive threshold is noise_floor * scaling_factor, capped
+        adaptive = self._noise_floor * self.scaling_factor
+        return max(self.min_threshold, min(adaptive, self.max_threshold))
+
+    @property
+    def noise_floor(self) -> float:
+        return self._noise_floor
+
+
 def energy_vad(
     pcm_chunk: NDArray[np.int16],
     threshold: float = 0.02,
+    adaptive_engine: Optional[AdaptiveVAD] = None,
 ) -> VADResult:
     """
     RMS energy-based Voice Activity Detection.
 
-    This is a *local* VAD used for UI reactivity (waveform display,
-    LED indicators). Gemini has its own server-side VAD for turn
-    detection; we do NOT rely on this for conversation flow.
-
     Args:
         pcm_chunk: Raw PCM int16 audio samples.
-        threshold: RMS energy threshold (0.0–1.0 normalized).
+        threshold: RMS energy threshold (used if adaptive_engine is None).
+        adaptive_engine: Optional AdaptiveVAD instance for dynamic thresholding.
 
     Returns:
         VADResult with speech flag, energy level, and sample count.
     """
     # ── Rust (Synapse) dispatch ──
     if _RUST_BACKEND:
+        # Note: If Rust backend exists, it should ideally handle the adaptive logic internally.
+        # For now, we use the Rust RMS calculation but apply Python adaptive logic if provided.
         result = aether_cortex.energy_vad(pcm_chunk, threshold)
+        energy_rms = float(result["energy_rms"])
+        
+        if adaptive_engine:
+            threshold = adaptive_engine.update(energy_rms)
+            
         return VADResult(
-            is_speech=result["is_speech"],
-            energy_rms=float(result["energy_rms"]),
+            is_speech=energy_rms > threshold,
+            energy_rms=energy_rms,
             sample_count=int(result["sample_count"]),
         )
 
@@ -239,6 +290,9 @@ def energy_vad(
 
     normalized = pcm_chunk.astype(np.float32) / 32768.0
     rms = float(np.sqrt(np.mean(normalized ** 2)))
+    
+    if adaptive_engine:
+        threshold = adaptive_engine.update(rms)
 
     return VADResult(
         is_speech=rms > threshold,

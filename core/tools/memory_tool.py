@@ -36,13 +36,21 @@ def _get_db():
     return None
 
 
-async def save_memory(key: str, value: str, **kwargs) -> dict:
+async def save_memory(
+    key: str, 
+    value: str, 
+    priority: str = "medium", 
+    tags: Optional[list[str]] = None, 
+    **kwargs
+) -> dict:
     """
     Save a piece of information to persistent memory.
 
     Args:
         key: A short label for the memory (e.g., "user_name", "preference")
         value: The information to remember
+        priority: Importance of this memory (low, medium, high). Defaults to medium.
+        tags: Optional list of categories/tags (e.g., ["contacts", "work", "hobby"])
     """
     db = _get_db()
     if not db:
@@ -50,22 +58,29 @@ async def save_memory(key: str, value: str, **kwargs) -> dict:
         return {
             "status": "saved_locally",
             "key": key,
-            "message": f"Remembered '{key}' (local only — will not persist across restarts).",
+            "message": f"Remembered '{key}' (local only — will not persist).",
         }
+
+    valid_priorities = ["low", "medium", "high"]
+    priority = priority.lower() if priority.lower() in valid_priorities else "medium"
+    tags = tags or []
 
     try:
         doc_ref = db.collection("memory").document(key)
         await doc_ref.set({
             "key": key,
             "value": value,
+            "priority": priority,
+            "tags": tags,
             "updated_at": datetime.now(timezone.utc).isoformat(),
             "session_id": _firebase._session_id if _firebase else None,
         })
-        logger.info("Memory saved: %s = %s", key, value[:50])
+        logger.info("Memory saved [%s]: %s = %s", priority, key, value[:50])
         return {
             "status": "saved",
             "key": key,
-            "message": f"I'll remember that: {key} = {value}",
+            "priority": priority,
+            "message": f"Synapse update: I've stored '{key}' as {priority} priority memory.",
         }
     except Exception as exc:
         logger.error("Memory save failed: %s", exc)
@@ -93,6 +108,8 @@ async def recall_memory(key: str, **kwargs) -> dict:
                 "status": "found",
                 "key": key,
                 "value": data.get("value", ""),
+                "priority": data.get("priority", "medium"),
+                "tags": data.get("tags", []),
                 "saved_at": data.get("updated_at", "unknown"),
             }
         else:
@@ -106,12 +123,13 @@ async def recall_memory(key: str, **kwargs) -> dict:
         return {"status": "error", "message": f"Failed to recall memory: {exc}"}
 
 
-async def list_memories(limit: int = 10, **kwargs) -> dict:
+async def list_memories(limit: int = 10, priority: Optional[str] = None, **kwargs) -> dict:
     """
-    List all saved memories.
+    List saved memories, optionally filtered by priority.
 
     Args:
         limit: Maximum number of memories to return.
+        priority: Filter by 'low', 'medium', or 'high'.
     """
     db = _get_db()
     if not db:
@@ -119,12 +137,18 @@ async def list_memories(limit: int = 10, **kwargs) -> dict:
 
     try:
         memories = []
-        docs = db.collection("memory").limit(limit).stream()
+        query = db.collection("memory")
+        if priority:
+            query = query.where("priority", "==", priority.lower())
+        
+        docs = query.limit(limit).stream()
         async for doc in docs:
             data = doc.to_dict()
             memories.append({
                 "key": data.get("key", doc.id),
                 "value": data.get("value", ""),
+                "priority": data.get("priority", "medium"),
+                "tags": data.get("tags", []),
             })
         return {
             "status": "ok",
@@ -136,34 +160,93 @@ async def list_memories(limit: int = 10, **kwargs) -> dict:
         return {"status": "error", "message": f"Failed to list memories: {exc}"}
 
 
-def get_tools() -> list[dict]:
+async def semantic_search(tags: list[str], limit: int = 5, **kwargs) -> dict:
     """
-    Module-level tool registration.
+    Search for memories using tags. This acts as a semantic-assisted lookup.
 
-    Called by ToolRouter.register_module() to auto-discover
-    all memory tools.
+    Args:
+        tags: List of tags to search for.
+        limit: Maximum results.
     """
+    db = _get_db()
+    if not db:
+        return {"status": "unavailable", "message": "Memory is offline."}
+
+    try:
+        memories = []
+        # Firestore array_contains_any supports up to 10 tags
+        query = db.collection("memory").where("tags", "array_contains_any", tags).limit(limit)
+        docs = query.stream()
+        async for doc in docs:
+            data = doc.to_dict()
+            memories.append({
+                "key": data.get("key", doc.id),
+                "value": data.get("value", ""),
+                "priority": data.get("priority", "medium"),
+            })
+        
+        return {
+            "status": "ok",
+            "matches": len(memories),
+            "memories": memories,
+        }
+    except Exception as exc:
+        logger.error("Semantic search failed: %s", exc)
+        return {"status": "error", "message": f"Search failed: {exc}"}
+
+
+async def prune_memories(priority: str = "low", **kwargs) -> dict:
+    """
+    Delete all memories of a specific priority. Use for memory hygiene.
+
+    Args:
+        priority: The priority to prune ('low', 'medium', or 'high').
+    """
+    db = _get_db()
+    if not db:
+        return {"status": "unavailable", "message": "Memory is offline."}
+
+    try:
+        count = 0
+        docs = db.collection("memory").where("priority", "==", priority.lower()).stream()
+        async for doc in docs:
+            await doc.reference.delete()
+            count += 1
+        
+        logger.info("Pruned %d %s-priority memories", count, priority)
+        return {
+            "status": "pruned",
+            "count": count,
+            "message": f"Successfully cleared {count} {priority}-importance items from memory.",
+        }
+    except Exception as exc:
+        logger.error("Pruning failed: %s", exc)
+        return {"status": "error", "message": f"Pruning failed: {exc}"}
+
+
+def get_tools() -> list[dict]:
+    """Module-level tool registration for Neural Dispatcher."""
     return [
         {
             "name": "save_memory",
             "description": (
-                "Save a piece of information to persistent memory. "
-                "Use when the user asks you to remember something, "
-                "like their name, preferences, or important details."
+                "Save information to persistent memory with priority and tags. "
+                "Higher priority memories are kept longer."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "key": {
-                        "type": "string",
-                        "description": (
-                            "A short label for the memory "
-                            "(e.g., 'user_name', 'favorite_language')"
-                        ),
+                    "key": {"type": "string", "description": "Unique label for the memory"},
+                    "value": {"type": "string", "description": "Information to remember"},
+                    "priority": {
+                        "type": "string", 
+                        "enum": ["low", "medium", "high"],
+                        "description": "Importance level"
                     },
-                    "value": {
-                        "type": "string",
-                        "description": "The information to remember",
+                    "tags": {
+                        "type": "array", 
+                        "items": {"type": "string"},
+                        "description": "Categorization tags"
                     },
                 },
                 "required": ["key", "value"],
@@ -172,18 +255,11 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "recall_memory",
-            "description": (
-                "Recall a previously saved piece of information. "
-                "Use when the user asks 'do you remember...?' or "
-                "references something they told you before."
-            ),
+            "description": "Recall a previously saved piece of information by key.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "key": {
-                        "type": "string",
-                        "description": "The label of the memory to recall",
-                    },
+                    "key": {"type": "string", "description": "Memory key to find"},
                 },
                 "required": ["key"],
             },
@@ -191,19 +267,38 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "list_memories",
-            "description": (
-                "List all saved memories. Use when the user asks "
-                "'what do you remember about me?'"
-            ),
+            "description": "List all saved memories, optionally filtering by priority.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "limit": {
-                        "type": "integer",
-                        "description": "Maximum number of memories to return",
-                    },
+                    "limit": {"type": "integer", "description": "Max documents"},
+                    "priority": {"type": "string", "enum": ["low", "medium", "high"]},
                 },
             },
             "handler": list_memories,
+        },
+        {
+            "name": "semantic_search",
+            "description": "Search memories by descriptive tags.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "tags": {"type": "array", "items": {"type": "string"}},
+                    "limit": {"type": "integer"},
+                },
+                "required": ["tags"],
+            },
+            "handler": semantic_search,
+        },
+        {
+            "name": "prune_memories",
+            "description": "Clear out low-importance memories to free up context.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "priority": {"type": "string", "enum": ["low", "medium", "high"]},
+                },
+            },
+            "handler": prune_memories,
         },
     ]

@@ -1,138 +1,113 @@
-# AGENTS.md — Aether Voice OS
+# 🌌 Aether Voice OS: Neural Architect Manifesto
 
-> The unified context file for AI agents operating within the Aether OS codebase.
-> This document follows the [AGENTS.md standard](https://agentsmd.io) for AI-native development.
+> **CORE DIRECTIVE:** Build a zero-latency, deeply persistent, multimodal AI operating system for the 2026 Gemini Live Challenge.
 
-## 🌌 Project Overview
+---
 
-**Aether Voice OS** is a real-time, multimodal AI operating system built for the
-**Google Gemini Live Agents Challenge 2026**. It combines Gemini 2.0 Multimodal
-Live API, Google ADK, and Firebase to deliver zero-latency voice-first AI interactions.
+## 🧠 System Architecture: The Aether Anatomy
 
-### Architecture at a Glance
+Aether is designed as a **Neural OS**, separating the "Vocal Cortex" (Gemini) from the "Neural Dispatcher" (ADK) and the "Synapse Layer" (Memory).
 
+```mermaid
+graph TD
+    A[Gemini 2.0 Multimodal API] <-->|Real-time Audio/Tools| B(Neural Dispatcher: ToolRouter)
+    B <-->|Hot-Reloading| C[AetherRegistry: .ath Packages]
+    B <-->|Synapse Layer| D[Firestore Persistent Memory]
+    B -->|Audio Rendering| E[AetherPlayback]
+    
+    subgraph Synapse_Memory
+        D1[L1: Session Context]
+        D2[L2: Semantic Tags]
+        D3[L3: Priority Persistence]
+    end
 ```
-┌─────────────────────────────────────────────────────┐
-│                   Aether Voice OS                   │
-├──────────┬──────────┬──────────┬────────────────────┤
-│  Voice   │ Gateway  │  Runner  │     Registry       │
-│ Stream   │ OpenClaw │   ADK    │    .ath Packages   │
-│ (Gemini) │ (WS/TLS) │ (Orch.) │  (Soul/Skills)     │
-├──────────┴──────────┴──────────┴────────────────────┤
-│              Firebase (Firestore + Functions)        │
-└─────────────────────────────────────────────────────┘
-```
 
-### Directory Structure
+### 📂 Structural Blueprint
 
-```
-core/               # Python backend engine
-  windowing.py      # Audio tumbling windows + zero-crossing detection
-  voice_stream.py   # Gemini 2.0 Multimodal Live client
-  gateway.py        # OpenClaw WebSocket gateway (Ed25519 auth)
-  runner.py         # Central ADK orchestrator
-  registry.py       # .ath package loader & hot-swap
-docs/               # Technical specifications
-  agent.md          # Persona & DNA specification
-  gateway_protocol.md  # OpenClaw handshake reference
-brain/              # Agent identity packages
-  aether-persona/   # Core persona files (Soul.md, Skills.md)
-  packages/         # Loadable .ath agent packages
-skills/             # Skill modules for tool execution
-apps/web/           # Next.js frontend (Phase 3)
+```text
+core/
+  engine.py         # The "Cerebellum" — Orchestrates all subsystems
+  tools/
+    router.py       # Neural Dispatcher — 60k+ calls/sec throughput
+    memory_tool.py  # Synapse Layer — Priority-weighted persistent memory
+    firebase_tool.py # Firebase Integration & Async Firestore Cloud
+  identity/
+    registry.py     # Hot-Reloading package observer
+    package.py      # .ath SoulManifest & Integrity Verification
+  gateway.py        # OpenClaw WebSocket Layer (Ed25519)
+brain/
+  packages/         # Live-loadable Agent Souls (.ath)
+tests/
+  test_adk_stress.py # High-concurrency performance validation
+  test_memory_deep.py # Priority & Pruning logic verification
 ```
 
 ---
 
-## 🛠️ Setup & Build
+## ⚡ Neural Dispatcher (ADK 2.0)
+
+The **ToolRouter** is our high-performance kernel.
+
+- **p99 Obsession:** Built-in micro-latency profiling for all tools.
+- **Dynamic Hot-Reloading:** Swapping `.ath` packages in `packages/` updates the agent's identity and tools in real-time WITHOUT engine restarts.
+- **Concurrency:** Uses `asyncio` to achieve near-native execution parallelization.
+
+---
+
+## 🧠 Synapse Layer (Deep Memory)
+
+Aether uses a **weighted persistence model** to ensure agents remain context-aware over months of interaction.
+
+| Priority | Retention Policy | Example Use Case |
+| :--- | :--- | :--- |
+| **High** | Permanent (Immortal) | User name, Critical health data, Core preferences. |
+| **Medium** | Session-spanning | Recent projects, Last week's conversation topics. |
+| **Low** | Ephemeral (Prunable) | Temporary meeting notes, transient grocery lists. |
+
+### Semantic Retrieval
+
+Agents use **Tag-based Synapses** to query long-term memory.
+
+- *Instead of:* `recall_memory("key123")`
+- *Neural Way:* `semantic_search(tags=["home", "automation"])`
+
+---
+
+## 🛠️ Developer Onboarding
+
+### 1. Zero-Friction Setup
 
 ```bash
-# 1. Create and activate virtual environment
+# Clone and ignite the environment
 python3 -m venv venv && source venv/bin/activate
+pip install -r requirements.txt
+python run_aether.py --mode production
+```
 
-# 2. Install dependencies
-pip install google-generativeai fastapi uvicorn websockets \
-  python-dotenv numpy cryptography pydantic watchdog
+### 2. Crafting a New Agent (.ath)
 
-# 3. Set environment variables
-export GOOGLE_API_KEY="your-key-here"
+Create a directory in `brain/packages/` with a `manifest.json`:
 
-# 4. Run the gateway
-python -m core.gateway
-
-# 5. Run the orchestrator
-python -m core.runner
+```json
+{
+  "name": "AetherSovereign",
+  "version": "1.0.0",
+  "persona": "Deep analytical entity...",
+  "memory_tags": ["high_security", "architecture"],
+  "capabilities": ["memory.write", "tool.execute"]
+}
 ```
 
 ---
 
-## 🧪 Testing
+## 🛡️ Coding Ethos
 
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run with coverage
-pytest tests/ --cov=core --cov-report=term-missing
-
-# Lint check
-flake8 core/ --max-line-length=120
-```
+1. **Async First:** If it blocks, it's a bug.
+2. **Type Safety:** `Pydantic` and `Type Hints` are mandatory for all protocol layers.
+3. **Frugal Luxury:** Cloud cost is a performance metric. Use serverless/elastic tools.
+4. **Cyberpunk Aesthetic:** Keep code clean, modern, and lean.
 
 ---
 
-## 📐 Coding Standards
-
-| Rule | Convention |
-| :--- | :--- |
-| **Language** | Python 3.11+ |
-| **Type Hints** | Required on all public functions |
-| **Docstrings** | Google-style, required on classes and public methods |
-| **Line Length** | 120 characters max |
-| **Imports** | `isort` ordering: stdlib → third-party → local |
-| **Async** | Prefer `asyncio` over threads for I/O-bound work |
-| **Secrets** | Never hardcode. Use `.env` + `python-dotenv` |
-| **Error Handling** | Explicit exceptions with context messages |
-
----
-
-## 🔐 Security Boundaries
-
-- **API Keys:** Injected via environment variables only. Never committed.
-- **Gateway Auth:** Ed25519 challenge-response (see `docs/gateway_protocol.md`).
-- **Workspace Access:** All tool execution is sandboxed with `workspace: "ro"` by default.
-- **Package Integrity:** `.ath` packages are verified with SHA256 checksums before loading.
-
----
-
-## 🧠 Domain Context
-
-### Audio Processing
-
-- **Chunk Size:** 150ms PCM windows (16kHz, 16-bit mono).
-- **Barge-in:** Zero-crossing detection prevents audio clicks during interruption.
-- **VAD:** Energy-based voice activity detection triggers processing.
-
-### Agent Identity (.ath Packages)
-
-- `Soul.md` — Core persona instructions and bias parameters.
-- `Skills.md` — Available tools and MCP integrations.
-- `heartbeat.md` — Autonomous background routines.
-
-### Multi-Agent Orchestration
-
-- Supervisor pattern: `runner.py` delegates to specialized sub-agents.
-- State shared via Firebase Firestore (L1: session, L2: long-term memory).
-- Capability-based access control prevents privilege escalation.
-
----
-
-## 🤖 Agent Instructions
-
-When modifying this codebase:
-
-1. **Always run `flake8`** before committing. Zero warnings policy.
-2. **Never modify `.env`** or credential files.
-3. **Test audio changes** with synthetic PCM data, not live microphone.
-4. **Respect the gateway protocol** — changes to handshake require updating `docs/gateway_protocol.md`.
-5. **Update `AGENTS.md`** if you add new directories, commands, or conventions.
+> [!TIP]
+> Always run `pytest tests/test_adk_stress.py` after modifying the `ToolRouter` to ensure no performance regression.

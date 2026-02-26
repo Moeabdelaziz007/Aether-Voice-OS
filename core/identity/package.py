@@ -32,6 +32,10 @@ class SoulManifest(BaseModel):
     language: str = Field("ar-EG", description="Primary language (BCP-47)")
     capabilities: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
+    memory_tags: list[str] = Field(
+        default_factory=list, 
+        description="Memory namespaces this agent is optimized for"
+    )
     author: Optional[str] = None
     checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
 

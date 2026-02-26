@@ -144,6 +144,12 @@ class GeminiLiveSession:
                 async with asyncio.TaskGroup() as tg:
                     tg.create_task(self._send_loop(session))
                     tg.create_task(self._receive_loop(session))
+                    
+                    # ── Proactive Vision Pulse ──────────────────────
+                    # Periodic screenshots injected into the stream 
+                    # for real-time visual context.
+                    if self._config.enable_proactive_vision:
+                        tg.create_task(self._vision_pulse_loop(session))
 
         except* Exception as eg:
             for exc in eg.exceptions:
@@ -190,6 +196,41 @@ class GeminiLiveSession:
                 logger.error("Send error: %s", exc)
                 if "closed" in str(exc).lower():
                     break
+
+    async def _vision_pulse_loop(self, session) -> None:
+        """
+        Periodically captures a screenshot and sends it to Gemini.
+        This provides 'eyes' to the agent without a direct prompt.
+        """
+        logger.info("Vision Pulse loop started (10s interval)")
+        import os
+        import time
+        from core.tools.vision_tool import capture_screenshot
+        
+        while self._running:
+            try:
+                # 10 second interval for proactive pulses
+                await asyncio.sleep(10.0)
+                
+                # Capture current screen content
+                # This uses the existing vision_tool infrastructure
+                res = await capture_screenshot()
+                if res.get("status") == "ok":
+                    path = res["path"]
+                    if os.path.exists(path):
+                        with open(path, "rb") as f:
+                            image_bytes = f.read()
+                        
+                        logger.debug("Proactive Vision: Sending screenshot to Gemini")
+                        await session.send_realtime_input(
+                            parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
+                        )
+                        # Cleanup
+                        os.remove(path)
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.debug("Vision pulse failed: %s", e)
 
     async def _receive_loop(self, session) -> None:
         """
@@ -263,32 +304,34 @@ class GeminiLiveSession:
                     break
                 logger.error("Receive error: %s", exc, exc_info=True)
                 await asyncio.sleep(0.5)  # Brief backoff before retry
-
+                
     async def _handle_tool_call(self, session, tool_call) -> None:
         """
         Handle a Gemini function call by dispatching to the ToolRouter.
 
-        Flow:
-          1. Gemini emits tool_call with function_calls list
-          2. We dispatch each to the router
-          3. We send tool_response back to Gemini
-          4. Gemini speaks the confirmation (audio stream stays open)
+        Upgraded to PARALLEL execution via TaskGroup.
         """
         if not self._tool_router:
             logger.warning("Tool call received but no ToolRouter configured")
             return
 
+        calls = tool_call.function_calls
+        logger.info("🧠 Brain Dispatch: Executing %d calls in parallel", len(calls))
+
+        # 1. Create dispatch tasks
+        tasks = []
+        for fc in calls:
+            tasks.append(self._tool_router.dispatch(fc))
+
+        # 2. Parallel Execution
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # 3. Process Responses
         function_responses = []
-
-        for fc in tool_call.function_calls:
-            logger.info(
-                "🧠 Function call: %s(%s)",
-                fc.name,
-                json.dumps(fc.args, default=str)[:200] if fc.args else "{}",
-            )
-
-            # Dispatch to the router
-            result = await self._tool_router.dispatch(fc)
+        for fc, result in zip(calls, results):
+            if isinstance(result, Exception):
+                logger.error("Tool %s failed: %s", fc.name, result)
+                result = {"error": str(result), "status": "failed"}
 
             function_responses.append(
                 types.FunctionResponse(
@@ -297,8 +340,7 @@ class GeminiLiveSession:
                 )
             )
 
-            # --- Multimodal Vision Injection ---
-            # If the tool returned a screenshot path, inject it as visual context into the stream.
+            # --- Multimodal Vision Injection (if tool returns screenshot) ---
             if isinstance(result, dict) and "screenshot_path" in result:
                 import os
                 path = result["screenshot_path"]
@@ -306,32 +348,23 @@ class GeminiLiveSession:
                     try:
                         with open(path, "rb") as f:
                             image_bytes = f.read()
-                        
-                        logger.info("Injecting %s into multimodal session stream.", path)
                         await session.send_realtime_input(
                             parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
                         )
-                        # Optionally delete the temp file
                         os.remove(path)
                     except Exception as e:
-                        logger.error("Failed to inject screenshot into stream: %s", e)
+                        logger.error("Vision injection failed: %s", e)
 
-            # Fire analytics callback
+            # Fire analytics
             if self._on_tool_call:
-                try:
-                    await self._on_tool_call(fc.name, fc.args, result)
-                except Exception:
-                    pass  # Analytics must never break the pipeline
+                asyncio.create_task(self._on_tool_call(fc.name, fc.args, result))
 
-        # Send all responses back to Gemini
+        # 4. Final step: Send all responses back in a single turn
         try:
             await session.send_tool_response(function_responses)
-            logger.info(
-                "✓ Sent %d tool response(s) back to Gemini",
-                len(function_responses),
-            )
+            logger.info("✓ Parallel Brain Cycle Complete: %d results sent", len(function_responses))
         except Exception as exc:
-            logger.error("Failed to send tool response: %s", exc)
+            logger.error("Failed to send parallel tool responses: %s", exc)
 
     def _drain_output(self) -> None:
         """Drain the output queue on interruption (instant silence)."""
