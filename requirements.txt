@@ -30,3 +30,4 @@ bandit
 black
 isort
 pre-commit
+mss>=9.0.0

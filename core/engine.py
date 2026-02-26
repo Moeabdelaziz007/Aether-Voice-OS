@@ -29,6 +29,7 @@ from typing import Any, Optional
 
 from core.admin_api import SHARED_STATE, AdminAPIServer
 from core.ai import handoff
+from core.ai.agents.proactive import CodeAwareProactiveAgent, ProactiveInterventionEngine
 from core.ai.genetic import GeneticOptimizer
 from core.ai.hive import HiveCoordinator
 from core.ai.session import GeminiLiveSession
@@ -72,7 +73,7 @@ class AetherEngine:
         self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
             maxsize=self._config.audio.mic_queue_max
         )
-        self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=50)
+        self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 
         # Firebase persistence layer (created before tools so they can reference it)
         self._firebase = FirebaseConnector()
@@ -132,6 +133,10 @@ class AetherEngine:
         self._optimizer = GeneticOptimizer(
             self._firebase, api_key=self._config.ai.api_key
         )
+        
+        # Phase 4: Proactive Intelligence Engine
+        self._proactive_engine = ProactiveInterventionEngine()
+        self._proactive_agent = CodeAwareProactiveAgent()
 
         # ADK Tool Registry (legacy — kept for backward compat)
         self._tools: dict[str, Any] = {}
@@ -181,6 +186,15 @@ class AetherEngine:
         rms = audio_state.last_rms
         stype = audio_state.silence_type
 
+        # Optimization: Drain the outgoing audio queue to prevent stale audio playback
+        # This ensures immediate silence when the user interrupts.
+        while not self._audio_out.empty():
+            try:
+                self._audio_out.get_nowait()
+                self._audio_out.task_done()
+            except asyncio.QueueEmpty:
+                break
+
         vad_payload: dict[str, object] = {
             "type": "interrupted",
             "rms": rms,
@@ -188,9 +202,10 @@ class AetherEngine:
             "silence_type": stype,
         }
 
+        # Panic Threshold: If input is extremely loud (>0.8), stop immediately regardless of classification.
         # Cognitive Guard: If it's a hard signal but classified as non-speech, it's likely noise.
         # We duck instead of stop to maintain Aether's "presence".
-        if is_hard and stype not in ("thinking", "breathing", "void"):
+        if (is_hard and stype not in ("thinking", "breathing", "void")) or rms > 0.8:
             logger.info(
                 "⚡ Hard Barge-in (Speech detected, RMS: %.2f) — Stopping playback.",
                 rms,
@@ -213,6 +228,35 @@ class AetherEngine:
         """Handle incoming affective metrics from the capture layer."""
         if self._firebase.is_connected:
             asyncio.create_task(self._firebase.log_affective_metrics(features))
+            
+        # Phase 4: Proactive Intervention Trigger
+        # Check if frustration levels warrant a system intervention
+        valence = getattr(features, "valence", 0.0)
+        arousal = getattr(features, "arousal", 0.0)
+        
+        if self._proactive_engine.should_intervene(valence, arousal):
+            asyncio.create_task(self._trigger_intervention())
+
+    async def _trigger_intervention(self) -> None:
+        """
+        Injects a proactive context update into the Gemini session
+        when the user is frustrated.
+        """
+        empathy_msg = self._proactive_engine.generate_empathetic_message()
+        tools = await self._proactive_agent.get_investigation_tools()
+        tool_names = [t["tool"] for t in tools]
+        
+        system_note = (
+            f"SYSTEM_ALERT: High user frustration detected. "
+            f"Suggested Action: {empathy_msg} "
+            f"Available Diagnostic Tools: {tool_names}"
+        )
+        
+        logger.info("🚨 Proactive Intervention: %s", system_note)
+        
+        # Inject into session so Gemini knows to speak/act
+        if hasattr(self._session, "send_text"):
+            await self._session.send_text(system_note)
 
     async def _on_tool_call(self, tool_name: str, args: dict, result: dict) -> None:
         """Log tool calls to Firestore for session analytics."""
@@ -376,7 +420,7 @@ class AetherEngine:
                     # Brief delay for audio cross-fade (simulated)
                     await asyncio.sleep(1.0)
                 else:
-                    # If sesson ended naturally and not because of restart/shutdown
+                    # If session ended naturally and not because of restart/shutdown
                     if not self._shutdown_event.is_set():
                         logger.warning(
                             "Gemini session ended unexpectedly. Restarting in 5s..."

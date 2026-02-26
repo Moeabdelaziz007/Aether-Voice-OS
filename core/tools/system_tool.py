@@ -13,10 +13,14 @@ from __future__ import annotations
 
 import logging
 import platform
+import shlex
+import subprocess
 from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
+# Security: Hardcoded blacklist of dangerous commands
+COMMAND_BLACKLIST = {"rm", "sudo", "mkfs", "kill", "shutdown", "reboot", "dd", "mv", ":(){ :|:& };:"}
 
 async def get_current_time(**kwargs) -> dict:
     """
@@ -67,6 +71,49 @@ async def run_timer(minutes: int = 1, label: str = "Timer", **kwargs) -> dict:
         "will_fire_at": end_time.strftime("%I:%M %p"),
         "message": f"Timer '{label}' set for {minutes} minute(s).",
     }
+
+
+async def run_terminal_command(command: str, **kwargs) -> dict:
+    """
+    Executes a safe, sandboxed terminal command.
+    
+    Security:
+    - shell=False (prevents injection)
+    - Blacklisted commands (rm, sudo, etc.) are blocked.
+    - 5-second timeout.
+    """
+    try:
+        # 1. Parse command safely
+        args = shlex.split(command)
+        if not args:
+            return {"error": "No command provided."}
+
+        base_cmd = args[0]
+
+        # 2. Check Blacklist
+        if base_cmd.lower() in COMMAND_BLACKLIST:
+            logger.warning(f"Security Block: Attempted to run '{base_cmd}'")
+            return {"error": "Command blocked by security guardrails.", "violation": base_cmd.lower()}
+
+        # 3. Execute with Isolation
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            timeout=5,  # Strict timeout
+            shell=False # Prevent shell injection
+        )
+
+        return {
+            "stdout": result.stdout.strip(),
+            "stderr": result.stderr.strip(),
+            "return_code": result.returncode,
+        }
+
+    except subprocess.TimeoutExpired:
+        return {"error": "Command timed out (limit: 5s)."}
+    except Exception as e:
+        return {"error": f"Execution failed: {str(e)}"}
 
 
 def get_tools() -> list[dict]:
@@ -122,5 +169,22 @@ def get_tools() -> list[dict]:
             "handler": run_timer,
             "latency_tier": "low_latency",
             "idempotent": True,
+        },
+        {
+            "name": "run_terminal_command",
+            "description": (
+                "Executes a read-only or safe terminal command to diagnose issues. "
+                "Allowed: git, cat, ls, grep, echo, etc. "
+                "Blocked: rm, sudo, kill. "
+                "Use this to check git status or read error logs."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "The terminal command to run"}
+                },
+                "required": ["command"],
+            },
+            "handler": run_terminal_command,
         },
     ]

@@ -3,6 +3,7 @@ import time
 
 logger = logging.getLogger(__name__)
 
+from core.tools.vision_tool import take_screenshot
 
 class ProactiveInterventionEngine:
     """
@@ -17,12 +18,21 @@ class ProactiveInterventionEngine:
 
     def calculate_frustration(self, valence: float, arousal: float) -> float:
         """
-        Frustration is typically high arousal combined with negative valence.
+        Calculates frustration score.
+        Updated to detect 'Resignation' (Sighs) which are Low Arousal + Negative Valence.
         """
         if valence >= 0:
             return 0.0
-        # Inverse valence (make it positive magnitude) * arousal
-        frustration = abs(valence) * arousal
+            
+        neg_valence = abs(valence)
+        
+        # If extremely negative, trigger regardless of arousal (Deep frustration)
+        if neg_valence > 0.8:
+            return neg_valence
+            
+        # Weighted: Valence is the primary driver, Arousal amplifies it.
+        # (0.5 base ensures low-energy sighs are still captured)
+        frustration = neg_valence * (0.5 + (arousal * 0.5))
         return min(1.0, frustration)
 
     def should_intervene(self, valence: float, arousal: float) -> bool:
@@ -65,3 +75,16 @@ class CodeAwareProactiveAgent:
     def get_contextual_help(self, file_content: str) -> str:
         bug = self.analyze_ast(file_content)
         return f"Code Context: {bug}"
+
+    async def get_investigation_tools(self) -> list[dict]:
+        """
+        Returns a list of tool definitions or immediate actions to perform
+        when frustration is detected.
+        """
+        return [
+            {
+                "tool": "take_screenshot",
+                "reason": "User frustration detected. Visual context needed to diagnose the issue.",
+                "function": take_screenshot
+            }
+        ]
