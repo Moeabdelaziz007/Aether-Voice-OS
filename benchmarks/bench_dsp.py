@@ -7,19 +7,25 @@ implementations for core DSP functions used in the live pipeline.
 Usage (from project root):
     PYTHONPATH="." python3 benchmarks/bench_dsp.py
 """
-import sys
+
 import os
+import sys
 import time
+
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core", "audio"))
 # Optimization: Point directly to release artifact to bypass TCC move blocks
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "aether-cortex", "target", "release"))
+sys.path.insert(
+    0,
+    os.path.join(os.path.dirname(__file__), "..", "aether-cortex", "target", "release"),
+)
 
 # ── Import Rust backend ──
 try:
     import aether_cortex
+
     HAS_RUST = True
 except ImportError:
     HAS_RUST = False
@@ -35,7 +41,7 @@ def _numpy_energy_vad(pcm: np.ndarray, threshold: float = 0.02):
     if len(pcm) == 0:
         return {"is_speech": False, "energy_rms": 0.0, "sample_count": 0}
     normalized = pcm.astype(np.float32) / 32768.0
-    rms = float(np.sqrt(np.mean(normalized ** 2)))
+    rms = float(np.sqrt(np.mean(normalized**2)))
     return {"is_speech": rms > threshold, "energy_rms": rms, "sample_count": len(pcm)}
 
 
@@ -46,7 +52,7 @@ def _numpy_find_zero_crossing(pcm: np.ndarray, sr: int = 16000, ms: float = 20.0
     audio = pcm.astype(np.float32)
     lookahead = int(sr * ms / 1000)
     limit = min(len(audio) - 1, lookahead)
-    signs = np.sign(audio[:limit + 1])
+    signs = np.sign(audio[: limit + 1])
     crossings = np.where(signs[:-1] * signs[1:] <= 0)[0]
     if len(crossings) > 0:
         return int(crossings[0]) + 1
@@ -79,8 +85,7 @@ def main():
     np.random.seed(42)
     pcm_speech = np.random.randint(-10000, 10000, size=FRAME_SAMPLES, dtype=np.int16)
     pcm_crossing = np.array(
-        list(range(-200, 0)) + list(range(0, FRAME_SAMPLES - 200)),
-        dtype=np.int16
+        list(range(-200, 0)) + list(range(0, FRAME_SAMPLES - 200)), dtype=np.int16
     )[:FRAME_SAMPLES]
 
     results = []
@@ -94,7 +99,9 @@ def main():
     print(f"  {name:20s}: {us:8.2f} µs/call")
 
     if HAS_RUST:
-        name, us_rust = bench("Rust (Synapse)", aether_cortex.energy_vad, pcm_speech, 0.02)
+        name, us_rust = bench(
+            "Rust (Synapse)", aether_cortex.energy_vad, pcm_speech, 0.02
+        )
         results.append((name, us_rust))
         print(f"  {name:20s}: {us_rust:8.2f} µs/call")
         print(f"  {'Speedup':20s}: {us / us_rust:8.1f}x 🚀")
@@ -108,7 +115,9 @@ def main():
     print(f"  {name:20s}: {us:8.2f} µs/call")
 
     if HAS_RUST:
-        name, us_rust = bench("Rust (Axon)", aether_cortex.find_zero_crossing, pcm_crossing, 16000, 20.0)
+        name, us_rust = bench(
+            "Rust (Axon)", aether_cortex.find_zero_crossing, pcm_crossing, 16000, 20.0
+        )
         results.append((name, us_rust))
         print(f"  {name:20s}: {us_rust:8.2f} µs/call")
         print(f"  {'Speedup':20s}: {us / us_rust:8.1f}x 🚀")

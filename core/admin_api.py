@@ -4,26 +4,23 @@ Aether Voice OS — Local Admin API.
 Exposes a simple REST API on localhost:18790 for the Next.js Admin Dashboard.
 Runs in a background thread and serves data fetched asynchronously.
 """
+
 import json
 import logging
-import os
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 logger = logging.getLogger(__name__)
 
 # Global state updated asynchronously by the main loop
-SHARED_STATE = {
-    "sessions": [],
-    "synapse": None,
-    "system_status": "online"
-}
+SHARED_STATE = {"sessions": [], "synapse": None, "system_status": "online"}
+
 
 class AdminAPIHandler(BaseHTTPRequestHandler):
     def end_headers(self):
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
-        self.send_header('Content-Type', 'application/json')
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+        self.send_header("Content-Type", "application/json")
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -31,26 +28,29 @@ class AdminAPIHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        if self.path == '/api/sessions':
+        if self.path == "/api/sessions":
             self.send_response(200)
             self.end_headers()
             self.wfile.write(json.dumps(SHARED_STATE["sessions"], default=str).encode())
-        elif self.path == '/api/synapse':
+        elif self.path == "/api/synapse":
             self.send_response(200)
             self.end_headers()
             self.wfile.write(json.dumps(SHARED_STATE["synapse"], default=str).encode())
-        elif self.path == '/api/status':
+        elif self.path == "/api/status":
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(json.dumps({"status": SHARED_STATE["system_status"]}).encode())
+            self.wfile.write(
+                json.dumps({"status": SHARED_STATE["system_status"]}).encode()
+            )
         else:
             self.send_response(404)
             self.end_headers()
             self.wfile.write(b'{"error": "Not found"}')
-            
+
     # Disable default HTTP logging to avoid spam
     def log_message(self, format, *args):
         pass
+
 
 class AdminAPIServer:
     def __init__(self, port: int = 18790):
@@ -59,7 +59,7 @@ class AdminAPIServer:
         self.thread = None
 
     def start(self):
-        self.server = HTTPServer(('127.0.0.1', self.port), AdminAPIHandler)
+        self.server = HTTPServer(("127.0.0.1", self.port), AdminAPIHandler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         logger.info(f"Admin API started on http://127.0.0.1:{self.port}")

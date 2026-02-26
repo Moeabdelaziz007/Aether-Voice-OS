@@ -13,10 +13,10 @@ Architecture:
 
 Uses the official `google-genai` SDK (not google-generativeai).
 """
+
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import TYPE_CHECKING, Optional
 
@@ -28,6 +28,7 @@ from google.genai import types
 
 from core.config import AIConfig
 from core.errors import AIConnectionError, AISessionExpiredError
+from core.identity.package import SoulManifest
 
 logger = logging.getLogger(__name__)
 
@@ -63,9 +64,11 @@ class GeminiLiveSession:
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
-        self._frame_buffer: list[tuple[float, bytes]] = []  # Rolling history of screenshots
+        self._frame_buffer: list[
+            tuple[float, bytes]
+        ] = []  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
-        self._active_handoffs: dict[str, dict] = {} # A2A V3 Handoff Tracking
+        self._active_handoffs: dict[str, dict] = {}  # A2A V3 Handoff Tracking
 
     def _build_session_config(self) -> types.LiveConnectConfig:
         """Build the LiveConnectConfig with tool declarations."""
@@ -89,12 +92,25 @@ class GeminiLiveSession:
         # ── Hive expert logic ──
         system_instruction = self._config.system_instruction
         if self._soul:
-            system_instruction = f"{self._soul.persona}\n\nPrimary Domain: {self._soul.manifest.expertise if hasattr(self._soul, 'manifest') else {}}\n\n{system_instruction}"
+            expertise = (
+                self._soul.manifest.expertise
+                if hasattr(self._soul, "manifest")
+                else {}
+            )
+            system_instruction = (
+                f"{self._soul.persona}\n\n"
+                f"Primary Domain: {expertise}\n\n"
+                f"{system_instruction}"
+            )
             logger.info("A2A [SESSION] Applying Expert Soul: %s", self._soul.name)
 
         # ── Voice Preference Mapping ──
         speech_config = None
-        if self._soul and hasattr(self._soul, "manifest") and self._soul.manifest.voice_id:
+        if (
+            self._soul
+            and hasattr(self._soul, "manifest")
+            and self._soul.manifest.voice_id
+        ):
             voice_name = self._soul.manifest.voice_id
             logger.info("A2A [SESSION] Applying Expert Voice: %s", voice_name)
             speech_config = types.SpeechConfig(
@@ -169,9 +185,9 @@ class GeminiLiveSession:
                 async with asyncio.TaskGroup() as tg:
                     tg.create_task(self._send_loop(session))
                     tg.create_task(self._receive_loop(session))
-                    
+
                     # ── Proactive Vision Pulse ──────────────────────
-                    # Periodic screenshots injected into the stream 
+                    # Periodic screenshots injected into the stream
                     # for real-time visual context.
                     if self._config.enable_proactive_vision:
                         tg.create_task(self._vision_pulse_loop(session))
@@ -203,9 +219,7 @@ class GeminiLiveSession:
         frame_count = 0
         while self._running:
             try:
-                msg = await asyncio.wait_for(
-                    self._in_queue.get(), timeout=1.0
-                )
+                msg = await asyncio.wait_for(self._in_queue.get(), timeout=1.0)
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
@@ -233,19 +247,20 @@ class GeminiLiveSession:
         logger.info("Vision Pulse loop started (Reflex-Triggered Camera active)")
         import os
         import time
-        from core.tools.vision_tool import capture_screenshot
-        from core.tools.camera_tool import camera_instance
+
         from core.audio.state import audio_state
-        
+        from core.tools.camera_tool import camera_instance
+        from core.tools.vision_tool import capture_screenshot
+
         last_proactive_pulse = 0
         while self._running:
             try:
                 # 1 second resolution for the rolling buffer
                 await asyncio.sleep(1.0)
-                
+
                 now = time.time()
                 is_hard = audio_state.is_hard
-                
+
                 # ── Pulse 1: Screen Capture (Rolling Buffer) ──
                 res = await capture_screenshot()
                 if res.get("status") == "ok":
@@ -253,28 +268,40 @@ class GeminiLiveSession:
                     if os.path.exists(path):
                         with open(path, "rb") as f:
                             image_bytes = f.read()
-                        
+
                         self._frame_buffer.append((now, image_bytes))
                         if len(self._frame_buffer) > self._max_frames:
                             self._frame_buffer.pop(0)
 
                         # Proactive Pulse (10s)
                         if now - last_proactive_pulse > 10.0:
-                            logger.debug("Proactive Vision: Sending screenshot to Gemini")
+                            logger.debug(
+                                "Proactive Vision: Sending screenshot to Gemini"
+                            )
                             await session.send_realtime_input(
-                                parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
+                                parts=[
+                                    types.Part.from_bytes(
+                                        data=image_bytes, mime_type="image/jpeg"
+                                    )
+                                ]
                             )
                             last_proactive_pulse = now
-                        
+
                         os.remove(path)
 
                 # ── Pulse 2: Camera Capture (Hard Interrupt Grounding) ──
                 if is_hard:
-                    logger.info("📸 Camera Pulse: Capturing user reaction to hard-interrupt.")
+                    logger.info(
+                        "📸 Camera Pulse: Capturing user reaction to hard-interrupt."
+                    )
                     cam_bytes = camera_instance.capture_frame()
                     if cam_bytes:
                         await session.send_realtime_input(
-                            parts=[types.Part.from_bytes(data=cam_bytes, mime_type="image/jpeg")]
+                            parts=[
+                                types.Part.from_bytes(
+                                    data=cam_bytes, mime_type="image/jpeg"
+                                )
+                            ]
                         )
 
             except asyncio.CancelledError:
@@ -289,29 +316,36 @@ class GeminiLiveSession:
         text part to trigger a model backchannel.
         """
         from core.audio.state import audio_state
+
         logger.info("Backchannel loop active (Acoustic Empathy enabled)")
-        
+
         thinking_streak = 0
         while self._running:
             await asyncio.sleep(0.2)
-            
+
             # Reset empathy if model is currently playing audio
             if audio_state.is_playing:
                 thinking_streak = 0
                 continue
-            
+
             stype = audio_state.silence_type
             if stype in ("thinking", "breathing"):
                 thinking_streak += 1
-                if thinking_streak >= 25: # ~5 seconds of cognitive load
-                    logger.info("🧠 Empathy Trigger: User is thinking. Sending backchannel cue.")
+                if thinking_streak >= 25:  # ~5 seconds of cognitive load
+                    logger.info(
+                        "🧠 Empathy Trigger: User is thinking. Sending backchannel cue."
+                    )
                     try:
-                        # Sending a tiny text hint can encourage Gemini to 
+                        # Sending a tiny text hint can encourage Gemini to
                         # give a soft vocal affirmative without fully taking the turn.
                         await session.send_realtime_input(
-                            parts=[types.Part.from_text(text="[user is thinking, give a soft Mhm or I'm listening]")]
+                            parts=[
+                                types.Part.from_text(
+                                    text="[user thinking, soft 'Mhm']"
+                                )
+                            ]
                         )
-                        thinking_streak = 0 # Reset to avoid spamming
+                        thinking_streak = 0  # Reset to avoid spamming
                     except Exception as e:
                         logger.debug("Backchannel send failed: %s", e)
             else:
@@ -337,10 +371,7 @@ class GeminiLiveSession:
                         continue
 
                     # ── Extract audio from model response ────────────
-                    if (
-                        response.server_content
-                        and response.server_content.model_turn
-                    ):
+                    if response.server_content and response.server_content.model_turn:
                         for part in response.server_content.model_turn.parts:
                             # 1. Handle Text Transcript
                             if part.text:
@@ -348,34 +379,29 @@ class GeminiLiveSession:
                                     # Broadcast transcript segment directly to UI
                                     asyncio.create_task(
                                         self._gateway.broadcast(
-                                            "transcript",
-                                            {"text": part.text}
+                                            "transcript", {"text": part.text}
                                         )
                                     )
                                 except Exception as e:
-                                    logger.debug("Failed to broadcast transcript: %s", e)
+                                    logger.debug(
+                                        "Failed to broadcast transcript: %s", e
+                                    )
 
                             # 2. Handle Audio Output
-                            if (
-                                part.inline_data
-                                and isinstance(part.inline_data.data, bytes)
+                            if part.inline_data and isinstance(
+                                part.inline_data.data, bytes
                             ):
                                 # Overflow protection: drop oldest if queue is full
                                 if self._out_queue.full():
                                     try:
                                         self._out_queue.get_nowait()
-                                        logger.debug("Output queue overflow — dropped oldest chunk")
+                                        logger.debug("Output queue overflow")
                                     except asyncio.QueueEmpty:
                                         pass
-                                self._out_queue.put_nowait(
-                                    part.inline_data.data
-                                )
+                                self._out_queue.put_nowait(part.inline_data.data)
 
                     # ── Handle barge-in / interruption ────────────────
-                    if (
-                        response.server_content
-                        and response.server_content.interrupted
-                    ):
+                    if response.server_content and response.server_content.interrupted:
                         logger.info("⚡ Barge-in detected — draining output")
                         self._drain_output()
                         if self._on_interrupt:
@@ -389,7 +415,7 @@ class GeminiLiveSession:
                     break
                 logger.error("Receive error: %s", exc, exc_info=True)
                 await asyncio.sleep(0.5)  # Brief backoff before retry
-                
+
     async def _handle_tool_call(self, session, tool_call) -> None:
         """
         Handle a Gemini function call by dispatching to the ToolRouter.
@@ -428,13 +454,18 @@ class GeminiLiveSession:
             # --- Multimodal Vision Injection (if tool returns screenshot) ---
             if isinstance(result, dict) and "screenshot_path" in result:
                 import os
+
                 path = result["screenshot_path"]
                 if os.path.exists(path):
                     try:
                         with open(path, "rb") as f:
                             image_bytes = f.read()
                         await session.send_realtime_input(
-                            parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
+                            parts=[
+                                types.Part.from_bytes(
+                                    data=image_bytes, mime_type="image/jpeg"
+                                )
+                            ]
                         )
                         os.remove(path)
                     except Exception as e:
@@ -445,19 +476,25 @@ class GeminiLiveSession:
                 asyncio.create_task(self._on_tool_call(fc.name, fc.args, result))
 
             # --- A2A Handoff State Injection ---
-            if fc.name == "delegate_to_agent" and result.get("status") == "handoff_initiated":
+            if (
+                fc.name == "delegate_to_agent"
+                and result.get("status") == "handoff_initiated"
+            ):
                 handoff_id = result.get("handoff_id")
                 self._active_handoffs[handoff_id] = {
                     "target": fc.args.get("target_agent_id"),
                     "task": fc.args.get("task_description"),
-                    "timestamp": result.get("handoff_time")
+                    "timestamp": result.get("handoff_time"),
                 }
                 logger.info("A2A [STATE] Tracking handoff: %s", handoff_id)
 
         # 4. Final step: Send all responses back in a single turn
         try:
             await session.send_tool_response(function_responses)
-            logger.info("✓ Parallel Brain Cycle Complete: %d results sent", len(function_responses))
+            logger.info(
+                "✓ Parallel Brain Cycle Complete: %d results sent",
+                len(function_responses),
+            )
         except Exception as exc:
             logger.error("Failed to send parallel tool responses: %s", exc)
 

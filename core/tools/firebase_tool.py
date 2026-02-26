@@ -10,6 +10,7 @@ Connects Aether to Firebase for:
 Uses the Firebase Admin SDK for server-side operations.
 All Firebase config is loaded from environment variables.
 """
+
 from __future__ import annotations
 
 import logging
@@ -77,8 +78,7 @@ class FirebaseConnector:
 
         except ImportError:
             logger.warning(
-                "firebase-admin not installed. "
-                "Run: pip install firebase-admin"
+                "firebase-admin not installed. Run: pip install firebase-admin"
             )
             return False
         except Exception as exc:
@@ -102,8 +102,8 @@ class FirebaseConnector:
             logger.warning("Firebase not connected — session not tracked")
             return "local-session"
 
-        from datetime import datetime, timezone
         import uuid
+        from datetime import datetime, timezone
 
         self._session_id = str(uuid.uuid4())[:8]
         session_data = {
@@ -210,7 +210,7 @@ class FirebaseConnector:
             "speech_rate": features.speech_rate,
             "rms_variance": features.rms_variance,
             "spectral_centroid": features.spectral_centroid,
-            "engagement_score": features.engagement_score
+            "engagement_score": features.engagement_score,
         }
 
         try:
@@ -227,28 +227,34 @@ class FirebaseConnector:
             return {"status": "error", "message": "Firebase offline"}
 
         try:
-            query = self._db.collection("affective_telemetry").where(
-                "session_id", "==", session_id
-            ).order_by("timestamp")
-            
+            query = (
+                self._db.collection("affective_telemetry")
+                .where("session_id", "==", session_id)
+                .order_by("timestamp")
+            )
+
             docs = []
             async for doc in query.stream():
                 docs.append(doc.to_dict())
-            
+
             if not docs:
                 return {"status": "success", "summary": "No telemetry data found."}
-                
+
             avg_engagement = sum(d["engagement_score"] for d in docs) / len(docs)
-            avg_pitch = sum(d["pitch_estimate"] for d in docs if d["pitch_estimate"] > 0) / max(1, len([d for d in docs if d["pitch_estimate"] > 0]))
-            
+            avg_pitch = sum(
+                d["pitch_estimate"] for d in docs if d["pitch_estimate"] > 0
+            ) / max(1, len([d for d in docs if d["pitch_estimate"] > 0]))
+
             return {
                 "status": "success",
                 "summary": {
                     "avg_engagement": round(avg_engagement, 2),
                     "avg_pitch": round(avg_pitch, 1),
                     "interaction_count": len(docs),
-                    "trend": "improving" if docs[-1]["engagement_score"] > docs[0]["engagement_score"] else "stable/declining"
-                }
+                    "trend": "improving"
+                    if docs[-1]["engagement_score"] > docs[0]["engagement_score"]
+                    else "stable/declining",
+                },
             }
         except Exception as exc:
             logger.error("Failed to generate affective summary: %s", exc)
@@ -269,41 +275,48 @@ class FirebaseConnector:
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["start_session", "end_session", "save_state", "status", "affective_summary"],
+                        "enum": [
+                            "start_session",
+                            "end_session",
+                            "save_state",
+                            "status",
+                            "affective_summary",
+                        ],
                         "description": "Firebase action to perform",
                     },
                     "session_id": {
                         "type": "string",
-                        "description": "Optional session ID for reports (defaults to current)"
-                    }
+                        "description": "Optional session ID for reports (defaults to current)",
+                    },
                 },
                 "required": ["action"],
             },
         }
+
+
 async def aether_firebase(action: str, session_id: Optional[str] = None) -> dict:
     """Neural Dispatcher entry point for Firebase operations."""
-    from core.engine import SHARED_STATE # Optional: use shared state if needed
-    
+
     # Instance is typically managed by the engine, but we can use a singleton or global
     # For now, we'll use a globally accessible instance if available, otherwise create one
     global _global_firebase_connector
-    if '_global_firebase_connector' not in globals():
+    if "_global_firebase_connector" not in globals():
         _global_firebase_connector = FirebaseConnector()
         await _global_firebase_connector.initialize()
 
     connector = _global_firebase_connector
-    
+
     if action == "status":
         return {
             "status": "connected" if connector.is_connected else "disconnected",
             "session_id": connector._session_id,
-            "project_id": connector._project_id
+            "project_id": connector._project_id,
         }
-    
+
     elif action == "start_session":
         sid = await connector.start_session()
         return {"status": "success", "session_id": sid}
-        
+
     elif action == "end_session":
         await connector.end_session()
         return {"status": "success"}
@@ -316,7 +329,9 @@ async def aether_firebase(action: str, session_id: Optional[str] = None) -> dict
 
     return {"status": "error", "message": f"Unknown action: {action}"}
 
+
 _global_firebase_connector: FirebaseConnector = None
+
 
 def set_firebase_connector(connector: FirebaseConnector) -> None:
     """Injected by AetherEngine during setup."""

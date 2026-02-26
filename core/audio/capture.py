@@ -2,22 +2,22 @@
 Aether Voice OS — Audio Capture.
 
 Captures PCM audio from the system microphone via PyAudio using
-high-performance C-callbacks and implements the "Thalamic Gate" — 
+high-performance C-callbacks and implements the "Thalamic Gate" —
 a software-defined Acoustic Echo Cancellation (AEC) layer.
 """
+
 from __future__ import annotations
 
 import asyncio
 import logging
-import queue
-from typing import Optional
+from typing import Any, Callable, Optional
 
 import numpy as np
 import pyaudio
 
-from core.audio.processing import energy_vad, SilentAnalyzer, SilenceType, AdaptiveVAD
-from core.audio.state import audio_state
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
+from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad
+from core.audio.state import audio_state
 from core.config import AudioConfig
 from core.errors import AudioDeviceNotFoundError
 
@@ -29,7 +29,7 @@ class AudioCapture:
     Microphone (C-Callback) → asyncio.Queue (Downstream).
     Direct Event-Loop Injection architecture eliminates thread-hopping latency.
 
-    The "Thalamic Gate" logic resides in the callback to minimize 
+    The "Thalamic Gate" logic resides in the callback to minimize
     latency between echo detection and suppression.
     """
 
@@ -73,49 +73,61 @@ class AudioCapture:
         Analyzes energy and gates microphone input based on AI state.
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
-        # Thalamic Mute / AEC Proxy: 
-        # If the AI is playing, we mute the microphone to prevent self-interruption (Echo).
-        if is_playing:
+        # Thalamic Mute / AEC Proxy:
+        # If the AI is playing, we mute the mic to prevent echo.
+        if audio_state.is_playing:
             # Force VAD to false and energy to 0 to prevent barge-in triggers
             from core.audio.processing import HyperVADResult
-            vad = HyperVADResult(is_soft=False, is_hard=False, energy_rms=0.0, sample_count=len(pcm_chunk))
+
+            vad = HyperVADResult(
+                is_soft=False,
+                is_hard=False,
+                energy_rms=0.0,
+                sample_count=len(pcm_chunk),
+            )
             # Optional: Send zeros to the AI to maintain PCM continuity without noise
             in_data = b"\x00" * len(in_data)
         else:
             # HyperVAD Logic: Dual-Threshold (mu + sigma)
             vad = energy_vad(pcm_chunk, adaptive_engine=self._vad)
-        
+
         # Update shared state for brain-sync
         audio_state.last_rms = vad.energy_rms
         audio_state.is_soft = vad.is_soft
         audio_state.is_hard = vad.is_hard
-        
+
         zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
-        audio_state.last_zcr = len(zero_crossings) / len(pcm_chunk) if len(pcm_chunk) > 0 else 0
-        
+        audio_state.last_zcr = (
+            len(zero_crossings) / len(pcm_chunk) if len(pcm_chunk) > 0 else 0
+        )
+
         # Architecture of Silence: Classify silence if no clear speech
         if not vad.is_hard:
-            audio_state.silence_type = self._analyzer.classify(pcm_chunk, vad.energy_rms).value
+            audio_state.silence_type = self._analyzer.classify(
+                pcm_chunk, vad.energy_rms
+            ).value
         else:
             audio_state.silence_type = "speech"
-            
+
             # Affective Analysis (Non-blocking trigger)
             if self._paralinguistic_analyzer and self._on_affective_data:
-                features = self._paralinguistic_analyzer.analyze(pcm_chunk, vad.energy_rms)
+                features = self._paralinguistic_analyzer.analyze(
+                    pcm_chunk, vad.energy_rms
+                )
                 if self._loop and not self._loop.is_closed():
                     self._loop.call_soon_threadsafe(self._on_affective_data, features)
 
         # Push to queue if hard speech detected or AI is silent (ambient feed)
-        # Note: If is_playing is True, in_data is now silence (zeros), 
+        # Note: If audio_state.is_playing is True, in_data is now silence (zeros),
         # which satisfies the 'ambient feed' requirement safely.
-        if vad.is_hard or not is_playing:
+        if vad.is_hard or not audio_state.is_playing:
             msg = {
                 "data": in_data,
-                "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}"
+                "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",
             }
             if self._loop and not self._loop.is_closed():
                 self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
-        
+
         return (None, pyaudio.paContinue)
 
     async def start(self) -> None:

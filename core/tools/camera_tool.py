@@ -4,12 +4,14 @@ Aether Voice OS — Camera Tool.
 Captures real-time frames from the user's camera for Spatio-Temporal Grounding.
 This allows Aether to "see" the user's reaction during hard interrupts.
 """
-import cv2
-import base64
+
 import logging
 from typing import Optional
 
+import cv2
+
 logger = logging.getLogger(__name__)
+
 
 class CameraTool:
     def __init__(self):
@@ -27,24 +29,26 @@ class CameraTool:
             if not cap.isOpened():
                 logger.error("Could not open camera")
                 return None
-            
+
             ret, frame = cap.read()
             cap.release()
-            
+
             if not ret:
                 logger.error("Failed to capture frame")
                 return None
-            
+
             # Encode as JPEG
             # Use lower quality (70) to reduce latency/payload size
-            _, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
+            _, buffer = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])
             return buffer.tobytes()
-            
+
         except Exception as e:
             logger.error("Camera capture error: %s", e)
             return None
 
+
 camera_instance = CameraTool()
+
 
 def get_tools():
     """ADK Tool Registry integration."""

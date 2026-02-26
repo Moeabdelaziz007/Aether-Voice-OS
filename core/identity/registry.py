@@ -5,15 +5,15 @@ Scans a directory for .ath packages, loads them,
 and provides a lookup interface. Supports hot-reload
 via filesystem watching.
 """
+
 from __future__ import annotations
 
 import logging
-import threading
 from pathlib import Path
 from typing import Any, Callable, Optional
 
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler, FileSystemEvent
 
 from core.errors import IdentityError, PackageNotFoundError
 from core.identity.package import AthPackage
@@ -50,9 +50,9 @@ class AetherRegistry:
     """
 
     def __init__(
-        self, 
+        self,
         packages_dir: str,
-        on_change: Optional[Callable[[str, Optional[AthPackage]], Any]] = None
+        on_change: Optional[Callable[[str, Optional[AthPackage]], Any]] = None,
     ) -> None:
         self._dir = Path(packages_dir)
         self._packages: dict[str, AthPackage] = {}
@@ -69,11 +69,11 @@ class AetherRegistry:
         for entry in self._dir.iterdir():
             if not entry.is_dir():
                 continue
-            
+
             pkg = self.load_package(entry)
             if pkg:
                 loaded += 1
-        
+
         return loaded
 
     def load_package(self, path: Path) -> Optional[AthPackage]:
@@ -96,9 +96,7 @@ class AetherRegistry:
 
         self._observer = Observer()
         self._observer.schedule(
-            PackageChangeHandler(self),
-            str(self._dir),
-            recursive=True
+            PackageChangeHandler(self), str(self._dir), recursive=True
         )
         self._observer.start()
         logger.info("📡 ADK Hot-Reloading Active: Watching %s", self._dir)
@@ -115,6 +113,7 @@ class AetherRegistry:
         logger.info("Detected change in package directory: %s", path.name)
         # We perform a small delay to let file writes finish
         import time
+
         time.sleep(0.5)
 
         old_pkg = None
@@ -123,11 +122,15 @@ class AetherRegistry:
             if pkg.path == path:
                 old_pkg = pkg
                 break
-        
+
         new_pkg = self.load_package(path)
         if self._on_change:
             # Notify callback (e.g. engine) to update tool registration
-            pkg_name = new_pkg.manifest.name if new_pkg else (old_pkg.manifest.name if old_pkg else path.name)
+            pkg_name = (
+                new_pkg.manifest.name
+                if new_pkg
+                else (old_pkg.manifest.name if old_pkg else path.name)
+            )
             self._on_change(pkg_name, new_pkg)
 
     def get(self, name: str) -> AthPackage:
@@ -143,8 +146,8 @@ class AetherRegistry:
     def find_expert(self, query: str) -> Optional[AthPackage]:
         """
         Find the best Expert Soul for a given query based on Expertise Matrix.
-        
-        Simple keyword-based implementation for now. In Phase 3.3, 
+
+        Simple keyword-based implementation for now. In Phase 3.3,
         this will use Vector Search.
         """
         query = query.lower()
@@ -155,7 +158,7 @@ class AetherRegistry:
             for domain, score in pkg.manifest.expertise.items():
                 if domain.lower() in query:
                     best_domain_score = max(best_domain_score, score)
-            
+
             if best_domain_score > 0:
                 candidates.append((pkg, best_domain_score))
 

@@ -11,11 +11,12 @@ that lands here.
 Collections:
   /memory/{key} — key-value store for agent memory
 """
+
 from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -37,11 +38,11 @@ def _get_db():
 
 
 async def save_memory(
-    key: str, 
-    value: str, 
-    priority: str = "medium", 
-    tags: Optional[list[str]] = None, 
-    **kwargs
+    key: str,
+    value: str,
+    priority: str = "medium",
+    tags: Optional[list[str]] = None,
+    **kwargs,
 ) -> dict:
     """
     Save a piece of information to persistent memory.
@@ -67,14 +68,16 @@ async def save_memory(
 
     try:
         doc_ref = db.collection("memory").document(key)
-        await doc_ref.set({
-            "key": key,
-            "value": value,
-            "priority": priority,
-            "tags": tags,
-            "updated_at": datetime.now(timezone.utc).isoformat(),
-            "session_id": _firebase._session_id if _firebase else None,
-        })
+        await doc_ref.set(
+            {
+                "key": key,
+                "value": value,
+                "priority": priority,
+                "tags": tags,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "session_id": _firebase._session_id if _firebase else None,
+            }
+        )
         logger.info("Memory saved [%s]: %s = %s", priority, key, value[:50])
         return {
             "status": "saved",
@@ -123,7 +126,9 @@ async def recall_memory(key: str, **kwargs) -> dict:
         return {"status": "error", "message": f"Failed to recall memory: {exc}"}
 
 
-async def list_memories(limit: int = 10, priority: Optional[str] = None, **kwargs) -> dict:
+async def list_memories(
+    limit: int = 10, priority: Optional[str] = None, **kwargs
+) -> dict:
     """
     List saved memories, optionally filtered by priority.
 
@@ -140,16 +145,18 @@ async def list_memories(limit: int = 10, priority: Optional[str] = None, **kwarg
         query = db.collection("memory")
         if priority:
             query = query.where("priority", "==", priority.lower())
-        
+
         docs = query.limit(limit).stream()
         async for doc in docs:
             data = doc.to_dict()
-            memories.append({
-                "key": data.get("key", doc.id),
-                "value": data.get("value", ""),
-                "priority": data.get("priority", "medium"),
-                "tags": data.get("tags", []),
-            })
+            memories.append(
+                {
+                    "key": data.get("key", doc.id),
+                    "value": data.get("value", ""),
+                    "priority": data.get("priority", "medium"),
+                    "tags": data.get("tags", []),
+                }
+            )
         return {
             "status": "ok",
             "count": len(memories),
@@ -175,16 +182,22 @@ async def semantic_search(tags: list[str], limit: int = 5, **kwargs) -> dict:
     try:
         memories = []
         # Firestore array_contains_any supports up to 10 tags
-        query = db.collection("memory").where("tags", "array_contains_any", tags).limit(limit)
+        query = (
+            db.collection("memory")
+            .where("tags", "array_contains_any", tags)
+            .limit(limit)
+        )
         docs = query.stream()
         async for doc in docs:
             data = doc.to_dict()
-            memories.append({
-                "key": data.get("key", doc.id),
-                "value": data.get("value", ""),
-                "priority": data.get("priority", "medium"),
-            })
-        
+            memories.append(
+                {
+                    "key": data.get("key", doc.id),
+                    "value": data.get("value", ""),
+                    "priority": data.get("priority", "medium"),
+                }
+            )
+
         return {
             "status": "ok",
             "matches": len(memories),
@@ -208,11 +221,13 @@ async def prune_memories(priority: str = "low", **kwargs) -> dict:
 
     try:
         count = 0
-        docs = db.collection("memory").where("priority", "==", priority.lower()).stream()
+        docs = (
+            db.collection("memory").where("priority", "==", priority.lower()).stream()
+        )
         async for doc in docs:
             await doc.reference.delete()
             count += 1
-        
+
         logger.info("Pruned %d %s-priority memories", count, priority)
         return {
             "status": "pruned",
@@ -236,17 +251,23 @@ def get_tools() -> list[dict]:
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "key": {"type": "string", "description": "Unique label for the memory"},
-                    "value": {"type": "string", "description": "Information to remember"},
+                    "key": {
+                        "type": "string",
+                        "description": "Unique label for the memory",
+                    },
+                    "value": {
+                        "type": "string",
+                        "description": "Information to remember",
+                    },
                     "priority": {
-                        "type": "string", 
+                        "type": "string",
                         "enum": ["low", "medium", "high"],
-                        "description": "Importance level"
+                        "description": "Importance level",
                     },
                     "tags": {
-                        "type": "array", 
+                        "type": "array",
                         "items": {"type": "string"},
-                        "description": "Categorization tags"
+                        "description": "Categorization tags",
                     },
                 },
                 "required": ["key", "value"],

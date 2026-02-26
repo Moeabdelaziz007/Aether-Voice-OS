@@ -1,7 +1,9 @@
 import asyncio
 import json
+
 import pytest
 import websockets
+
 from core.config import GatewayConfig
 from core.transport.gateway import AetherGateway
 from core.transport.messages import MessageType
@@ -46,7 +48,7 @@ async def test_handshake_success(gateway, gateway_config):
         response = {
             "client_id": "test_client_123",
             "signature": "dummy_sig",
-            "capabilities": ["audio_levels"]
+            "capabilities": ["audio_levels"],
         }
         await ws.send(json.dumps(response))
 
@@ -67,13 +69,13 @@ async def test_handshake_timeout(gateway, gateway_config):
         # Expect challenge
         await ws.recv()
         # Do not send response, wait for server to disconnect us
-        
+
         # Server sends error message first
         error_raw = await ws.recv()
         error_msg = json.loads(error_raw)
         assert error_msg["type"] == MessageType.ERROR.value
         assert error_msg["code"] == 401
-        
+
         with pytest.raises(websockets.exceptions.ConnectionClosed):
             await ws.recv()
 
@@ -82,12 +84,9 @@ async def test_handshake_timeout(gateway, gateway_config):
 async def test_heartbeat_tick_and_pong(gateway, gateway_config):
     uri = f"ws://{gateway_config.host}:{gateway_config.port}"
     async with websockets.connect(uri) as ws:
-        await ws.recv() # Challenge
-        await ws.send(json.dumps({
-            "client_id": "test_ticker", 
-            "signature": "dummy"
-        }))
-        await ws.recv() # ACK
+        await ws.recv()  # Challenge
+        await ws.send(json.dumps({"client_id": "test_ticker", "signature": "dummy"}))
+        await ws.recv()  # ACK
 
         # Wait for TICK
         tick_raw = await ws.recv()
@@ -106,17 +105,16 @@ async def test_heartbeat_tick_and_pong(gateway, gateway_config):
 async def test_pruning_dead_clients(gateway, gateway_config):
     uri = f"ws://{gateway_config.host}:{gateway_config.port}"
     async with websockets.connect(uri) as ws:
-        await ws.recv() # Challenge
-        await ws.send(json.dumps({
-            "client_id": "dead_client", 
-            "signature": "dummy"
-        }))
-        await ws.recv() # ACK
+        await ws.recv()  # Challenge
+        await ws.send(json.dumps({"client_id": "dead_client", "signature": "dummy"}))
+        await ws.recv()  # ACK
 
         assert "dead_client" in gateway._clients
 
         # Wait for max_missed_ticks to elapse without sending PONG
-        wait_time = gateway_config.tick_interval_s * (gateway_config.max_missed_ticks + 1.5)
+        wait_time = gateway_config.tick_interval_s * (
+            gateway_config.max_missed_ticks + 1.5
+        )
         await asyncio.sleep(wait_time)
 
         # Client should be pruned

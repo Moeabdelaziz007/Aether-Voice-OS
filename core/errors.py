@@ -4,6 +4,7 @@ Aether Voice OS — Exception Hierarchy.
 Every exception carries structured context for observability.
 Catch `AetherError` at the engine level for unified error handling.
 """
+
 from __future__ import annotations
 
 from typing import Any, Optional
@@ -26,6 +27,7 @@ class AetherError(Exception):
 
 # --- Audio Layer ---
 
+
 class AudioError(AetherError):
     """Errors in the audio capture/playback pipeline."""
 
@@ -40,6 +42,7 @@ class AudioOverflowError(AudioError):
 
 # --- AI Layer ---
 
+
 class AIError(AetherError):
     """Errors from the Gemini Live API integration."""
 
@@ -53,6 +56,7 @@ class AISessionExpiredError(AIError):
 
 
 # --- Transport Layer ---
+
 
 class TransportError(AetherError):
     """Errors in the WebSocket gateway."""
@@ -71,6 +75,7 @@ class CapabilityDeniedError(TransportError):
 
 
 # --- Identity Layer ---
+
 
 class IdentityError(AetherError):
     """Errors in the .ath package system."""

@@ -4,6 +4,7 @@ Aether Voice OS — Tests for Identity System.
 Tests package loading, manifest validation, and
 checksum verification.
 """
+
 import json
 from pathlib import Path
 
@@ -126,5 +127,6 @@ class TestRegistry:
         registry = AetherRegistry(str(package_dir.parent))
         registry.scan()
         from core.errors import PackageNotFoundError
+
         with pytest.raises(PackageNotFoundError):
             registry.get("nonexistent")

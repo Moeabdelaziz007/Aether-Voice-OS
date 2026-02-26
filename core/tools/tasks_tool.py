@@ -12,12 +12,12 @@ Collections used in Firestore:
 All read/write operations go through the FirebaseConnector.
 If Firebase is unavailable, tools return graceful fallbacks.
 """
+
 from __future__ import annotations
 
 import logging
 import uuid
 from datetime import datetime, timezone
-from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -158,10 +158,12 @@ async def complete_task(task_id: str, **kwargs) -> dict:
                 "message": f"Task '{task_id}' not found.",
             }
 
-        await doc_ref.update({
-            "status": "completed",
-            "completed_at": datetime.now(timezone.utc).isoformat(),
-        })
+        await doc_ref.update(
+            {
+                "status": "completed",
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+            }
+        )
 
         task_data = doc.to_dict()
         logger.info("Task completed: %s — %s", task_id, task_data.get("title"))
@@ -207,7 +209,7 @@ async def add_note(content: str, tag: str = "general", **kwargs) -> dict:
     return {
         "status": "saved",
         "note_id": note_id,
-        "message": f"Note saved successfully.",
+        "message": "Note saved successfully.",
     }
 
 

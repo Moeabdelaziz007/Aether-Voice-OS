@@ -5,6 +5,7 @@ Single source of truth for all runtime settings.
 Loaded from environment variables and .env files via pydantic-settings.
 Frozen after initialization (immutable at runtime).
 """
+
 from __future__ import annotations
 
 from enum import Enum
@@ -16,10 +17,13 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AudioConfig(BaseSettings):
     """Audio capture and playback settings."""
+
     model_config = SettingsConfigDict(env_prefix="AETHER_AUDIO_")
 
     send_sample_rate: int = Field(16_000, description="Mic input sample rate (Hz)")
-    receive_sample_rate: int = Field(24_000, description="Gemini output sample rate (Hz)")
+    receive_sample_rate: int = Field(
+        24_000, description="Gemini output sample rate (Hz)"
+    )
     channels: int = Field(1, description="Mono audio")
     chunk_size: int = Field(512, description="PyAudio frames per buffer read")
     format_width: int = Field(2, description="Bytes per sample (2 = 16-bit)")
@@ -28,15 +32,19 @@ class AudioConfig(BaseSettings):
 
 class GeminiModel(str, Enum):
     """Supported Gemini Live models."""
+
     FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
     LIVE_FLASH = "gemini-live-2.5-flash-preview"
 
 
 class AIConfig(BaseSettings):
     """Gemini Live API settings."""
+
     model_config = SettingsConfigDict(env_prefix="AETHER_AI_")
 
-    api_key: str = Field(..., description="Google API key (GOOGLE_API_KEY also accepted)")
+    api_key: str = Field(
+        ..., description="Google API key (GOOGLE_API_KEY also accepted)"
+    )
     model: GeminiModel = Field(
         GeminiModel.FLASH_NATIVE_AUDIO,
         description="Gemini model ID",
@@ -44,9 +52,15 @@ class AIConfig(BaseSettings):
     api_version: str = Field("v1alpha", description="API version for advanced features")
     enable_affective_dialog: bool = Field(True, description="Emotion-aware responses")
     proactive_audio: bool = Field(True, description="Model decides when to respond")
-    enable_proactive_vision: bool = Field(False, description="Enable proactive vision context")
-    enable_search_grounding: bool = Field(True, description="Google Search grounding for fact-checking")
-    thinking_budget: Optional[int] = Field(0, description="Thinking token budget (0 disables for minimal latency)")
+    enable_proactive_vision: bool = Field(
+        False, description="Enable proactive vision context"
+    )
+    enable_search_grounding: bool = Field(
+        True, description="Google Search grounding for fact-checking"
+    )
+    thinking_budget: Optional[int] = Field(
+        0, description="Thinking token budget (0 disables for minimal latency)"
+    )
     system_instruction: str = Field(
         "You are Aether — a calm, wise, deeply technical AI companion. "
         "You speak Arabic naturally and switch to English for code. "
@@ -57,6 +71,7 @@ class AIConfig(BaseSettings):
 
 class GatewayConfig(BaseSettings):
     """WebSocket gateway settings."""
+
     model_config = SettingsConfigDict(env_prefix="AETHER_GW_")
 
     host: str = Field("0.0.0.0", description="Bind address")
@@ -75,9 +90,10 @@ class AetherConfig(BaseSettings):
       2. .env file in project root
       3. Defaults defined here (lowest priority)
     """
+
     model_config = SettingsConfigDict(
         # We handle env_file manually in load_config() to bypass TCC/Sandbox stat() blocks
-        env_file=None, 
+        env_file=None,
         case_sensitive=False,
         extra="ignore",
     )
@@ -88,7 +104,9 @@ class AetherConfig(BaseSettings):
     gateway: GatewayConfig = Field(default_factory=GatewayConfig)
 
     # Identity
-    packages_dir: str = Field("brain/packages", description="Path to .ath package registry")
+    packages_dir: str = Field(
+        "brain/packages", description="Path to .ath package registry"
+    )
     log_level: str = Field("INFO", description="Logging level")
 
 
@@ -99,8 +117,8 @@ def load_config() -> AetherConfig:
     Bypasses macOS Sandbox issues by falling back to aether_runtime_config.json
     if .env or environment variables are blocked/missing.
     """
-    import os
     import json
+    import os
     from pathlib import Path
 
     api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("AETHER_AI_API_KEY")
@@ -119,7 +137,10 @@ def load_config() -> AetherConfig:
                             os.environ[k] = str(v)
                 if api_key:
                     from logging import getLogger
-                    getLogger(__name__).info("Bypassed Sandbox: Loaded config from JSON fallback")
+
+                    getLogger(__name__).info(
+                        "Bypassed Sandbox: Loaded config from JSON fallback"
+                    )
             except Exception:
                 pass
 

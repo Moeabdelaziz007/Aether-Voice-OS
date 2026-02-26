@@ -2,11 +2,12 @@
 Aether Voice OS — Audio Playback.
 
 Consumes PCM audio from an asyncio.Queue and writes it
-to the system speaker via PyAudio using a high-performance 
+to the system speaker via PyAudio using a high-performance
 C-thread callback. Supports interruption by draining the queue.
 
 Output sample rate is 24kHz (Gemini native audio output).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -62,22 +63,25 @@ class AudioPlayback:
     ) -> tuple[bytes | None, int]:
         """PyAudio callback running in a high-priority C-thread."""
         import numpy as np
+
         try:
             data = self._buffer.get_nowait()
             audio_state.set_playing(True)
-            
+
             pcm = np.frombuffer(data, dtype=np.int16).astype(np.float32)
-            
+
             # 1. Apply linear gain for ducking
             if self._gain < 0.99:
                 pcm *= self._gain
 
             # 2. Mix Ambient Heartbeat (Subliminal status)
             t = np.arange(len(pcm)) / 16000.0
-            heartbeat = 500.0 * np.sin(2 * np.pi * self._heartbeat_freq * (t + self._phase))
+            heartbeat = 500.0 * np.sin(
+                2 * np.pi * self._heartbeat_freq * (t + self._phase)
+            )
             pcm += heartbeat
             self._phase = (self._phase + t[-1]) % 1.0
-            
+
             data = pcm.astype(np.int16).tobytes()
             return (data, pyaudio.paContinue)
         except queue.Empty:
@@ -104,13 +108,13 @@ class AudioPlayback:
             rate=self._config.receive_sample_rate,
             output=True,
             stream_callback=self._callback,
-            frames_per_buffer=1024, # Standard Gemini buffer
+            frames_per_buffer=1024,  # Standard Gemini buffer
         )
-        
+
         self._running = True
         logger.info(
-            "⚡ Thalamic Playback Active: Speaker opened @ %dHz (Callback Mode)", 
-            self._config.receive_sample_rate
+            "⚡ Thalamic Playback Active: Speaker opened @ %dHz (Callback Mode)",
+            self._config.receive_sample_rate,
         )
 
     async def run(self) -> None:
@@ -127,14 +131,14 @@ class AudioPlayback:
             try:
                 # 1. Get audio from AI session (asyncio)
                 audio_bytes = await self._async_queue.get()
-                
+
                 # 1.5 Mirror to UI (WebSockets) if connected
                 if self._on_audio_tx:
                     try:
                         await self._on_audio_tx(audio_bytes)
                     except Exception as e:
                         logger.debug("Failed to mirror audio to UI: %s", e)
-                
+
                 # 2. Push to thread-safe buffer with lightweight async spinlock (Zero thread overhead)
                 while self._running:
                     try:
@@ -142,7 +146,7 @@ class AudioPlayback:
                         break
                     except queue.Full:
                         await asyncio.sleep(0.005)
-                
+
             except asyncio.CancelledError:
                 break
             except Exception as exc:
@@ -155,7 +159,7 @@ class AudioPlayback:
         Prevents 'zombie' audio chunks from playing after barge-in.
         """
         dropped = 0
-        
+
         # 1. Drain asyncio queue
         while not self._async_queue.empty():
             try:
@@ -163,7 +167,7 @@ class AudioPlayback:
                 dropped += 1
             except asyncio.QueueEmpty:
                 break
-        
+
         # 2. Drain thread-safe buffer
         while not self._buffer.empty():
             try:
@@ -171,9 +175,9 @@ class AudioPlayback:
                 dropped += 1
             except queue.Empty:
                 break
-                
+
         audio_state.set_playing(False)
-        
+
         if dropped:
             logger.info("⚡ Thalamic Drain: Dropped %d chunks", dropped)
 

@@ -4,17 +4,18 @@ Aether Voice OS — ADK Voice Tool Tests.
 Tests the VoiceTool lifecycle (setup → execute → teardown),
 state machine transitions, tool declaration, and tool call interface.
 """
+
 from __future__ import annotations
 
-import asyncio
+from unittest.mock import MagicMock
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
-from core.tools.voice_tool import VoiceTool, VoiceState
 from core.config import AetherConfig, AIConfig, AudioConfig, GatewayConfig
-
+from core.tools.voice_tool import VoiceState, VoiceTool
 
 # ── Fixtures ────────────────────────────────────────────────
+
 
 @pytest.fixture
 def mock_config():
@@ -33,6 +34,7 @@ def voice_tool():
 
 
 # ── State Machine Tests ─────────────────────────────────────
+
 
 class TestVoiceToolState:
     """Test VoiceTool state machine transitions."""
@@ -58,7 +60,12 @@ class TestVoiceToolState:
             voice_tool._set_state(state)
             assert voice_tool.is_active is True
 
-        for state in (VoiceState.IDLE, VoiceState.INITIALIZING, VoiceState.ERROR, VoiceState.STOPPED):
+        for state in (
+            VoiceState.IDLE,
+            VoiceState.INITIALIZING,
+            VoiceState.ERROR,
+            VoiceState.STOPPED,
+        ):
             voice_tool._set_state(state)
             assert voice_tool.is_active is False
 
@@ -74,6 +81,7 @@ class TestVoiceToolState:
 
 
 # ── ADK Tool Declaration Tests ──────────────────────────────
+
 
 class TestADKDeclaration:
     """Test ADK-compatible tool interface."""
@@ -91,7 +99,11 @@ class TestADKDeclaration:
         assert "parameters" in decl
         assert decl["parameters"]["type"] == "object"
         assert "action" in decl["parameters"]["properties"]
-        assert set(decl["parameters"]["properties"]["action"]["enum"]) == {"start", "stop", "status"}
+        assert set(decl["parameters"]["properties"]["action"]["enum"]) == {
+            "start",
+            "stop",
+            "status",
+        }
 
     def test_adk_declaration_has_required_fields(self, voice_tool):
         decl = voice_tool.to_adk_declaration()
@@ -100,6 +112,7 @@ class TestADKDeclaration:
 
 
 # ── Tool Call Interface Tests ────────────────────────────────
+
 
 class TestToolCallInterface:
     """Test handle_tool_call dispatcher."""
@@ -122,6 +135,7 @@ class TestToolCallInterface:
 
 
 # ── Setup / Teardown Lifecycle Tests ─────────────────────────
+
 
 class TestLifecycle:
     """Test setup/teardown lifecycle."""
@@ -156,11 +170,13 @@ class TestLifecycle:
 
 # ── Engine Tool Registration Tests ───────────────────────────
 
+
 class TestEngineRegistration:
     """Test ADK tool registration with the engine."""
 
     def test_register_tool(self, mock_config):
         from core.engine import AetherEngine
+
         engine = AetherEngine(config=mock_config)
         tool = VoiceTool()
         engine.register_tool(tool.NAME, tool)
@@ -169,6 +185,7 @@ class TestEngineRegistration:
 
     def test_register_multiple_tools(self, mock_config):
         from core.engine import AetherEngine
+
         engine = AetherEngine(config=mock_config)
         tool1 = VoiceTool()
         engine.register_tool("voice", tool1)
@@ -177,6 +194,7 @@ class TestEngineRegistration:
 
 
 # ── Interrupt / Barge-in Tests ───────────────────────────────
+
 
 class TestBargeIn:
     """Test barge-in (interrupt) handling."""

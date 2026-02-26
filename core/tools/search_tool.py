@@ -13,9 +13,11 @@ Note: Google Search grounding is declared as a special tool type
 in LiveConnectConfig, NOT as a function declaration. The model
 automatically decides when to use it based on the query.
 """
+
 from __future__ import annotations
 
 import logging
+
 from google.genai import types
 
 logger = logging.getLogger(__name__)

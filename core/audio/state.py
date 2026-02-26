@@ -1,13 +1,16 @@
 """
 Aether Voice OS — Shared Audio State.
 
-Thread-safe singleton to manage global audio states (playback/capture) 
+Thread-safe singleton to manage global audio states (playback/capture)
 across C-callback threads and the main asyncio event loop.
 """
+
 import threading
+
 
 class AudioState:
     """Thread-safe singleton to track audio I/O state."""
+
     _instance = None
     _lock = threading.Lock()
 
@@ -21,7 +24,7 @@ class AudioState:
                 cls._instance.last_zcr = 0.0
                 cls._instance.is_soft = False
                 cls._instance.is_hard = False
-                cls._instance.silence_type = "void" 
+                cls._instance.silence_type = "void"
                 cls._instance._playing_lock = threading.Lock()
         return cls._instance
 
@@ -29,6 +32,7 @@ class AudioState:
         """Atomic update for playback state."""
         with self._playing_lock:
             self.is_playing = playing
+
 
 # Global singleton
 audio_state = AudioState()

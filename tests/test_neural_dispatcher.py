@@ -8,20 +8,22 @@ Validates:
   - Module auto-discovery via get_tools()
   - Error handling for unknown tools
 """
+
 from __future__ import annotations
 
-import asyncio
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
+import pytest
 
 # ─── ToolRouter Tests ────────────────────────────────────────
+
 
 class TestToolRouter:
     """Tests for core.tools.router.ToolRouter."""
 
     def _make_router(self):
         from core.tools.router import ToolRouter
+
         return ToolRouter()
 
     def test_register_tool(self):
@@ -37,6 +39,7 @@ class TestToolRouter:
 
     def test_register_module(self):
         from core.tools import system_tool
+
         router = self._make_router()
         router.register_module(system_tool)
         assert router.count >= 3
@@ -46,6 +49,7 @@ class TestToolRouter:
 
     def test_register_module_tasks(self):
         from core.tools import tasks_tool
+
         router = self._make_router()
         router.register_module(tasks_tool)
         assert router.count >= 4
@@ -56,6 +60,7 @@ class TestToolRouter:
 
     def test_get_declarations(self):
         from core.tools import system_tool
+
         router = self._make_router()
         router.register_module(system_tool)
         declarations = router.get_declarations()
@@ -152,12 +157,14 @@ class TestToolRouter:
 
 # ─── System Tool Tests ───────────────────────────────────────
 
+
 class TestSystemTool:
     """Tests for core.tools.system_tool functions."""
 
     @pytest.mark.asyncio
     async def test_get_current_time(self):
         from core.tools.system_tool import get_current_time
+
         result = await get_current_time()
         assert "local_time" in result
         assert "local_date" in result
@@ -167,6 +174,7 @@ class TestSystemTool:
     @pytest.mark.asyncio
     async def test_get_system_info(self):
         from core.tools.system_tool import get_system_info
+
         result = await get_system_info()
         assert "os" in result
         assert "python_version" in result
@@ -175,6 +183,7 @@ class TestSystemTool:
     @pytest.mark.asyncio
     async def test_run_timer(self):
         from core.tools.system_tool import run_timer
+
         result = await run_timer(minutes=5, label="Test Timer")
         assert result["status"] == "timer_set"
         assert result["duration_minutes"] == 5
@@ -182,6 +191,7 @@ class TestSystemTool:
 
     def test_get_tools_returns_list(self):
         from core.tools.system_tool import get_tools
+
         tools = get_tools()
         assert isinstance(tools, list)
         assert len(tools) >= 3
@@ -193,6 +203,7 @@ class TestSystemTool:
 
 # ─── Tasks Tool Tests ────────────────────────────────────────
 
+
 class TestTasksTool:
     """Tests for core.tools.tasks_tool functions (without Firebase)."""
 
@@ -200,6 +211,7 @@ class TestTasksTool:
     async def test_create_task_no_firebase(self):
         """Creating a task without Firebase should still return success."""
         from core.tools.tasks_tool import create_task
+
         result = await create_task(title="Buy groceries", due="tomorrow")
         assert result["status"] == "created"
         assert result["title"] == "Buy groceries"
@@ -209,6 +221,7 @@ class TestTasksTool:
     async def test_list_tasks_no_firebase(self):
         """Listing tasks without Firebase should return unavailable."""
         from core.tools.tasks_tool import list_tasks
+
         result = await list_tasks()
         assert result["status"] == "unavailable"
 
@@ -216,6 +229,7 @@ class TestTasksTool:
     async def test_complete_task_no_firebase(self):
         """Completing a task without Firebase should return unavailable."""
         from core.tools.tasks_tool import complete_task
+
         result = await complete_task(task_id="abc123")
         assert result["status"] == "unavailable"
 
@@ -223,12 +237,14 @@ class TestTasksTool:
     async def test_add_note_no_firebase(self):
         """Adding a note without Firebase should still return success."""
         from core.tools.tasks_tool import add_note
+
         result = await add_note(content="Remember to check the mail", tag="personal")
         assert result["status"] == "saved"
         assert "note_id" in result
 
     def test_get_tools_returns_list(self):
         from core.tools.tasks_tool import get_tools
+
         tools = get_tools()
         assert isinstance(tools, list)
         assert len(tools) >= 4
@@ -241,6 +257,7 @@ class TestTasksTool:
 
 # ─── Integration: Engine + Router ─────────────────────────────
 
+
 class TestEngineRouterIntegration:
     """Tests that the engine correctly wires the ToolRouter."""
 
@@ -248,6 +265,7 @@ class TestEngineRouterIntegration:
         """Engine should create a ToolRouter with tools registered."""
         with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
             from core.engine import AetherEngine
+
             engine = AetherEngine()
             assert hasattr(engine, "_router")
             assert engine._router.count >= 7  # 3 system + 4 tasks
@@ -255,6 +273,7 @@ class TestEngineRouterIntegration:
     def test_engine_router_has_system_tools(self):
         with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
             from core.engine import AetherEngine
+
             engine = AetherEngine()
             assert "get_current_time" in engine._router.names
             assert "get_system_info" in engine._router.names
@@ -262,6 +281,7 @@ class TestEngineRouterIntegration:
     def test_engine_router_has_task_tools(self):
         with patch.dict("os.environ", {"GOOGLE_API_KEY": "test-key"}):
             from core.engine import AetherEngine
+
             engine = AetherEngine()
             assert "create_task" in engine._router.names
             assert "list_tasks" in engine._router.names

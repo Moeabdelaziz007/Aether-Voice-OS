@@ -1,6 +1,8 @@
 """Tests for the audio processing module (core/audio/processing.py)."""
+
 import numpy as np
-from core.audio.processing import RingBuffer, find_zero_crossing, energy_vad
+
+from core.audio.processing import RingBuffer, energy_vad, find_zero_crossing
 
 
 class TestRingBuffer:
@@ -64,6 +66,6 @@ class TestVAD:
         assert result.is_speech is False
 
     def test_loud_signal_returns_true(self):
-        loud = (np.ones(2400, dtype=np.int16) * 10000)
+        loud = np.ones(2400, dtype=np.int16) * 10000
         result = energy_vad(loud)
         assert result.is_speech is True

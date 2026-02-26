@@ -21,10 +21,13 @@ Architecture Note (Synapse Philosophy):
     If aether_cortex is available, Rust implementations are used
     automatically (10-50x faster). Otherwise, NumPy fallbacks below.
 """
+
 from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
 
 import numpy as np
 from numpy.typing import NDArray
@@ -39,24 +42,29 @@ aether_cortex = None
 try:
     # 1. Try standard import (if installed via maturin develop/pip)
     import aether_cortex as ac
+
     aether_cortex = ac
 except ImportError:
     # 2. Try dynamic resolution from build artifacts (bypass TCC move blocks)
     try:
         import importlib.util
         import os
-        
+
         # Search paths relative to this file
         base_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
         potential_paths = [
             # Standard location (should be here if cp worked)
             os.path.join(os.path.dirname(__file__), "aether_cortex.so"),
             # Local release build
-            os.path.join(base_dir, "aether-cortex", "target", "release", "libaether_cortex.dylib"),
+            os.path.join(
+                base_dir, "aether-cortex", "target", "release", "libaether_cortex.dylib"
+            ),
             # Local debug build
-            os.path.join(base_dir, "aether-cortex", "target", "debug", "libaether_cortex.dylib"),
+            os.path.join(
+                base_dir, "aether-cortex", "target", "debug", "libaether_cortex.dylib"
+            ),
         ]
-        
+
         for path in potential_paths:
             if os.path.exists(path):
                 spec = importlib.util.spec_from_file_location("aether_cortex", path)
@@ -71,7 +79,9 @@ except ImportError:
         aether_cortex = None
 
 if aether_cortex:
-    print(f"🧬 Aether Brain: Synapse Layer (Rust) Active at {getattr(aether_cortex, '__file__', 'compiled')}")
+    print(
+        f"🧬 Aether Brain: Synapse Layer (Rust) Active at {getattr(aether_cortex, '__file__', 'compiled')}"
+    )
     _RUST_BACKEND = True
     _BACKEND_NAME = f"aether-cortex v{aether_cortex.__version__} (Rust)"
     logger.info("⚡ Neural DSP backend: %s", _BACKEND_NAME)
@@ -85,6 +95,7 @@ else:
 @dataclass(frozen=True)
 class VADResult:
     """Result of voice activity detection."""
+
     is_speech: bool
     energy_rms: float
     sample_count: int
@@ -127,7 +138,7 @@ class RingBuffer:
 
         if n >= self._capacity:
             # Data larger than buffer — keep only the last `capacity` samples
-            self._buf[:] = data[-self._capacity:]
+            self._buf[:] = data[-self._capacity :]
             self._write_pos = 0
             self._count = self._capacity
             return
@@ -135,11 +146,11 @@ class RingBuffer:
         # How many fit before wrapping?
         space_before_wrap = self._capacity - self._write_pos
         if n <= space_before_wrap:
-            self._buf[self._write_pos:self._write_pos + n] = data
+            self._buf[self._write_pos : self._write_pos + n] = data
         else:
             # Wrap around
-            self._buf[self._write_pos:] = data[:space_before_wrap]
-            self._buf[:n - space_before_wrap] = data[space_before_wrap:]
+            self._buf[self._write_pos :] = data[:space_before_wrap]
+            self._buf[: n - space_before_wrap] = data[space_before_wrap:]
 
         self._write_pos = (self._write_pos + n) % self._capacity
         self._count = min(self._count + n, self._capacity)
@@ -156,11 +167,11 @@ class RingBuffer:
 
         start = (self._write_pos - n) % self._capacity
         if start + n <= self._capacity:
-            return self._buf[start:start + n].copy()
+            return self._buf[start : start + n].copy()
         else:
             # Wraps around
             tail = self._buf[start:]
-            head = self._buf[:n - len(tail)]
+            head = self._buf[: n - len(tail)]
             return np.concatenate([tail, head])
 
     def clear(self) -> None:
@@ -185,9 +196,7 @@ def find_zero_crossing(
     """
     # ── Rust (Axon) dispatch ──
     if _RUST_BACKEND:
-        return aether_cortex.find_zero_crossing(
-            pcm_data, sample_rate, max_lookahead_ms
-        )
+        return aether_cortex.find_zero_crossing(pcm_data, sample_rate, max_lookahead_ms)
 
     # ── NumPy fallback ──
     if len(pcm_data) < 2:
@@ -197,7 +206,7 @@ def find_zero_crossing(
     lookahead = int(sample_rate * max_lookahead_ms / 1000)
     limit = min(len(audio) - 1, lookahead)
 
-    signs = np.sign(audio[:limit + 1])
+    signs = np.sign(audio[: limit + 1])
     crossings = np.where(signs[:-1] * signs[1:] <= 0)[0]
 
     if len(crossings) > 0:
@@ -209,30 +218,31 @@ def find_zero_crossing(
 @dataclass(frozen=True)
 class HyperVADResult:
     """Refined VAD result with dual-threshold triggers."""
-    is_soft: bool   # User is breathing/thinking (Backchannel trigger)
-    is_hard: bool   # User is speaking clearly (Interrupt/Vision trigger)
+
+    is_soft: bool  # User is breathing/thinking (Backchannel trigger)
+    is_hard: bool  # User is speaking clearly (Interrupt/Vision trigger)
     energy_rms: float
     sample_count: int
 
 
 class AdaptiveVAD:
     """
-    HyperVAD: Tracks environmental noise statistics (mu, sigma) 
+    HyperVAD: Tracks environmental noise statistics (mu, sigma)
     to dynamically calculate Soft and Hard thresholds.
     """
 
     def __init__(
-        self, 
-        window_size_sec: float = 5.0, 
+        self,
+        window_size_sec: float = 5.0,
         sample_rate: int = 16_000,
         min_threshold: float = 0.01,
         max_threshold: float = 0.2,
     ) -> None:
         self.min_threshold = min_threshold
         self.max_threshold = max_threshold
-        
+
         # Track energy history for statistical noise floor estimation
-        self._history_size = int(window_size_sec / 0.1) # 100ms blocks
+        self._history_size = int(window_size_sec / 0.1)  # 100ms blocks
         self._history: list[float] = []
         self._mu = min_threshold
         self._sigma = 0.001
@@ -250,16 +260,16 @@ class AdaptiveVAD:
             self._sigma = float(np.std(self._history))
         else:
             self._mu = current_rms
-            
+
         # RMS_soft = mu + 1.5 * sigma (Thinking/Breathing)
         # RMS_hard = mu + 4.0 * sigma (Hard Interrupt)
         soft = self._mu + (1.5 * self._sigma)
         hard = self._mu + (4.0 * self._sigma)
-        
+
         # Clamp to reasonable bounds
         soft = max(self.min_threshold, min(soft, self.max_threshold * 0.5))
         hard = max(self.min_threshold * 2, min(hard, self.max_threshold))
-        
+
         return soft, hard
 
     @property
@@ -267,12 +277,10 @@ class AdaptiveVAD:
         return {"mu": self._mu, "sigma": self._sigma}
 
 
-from enum import Enum
-
 class SilenceType(Enum):
-    VOID = "void"           # Absolute silence, no human presence
-    BREATHING = "breathing" # Oscillatory micro-RMS, likely user thinking
-    THINKING = "thinking"   # Sustained low-RMS, indicates cognitive load
+    VOID = "void"  # Absolute silence, no human presence
+    BREATHING = "breathing"  # Oscillatory micro-RMS, likely user thinking
+    THINKING = "thinking"  # Sustained low-RMS, indicates cognitive load
 
 
 class SilentAnalyzer:
@@ -280,11 +288,12 @@ class SilentAnalyzer:
     Analyzes silence periods to detect human cognitive presence.
     Uses Zero-Crossing Rate (ZCR) and RMS variance to find 'breathing' patterns.
     """
+
     def __init__(self, sample_rate: int = 16000):
         self.sample_rate = sample_rate
         self._history_rms: list[float] = []
         self._history_zcr: list[float] = []
-        self._window_size = 20 # 2 seconds at 100ms chunks
+        self._window_size = 20  # 2 seconds at 100ms chunks
 
     def classify(self, pcm_chunk: NDArray[np.int16], current_rms: float) -> SilenceType:
         """Classify the type of silence in the current chunk."""
@@ -294,7 +303,7 @@ class SilentAnalyzer:
         # 1. Calculate Zero-Crossing Rate
         zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
         zcr = len(zero_crossings) / len(pcm_chunk)
-        
+
         self._history_rms.append(current_rms)
         self._history_zcr.append(zcr)
         if len(self._history_rms) > self._window_size:
@@ -305,7 +314,7 @@ class SilentAnalyzer:
         # VOID: Extremely low RMS (< 0.005)
         if current_rms < 0.005:
             return SilenceType.VOID
-        
+
         # BREATHING: RMS oscillates slightly (inhale/exhale) + Low ZCR
         rms_var = np.var(self._history_rms) if len(self._history_rms) > 5 else 0
         if 0.005 <= current_rms < 0.01 and rms_var > 1e-7 and zcr < 0.05:
@@ -314,7 +323,7 @@ class SilentAnalyzer:
         # THINKING: Sustained low level, not quiet enough to be void
         if current_rms < 0.02:
             return SilenceType.THINKING
-            
+
         return SilenceType.VOID
 
 
@@ -339,18 +348,18 @@ def energy_vad(
     if _RUST_BACKEND:
         result = aether_cortex.energy_vad(pcm_chunk, threshold)
         energy_rms = float(result["energy_rms"])
-        
+
         is_soft = False
         is_hard = False
-        
+
         if adaptive_engine:
             soft_thr, hard_thr = adaptive_engine.update(energy_rms)
             is_soft = energy_rms > soft_thr
             is_hard = energy_rms > hard_thr
         else:
             is_hard = energy_rms > threshold
-            is_soft = is_hard # No soft distinction without adaptive engine
-            
+            is_soft = is_hard  # No soft distinction without adaptive engine
+
         return HyperVADResult(
             is_soft=is_soft,
             is_hard=is_hard,
@@ -360,14 +369,16 @@ def energy_vad(
 
     # ── NumPy fallback ──
     if len(pcm_chunk) == 0:
-        return HyperVADResult(is_soft=False, is_hard=False, energy_rms=0.0, sample_count=0)
+        return HyperVADResult(
+            is_soft=False, is_hard=False, energy_rms=0.0, sample_count=0
+        )
 
     normalized = pcm_chunk.astype(np.float32) / 32768.0
-    rms = float(np.sqrt(np.mean(normalized ** 2)))
-    
+    rms = float(np.sqrt(np.mean(normalized**2)))
+
     is_soft = False
     is_hard = False
-    
+
     if adaptive_engine:
         soft_thr, hard_thr = adaptive_engine.update(rms)
         is_soft = rms > soft_thr

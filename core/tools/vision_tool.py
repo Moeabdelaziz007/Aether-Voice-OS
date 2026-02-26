@@ -6,8 +6,8 @@ When the user asks "What's on my screen?" or "Can you see what I'm doing?",
 this tool triggers a silent macOS screen capture, returning the file path
 so the core session can inject it into the multimodal stream.
 """
+
 import logging
-import os
 import subprocess
 import time
 
@@ -41,7 +41,7 @@ async def take_screenshot(**kwargs) -> dict:
     return {
         "status": "success",
         "screenshot_path": snapshot_path,
-        "message": "Screenshot captured. The image has been injected into your context stream. Please analyze it."
+        "message": "Screenshot captured. The image has been injected into your context stream. Please analyze it.",
     }
 
 

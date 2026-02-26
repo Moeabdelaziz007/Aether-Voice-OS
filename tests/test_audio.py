@@ -4,8 +4,8 @@ Aether Voice OS — Tests for Audio Processing.
 Tests the pure-computation functions: RingBuffer,
 find_zero_crossing, and energy_vad.
 """
+
 import numpy as np
-import pytest
 
 from core.audio.processing import RingBuffer, VADResult, energy_vad, find_zero_crossing
 

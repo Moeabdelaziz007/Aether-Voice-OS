@@ -18,6 +18,7 @@ with:
 
 Supports ADK-style tool registration for modular extensibility.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -26,24 +27,23 @@ import signal
 import sys
 from typing import Any, Optional
 
-from core.config import AetherConfig, load_config
-from core.audio.capture import AudioCapture
-from core.audio.playback import AudioPlayback
-from core.ai.session import GeminiLiveSession
-from core.transport.gateway import AetherGateway
-from core.identity.registry import AetherRegistry
-from core.tools.router import ToolRouter
-from core.tools import system_tool, tasks_tool, memory_tool, vision_tool
-from core.tools import voice_tool as voice_tool_mod
-from core.tools.firebase_tool import FirebaseConnector
-from core.tools.search_tool import get_search_tool
+from core.admin_api import SHARED_STATE, AdminAPIServer
 from core.ai import handoff
-from core.admin_api import AdminAPIServer, SHARED_STATE
-from core.audio.processing import AdaptiveVAD
-from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.ai.genetic import GeneticOptimizer
 from core.ai.hive import HiveCoordinator
-from core.tools import hive_memory
+from core.ai.session import GeminiLiveSession
+from core.audio.capture import AudioCapture
+from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
+from core.audio.playback import AudioPlayback
+from core.audio.processing import AdaptiveVAD
+from core.config import AetherConfig, load_config
+from core.identity.package import AthPackage
+from core.identity.registry import AetherRegistry
+from core.tools import hive_memory, memory_tool, system_tool, tasks_tool, vision_tool
+from core.tools import voice_tool as voice_tool_mod
+from core.tools.firebase_tool import FirebaseConnector
+from core.tools.router import ToolRouter
+from core.transport.gateway import AetherGateway
 
 logger = logging.getLogger(__name__)
 
@@ -80,28 +80,31 @@ class AetherEngine:
         self._router.init_vector_store(self._config.ai.api_key)
 
         # Affective Computing: Paralinguistic Analyzer
-        self._paralinguistics = ParalinguisticAnalyzer(sample_rate=self._config.audio.send_sample_rate)
+        self._paralinguistics = ParalinguisticAnalyzer(
+            sample_rate=self._config.audio.send_sample_rate
+        )
 
         # Components
         self._vad = AdaptiveVAD(
-            window_size_sec=self._config.audio.vad_window_sec if hasattr(self._config.audio, "vad_window_sec") else 5.0,
+            window_size_sec=self._config.audio.vad_window_sec
+            if hasattr(self._config.audio, "vad_window_sec")
+            else 5.0,
             sample_rate=self._config.audio.send_sample_rate,
         )
         self._capture = AudioCapture(
-            self._config.audio, 
+            self._config.audio,
             self._audio_in,
             vad_engine=self._vad,
             paralinguistic_analyzer=self._paralinguistics,
-            on_affective_data=self._on_affective_data
+            on_affective_data=self._on_affective_data,
         )
         self._gateway = AetherGateway(
-            self._config.gateway,
-            on_audio_rx=self._audio_in.put
+            self._config.gateway, on_audio_rx=self._audio_in.put
         )
         self._playback = AudioPlayback(
-            self._config.audio, 
+            self._config.audio,
             self._audio_out,
-            on_audio_tx=self._gateway.broadcast_binary
+            on_audio_tx=self._gateway.broadcast_binary,
         )
         self._session = GeminiLiveSession(
             self._config.ai,
@@ -112,18 +115,19 @@ class AetherEngine:
             tool_router=self._router,
         )
         self._registry = AetherRegistry(
-            self._config.packages_dir,
-            on_change=self._on_package_change
+            self._config.packages_dir, on_change=self._on_package_change
         )
         self._hive = HiveCoordinator(
             registry=self._registry,
             router=self._router,
-            default_soul_name="ArchitectExpert"
+            default_soul_name="ArchitectExpert",
         )
         self._admin_api = AdminAPIServer(port=18790)
 
         # Genetic Evolution Layer
-        self._optimizer = GeneticOptimizer(self._firebase, api_key=self._config.ai.api_key)
+        self._optimizer = GeneticOptimizer(
+            self._firebase, api_key=self._config.ai.api_key
+        )
 
         # ADK Tool Registry (legacy — kept for backward compat)
         self._tools: dict[str, Any] = {}
@@ -144,7 +148,7 @@ class AetherEngine:
         self._router.register_module(vision_tool)
         self._router.register_module(handoff)
         self._router.register_module(hive_memory)
-        
+
         # Connect Hive to tools
         handoff.set_hive_params(self._hive, self._session_restart)
         hive_memory.set_firebase_connector(self._firebase)
@@ -158,13 +162,9 @@ class AetherEngine:
         """Configure structured logging."""
         logging.basicConfig(
             level=getattr(logging, self._config.log_level.upper(), logging.INFO),
-            format=(
-                "%(asctime)s │ %(levelname)-7s │ %(name)-28s │ %(message)s"
-            ),
+            format=("%(asctime)s │ %(levelname)-7s │ %(name)-28s │ %(message)s"),
             datefmt="%H:%M:%S",
         )
-
-
 
     def _on_interrupt(self) -> None:
         """
@@ -172,60 +172,67 @@ class AetherEngine:
         Refined with Hybrid Cognition: System 1 (Reflex) & System 2 (Semantic).
         """
         from core.audio.state import audio_state
-        
+
         is_hard = audio_state.is_hard
         rms = audio_state.last_rms
         stype = audio_state.silence_type
-        
+
         vad_payload: dict[str, object] = {
             "type": "interrupted",
             "rms": rms,
             "is_hard": is_hard,
-            "silence_type": stype
+            "silence_type": stype,
         }
 
         # Cognitive Guard: If it's a hard signal but classified as non-speech, it's likely noise.
         # We duck instead of stop to maintain Aether's "presence".
         if is_hard and stype not in ("thinking", "breathing", "void"):
-            logger.info("⚡ Hard Barge-in (Speech detected, RMS: %.2f) — Stopping playback.", rms)
+            logger.info(
+                "⚡ Hard Barge-in (Speech detected, RMS: %.2f) — Stopping playback.",
+                rms,
+            )
             self._playback.interrupt()
             vad_payload["action"] = "hard_stop"
         else:
-            logger.info("🌊 Semantic Ducking (Type: %s, RMS: %.2f) — Maintaining presence.", stype, rms)
+            logger.info(
+                "🌊 Semantic Ducking (Type: %s, RMS: %.2f) — Maintaining presence.",
+                stype,
+                rms,
+            )
             self._playback.set_gain(0.2)
             vad_payload["action"] = "ducking"
 
         # Broadcast VAD event to connected UI clients
-        asyncio.create_task(
-            self._gateway.broadcast("vad.event", vad_payload)
-        )
+        asyncio.create_task(self._gateway.broadcast("vad.event", vad_payload))
 
     def _on_affective_data(self, features: ParalinguisticFeatures) -> None:
         """Handle incoming affective metrics from the capture layer."""
         if self._firebase.is_connected:
             asyncio.create_task(self._firebase.log_affective_metrics(features))
 
-    async def _on_tool_call(
-        self, tool_name: str, args: dict, result: dict
-    ) -> None:
+    async def _on_tool_call(self, tool_name: str, args: dict, result: dict) -> None:
         """Log tool calls to Firestore for session analytics."""
         if not self._firebase.is_connected:
             return
         try:
             from datetime import datetime, timezone
 
-            await self._firebase._db.collection("events").add({
-                "type": "tool_call",
-                "tool": tool_name,
-                "args_summary": str(args)[:200] if args else "{}",
-                "result_status": result.get("status", "unknown"),
-                "session_id": self._firebase._session_id,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-            })
+            await self._firebase._db.collection("events").add(
+                {
+                    "type": "tool_call",
+                    "tool": tool_name,
+                    "args_summary": str(args)[:200] if args else "{}",
+                    "result_status": result.get("status", "unknown"),
+                    "session_id": self._firebase._session_id,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                }
+            )
         except Exception as exc:
             logger.debug("Analytics log failed: %s", exc)
 
-    async def _on_package_change(self, name: str, package: Optional[AthPackage]) -> None:
+    async def _on_package_change(
+        self, name: str, package: Optional[AthPackage]
+    ) -> None:
         """Handle dynamic package loading/unloading."""
         if package:
             logger.info("Hot-Reloading package: %s", name)
@@ -265,7 +272,9 @@ class AetherEngine:
         firebase_ok = await self._firebase.initialize()
         if firebase_ok:
             await self._firebase.start_session()
-            logger.info("  Firebase: ✦ Connected — session %s", self._firebase._session_id)
+            logger.info(
+                "  Firebase: ✦ Connected — session %s", self._firebase._session_id
+            )
         else:
             logger.warning("  Firebase: ✗ Offline — tasks will not persist")
 
@@ -293,7 +302,7 @@ class AetherEngine:
             # The Hive Loop: Manages the Gemini session lifecycle and soul handoffs
             while not self._shutdown_event.is_set():
                 self._session_restart.clear()
-                
+
                 # Create a fresh session with the active expert soul
                 active_soul = self._hive.active_soul
                 self._session = GeminiLiveSession(
@@ -303,46 +312,58 @@ class AetherEngine:
                     on_interrupt=self._on_interrupt,
                     on_tool_call=self._on_tool_call,
                     tool_router=self._router,
-                    soul_manifest=active_soul.manifest
+                    soul_manifest=active_soul.manifest,
                 )
-                
+
                 await self._session.connect()
-                
-                logger.info("✦ Hive Active: Expert '%s' taking control", active_soul.manifest.name)
+
+                logger.info(
+                    "✦ Hive Active: Expert '%s' taking control",
+                    active_soul.manifest.name,
+                )
 
                 # Run session alongside other background tasks
                 async with asyncio.TaskGroup() as tg:
                     tg.create_task(self._capture.run(), name="audio-capture")
                     tg.create_task(self._playback.run(), name="audio-playback")
-                    session_task = tg.create_task(self._session.run(), name="gemini-session")
+                    session_task = tg.create_task(
+                        self._session.run(), name="gemini-session"
+                    )
                     tg.create_task(self._gateway.run(), name="gateway")
                     tg.create_task(self._admin_sync_loop(), name="admin-sync")
-                    
+
                     # Watcher for shutdown or restart
-                    restart_waiter = tg.create_task(self._session_restart.wait(), name="restart-waiter")
-                    shutdown_waiter = tg.create_task(self._shutdown_event.wait(), name="shutdown-waiter")
-                    
+                    restart_waiter = tg.create_task(
+                        self._session_restart.wait(), name="restart-waiter"
+                    )
+                    shutdown_waiter = tg.create_task(
+                        self._shutdown_event.wait(), name="shutdown-waiter"
+                    )
+
                     # Wait for either session to end, restart triggered, or shutdown
                     done, pending = await asyncio.wait(
                         [session_task, restart_waiter, shutdown_waiter],
-                        return_when=asyncio.FIRST_COMPLETED
+                        return_when=asyncio.FIRST_COMPLETED,
                     )
-                    
+
                     # Clean up pending tasks in the group
                     for p in pending:
                         p.cancel()
-                
+
                 if self._session_restart.is_set():
                     logger.info("🔄 Hive Handoff: Preparing next expert...")
-                    
+
                     # TRIGGER GENETIC EVOLUTION
                     # We evolve the 'soul' instructions based on the just-finished session performance
                     mutation = await self._optimizer.evolve(
                         current_instructions=active_soul.manifest.general_instructions,
-                        session_id=self._firebase._session_id
+                        session_id=self._firebase._session_id,
                     )
                     if mutation:
-                        logger.info("🧬 Genetic Leap: Soul '%s' instruction set evolved.", active_soul.manifest.name)
+                        logger.info(
+                            "🧬 Genetic Leap: Soul '%s' instruction set evolved.",
+                            active_soul.manifest.name,
+                        )
                         # TODO: Hot-patch the in-memory registry if needed, or wait for next session
                         # For now, we trust the registry watcher to handle file-system mutations
                         # A higher-tier implementation would write back to the .ath file.
@@ -353,7 +374,9 @@ class AetherEngine:
                 else:
                     # If sesson ended naturally and not because of restart/shutdown
                     if not self._shutdown_event.is_set():
-                        logger.warning("Gemini session ended unexpectedly. Restarting in 5s...")
+                        logger.warning(
+                            "Gemini session ended unexpectedly. Restarting in 5s..."
+                        )
                         await asyncio.sleep(5.0)
 
         except* KeyboardInterrupt:
@@ -379,14 +402,17 @@ class AetherEngine:
         """Background task to continually update Admin API shared state."""
         import json
         import os
+
         synapse_path = os.path.expanduser("~/.aetheros/synapse/heartbeat.ath")
         while True:
             try:
                 # 1. Update Sessions from Firestore
                 if self._firebase.is_connected and self._firebase._db:
-                    query = self._firebase._db.collection("sessions").order_by(
-                        "started_at", direction="DESCENDING"
-                    ).limit(10)
+                    query = (
+                        self._firebase._db.collection("sessions")
+                        .order_by("started_at", direction="DESCENDING")
+                        .limit(10)
+                    )
                     sessions = []
                     async for doc in query.stream():
                         d = doc.to_dict()
@@ -421,10 +447,12 @@ class AetherEngine:
 
         # End Firebase session with summary
         if self._firebase.is_connected:
-            await self._firebase.end_session({
-                "tools_used": self._router.names,
-                "tool_count": self._router.count,
-            })
+            await self._firebase.end_session(
+                {
+                    "tools_used": self._router.names,
+                    "tool_count": self._router.count,
+                }
+            )
 
         logger.info("═" * 60)
         logger.info("  AETHER VOICE OS — Engine stopped cleanly")

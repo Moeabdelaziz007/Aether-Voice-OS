@@ -13,16 +13,18 @@ The router maintains a registry of:
   - Function declarations (sent to Gemini at session start)
   - Handler callables (invoked when Gemini emits a tool_call)
 """
+
 from __future__ import annotations
 
 import asyncio
 import inspect
 import json
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Optional
 
 from google.genai import types
+
 from core.tools.vector_store import LocalVectorStore
 
 logger = logging.getLogger(__name__)
@@ -31,6 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ToolRegistration:
     """A registered tool with its schema and handler."""
+
     name: str
     description: str
     parameters: dict[str, Any]
@@ -41,7 +44,7 @@ class ToolRegistration:
 
 class ToolExecutionProfiler:
     """Tracks performance metrics for tool executions."""
-    
+
     def __init__(self) -> None:
         self._execution_times: dict[str, list[float]] = {}
         self._lock = asyncio.Lock()
@@ -61,7 +64,7 @@ class ToolExecutionProfiler:
         times = sorted(self._execution_times.get(tool_name, []))
         if not times:
             return {"p50": 0.0, "p95": 0.0, "p99": 0.0, "avg": 0.0, "count": 0}
-        
+
         count = len(times)
         return {
             "p50": times[int(count * 0.5)],
@@ -80,11 +83,11 @@ class ToolRouter:
 
     # Tools that require Biometric Soul-Lock (Middleware)
     SENSITIVE_TOOLS = {
-        "deploy_package", 
-        "write_memory", 
+        "deploy_package",
+        "write_memory",
         "execute_system_command",
         "delete_task",
-        "update_firebase_config"
+        "update_firebase_config",
     }
 
     def __init__(self) -> None:
@@ -104,7 +107,7 @@ class ToolRouter:
         parameters: dict[str, Any],
         handler: Callable[..., Any],
         latency_tier: str = "p95_sub_500ms",
-        idempotent: bool = True
+        idempotent: bool = True,
     ) -> None:
         """Register a tool with its handler function and A2A metadata."""
         self._tools[name] = ToolRegistration(
@@ -113,19 +116,19 @@ class ToolRouter:
             parameters=parameters,
             handler=handler,
             latency_tier=latency_tier,
-            idempotent=idempotent
+            idempotent=idempotent,
         )
-        
+
         # Async indexing (Best effort)
         if self._vector_store:
             asyncio.create_task(
                 self._vector_store.add_text(
                     key=name,
                     text=f"Title: {name}; Description: {description}",
-                    metadata={"name": name}
+                    metadata={"name": name},
                 )
             )
-            
+
         logger.info("Tool registered: %s [Tier: %s]", name, latency_tier)
 
     def un_register(self, name: str) -> None:
@@ -196,8 +199,10 @@ class ToolRouter:
         args = function_call.args or {}
 
         if name not in self._tools:
-            logger.warning("Unmatched tool called: %s. Attempting semantic recovery...", name)
-            
+            logger.warning(
+                "Unmatched tool called: %s. Attempting semantic recovery...", name
+            )
+
             # --- Semantic Recovery Sequence ---
             if self._vector_store:
                 try:
@@ -205,17 +210,22 @@ class ToolRouter:
                     hits = self._vector_store.search(query_vec, limit=1)
                     if hits and hits[0]["similarity"] > 0.85:
                         match = hits[0]["key"]
-                        logger.info("🎯 Semantic Match Found: %s -> %s (Sim: %.2f)", name, match, hits[0]["similarity"])
-                        name = match # Redirect to the closest tool
+                        logger.info(
+                            "🎯 Semantic Match Found: %s -> %s (Sim: %.2f)",
+                            name,
+                            match,
+                            hits[0]["similarity"],
+                        )
+                        name = match  # Redirect to the closest tool
                     else:
                         return {
                             "error": f"Tool '{name}' not found and no close semantic matches (>0.85).",
                             "available_tools": self.names,
-                            "x-a2a-status": 404
+                            "x-a2a-status": 404,
                         }
                 except Exception as e:
                     logger.error("Semantic recovery failed: %s", e)
-            
+
             if name not in self._tools:
                 return {
                     "error": f"Unknown tool: {name}",
@@ -223,20 +233,24 @@ class ToolRouter:
                 }
 
         tool = self._tools[name]
-        
+
         # ── Biometric Soul-Lock Middleware ──────────────────────────
         if name in self.SENSITIVE_TOOLS:
             logger.info("🛡️ [SECURITY] [BIO-HASH] Sensitive tool detected: %s", name)
-            logger.info("🛡️ [SECURITY] [BIO-HASH] Extracting 128-bit voice-print vector...")
-            await asyncio.sleep(0.1) # Simulate DSP overhead
-            logger.info("🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against Soul.md... SUCCESS")
+            logger.info(
+                "🛡️ [SECURITY] [BIO-HASH] Extracting 128-bit voice-print vector..."
+            )
+            await asyncio.sleep(0.1)  # Simulate DSP overhead
+            logger.info(
+                "🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against Soul.md... SUCCESS"
+            )
             # In a production system, we would perform actual pitch/timbre comparison here.
-        
+
         logger.info(
             "⚡ Dispatching: %s(%s) [Tier: %s]",
             name,
             json.dumps(args, default=str)[:200],
-            tool.latency_tier
+            tool.latency_tier,
         )
 
         start_time = asyncio.get_event_loop().time()
@@ -246,7 +260,7 @@ class ToolRouter:
                 result = await tool.handler(**args)
             else:
                 result = await asyncio.to_thread(tool.handler, **args)
-                
+
             # If the result itself is still awaitable (e.g. from a mock or wrapper leak)
             if inspect.isawaitable(result):
                 result = await result
@@ -256,32 +270,34 @@ class ToolRouter:
 
             # ── A2A Protocol V3 Response Wrapping ───────────────────────
             # Standardizes output for multi-agent interoperability.
-            a2a_status = 200 # OK
+            a2a_status = 200  # OK
             if isinstance(result, dict) and "a2a_code" in result:
-                 a2a_status = result.pop("a2a_code")
-            
+                a2a_status = result.pop("a2a_code")
+
             wrapped_result = {
                 "result": result if isinstance(result, dict) else {"data": result},
                 "x-a2a-status": a2a_status,
                 "x-a2a-latency": tool.latency_tier,
                 "x-a2a-idempotent": tool.idempotent,
-                "x-a2a-duration_ms": int(duration * 1000)
+                "x-a2a-duration_ms": int(duration * 1000),
             }
 
-            logger.info("✓ Tool %s completed [A2A:%d] (%.3fs)", name, a2a_status, duration)
+            logger.info(
+                "✓ Tool %s completed [A2A:%d] (%.3fs)", name, a2a_status, duration
+            )
             return wrapped_result
 
         except TypeError as exc:
             logger.error("Tool %s argument error: %s", name, exc)
             return {
                 "error": f"Invalid arguments for {name}: {exc}",
-                "x-a2a-status": 400 # Bad Request
+                "x-a2a-status": 400,  # Bad Request
             }
         except Exception as exc:
             logger.error("Tool %s execution failed: %s", name, exc, exc_info=True)
             return {
                 "error": f"Tool {name} failed: {exc}",
-                "x-a2a-status": 500 # Internal Error
+                "x-a2a-status": 500,  # Internal Error
             }
 
     def get_performance_report(self) -> dict[str, dict[str, float]]:

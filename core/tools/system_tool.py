@@ -8,6 +8,7 @@ environment information.
 
 All functions are pure — no side effects beyond returning data.
 """
+
 from __future__ import annotations
 
 import logging

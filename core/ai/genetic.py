@@ -7,10 +7,10 @@ prompts for better user engagement in future sessions.
 """
 
 from __future__ import annotations
-import logging
+
 import json
-from typing import Any, Optional
-from datetime import datetime, timezone
+import logging
+from typing import Optional
 
 from core.tools.firebase_tool import FirebaseConnector
 
@@ -43,6 +43,7 @@ Return ONLY a JSON object with:
 }}
 """
 
+
 class GeneticOptimizer:
     """
     Orchestrates the evolution of the Agent's soul.
@@ -52,7 +53,9 @@ class GeneticOptimizer:
         self._firebase = firebase
         self._api_key = api_key
 
-    async def evolve(self, current_instructions: str, session_id: Optional[str] = None) -> Optional[dict]:
+    async def evolve(
+        self, current_instructions: str, session_id: Optional[str] = None
+    ) -> Optional[dict]:
         """
         Perform a mutation step based on the last session's performance.
         """
@@ -71,23 +74,29 @@ class GeneticOptimizer:
             return None
 
         metrics = report["summary"]
-        
+
         # Threshold: Only evolve if we have enough interactions
         if metrics.get("interaction_count", 0) < 3:
-            logger.info("Evolution skipped: Insufficient interaction count (%d)", metrics.get("interaction_count"))
+            logger.info(
+                "Evolution skipped: Insufficient interaction count (%d)",
+                metrics.get("interaction_count"),
+            )
             return None
 
         # 2. Invoke Gemini for Mutation
         try:
             import google.generativeai as genai
+
             genai.configure(api_key=self._api_key)
-            model = genai.GenerativeModel('gemini-2.5-flash') # Standard flash for mutation
+            model = genai.GenerativeModel(
+                "gemini-2.5-flash"
+            )  # Standard flash for mutation
 
             prompt = GENETIC_SYSTEM_PROMPT.format(
                 avg_engagement=metrics["avg_engagement"],
                 trend=metrics["trend"],
                 avg_pitch=metrics["avg_pitch"],
-                current_instructions=current_instructions
+                current_instructions=current_instructions,
             )
 
             response = await model.generate_content_async(prompt)
@@ -95,17 +104,24 @@ class GeneticOptimizer:
             text = response.text
             if "```json" in text:
                 text = text.split("```json")[1].split("```")[0].strip()
-            
+
             mutation = json.loads(text)
-            logger.info("Soul Mutated: %s (Engagement: %.2f)", mutation.get("rationale"), metrics["avg_engagement"])
-            
+            logger.info(
+                "Soul Mutated: %s (Engagement: %.2f)",
+                mutation.get("rationale"),
+                metrics["avg_engagement"],
+            )
+
             # 3. Log mutation to Firestore
-            await self._firebase.log_event("soul_mutation", {
-                "session_id": sid,
-                "prev_engagement": metrics["avg_engagement"],
-                "rationale": mutation.get("rationale"),
-                "version_delta": mutation.get("version_delta")
-            })
+            await self._firebase.log_event(
+                "soul_mutation",
+                {
+                    "session_id": sid,
+                    "prev_engagement": metrics["avg_engagement"],
+                    "rationale": mutation.get("rationale"),
+                    "version_delta": mutation.get("version_delta"),
+                },
+            )
 
             return mutation
 

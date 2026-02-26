@@ -5,6 +5,7 @@ Manages external client connections via WebSocket.
 Handles Ed25519 challenge-response authentication,
 capability negotiation, and heartbeat ticking.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 class ClientSession:
     """Tracks a connected and authenticated client."""
+
     def __init__(
         self,
         client_id: str,
@@ -55,9 +57,7 @@ class AetherGateway:
     """
 
     def __init__(
-        self, 
-        config: GatewayConfig,
-        on_audio_rx: Optional[callable] = None
+        self, config: GatewayConfig, on_audio_rx: Optional[callable] = None
     ) -> None:
         self._config = config
         self._on_audio_rx = on_audio_rx
@@ -196,7 +196,12 @@ class AetherGateway:
                 # To maintain engine compatibility, we wrap the raw PCM bytes
                 # in the dict format expected by GeminiLiveSession's input queue.
                 # However, we skip JSON decoding overhead here.
-                await self._on_audio_rx({"data": data, "mime_type": f"audio/pcm;rate={self._config.receive_sample_rate}"})
+                await self._on_audio_rx(
+                    {
+                        "data": data,
+                        "mime_type": f"audio/pcm;rate={self._config.receive_sample_rate}",
+                    }
+                )
             except Exception as exc:
                 logger.error("Error routing binary audio: %s", exc)
 
@@ -239,10 +244,12 @@ class AetherGateway:
 
                     # Send tick
                     try:
-                        tick_msg = json.dumps({
-                            "type": MessageType.TICK.value,
-                            "timestamp": now,
-                        })
+                        tick_msg = json.dumps(
+                            {
+                                "type": MessageType.TICK.value,
+                                "timestamp": now,
+                            }
+                        )
                         await session.ws.send(tick_msg)
                     except websockets.exceptions.ConnectionClosed:
                         dead_clients.append(cid)

@@ -4,6 +4,7 @@ Aether Voice OS — Package Model.
 Defines the .ath package structure with Pydantic validation
 and SHA256 integrity verification.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -25,6 +26,7 @@ class SoulManifest(BaseModel):
 
     Loaded from manifest.json inside a .ath package directory.
     """
+
     name: str = Field(..., min_length=1, max_length=64)
     version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
     persona: str = Field(..., min_length=1, description="Agent personality description")
@@ -33,12 +35,12 @@ class SoulManifest(BaseModel):
     capabilities: list[str] = Field(default_factory=list)
     tools: list[str] = Field(default_factory=list)
     memory_tags: list[str] = Field(
-        default_factory=list, 
-        description="Memory namespaces this agent is optimized for"
+        default_factory=list,
+        description="Memory namespaces this agent is optimized for",
     )
     expertise: dict[str, float] = Field(
         default_factory=dict,
-        description="Domain-specific expertise scores (0.0 to 1.0)"
+        description="Domain-specific expertise scores (0.0 to 1.0)",
     )
     author: Optional[str] = None
     checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
@@ -48,9 +50,15 @@ class SoulManifest(BaseModel):
     def validate_capabilities(cls, v: list[str]) -> list[str]:
         """Ensure only known capabilities are declared."""
         known = {
-            "audio.input", "audio.output", "text.input", "text.output",
-            "tool.execute", "memory.read", "memory.write",
-            "ui.render", "network.http",
+            "audio.input",
+            "audio.output",
+            "text.input",
+            "text.output",
+            "tool.execute",
+            "memory.read",
+            "memory.write",
+            "ui.render",
+            "network.http",
         }
         unknown = set(v) - known
         if unknown:
@@ -134,8 +142,7 @@ class AthPackage:
         """
         hasher = hashlib.sha256()
         files = sorted(
-            f for f in self.path.rglob("*")
-            if f.is_file() and f.name != "manifest.json"
+            f for f in self.path.rglob("*") if f.is_file() and f.name != "manifest.json"
         )
         for file_path in files:
             hasher.update(file_path.read_bytes())

@@ -15,6 +15,7 @@ The agent will:
 Compatible with OpenClaw skill specifications and
 ADK (Agent Development Kit) lifecycle patterns.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -29,6 +30,7 @@ sys.path.insert(0, str(ROOT))
 # Load .env before anything else reads env vars
 try:
     from dotenv import load_dotenv
+
     load_dotenv(ROOT / ".env")
 except ImportError:
     pass  # dotenv is optional; env vars can be set externally

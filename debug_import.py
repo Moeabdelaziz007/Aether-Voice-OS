@@ -1,8 +1,6 @@
-
 import importlib.machinery
 import importlib.util
 import os
-import sys
 
 path = "/Users/cryptojoker710/Desktop/Aether Live Agent/aether-cortex/target/release/aether_cortex.so"
 print(f"Attempting to load: {path}")
@@ -18,4 +16,5 @@ try:
 except Exception as e:
     print(f"FAILURE: {e}")
     import traceback
+
     traceback.print_exc()

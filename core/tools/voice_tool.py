@@ -17,6 +17,7 @@ Usage as a tool:
     await tool.execute()       # starts listening + responding
     await tool.teardown()      # graceful cleanup
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -25,16 +26,17 @@ import signal
 from enum import Enum
 from typing import Callable, Optional
 
-from core.config import AetherConfig, load_config
+from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
 from core.audio.playback import AudioPlayback
-from core.ai.session import GeminiLiveSession
+from core.config import AetherConfig, load_config
 
 logger = logging.getLogger(__name__)
 
 
 class VoiceState(str, Enum):
     """Current state of the voice tool."""
+
     IDLE = "idle"
     INITIALIZING = "initializing"
     LISTENING = "listening"
@@ -121,9 +123,7 @@ class VoiceTool:
         self._config = config or self._config or load_config()
 
         # Pipeline queues
-        self._audio_in = asyncio.Queue(
-            maxsize=self._config.audio.mic_queue_max
-        )
+        self._audio_in = asyncio.Queue(maxsize=self._config.audio.mic_queue_max)
         self._audio_out = asyncio.Queue()
 
         # Components
@@ -325,4 +325,3 @@ def get_tools() -> list[dict]:
             "handler": _voice_tool_handler,
         },
     ]
-
