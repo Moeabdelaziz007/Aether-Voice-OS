@@ -37,7 +37,7 @@ class TestConfig:
         assert cfg.send_sample_rate == 16_000
         assert cfg.receive_sample_rate == 24_000
         assert cfg.channels == 1
-        assert cfg.chunk_size == 1024
+        assert cfg.chunk_size == 512
         assert cfg.format_width == 2
         assert cfg.mic_queue_max == 5
 
@@ -56,7 +56,7 @@ class TestConfig:
         assert cfg.enable_affective_dialog is True
         assert cfg.proactive_audio is True
         assert cfg.enable_search_grounding is True
-        assert cfg.thinking_budget == 1024
+        assert cfg.thinking_budget == 0
 
     def test_gemini_model_enum(self):
         from core.config import GeminiModel

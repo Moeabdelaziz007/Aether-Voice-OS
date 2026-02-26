@@ -123,7 +123,7 @@ class AudioCapture:
                 data = await asyncio.to_thread(self._buffer.get)
                 
                 # 2. Package for AI session (Blob format)
-                msg = {"data": data, "mime_type": "audio/pcm"}
+                msg = {"data": data, "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}"}
                 
                 # 3. Push to asyncio queue with overflow protection
                 try:

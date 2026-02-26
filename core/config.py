@@ -21,7 +21,7 @@ class AudioConfig(BaseSettings):
     send_sample_rate: int = Field(16_000, description="Mic input sample rate (Hz)")
     receive_sample_rate: int = Field(24_000, description="Gemini output sample rate (Hz)")
     channels: int = Field(1, description="Mono audio")
-    chunk_size: int = Field(1024, description="PyAudio frames per buffer read")
+    chunk_size: int = Field(512, description="PyAudio frames per buffer read")
     format_width: int = Field(2, description="Bytes per sample (2 = 16-bit)")
     mic_queue_max: int = Field(5, description="Back-pressure limit on mic queue")
 
@@ -45,7 +45,7 @@ class AIConfig(BaseSettings):
     enable_affective_dialog: bool = Field(True, description="Emotion-aware responses")
     proactive_audio: bool = Field(True, description="Model decides when to respond")
     enable_search_grounding: bool = Field(True, description="Google Search grounding for fact-checking")
-    thinking_budget: Optional[int] = Field(1024, description="Thinking token budget (0 disables)")
+    thinking_budget: Optional[int] = Field(0, description="Thinking token budget (0 disables for minimal latency)")
     system_instruction: str = Field(
         "You are Aether — a calm, wise, deeply technical AI companion. "
         "You speak Arabic naturally and switch to English for code. "
