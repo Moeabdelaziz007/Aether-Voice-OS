@@ -26,9 +26,9 @@ if TYPE_CHECKING:
 from google import genai
 from google.genai import types
 
-from core.config import AIConfig
-from core.errors import AIConnectionError, AISessionExpiredError
 from core.identity.package import SoulManifest
+from core.utils.config import AIConfig
+from core.utils.errors import AIConnectionError, AISessionExpiredError
 
 logger = logging.getLogger(__name__)
 

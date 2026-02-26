@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 
-from core.errors import ManifestValidationError, PackageCorruptError
 from core.identity.package import AthPackage, SoulManifest
 from core.identity.registry import AetherRegistry
+from core.utils.errors import ManifestValidationError, PackageCorruptError
 
 
 @pytest.fixture
@@ -126,7 +126,7 @@ class TestRegistry:
     def test_get_missing_package(self, package_dir):
         registry = AetherRegistry(str(package_dir.parent))
         registry.scan()
-        from core.errors import PackageNotFoundError
+        from core.utils.errors import PackageNotFoundError
 
         with pytest.raises(PackageNotFoundError):
             registry.get("nonexistent")

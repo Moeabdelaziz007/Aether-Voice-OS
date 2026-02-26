@@ -21,6 +21,7 @@
   <a href="#"><img src="https://img.shields.io/badge/Python-3.11%20%7C%203.12%20%7C%203.13-3776ab?style=for-the-badge&logo=python&logoColor=white" alt="Test Matrix"/></a>
   <a href="#"><img src="https://img.shields.io/badge/Next.js-15-000?style=for-the-badge&logo=nextdotjs" alt="Next.js"/></a>
   <a href="#"><img src="https://img.shields.io/badge/License-Apache_2.0-green?style=for-the-badge" alt="License"/></a>
+  <a href="#"><img src="https://komarev.com/ghpvc/?username=Moeabdelaziz007-Aether-Voice-OS&label=Project%20Views&color=0e75b6&style=for-the-badge" alt="Project Views"/></a>
 </p>
 
 <p align="center">

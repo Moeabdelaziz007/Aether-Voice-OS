@@ -37,7 +37,6 @@ from core.audio.paralinguistics import (ParalinguisticAnalyzer,
                                         ParalinguisticFeatures)
 from core.audio.playback import AudioPlayback
 from core.audio.processing import AdaptiveVAD
-from core.config import AetherConfig, load_config
 from core.identity.package import AthPackage
 from core.identity.registry import AetherRegistry
 from core.tools import (hive_memory, memory_tool, system_tool, tasks_tool,
@@ -46,6 +45,7 @@ from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.router import ToolRouter
 from core.transport.gateway import AetherGateway
+from core.utils.config import AetherConfig, load_config
 
 logger = logging.getLogger(__name__)
 

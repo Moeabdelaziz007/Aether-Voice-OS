@@ -6,8 +6,8 @@ import numpy as np
 from core.audio.playback import AudioPlayback
 from core.audio.processing import SilenceType, SilentAnalyzer
 from core.audio.state import audio_state
-from core.config import AudioConfig
 from core.tools.voice_auth import VoiceAuthGuard
+from core.utils.config import AudioConfig
 
 
 class TestCyberneticCore(unittest.TestCase):

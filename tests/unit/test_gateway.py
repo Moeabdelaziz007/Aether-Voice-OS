@@ -4,9 +4,9 @@ import json
 import pytest
 import websockets
 
-from core.config import GatewayConfig
 from core.transport.gateway import AetherGateway
 from core.transport.messages import MessageType
+from core.utils.config import GatewayConfig
 
 
 @pytest.fixture

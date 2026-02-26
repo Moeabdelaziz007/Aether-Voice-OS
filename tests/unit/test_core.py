@@ -31,7 +31,7 @@ class TestConfig:
     """Test configuration loading and validation."""
 
     def test_audio_config_defaults(self):
-        from core.config import AudioConfig
+        from core.utils.config import AudioConfig
 
         cfg = AudioConfig()
         assert cfg.send_sample_rate == 16_000
@@ -42,7 +42,7 @@ class TestConfig:
         assert cfg.mic_queue_max == 5
 
     def test_gateway_config_defaults(self):
-        from core.config import GatewayConfig
+        from core.utils.config import GatewayConfig
 
         cfg = GatewayConfig()
         assert cfg.host == "0.0.0.0"
@@ -51,7 +51,7 @@ class TestConfig:
         assert cfg.max_missed_ticks == 2
 
     def test_ai_config_requires_api_key(self):
-        from core.config import AIConfig
+        from core.utils.config import AIConfig
 
         cfg = AIConfig(api_key="test-key-123")
         assert cfg.api_key == "test-key-123"
@@ -61,7 +61,7 @@ class TestConfig:
         assert cfg.thinking_budget == 0
 
     def test_gemini_model_enum(self):
-        from core.config import GeminiModel
+        from core.utils.config import GeminiModel
 
         assert (
             GeminiModel.FLASH_NATIVE_AUDIO.value
@@ -70,7 +70,7 @@ class TestConfig:
         assert GeminiModel.LIVE_FLASH.value == "gemini-live-2.5-flash-preview"
 
     def test_load_config_with_env(self):
-        from core.config import load_config
+        from core.utils.config import load_config
 
         with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key-for-loading"}):
             cfg = load_config()
@@ -78,7 +78,7 @@ class TestConfig:
 
     def test_load_config_with_json_fallback(self):
         """Test the TCC Bypass logic using JSON config."""
-        from core.config import load_config
+        from core.utils.config import load_config
 
         json_path = Path("aether_runtime_config.json")
         backup_path = Path("aether_runtime_config.json.bak")
@@ -112,7 +112,7 @@ class TestConfig:
                     os.remove(json_path)
 
     def test_load_config_missing_key_raises(self):
-        from core.config import load_config
+        from core.utils.config import load_config
 
         # Ensure no env and no json
         json_path = Path("aether_runtime_config.json")

@@ -19,10 +19,10 @@ from typing import Any, Optional
 import websockets
 from websockets.asyncio.server import Server, ServerConnection
 
-from core.config import GatewayConfig
-from core.errors import HandshakeError, HandshakeTimeoutError
 from core.transport.messages import (AckMessage, ChallengeMessage,
                                      ErrorMessage, MessageType)
+from core.utils.config import GatewayConfig
+from core.utils.errors import HandshakeError, HandshakeTimeoutError
 
 logger = logging.getLogger(__name__)
 

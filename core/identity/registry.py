@@ -15,8 +15,8 @@ from typing import Any, Callable, Optional
 from watchdog.events import FileSystemEvent, FileSystemEventHandler
 from watchdog.observers import Observer
 
-from core.errors import IdentityError, PackageNotFoundError
 from core.identity.package import AthPackage
+from core.utils.errors import IdentityError, PackageNotFoundError
 
 logger = logging.getLogger(__name__)
 

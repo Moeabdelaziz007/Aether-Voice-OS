@@ -15,7 +15,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-from core.errors import ManifestValidationError, PackageCorruptError
+from core.utils.errors import ManifestValidationError, PackageCorruptError
 
 logger = logging.getLogger(__name__)
 
