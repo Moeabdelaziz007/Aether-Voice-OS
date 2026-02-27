@@ -1,10 +1,10 @@
 import logging
 import time
 
-logger = logging.getLogger(__name__)
-
 from core.emotion.calibrator import EmotionCalibrator
 from core.tools.vision_tool import take_screenshot
+
+logger = logging.getLogger(__name__)
 
 
 class ProactiveInterventionEngine:
@@ -22,14 +22,16 @@ class ProactiveInterventionEngine:
             "أشعر بضيقك في هذا الجزء. هل تريد أن نلقي نظرة معاً على الكود لحلها؟",
             "يبدو أن هذا الخطأ محبط حقاً. هل تريد مني تشغيل فحص للملفات المتأثرة؟",
             "لا تقلق، النسق يبدو معقداً هنا. هل تريد أن آخذ لقطة للشاشة لأفهم ما تراه؟",
-            "ألاحظ بعض التوتر في نبرتك. فلنأخذ استراحة بسيطة أو نحل هذه المشكلة معاً الآن؟",
+            "ألاحظ بعض التوتر في نبرتك. فلنأخذ استراحة بسيطة أو نحل هذه "
+            "المشكلة معاً الآن؟",
         ]
         self._message_index = 0
 
     def calculate_frustration(self, valence: float, arousal: float) -> float:
         """
         Calculates frustration score.
-        Updated to detect 'Resignation' (Sighs) which are Low Arousal + Negative Valence.
+        Updated to detect "Resignation" (Sighs) which are Low Arousal + Negative
+        Valence.
         Also factors in dynamic baselines.
         """
         if valence >= 0:
@@ -101,17 +103,22 @@ class CodeAwareProactiveAgent:
         when frustration is detected.
         """
         from core.tools.rag_tool import search_codebase
-        from core.tools.vision_tool import take_screenshot
 
         return [
             {
                 "tool": "search_codebase",
-                "reason": "User frustration detected. Search the local codebase to pinpoint the structural issue.",
+                "reason": (
+                    "User frustration detected. Search the local codebase to "
+                    "pinpoint the structural issue."
+                ),
                 "function": search_codebase,
             },
             {
                 "tool": "take_screenshot",
-                "reason": "User frustration detected. Visual context needed to diagnose the issue on their screen.",
+                "reason": (
+                    "User frustration detected. Visual context needed to diagnose "
+                    "the issue on their screen."
+                ),
                 "function": take_screenshot,
             },
         ]

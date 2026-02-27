@@ -221,7 +221,10 @@ class ToolRouter:
                         was_recovered = True
                     else:
                         return {
-                            "error": f"Tool '{name}' not found and no close semantic matches (>0.85).",
+                            "error": (
+                                f"Tool '{name}' not found and no close semantic "
+                                "matches (>0.85)."
+                            ),
                             "available_tools": self.names,
                             "x-a2a-status": 404,
                         }
@@ -246,9 +249,10 @@ class ToolRouter:
             )
             await asyncio.sleep(0.1)  # Simulate DSP overhead
             logger.info(
-                "🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against Soul.md... SUCCESS"
+                "🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against "
+                "Soul.md... SUCCESS"
             )
-            # In a production system, we would perform actual pitch/timbre comparison here.
+            # In production, perform actual pitch/timbre comparison here.
 
         logger.info(
             "⚡ Dispatching: %s(%s) [Tier: %s]",

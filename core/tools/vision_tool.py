@@ -46,7 +46,9 @@ async def take_screenshot(**kwargs) -> dict:
                 "status": "success",
                 "mime_type": "image/png",
                 "data": b64_data,
-                "message": "Screen captured instantly. Visual data injected into context.",
+                "message": (
+                    "Screen captured instantly. Visual data injected into context."
+                ),
             }
     except Exception as e:
         logger.error("Vision Tool: Failed to capture screen: %s", str(e))
@@ -62,8 +64,9 @@ def get_tools() -> list[dict]:
             "name": "take_screenshot",
             "description": (
                 "Takes a live snapshot of the user's entire desktop screen. "
-                "Call this when the user asks 'what am I looking at?', 'read my screen', "
-                "or asks about visual context. The image will be provided to you instantly."
+                "Call this when the user asks 'what am I looking at?', "
+                "'read my screen', or asks about visual context. The image will "
+                "be provided to you instantly."
             ),
             "parameters": {},
             "handler": take_screenshot,

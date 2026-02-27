@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -22,14 +22,17 @@ def set_firebase_connector(connector: Any) -> None:
     _firebase = connector
 
 
-async def write_collective_memory(key: str, value: Any, tags: list[str] = None) -> dict:
+async def write_collective_memory(
+    key: str, value: Any, tags: Optional[list[str]] = None
+) -> dict[str, object]:
     """
     Write a value to the Hive Collective Memory.
 
     Args:
         key: The unique identifier for this memory slot.
         value: The data to store (JSON serializable).
-        tags: Optional list of domains this memory relates to (e.g. ['code', 'database']).
+        tags: Optional list of domains this memory relates to (e.g.
+            ["code", "database"]).
     """
     if not _firebase or not _firebase.is_connected:
         return {
@@ -37,7 +40,7 @@ async def write_collective_memory(key: str, value: Any, tags: list[str] = None) 
             "message": "Hive Memory offline (Firebase not connected)",
         }
 
-    memory_data = {
+    memory_data: dict[str, object] = {
         "key": key,
         "value": value,
         "tags": tags or [],
@@ -55,7 +58,7 @@ async def write_collective_memory(key: str, value: Any, tags: list[str] = None) 
         return {"status": "error", "message": str(e)}
 
 
-async def read_collective_memory(key: str) -> dict:
+async def read_collective_memory(key: str) -> dict[str, object]:
     """Read a value from the Hive Collective Memory."""
     if not _firebase or not _firebase.is_connected:
         return {"status": "error", "message": "Hive Memory offline"}
@@ -71,12 +74,15 @@ async def read_collective_memory(key: str) -> dict:
         return {"status": "error", "message": str(e)}
 
 
-def get_tools() -> list[dict]:
+def get_tools() -> list[dict[str, object]]:
     """Module registration for Collective Memory tools."""
     return [
         {
             "name": "write_memory",
-            "description": "Store state in the Hive Collective Memory for other expert souls to see.",
+            "description": (
+                "Store state in the Hive Collective Memory for other expert "
+                "souls to see."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -90,7 +96,10 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "read_memory",
-            "description": "Retrieve state from the Hive Collective Memory stored by previous experts.",
+            "description": (
+                "Retrieve state from the Hive Collective Memory stored by "
+                "previous experts."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {"key": {"type": "string"}},

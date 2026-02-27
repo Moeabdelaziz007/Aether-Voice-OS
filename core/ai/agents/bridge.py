@@ -16,8 +16,8 @@ class ADKGeminiBridge:
 
     def route_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> str:
         """
-        Receives a tool call from Gemini, routes it to the correct ADK agent via orchestrator,
-        and returns the result to stream back to Gemini.
+        Receives a tool call from Gemini, routes it to the correct ADK agent via
+        the orchestrator, and returns the result to stream back to Gemini.
         """
         logger.info(f"Bridge routing tool: {tool_name} with args: {arguments}")
 

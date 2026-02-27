@@ -39,8 +39,8 @@ class ParalinguisticAnalyzer:
         self._history_pitch: list[float] = []
         self._history_rate: list[float] = []
         self._history_transients: list[int] = []  # Count of high-freq transients
-        self._window_size = 20  # Last 2 seconds of interaction (more reactive)
-        self._zen_threshold = 0.7  # Sentiment/Transience threshold for Zen
+        self._window_seconds = 2.0
+        self._zen_threshold = 2.5
 
     def _detect_transients(self, pcm_chunk: NDArray[np.int16]) -> int:
         """Detect sharp high-frequency spikes (typing clicks)."""
@@ -52,7 +52,7 @@ class ParalinguisticAnalyzer:
         std = np.std(diff)
 
         # Count values that are N times the standard deviation (spikes)
-        threshold = std * 5
+        threshold = std * 4
         peaks = np.where(np.abs(diff) > threshold)[0]
 
         # Cluster peaks to avoid counting the same spike multiple times
@@ -136,24 +136,31 @@ class ParalinguisticAnalyzer:
         if len(pcm_chunk) == 0:
             return ParalinguisticFeatures(0, 0, 0, 0, 0.5)
 
+        frame_duration = len(pcm_chunk) / self.sample_rate
+        window_size = (
+            int(self._window_seconds / frame_duration) if frame_duration > 0 else 1
+        )
+        if window_size < 5:
+            window_size = 5
+
         # 1. Pitch
         pitch = self._estimate_pitch(pcm_chunk)
         if pitch > 0:
             self._history_pitch.append(pitch)
-            if len(self._history_pitch) > self._window_size:
+            if len(self._history_pitch) > window_size:
                 self._history_pitch.pop(0)
 
         # 2. Rate
         rate = self._estimate_rate(pcm_chunk)
         if rate > 0:
             self._history_rate.append(rate)
-            if len(self._history_rate) > self._window_size:
+            if len(self._history_rate) > window_size:
                 self._history_rate.pop(0)
 
         # 3. Focus: Transient Detection (Keyboard clicks)
         transients = self._detect_transients(pcm_chunk)
         self._history_transients.append(transients)
-        if len(self._history_transients) > self._window_size:
+        if len(self._history_transients) > window_size:
             self._history_transients.pop(0)
 
         # 4. RMS Variance (Expressiveness)
@@ -188,12 +195,12 @@ class ParalinguisticAnalyzer:
         # 7. Zen Mode Detection (Neural Shield)
         # logic: high concentration detected if we see typing cadence and low speech
         avg_transience = (
-            np.mean(self._history_transients) if self._history_transients else 0
+            np.mean(self._history_transients) if self._history_transients else 0.0
         )
+        transience_rate = avg_transience / frame_duration if frame_duration > 0 else 0.0
         is_zen = False
-        if current_rms < 0.05:  # Low background noise (silence)
-            # 0.25 means average 2.5 spikes/sec (Relaxed coding pace)
-            if avg_transience > 0.25:
+        if 0.001 < current_rms < 0.2 and pitch < 140:
+            if transience_rate >= self._zen_threshold:
                 is_zen = True
 
         return ParalinguisticFeatures(

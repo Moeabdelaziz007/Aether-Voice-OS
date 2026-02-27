@@ -51,7 +51,7 @@ async def test_parallel_tool_stress():
 
 @pytest.mark.asyncio
 async def test_semantic_recovery_success():
-    """Phase 7.3: Verify Neural Dispatcher V3 recovers from typos via semantic search."""
+    """Phase 7.3: Verify Neural Dispatcher V3 recovers typos via semantic search."""
     router = ToolRouter()
     # We need a real API key for embeddings, but for test we mock the vector store
     router._vector_store = MagicMock()
@@ -88,7 +88,7 @@ async def test_semantic_recovery_success():
 
 @pytest.mark.asyncio
 async def test_vad_stability_drift():
-    """Phase 7.2: Verify Adaptive VAD noise floor tracking doesn't drift uncontrollably."""
+    """Phase 7.2: Verify Adaptive VAD noise floor tracking stays bounded."""
     from core.audio.processing import energy_vad
 
     vad = AdaptiveVAD(window_size_sec=1.0, sample_rate=16000)

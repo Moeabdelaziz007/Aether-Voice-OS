@@ -31,8 +31,10 @@ class VoiceAuthGuard:
         rms = audio_state.last_rms
         zcr = audio_state.last_zcr
 
-        # Simple heuristic: ZCR * sample_rate / 2 approximates fundamental frequency (F0)
-        # 0.05 ZCR at 16k -> 0.05 * 8000 = 400Hz (too high for speech, noise?)
+        # Simple heuristic: ZCR * sample_rate / 2 approximates fundamental
+        # frequency (F0).
+        # 0.05 ZCR at 16k -> 0.05 * 8000 = 400Hz
+        # Too high for speech, likely noise.
         # 0.015 ZCR at 16k -> 120Hz (Valid human male pitch)
         estimated_pitch = zcr * 8000
 
@@ -69,7 +71,10 @@ def get_tools() -> list[dict]:
     return [
         {
             "name": "verify_admin",
-            "description": "Verifies the user's biometric voice signature. Call this before performing sensitive operations.",
+            "description": (
+                "Verifies the user's biometric voice signature. Call this before "
+                "performing sensitive operations."
+            ),
             "parameters": {},
             "handler": verify_admin,
         }

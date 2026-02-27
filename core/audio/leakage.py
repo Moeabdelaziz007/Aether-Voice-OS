@@ -9,8 +9,9 @@ logger = logging.getLogger(__name__)
 
 class LeakageDetector:
     """
-    Detects if the microphone input is the user speaking or just speaker echo (leakage).
-    Uses FFT correlation to compare the AI's recent outgoing spectrum with the incoming mic spectrum.
+    Detects if the microphone input is the user speaking or just speaker echo
+    (leakage). Uses FFT correlation to compare the AI's recent outgoing spectrum
+    with the incoming mic spectrum.
     """
 
     def __init__(self, sample_rate: int = 16000):
@@ -51,7 +52,8 @@ class LeakageDetector:
 
         mic_spectrum = np.abs(np.fft.rfft(mic_pcm))
 
-        # Ensure sizes match (padding if necessary, though they should be the same chunk size)
+        # Ensure sizes match (padding if necessary, though they should be the same
+        # chunk size)
         min_len = min(len(self._ai_spectrum), len(mic_spectrum))
         if min_len == 0:
             return True
@@ -66,7 +68,8 @@ class LeakageDetector:
         # Calculate Pearson correlation coefficient between the two frequency spectrums
         correlation = np.corrcoef(ai_spec_cut, mic_spec_cut)[0, 1]
 
-        # High correlation means the mic is just hearing what the speaker is outputting (Echo)
+        # High correlation means the mic is just hearing what the speaker is
+        # outputting (Echo)
         is_echo = correlation > 0.7
 
         return not is_echo

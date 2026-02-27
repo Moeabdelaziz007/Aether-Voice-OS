@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Optional
 
 from core.analytics.demo_metrics import DemoMetrics
 from core.audio.state import audio_state
@@ -11,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 class ThalamicGate:
     """
-    Central routing hub for proactive interventions (Software-Defined AEC and Emotional Triggering).
+    Central routing hub for proactive interventions (Software-Defined AEC and
+    Emotional Triggering).
     Monitors emotional indices (frustration) and decides when to trigger a barge-in.
     """
 
@@ -39,7 +39,7 @@ class ThalamicGate:
         return self._metrics
 
     async def _monitor_loop(self):
-        """A background loop monitoring frustration indices to trigger proactive help."""
+        """Background loop monitoring frustration indices to trigger help."""
         while self._running:
             await asyncio.sleep(0.1)
 
@@ -58,7 +58,8 @@ class ThalamicGate:
                 rms=rms, is_speaking=is_speaking
             )
 
-            # For the demo MVP, we synthesize a frustration score based on silence type + acoustic features.
+            # For the demo MVP, we synthesize a frustration score based on silence
+            # type and acoustic features.
             frustration_score = self._compute_frustration_score()
 
             if self._calibrator.should_intervene({"frustration": frustration_score}):
@@ -67,7 +68,8 @@ class ThalamicGate:
                     self._frustration_streak >= 15
                 ):  # ~1.5 seconds of sustained frustration
                     logger.warning(
-                        "🚨 THALAMIC GATE: Proactive Intervention Triggered! (Score: %.2f)",
+                        "🚨 THALAMIC GATE: Proactive Intervention Triggered! "
+                        "(Score: %.2f)",
                         frustration_score,
                     )
                     self._metrics.start_timer("intervention_latency")
@@ -100,11 +102,16 @@ class ThalamicGate:
         try:
             from google.genai import types
 
-            # This triggers the prompt directly into the current Live Session context window
+            # This triggers the prompt directly into the current Live Session
+            # context window.
             await self._gemini_session.send_realtime_input(
                 parts=[
                     types.Part.from_text(
-                        text="[SYSTEM: User is highly frustrated. Proactively intervene immediately in Arabic. Read their screen/code and offer the exact fix with deep empathy.]"
+                        text=(
+                            "[SYSTEM: User is highly frustrated. Proactively "
+                            "intervene immediately in Arabic. Read their screen/"
+                            "code and offer the exact fix with deep empathy.]"
+                        )
                     )
                 ]
             )

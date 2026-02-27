@@ -3,11 +3,10 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.ruff]
-# Enable Pyflakes, pycodestyle, and isort rules.
-select = ["E", "F", "I"]
-
-# Set a line length of 88, which is the standard for Black.
 line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
 
 [tool.ruff.format]
 # Enable formatting.

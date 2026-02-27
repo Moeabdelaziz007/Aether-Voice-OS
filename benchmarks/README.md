@@ -4,13 +4,13 @@ This directory contains the automated benchmark suite used to verify AetherOS's 
 
 ## ⚡ 1. Latency Benchmark (`bench_latency.py`)
 
-Verifies the internal processing budget. Aether aims for sub-10ms overhead to leave 170ms+ for network and Gemini inference within the 180ms E2E goal.
+Verifies the internal processing budget only. Excludes Gemini API, WebSocket transport, and Firebase latencies. Aether aims for sub-10ms overhead to leave 170ms+ for network and Gemini inference within the 180ms E2E goal.
 
-**Results (Verified 2026-02-27):**
+**Results (Verified 2026-02-27, Internal Only):**
 
-- **Avg Internal Latency:** 0.49 ms
-- **p99 Latency:** 0.85 ms
-- **Processing Budget Used:** <1%
+- **Avg Internal Latency:** 0.72 ms
+- **p99 Latency:** 2.52 ms
+- **Processing Budget Used:** 0.4%
 
 **Execution:**
 
@@ -24,15 +24,22 @@ Evaluates the `ParalinguisticAnalyzer` against synthetic audio signatures to ver
 
 **Targets:**
 
-- **Accuracy:** >95% (Measured: 87% synthetic, 95%+ real-world)
-- **Precision:** 100% (No false triggers during speech/silence)
-- **F1 Score:** >80%
+- **Accuracy:** >95% (Measured: 95.6% synthetic)
+- **Precision:** 100%
+- **Recall:** 89.3%
+- **F1 Score:** 94.3%
 
 **Execution:**
 
 ```bash
 PYTHONPATH="." python3 benchmarks/bench_focus.py
 ```
+
+**Real-World Dataset Mode:**
+
+Set `AETHER_FOCUS_REAL_DATA_DIR` to a folder of 16kHz mono WAV files. Label
+files by name: `zen_*.wav` or `typing_*.wav` (label 1), and `speech_*.wav`
+or `silence_*.wav` (label 0).
 
 ## 🧬 3. DSP Performance (Cortex vs Simulation)
 

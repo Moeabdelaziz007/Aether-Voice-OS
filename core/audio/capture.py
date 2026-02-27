@@ -16,7 +16,7 @@ import numpy as np
 import pyaudio
 
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad
+from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.state import audio_state
 from core.utils.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
@@ -265,8 +265,8 @@ class AudioCapture:
         else:
             audio_state.silence_type = "speech"
 
-            # Affective Analysis (Non-blocking trigger)
-            if self._paralinguistic_analyzer and self._on_affective_data:
+        if self._paralinguistic_analyzer and self._on_affective_data:
+            if vad.is_hard or vad.energy_rms < 0.05:
                 features = self._paralinguistic_analyzer.analyze(
                     processed_chunk, vad.energy_rms
                 )

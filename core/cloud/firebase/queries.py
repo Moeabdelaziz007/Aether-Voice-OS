@@ -53,8 +53,9 @@ class Queries:
                 .limit(limit)
             )
 
-            # Note: The firestore python SDK async support might need aio module, we use standard sync to simulate here or if using firebase-admin async
-            # Since standard firebase-admin is synchronous, we wrap or mock.
+            # Note: The firestore python SDK async support might need aio module.
+            # We use standard sync to simulate here or if using firebase-admin
+            # async. Since standard firebase-admin is synchronous, we wrap or mock.
             docs = query.stream()
 
             results = []

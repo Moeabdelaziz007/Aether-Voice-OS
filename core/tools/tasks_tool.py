@@ -236,7 +236,9 @@ def get_tools() -> list[dict]:
                     },
                     "due": {
                         "type": "string",
-                        "description": "When the task is due (e.g., 'tomorrow', 'Friday')",
+                        "description": (
+                            "When the task is due (e.g., 'tomorrow', 'Friday')"
+                        ),
                     },
                     "priority": {
                         "type": "string",
@@ -253,8 +255,9 @@ def get_tools() -> list[dict]:
         {
             "name": "list_tasks",
             "description": (
-                "List the user's tasks. Can filter by status: pending, completed, or all. "
-                "Use when the user asks about their tasks, to-do list, or what they need to do."
+                "List the user's tasks. Can filter by status: pending, completed, "
+                "or all. Use when the user asks about their tasks, to-do list, "
+                "or what they need to do."
             ),
             "parameters": {
                 "type": "object",

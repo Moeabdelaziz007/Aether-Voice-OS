@@ -130,6 +130,10 @@ async def run_terminal_command(command: str, **kwargs) -> dict:
         return {"error": f"Execution failed: {str(e)}"}
 
 
+async def run_command(command: str, **kwargs) -> dict:
+    return await run_terminal_command(command, **kwargs)
+
+
 async def list_codebase(path: str = ".", **kwargs) -> dict:
     """
     Returns a flat list of files in the project, ignoring common artifacts.
@@ -267,7 +271,10 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "list_codebase",
-            "description": "Returns a map of all files in the current project directory, ignoring git/build artifacts.",
+            "description": (
+                "Returns a map of all files in the current project directory, "
+                "ignoring git/build artifacts."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -282,7 +289,10 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "read_file_content",
-            "description": "Reads the text content of a file. Use this to examine code or config files.",
+            "description": (
+                "Reads the text content of a file. Use this to examine code or "
+                "config files."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {

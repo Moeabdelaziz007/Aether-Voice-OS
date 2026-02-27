@@ -40,11 +40,16 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8
+          pip install ruff pre-commit
 
-      - name: Run flake8
+      - name: Run ruff
         run: |
-          flake8 core/ --max-line-length=120 --statistics --count
+          ruff check .
+          ruff format --check .
+
+      - name: Check trailing whitespace
+        run: |
+          pre-commit run trailing-whitespace --all-files
 
   # ─────────────────────────────────────────────────────────────────
   # Stage 2: Unit Tests

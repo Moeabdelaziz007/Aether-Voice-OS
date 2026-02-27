@@ -8,7 +8,7 @@ and specialist consultations.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from core.ai.hive import HiveCoordinator
@@ -24,7 +24,9 @@ def set_hive_coordinator(coordinator: HiveCoordinator):
     _hive_coordinator = coordinator
 
 
-async def switch_expert_soul(target_name: str, reason: str, **kwargs) -> dict:
+async def switch_expert_soul(
+    target_name: str, reason: str, **kwargs: object
+) -> dict[str, object]:
     """
     Switches the current agent's personality and expertise to another soul.
     Use this when you need specialized knowledge (e.g., Architect, Debugger).
@@ -46,12 +48,15 @@ async def switch_expert_soul(target_name: str, reason: str, **kwargs) -> dict:
         }
 
 
-def get_tools() -> list[dict]:
+def get_tools() -> list[dict[str, object]]:
     """Module-level tool registration."""
     return [
         {
             "name": "switch_expert_soul",
-            "description": "Switch your current personality/expertise to a specialized soul (e.g. 'ArchitectExpert' or 'DebuggerExpert').",
+            "description": (
+                "Switch your current personality/expertise to a specialized soul "
+                "(e.g. 'ArchitectExpert' or 'DebuggerExpert')."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {

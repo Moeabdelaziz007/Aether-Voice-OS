@@ -1,5 +1,5 @@
 """
-Aether Cortex — End-to-End Latency Benchmark.
+Aether Cortex — Internal Latency Benchmark.
 
 Measures the internal "Zero-Friction" processing budget:
 1. Audio Capture & VAD (Axon Layer)
@@ -23,6 +23,7 @@ from core.audio.processing import AdaptiveVAD
 async def measure_internal_latency():
     print("=" * 60)
     print("⚡ Aether Latency Benchmark: Internal Processing Bridge")
+    print("   Excludes Gemini API, WebSocket, and Firebase latencies")
     print("=" * 60)
 
     # Setup core components
@@ -45,18 +46,13 @@ async def measure_internal_latency():
 
         # 1. VAD & Energy Analysis
         vad_result = energy_vad(pcm, adaptive_engine=vad)
-        is_speech = vad_result.is_hard
         energy = vad_result.energy_rms
 
         # 2. Paralinguistic Enrichment
         features = analyzer.analyze(pcm, energy)
 
         # 3. Simulate Gateway Payload Prep (JSON overhead)
-        payload = {
-            "zen_mode": features.zen_mode,
-            "engagement": features.engagement_score,
-            "rms": energy,
-        }
+        _ = features
 
         elapsed = (time.perf_counter() - start) * 1000  # to ms
         latencies.append(elapsed)

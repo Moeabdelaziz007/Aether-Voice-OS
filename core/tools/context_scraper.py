@@ -1,7 +1,6 @@
 import asyncio
-import re
 import urllib.parse
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 from scrapling import Fetcher
 
@@ -102,17 +101,26 @@ def get_tools() -> list[dict]:
     return [
         {
             "name": "scrape_context",
-            "description": "Searches for real-time technical solutions on StackOverflow or GitHub. Use this when the agent's knowledge is outdated or for specific coding errors.",
+            "description": (
+                "Searches for real-time technical solutions on StackOverflow or "
+                "GitHub. Use this when the agent's knowledge is outdated or for "
+                "specific coding errors."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "The technical issue or error message to search for",
+                        "description": (
+                            "The technical issue or error message to search for"
+                        ),
                     },
                     "platform": {
                         "type": "string",
-                        "description": "The platform to search on (stackoverflow, github, hackernews)",
+                        "description": (
+                            "The platform to search on (stackoverflow, github, "
+                            "hackernews)"
+                        ),
                         "enum": ["stackoverflow", "github", "hackernews"],
                         "default": "stackoverflow",
                     },

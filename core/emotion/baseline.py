@@ -1,7 +1,7 @@
 import logging
 import time
 from collections import deque
-from typing import Dict, Optional
+from typing import Dict
 
 logger = logging.getLogger(__name__)
 

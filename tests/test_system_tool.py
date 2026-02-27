@@ -1,8 +1,6 @@
-import asyncio
-
 import pytest
 
-from core.tools.system_tool import COMMAND_BLACKLIST, run_terminal_command
+from core.tools.system_tool import run_terminal_command
 
 
 @pytest.mark.asyncio
@@ -57,12 +55,13 @@ async def test_shell_injection_prevention():
     not executed, because shell=False.
     """
     # If shell=True, this would echo "hacked".
-    # With shell=False, 'echo' receives "hello; echo hacked" as a single string argument.
+    # With shell=False, 'echo' receives "hello; echo hacked" as one string argument.
     result = await run_terminal_command('echo "hello; echo hacked"')
 
     # The output should literally contain the semicolon, not execute the second command
-    assert "hello; echo hacked" in result["stdout"] or "hello; echo hacked" in result[
-        "stdout"
-    ].replace('"', "")
+    stdout_text = result["stdout"].replace('"', "")
+    assert (
+        "hello; echo hacked" in result["stdout"] or "hello; echo hacked" in stdout_text
+    )
     # Ensure it didn't actually run the second echo on a new line
     assert result["stdout"].count("hacked") == 1

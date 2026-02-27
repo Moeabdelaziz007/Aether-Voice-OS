@@ -196,10 +196,11 @@ class AetherGateway:
                 # To maintain engine compatibility, we wrap the raw PCM bytes
                 # in the dict format expected by GeminiLiveSession's input queue.
                 # However, we skip JSON decoding overhead here.
+                mime_type = f"audio/pcm;rate={self._config.receive_sample_rate}"
                 await self._on_audio_rx(
                     {
                         "data": data,
-                        "mime_type": f"audio/pcm;rate={self._config.receive_sample_rate}",
+                        "mime_type": mime_type,
                     }
                 )
             except Exception as exc:

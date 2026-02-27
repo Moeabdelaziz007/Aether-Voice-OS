@@ -29,7 +29,8 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
     Use this to understand the implementation details of specific features or find bugs.
 
     Args:
-        query: The semantic search query (e.g. 'Where is the frustration trigger defined?').
+        query: The semantic search query (e.g.
+            "Where is the frustration trigger defined?").
         limit: Max number of chunks to return (default 3).
     """
     if not _shared_index:
@@ -44,10 +45,9 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
 
         formatted_results = []
         for r in results:
-            # We recover the text using the chunk ID if we need to, but the index currently
-            # only stores embeddings. Let's fix this in vector_store.py or assume the tool
-            # returns metadata which includes the file and line/chunk info.
-            # For now, we return the file paths and similarity so Gemini knows where to look.
+            # We recover the text using the chunk ID if needed, but the index currently
+            # only stores embeddings. Assume metadata includes file and chunk info.
+            # For now, return file paths and similarity so Gemini knows where to look.
             file_path = r["metadata"].get("file", "Unknown")
             chunk_idx = r["metadata"].get("chunk", 0)
             formatted_results.append(
@@ -61,7 +61,10 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
         return {
             "query": query,
             "results": formatted_results,
-            "instruction": "Use the vision_tool or system_tool to read the specific file if more context is needed.",
+            "instruction": (
+                "Use the vision_tool or system_tool to read the specific file "
+                "if more context is needed."
+            ),
         }
     except Exception as e:
         logger.error("RAG Tool search failed: %s", e)
@@ -73,13 +76,18 @@ def get_tools() -> list[dict[str, Any]]:
     return [
         {
             "name": "search_codebase",
-            "description": "Perform a semantic search across the entire AetherOS codebase.",
+            "description": (
+                "Perform a semantic search across the entire AetherOS codebase."
+            ),
             "parameters": {
                 "type": "OBJECT",
                 "properties": {
                     "query": {
                         "type": "STRING",
-                        "description": "The search query, e.g., 'How is the Thalamic Gate implemented?'",
+                        "description": (
+                            "The search query, e.g., "
+                            "'How is the Thalamic Gate implemented?'"
+                        ),
                     },
                     "limit": {
                         "type": "INTEGER",

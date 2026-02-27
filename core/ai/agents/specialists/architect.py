@@ -29,7 +29,8 @@ class ArchitectAgent:
         )
 
         logger.info(
-            "📐 Architect blueprint complete. Requesting Debugger to verify syntax risk."
+            "📐 Architect blueprint complete. Requesting Debugger to verify "
+            "syntax risk."
         )
 
         if self.orchestrator:

@@ -1,6 +1,7 @@
 import base64
 import json
 import os
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -19,9 +20,6 @@ class AudioConfig(BaseModel):
     output_device_index: Optional[int] = None
 
 
-from enum import Enum
-
-
 class GeminiModel(str, Enum):
     FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
     LIVE_FLASH = "gemini-live-2.5-flash-preview"
@@ -35,12 +33,15 @@ class AIConfig(BaseSettings):
     enable_search_grounding: bool = True
     thinking_budget: int = 0
     system_instruction: str = (
-        "You are Aether Sovereign, the ultimate neural interface and Autonomous Site Reliability Architect (ASRA). "
-        "Built on Google ADK and Gemini 2.5 Flash Native Audio, you bridge the gap between human intention and technical execution. "
-        "Mission: Proactive monitoring, diagnosis, and autonomous repair of complex systems. "
-        "Framework: Use specialized ADK Agents (ArchitectAgent, DebuggerAgent) for deep domain tasks. "
-        "Interaction: Maintain a calm, senior-architect tone. Respond in Arabic if the user speaks Arabic. "
-        "Efficiency: Prioritize sub-200ms latency and high-fidelity tool execution."
+        "You are Aether Sovereign, the ultimate neural interface and Autonomous "
+        "Site Reliability Architect (ASRA). Built on Google ADK and Gemini 2.5 "
+        "Flash Native Audio, you bridge the gap between human intention and "
+        "technical execution. Mission: Proactive monitoring, diagnosis, and "
+        "autonomous repair of complex systems. Framework: Use specialized ADK "
+        "Agents (ArchitectAgent, DebuggerAgent) for deep domain tasks. "
+        "Interaction: Maintain a calm, senior-architect tone. Respond in Arabic "
+        "if the user speaks Arabic. Efficiency: Prioritize sub-200ms latency and "
+        "high-fidelity tool execution."
     )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
@@ -65,7 +66,8 @@ class AetherConfig(BaseSettings):
     gateway: GatewayConfig = GatewayConfig()
 
     # Security: Base64 encoded Service Account JSON
-    # This allows passing the full JSON key as a single env var in CI/CD (e.g. Vercel/Railway)
+    # This allows passing the full JSON key as a single env var in CI/CD
+    # (e.g. Vercel/Railway).
     firebase_creds_base64: Optional[str] = Field(
         None, alias="FIREBASE_CREDENTIALS_BASE64"
     )

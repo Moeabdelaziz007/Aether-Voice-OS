@@ -71,5 +71,6 @@ async def test_parallel_dispatch_benchmark():
     # If sequential, it would take 2.5s. If parallel, ~0.5s.
     assert duration < 1.0
     print(
-        f"\nParallel Dispatch Duration: {duration:.4f}s for 5 tools (Sequential would be 2.5s)"
+        f"\nParallel Dispatch Duration: {duration:.4f}s for 5 tools "
+        "(Sequential would be 2.5s)"
     )

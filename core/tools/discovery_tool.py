@@ -10,7 +10,6 @@ from __future__ import annotations
 import logging
 import os
 import time
-from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +27,8 @@ def set_references(affective=None, hive=None):
 async def generate_system_audit(**kwargs) -> dict:
     """
     Generates a comprehensive audit of the AI's internal health and environment.
-    Use this to 'reflect' on your current state or answer questions about your performance.
+    Use this to 'reflect' on your current state or answer questions about your
+    performance.
     """
     audit = {
         "timestamp": time.time(),
@@ -70,7 +70,10 @@ def get_tools() -> list[dict]:
     return [
         {
             "name": "generate_system_audit",
-            "description": "Perform a self-diagnostic audit of AetherOS internal systems, metrics, and codebase integrity.",
+            "description": (
+                "Perform a self-diagnostic audit of AetherOS internal systems, "
+                "metrics, and codebase integrity."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {},

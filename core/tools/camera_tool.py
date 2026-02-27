@@ -55,7 +55,9 @@ def get_tools():
     return [
         {
             "name": "capture_user_frame",
-            "description": "Captures a single frame from the user's camera to see their reaction.",
+            "description": (
+                "Captures a single frame from the user's camera to see their reaction."
+            ),
             "parameters": {"type": "object", "properties": {}},
             "handler": camera_instance.capture_frame,
         }

@@ -19,7 +19,8 @@ async def test_sentiment_analytics_logic():
 
     res_dull = analyzer.analyze(dull_pcm, 0.05)
     print(
-        f"\nDull Audio: Pitch={res_dull.pitch_estimate:.2f}, Engagement={res_dull.engagement_score:.2f}"
+        f"\nDull Audio: Pitch={res_dull.pitch_estimate:.2f}, "
+        f"Engagement={res_dull.engagement_score:.2f}"
     )
 
     # 2. Simulate "Bright/Excited" Audio (Rising frequency, high pitch)
@@ -28,7 +29,8 @@ async def test_sentiment_analytics_logic():
 
     res_excited = analyzer.analyze(excited_pcm, 0.15)
     print(
-        f"Excited Audio: Pitch={res_excited.pitch_estimate:.2f}, Engagement={res_excited.engagement_score:.2f}"
+        f"Excited Audio: Pitch={res_excited.pitch_estimate:.2f}, "
+        f"Engagement={res_excited.engagement_score:.2f}"
     )
 
     # 3. Simulate "Expressive" Audio (Randomized pitch variance)
@@ -41,7 +43,8 @@ async def test_sentiment_analytics_logic():
 
     res_varied = analyzer.analyze(excited_pcm, 0.1)
     print(
-        f"Varied Audio: Variance={res_varied.rms_variance:.2f}, Engagement={res_varied.engagement_score:.2f}"
+        f"Varied Audio: Variance={res_varied.rms_variance:.2f}, "
+        f"Engagement={res_varied.engagement_score:.2f}"
     )
 
     # Assertions

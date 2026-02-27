@@ -65,7 +65,8 @@ async def main():
 
     logger.info("🚀 Running Barge-in Latency Benchmark...")
     logger.info(
-        "This test measures the time to drain the outgoing audio queue upon user interruption.\n"
+        "This test measures the time to drain the outgoing audio queue upon "
+        "user interruption.\n"
     )
 
     queue_size = 15  # From core/engine.py

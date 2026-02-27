@@ -25,9 +25,11 @@ import asyncio
 import logging
 import signal
 import sys
+from datetime import datetime
 from typing import Any, Optional
 
 from google.adk.runners import InMemoryRunner
+from google.genai import types
 
 from core.admin_api import SHARED_STATE, AdminAPIServer
 from core.ai import handoff
@@ -46,7 +48,6 @@ from core.audio.processing import AdaptiveVAD
 from core.identity.package import AthPackage
 from core.identity.registry import AetherRegistry
 from core.tools import hive_memory, memory_tool, system_tool, tasks_tool, vision_tool
-from core.tools import voice_tool as voice_tool_mod
 from core.tools.firebase_tool import FirebaseConnector
 from core.tools.router import ToolRouter
 from core.transport.gateway import AetherGateway
@@ -170,11 +171,7 @@ class AetherEngine:
             context_scraper,
             discovery_tool,
             hive_tool,
-            memory_tool,
             rag_tool,
-            system_tool,
-            tasks_tool,
-            vision_tool,
             voice_tool,
         )
 
@@ -200,6 +197,25 @@ class AetherEngine:
         self._router.register_module(rag_tool)
         self._router.register_module(discovery_tool)
         self._router.register_module(context_scraper)
+        self._router.register(
+            name="delegate_complex_task",
+            description=(
+                "Delegate a complex multi-step task to ADK specialists and "
+                "return their consolidated response."
+            ),
+            parameters={
+                "type": "object",
+                "properties": {
+                    "task": {
+                        "type": "string",
+                        "description": "The task to delegate to ADK specialists",
+                    }
+                },
+                "required": ["task"],
+            },
+            handler=self._delegate_complex_task,
+            latency_tier="p95_sub_2s",
+        )
 
         # Connect Hive to tools
         handoff.set_hive_params(self._hive, self._session_restart)
@@ -238,16 +254,10 @@ class AetherEngine:
             except asyncio.QueueEmpty:
                 break
 
-        vad_payload: dict[str, object] = {
-            "type": "interrupted",
-            "rms": rms,
-            "is_hard": is_hard,
-            "silence_type": stype,
-        }
-
-        # Panic Threshold: If input is extremely loud (>0.8), stop immediately regardless of classification.
-        # Cognitive Guard: If it's a hard signal but classified as non-speech, it's likely noise.
-        # We duck instead of stop to maintain Aether's "presence".
+        # Panic Threshold: If input is extremely loud (>0.8), stop immediately
+        # regardless of classification. Cognitive Guard: If it's a hard signal
+        # but classified as non-speech, it's likely noise. We duck instead of
+        # stop to maintain Aether's "presence".
         if (is_hard and stype not in ("thinking", "breathing", "void")) or rms > 0.8:
             logger.info(
                 "⚡ Hard Barge-in (Speech detected, RMS: %.2f) — Stopping playback.",
@@ -255,31 +265,36 @@ class AetherEngine:
             )
             self._playback.interrupt()
 
-    async def _handle_complex_task(self, user_message: str):
+    async def _execute_adk_task(self, task: str) -> str:
+        response_text = ""
+        async for event in self._adk_runner.run_async(task):
+            if event.is_final_response():
+                response_text = event.text
+        return response_text
+
+    async def _handle_complex_task(self, user_message: str) -> str:
         """
         Processes complex multi-step tasks using Google ADK orchestration.
         Delegates to specialized agents (Architect/Debugger) as needed.
         """
         logger.info("🧠 ADK: Orchestrating complex task: %s", user_message)
-        async for event in self._adk_runner.run_async(user_message):
-            if event.is_final_response():
-                # Inject the ADK response back into the Gemini Live session
-                logger.info("✅ ADK: Task complete, injecting response.")
-                await self._session._session.send_realtime_input(
-                    parts=[types.Part.from_text(event.text)]
-                )
-            vad_payload["action"] = "hard_stop"
-        else:
-            logger.info(
-                "🌊 Semantic Ducking (Type: %s, RMS: %.2f) — Maintaining presence.",
-                stype,
-                rms,
+        response_text = await self._execute_adk_task(user_message)
+        if (
+            response_text
+            and self._session
+            and getattr(self._session, "_session", None) is not None
+        ):
+            logger.info("✅ ADK: Task complete, injecting response.")
+            await self._session._session.send_realtime_input(
+                parts=[types.Part.from_text(response_text)]
             )
-            self._playback.set_gain(0.2)
-            vad_payload["action"] = "ducking"
+        return response_text
 
-        # Broadcast VAD event to connected UI clients
-        asyncio.create_task(self._gateway.broadcast("vad.event", vad_payload))
+    async def _delegate_complex_task(self, task: str, **kwargs) -> dict:
+        response_text = await self._execute_adk_task(task)
+        if not response_text:
+            return {"status": "error", "message": "No response from ADK."}
+        return {"status": "success", "response": response_text}
 
     def _on_affective_data(self, features: ParalinguisticFeatures) -> None:
         """Handle incoming affective metrics from the capture layer."""
@@ -376,7 +391,8 @@ class AetherEngine:
         if package:
             logger.info("Hot-Reloading package: %s", name)
             # 1. Un-register old tools first if they exist
-            # Note: In a production version, we'd track which tools belong to which package.
+            # Note: In a production version, we'd track which tools belong to
+            # which package.
             # For now, we assume tool names are unique.
             # 2. Register tools from package
             # TODO: Implement dynamic module import for .ath packages
@@ -498,7 +514,8 @@ class AetherEngine:
                     logger.info("🔄 Hive Handoff: Preparing next expert...")
 
                     # TRIGGER GENETIC EVOLUTION
-                    # We evolve the 'soul' instructions based on the just-finished session performance
+                    # We evolve the 'soul' instructions based on the just-finished
+                    # session performance.
                     mutation = await self._optimizer.evolve(
                         current_instructions=active_soul.manifest.general_instructions,
                         session_id=self._firebase._session_id,

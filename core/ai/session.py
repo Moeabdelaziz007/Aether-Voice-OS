@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import base64
 import logging
+from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
 if TYPE_CHECKING:
@@ -65,9 +66,9 @@ class GeminiLiveSession:
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
-        self._frame_buffer: list[tuple[float, bytes]] = (
-            []
-        )  # Rolling history of screenshots
+        self._frame_buffer: list[
+            tuple[float, bytes]
+        ] = []  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
         self._active_handoffs: dict[str, dict] = {}  # A2A V3 Handoff Tracking
 
@@ -257,7 +258,6 @@ class GeminiLiveSession:
         Also sends proactive pulses every 10s or on Hard-Interrupt (Camera Pulse).
         """
         logger.info("Vision Pulse loop started (Reflex-Triggered Camera active)")
-        import os
         import time
 
         from core.audio.state import audio_state

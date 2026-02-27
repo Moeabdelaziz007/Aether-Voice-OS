@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -30,7 +29,8 @@ class FirebaseConnector:
 
     async def initialize(self) -> bool:
         """
-        Initializes connection to Firestore using secure Base64 credentials if available.
+        Initializes connection to Firestore using secure Base64 credentials if
+        available.
         """
         try:
             config = load_config()

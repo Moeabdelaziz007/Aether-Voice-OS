@@ -62,8 +62,9 @@ async def index_codebase() -> None:
         return
 
     vector_store = LocalVectorStore(api_key=api_key)
-    # Attempt to load existing to append/update, but typically we want to overwrite entirely
-    # For this script, we'll start fresh to guarantee no stale vectors.
+    # Attempt to load existing to append/update, but typically we want to
+    # overwrite entirely. For this script, we'll start fresh to guarantee no
+    # stale vectors.
 
     files_to_index = []
     for current_dir, dirs, files in os.walk(ROOT_DIR):
@@ -90,10 +91,11 @@ async def index_codebase() -> None:
             chunks = chunk_text(content)
             for i, chunk in enumerate(chunks):
                 key = f"{rel_path}:{i}"
-                chunk_header = f"File: {rel_path}\nChunk: {i+1}/{len(chunks)}\n---\n"
+                chunk_header = f"File: {rel_path}\nChunk: {i + 1}/{len(chunks)}\n---\n"
                 full_text = chunk_header + chunk
 
-                # We batch await for simplicity, but a Semaphore would be safer for rate limits
+                # We batch await for simplicity, but a Semaphore would be safer
+                # for rate limits.
                 await vector_store.add_text(
                     key=key,
                     text=full_text,

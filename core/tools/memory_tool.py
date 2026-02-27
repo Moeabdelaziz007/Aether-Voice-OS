@@ -83,7 +83,9 @@ async def save_memory(
             "status": "saved",
             "key": key,
             "priority": priority,
-            "message": f"Synapse update: I've stored '{key}' as {priority} priority memory.",
+            "message": (
+                f"Synapse update: I've stored '{key}' as {priority} priority memory."
+            ),
         }
     except Exception as exc:
         logger.error("Memory save failed: %s", exc)
@@ -232,7 +234,9 @@ async def prune_memories(priority: str = "low", **kwargs) -> dict:
         return {
             "status": "pruned",
             "count": count,
-            "message": f"Successfully cleared {count} {priority}-importance items from memory.",
+            "message": (
+                f"Successfully cleared {count} {priority}-importance items from memory."
+            ),
         }
     except Exception as exc:
         logger.error("Pruning failed: %s", exc)

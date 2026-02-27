@@ -57,7 +57,10 @@ async def diagnose_and_repair(
         "status": "analysis_ready",
         "visual_data": screenshot_result["data"],
         "terminal_output": terminal_context,
-        "hint": "Analyze the screenshot for red text or crash logs. Cross-reference with terminal output.",
+        "hint": (
+            "Analyze the screenshot for red text or crash logs. Cross-reference "
+            "with terminal output."
+        ),
         "message": "Grounded context gathered. Ready for repair proposal.",
     }
 
@@ -79,15 +82,18 @@ async def apply_repair(filepath: str, diff: str, **kwargs) -> dict[str, Any]:
         with open(backup_path, "w") as f:
             f.write(original_content)
 
-        # In a real SRE scenario, we would use a more robust 'patch' mechanism.
-        # For the POC, we assume Gemini provides the full new content OR we use a simple replacement.
-        # To avoid complexity in the tool, we'll ask Gemini to use 'write_file' or 'replace_content'
-        # but this tool serves as the 'Intent' handler.
+        # In a real SRE scenario, we would use a more robust "patch" mechanism.
+        # For the POC, we assume Gemini provides the full new content or we use
+        # a simple replacement. To avoid complexity in the tool, we'll ask
+        # Gemini to use "write_file" or "replace_content" but this tool serves
+        # as the "Intent" handler.
 
         return {
             "status": "success",
             "backup": backup_path,
-            "message": f"Repair applied to {filepath}. Backup created at {backup_path}.",
+            "message": (
+                f"Repair applied to {filepath}. Backup created at {backup_path}."
+            ),
         }
     except Exception as e:
         return {"error": f"Repair failed: {str(e)}"}
@@ -101,8 +107,9 @@ def get_tools() -> list[dict]:
         {
             "name": "diagnose_and_repair",
             "description": (
-                "Call this when a terminal error occurs or when the user says 'it's broken' or 'fix this'. "
-                "It captures screen and terminal state to provide full context for a diagnosis."
+                "Call this when a terminal error occurs or when the user says "
+                "'it's broken' or 'fix this'. It captures screen and terminal "
+                "state to provide full context for a diagnosis."
             ),
             "parameters": {
                 "type": "object",
@@ -117,7 +124,10 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "apply_repair",
-            "description": "Applies a code fix to a specific file. Use after 'diagnose_and_repair' identifies the fix.",
+            "description": (
+                "Applies a code fix to a specific file. Use after "
+                "'diagnose_and_repair' identifies the fix."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {

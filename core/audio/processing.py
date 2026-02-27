@@ -79,9 +79,8 @@ except ImportError:
         aether_cortex = None
 
 if aether_cortex:
-    print(
-        f"🧬 Aether Brain: Synapse Layer (Rust) Active at {getattr(aether_cortex, '__file__', 'compiled')}"
-    )
+    cortex_path = getattr(aether_cortex, "__file__", "compiled")
+    print(f"🧬 Aether Brain: Synapse Layer (Rust) Active at {cortex_path}")
     _RUST_BACKEND = True
     _BACKEND_NAME = f"aether-cortex v{aether_cortex.__version__} (Rust)"
     logger.info("⚡ Neural DSP backend: %s", _BACKEND_NAME)

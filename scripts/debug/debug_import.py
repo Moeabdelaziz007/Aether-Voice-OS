@@ -2,7 +2,8 @@ import importlib.machinery
 import importlib.util
 import os
 
-path = "/Users/cryptojoker710/Desktop/Aether Live Agent/aether-cortex/target/release/aether_cortex.so"
+base_dir = "/Users/cryptojoker710/Desktop/Aether Live Agent"
+path = os.path.join(base_dir, "aether-cortex/target/release/aether_cortex.so")
 print(f"Attempting to load: {path}")
 print(f"File exists: {os.path.exists(path)}")
 
