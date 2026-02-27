@@ -39,7 +39,7 @@ class ParalinguisticAnalyzer:
         self._history_pitch: list[float] = []
         self._history_rate: list[float] = []
         self._history_transients: list[int] = []  # Count of high-freq transients
-        self._window_size = 50  # Last 5 seconds of interaction
+        self._window_size = 20  # Last 2 seconds of interaction (more reactive)
         self._zen_threshold = 0.7  # Sentiment/Transience threshold for Zen
 
     def _detect_transients(self, pcm_chunk: NDArray[np.int16]) -> int:
@@ -192,7 +192,8 @@ class ParalinguisticAnalyzer:
         )
         is_zen = False
         if current_rms < 0.05:  # Low background noise (silence)
-            if avg_transience > 1.5:  # Clear typing cadence detected
+            # 0.25 means average 2.5 spikes/sec (Relaxed coding pace)
+            if avg_transience > 0.25:
                 is_zen = True
 
         return ParalinguisticFeatures(

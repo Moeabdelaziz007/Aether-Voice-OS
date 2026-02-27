@@ -27,8 +27,11 @@ import signal
 import sys
 from typing import Any, Optional
 
+from google.adk.runners import InMemoryRunner
+
 from core.admin_api import SHARED_STATE, AdminAPIServer
 from core.ai import handoff
+from core.ai.adk_agents import root_agent
 from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
     ProactiveInterventionEngine,
@@ -76,8 +79,11 @@ class AetherEngine:
         )
         self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 
-        # Firebase persistence layer (created before tools so they can reference it)
+        # Firebase persistence layer
         self._firebase = FirebaseConnector()
+
+        # Google ADK Runner
+        self._adk_runner = InMemoryRunner(agent=root_agent)
 
         # Neural Dispatcher — routes Gemini tool_calls to handlers
         from pathlib import Path
@@ -248,6 +254,20 @@ class AetherEngine:
                 rms,
             )
             self._playback.interrupt()
+
+    async def _handle_complex_task(self, user_message: str):
+        """
+        Processes complex multi-step tasks using Google ADK orchestration.
+        Delegates to specialized agents (Architect/Debugger) as needed.
+        """
+        logger.info("🧠 ADK: Orchestrating complex task: %s", user_message)
+        async for event in self._adk_runner.run_async(user_message):
+            if event.is_final_response():
+                # Inject the ADK response back into the Gemini Live session
+                logger.info("✅ ADK: Task complete, injecting response.")
+                await self._session._session.send_realtime_input(
+                    parts=[types.Part.from_text(event.text)]
+                )
             vad_payload["action"] = "hard_stop"
         else:
             logger.info(
