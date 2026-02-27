@@ -20,19 +20,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /build/aether-cortex
 RUN cargo build --release \
     && cp target/release/libaether_cortex.so /build/aether_cortex.so 2>/dev/null || \
-       cp target/release/libaether_cortex.dylib /build/aether_cortex.so 2>/dev/null || true
+    cp target/release/libaether_cortex.dylib /build/aether_cortex.so 2>/dev/null || true
 
 
 # ── Stage 2: Python runtime ─────────────────────────────
 FROM python:3.11-slim-bookworm AS runtime
 
-# System deps for PyAudio (ALSA headers)
+# System deps for PyAudio (compilation and runtime)
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     portaudio19-dev \
     libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Upgrade pip for better dependency resolution
+RUN pip install --no-cache-dir --upgrade pip
 
 # Copy requirements first (cache layer)
 COPY requirements.txt .
