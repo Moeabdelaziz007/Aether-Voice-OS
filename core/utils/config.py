@@ -96,10 +96,17 @@ def load_config() -> AetherConfig:
             print(f"Warning: Failed to load {json_path}: {e}")
 
     try:
+        # 1. Try with .env loading (standard local dev)
         return AetherConfig()
+    except (PermissionError, OSError):
+        # 2. Try without .env loading (restricted CI/Docker)
+        try:
+            return AetherConfig(_env_file=None)
+        except Exception as e:
+            # 3. Last resort fallback
+            raise OSError(f"Critical configuration missing or restricted: {e}")
     except Exception as e:
-        # Fallback to defaults or re-raise if critical configuration is missing
-        # In CI, we often don't have a .env file, so we rely on environment variables.
+        # Re-try without env file if it's a validation error or something else
         try:
             return AetherConfig(_env_file=None)
         except Exception:

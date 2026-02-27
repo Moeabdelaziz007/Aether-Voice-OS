@@ -45,7 +45,11 @@ COPY --from=rust-builder /build/aether_cortex.so /app/core/audio/aether_cortex.s
 COPY core/ ./core/
 COPY brain/ ./brain/
 COPY main.py .
-COPY .env.example .env
+
+# Metadata and security labels
+LABEL org.opencontainers.image.source="https://github.com/Moeabdelaziz007/Aether-Voice-OS"
+LABEL org.opencontainers.image.description="Aether Voice OS — Production Container"
+LABEL org.opencontainers.image.authors="Aether Architect"
 
 # Non-root user for security
 RUN useradd -m aether && chown -R aether:aether /app

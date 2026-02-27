@@ -420,8 +420,8 @@ def energy_vad(
             is_soft = is_hard  # No soft distinction without adaptive engine
 
         return HyperVADResult(
-            is_soft=is_soft,
-            is_hard=is_hard,
+            is_soft=bool(is_soft),
+            is_hard=bool(is_hard),
             energy_rms=energy_rms,
             sample_count=int(result["sample_count"]),
         )
@@ -496,8 +496,8 @@ def enhanced_vad(
         is_soft = is_hard
 
     return HyperVADResult(
-        is_soft=is_soft,
-        is_hard=is_hard,
+        is_soft=bool(is_soft),
+        is_hard=bool(is_hard),
         energy_rms=rms,
         sample_count=len(pcm_chunk),
     )
