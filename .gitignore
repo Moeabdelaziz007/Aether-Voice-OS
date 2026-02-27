@@ -50,3 +50,4 @@ logs/
 
 # --- Aether Internal ---
 brain/packages/*/secrets/
+.git_stuck_backup/
