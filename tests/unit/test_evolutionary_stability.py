@@ -5,7 +5,6 @@ doesn't regress or generate invalid configurations over time.
 """
 
 import asyncio
-import os
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -24,7 +23,10 @@ async def test_multi_turn_evolution():
     # Mock GenAI
     mock_model = MagicMock()
     mock_response = MagicMock()
-    mock_response.text = '{"mutated_instructions": "Be even more helpful.", "rationale": "High engagement strategy.", "version_delta": 0.1}'
+    mock_response.text = (
+        '{"mutated_instructions": "Be even more helpful.", '
+        '"rationale": "High engagement strategy.", "version_delta": 0.1}'
+    )
     mock_model.generate_content_async = AsyncMock(return_value=mock_response)
 
     import google.generativeai as genai

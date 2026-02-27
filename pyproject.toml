@@ -4,6 +4,7 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 88
+extend-exclude = ["*.bak", "*.coverage", "docs/assets/*"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
