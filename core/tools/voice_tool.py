@@ -266,7 +266,7 @@ class VoiceTool:
             }
         elif action == "start":
             if not self.is_active:
-                await self.setup()
+                await self.setup(self._config)
                 # Run in background — don't block the agent
                 asyncio.create_task(self.execute())
             return {"state": self._state.value, "message": "Voice started"}

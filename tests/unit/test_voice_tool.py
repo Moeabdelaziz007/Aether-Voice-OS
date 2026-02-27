@@ -19,9 +19,13 @@ from core.utils.config import AetherConfig, AIConfig, AudioConfig, GatewayConfig
 
 @pytest.fixture
 def mock_config():
-    """Create a valid test config without hitting real env vars."""
+    """Create a valid test config without hitting real env vars or .env file."""
+    # We must provide fields marked as required in AIConfig (like api_key)
+    # even when _env_file is None, to satisfy Pydantic validation.
+    # Note: AIConfig uses 'GOOGLE_API_KEY' as an alias for 'api_key'.
     return AetherConfig(
-        ai=AIConfig(api_key="test-key-fake"),
+        _env_file=None,
+        ai=AIConfig(_env_file=None, GOOGLE_API_KEY="dummy-test-key"),
         audio=AudioConfig(),
         gateway=GatewayConfig(),
     )

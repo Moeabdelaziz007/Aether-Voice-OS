@@ -44,7 +44,7 @@ class AIConfig(BaseSettings):
         "high-fidelity tool execution."
     )
 
-    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", env_file_encoding="utf-8")
 
 
 class GatewayConfig(BaseModel):
@@ -96,8 +96,12 @@ def load_config() -> AetherConfig:
     try:
         return AetherConfig()
     except Exception as e:
-        # Re-raise as EnvironmentError for test compatibility if it's a validation error
-        raise OSError(f"Sandbox restriction or missing config: {e}")
+        # Fallback to defaults or re-raise if critical configuration is missing
+        # In CI, we often don't have a .env file, so we rely on environment variables.
+        try:
+            return AetherConfig(_env_file=None)
+        except Exception:
+            raise OSError(f"Sandbox restriction or missing config: {e}")
 
 
 def get_firebase_cert(config: AetherConfig) -> Optional[dict]:

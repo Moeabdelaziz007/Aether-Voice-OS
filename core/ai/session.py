@@ -63,6 +63,7 @@ class GeminiLiveSession:
         self._on_interrupt = on_interrupt
         self._on_tool_call = on_tool_call
         self._tool_router = tool_router
+        self._gateway = None  # Will be set by engine if available
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
@@ -392,11 +393,12 @@ class GeminiLiveSession:
                             if part.text:
                                 try:
                                     # Broadcast transcript segment directly to UI
-                                    asyncio.create_task(
-                                        self._gateway.broadcast(
-                                            "transcript", {"text": part.text}
+                                    if self._gateway:
+                                        asyncio.create_task(
+                                            self._gateway.broadcast(
+                                                "transcript", {"text": part.text}
+                                            )
                                         )
-                                    )
                                 except Exception as e:
                                     logger.debug(
                                         "Failed to broadcast transcript: %s", e
@@ -415,11 +417,12 @@ class GeminiLiveSession:
                                         pass
                                 self._out_queue.put_nowait(part.inline_data.data)
                                 # UI Broadcast: Speaking state
-                                asyncio.create_task(
-                                    self._gateway.broadcast(
-                                        "engine_state", {"state": "SPEAKING"}
+                                if self._gateway:
+                                    asyncio.create_task(
+                                        self._gateway.broadcast(
+                                            "engine_state", {"state": "SPEAKING"}
+                                        )
                                     )
-                                )
 
                     # ── Handle barge-in / interruption ────────────────
                     if response.server_content and response.server_content.interrupted:
@@ -452,9 +455,10 @@ class GeminiLiveSession:
 
         # 1. Create dispatch tasks
         # UI Broadcast: Thinking state
-        asyncio.create_task(
-            self._gateway.broadcast("engine_state", {"state": "THINKING"})
-        )
+        if self._gateway:
+            asyncio.create_task(
+                self._gateway.broadcast("engine_state", {"state": "THINKING"})
+            )
 
         tasks = []
         for fc in calls:
