@@ -190,22 +190,13 @@ Watch the demo video to see:
 
 ---
 
-## 🏗️ Architecture | الهندسة المعمارية
+<p align="center">
+  <img src="docs/assets/architecture_v2.png" alt="AetherOS Neural Switchboard Architecture" width="800px" style="border-radius:20px; box-shadow: 0 0 30px rgba(0, 243, 255, 0.2);"/>
+</p>
+
+### Neural Switchboard Logic
 
 Aether is built on a **Pipeline Architecture** with the new **Thalamic Gate Audio Layer**. Each stage is an independent task communicating via thread-safe `queue.Queue` bridged to `asyncio`.
-
-```mermaid
-graph LR
-    MIC["🎤 Microphone"] -->|"PCM 16kHz"| THALAMUS["🧠 Thalamic Gate v2"]
-    THALAMUS -->|"Acoustic Features"| EMOTION["❤️ Emotion Calibrator"]
-    THALAMUS -->|"Blob"| GEMINI["🧠 Gemini Live Session"]
-    EMOTION -.->|"Proactive Trigger"| GEMINI
-    GEMINI -->|"PCM 24kHz"| Q2["audio_out_queue"]
-    Q2 -->|"bytes"| SPK["🔊 Speaker"]
-    GEMINI -->|"interrupted=True"| DRAIN["⚡ Drain Q2"]
-    GEMINI -->|"tool_call"| TOOLS["🛠️ Tool Executor (OpenClaw)"]
-    TOOLS -->|"result"| GEMINI
-```
 
 ### Core Modules
 
