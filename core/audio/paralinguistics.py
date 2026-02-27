@@ -25,6 +25,7 @@ class ParalinguisticFeatures:
     rms_variance: float  # Energy variability (monotone vs expressive)
     spectral_centroid: float  # "Brightness" of voice (breathiness vs sharpness)
     engagement_score: float  # Unified 0.0 - 1.0 metric
+    zen_mode: bool = False  # Flag for deep focus (typing/silence)
 
 
 class ParalinguisticAnalyzer:
@@ -37,7 +38,32 @@ class ParalinguisticAnalyzer:
         self.sample_rate = sample_rate
         self._history_pitch: list[float] = []
         self._history_rate: list[float] = []
+        self._history_transients: list[int] = []  # Count of high-freq transients
         self._window_size = 50  # Last 5 seconds of interaction
+        self._zen_threshold = 0.7  # Sentiment/Transience threshold for Zen
+
+    def _detect_transients(self, pcm_chunk: NDArray[np.int16]) -> int:
+        """Detect sharp high-frequency spikes (typing clicks)."""
+        if len(pcm_chunk) < 64:
+            return 0
+
+        # High-pass filter approximation (simple difference)
+        diff = np.diff(pcm_chunk.astype(np.float32))
+        std = np.std(diff)
+
+        # Count values that are N times the standard deviation (spikes)
+        threshold = std * 5
+        peaks = np.where(np.abs(diff) > threshold)[0]
+
+        # Cluster peaks to avoid counting the same spike multiple times
+        if len(peaks) < 2:
+            return len(peaks)
+
+        cluster_count = 1
+        for i in range(1, len(peaks)):
+            if peaks[i] - peaks[i - 1] > 100:  # 100 samples min gap (~6ms)
+                cluster_count += 1
+        return cluster_count
 
     def _estimate_pitch(self, pcm_chunk: NDArray[np.int16]) -> float:
         """Estimate fundamental frequency (F0) using autocorrelation."""
@@ -124,19 +150,25 @@ class ParalinguisticAnalyzer:
             if len(self._history_rate) > self._window_size:
                 self._history_rate.pop(0)
 
-        # 3. RMS Variance (Expressiveness)
+        # 3. Focus: Transient Detection (Keyboard clicks)
+        transients = self._detect_transients(pcm_chunk)
+        self._history_transients.append(transients)
+        if len(self._history_transients) > self._window_size:
+            self._history_transients.pop(0)
+
+        # 4. RMS Variance (Expressiveness)
         # Higher variance usually means more emotive speech
         rms_var = (
             float(np.var(self._history_pitch)) if len(self._history_pitch) > 5 else 0.0
         )
 
-        # 4. Spectral Centroid (Rough Brightness)
+        # 5. Spectral Centroid (Rough Brightness)
         fft = np.fft.rfft(pcm_chunk.astype(np.float32) / 32768.0)
         magnitudes = np.abs(fft)
         freqs = np.fft.rfftfreq(len(pcm_chunk), 1.0 / self.sample_rate)
         centroid = float(np.sum(magnitudes * freqs) / (np.sum(magnitudes) + 1e-10))
 
-        # 5. Engagement Logic (Neuro-Darwinism Scoring)
+        # 6. Engagement Logic (Neuro-Darwinism Scoring)
         # - Good: High Centroid, high Pitch, expressiveness (Variance)
         # - Bad: Monotone, Low Pitch (lethargy), Low Centroid (dullness)
         base_engagement = 0.5
@@ -153,10 +185,21 @@ class ParalinguisticAnalyzer:
 
         engagement = max(0.0, min(1.0, base_engagement))
 
+        # 7. Zen Mode Detection (Neural Shield)
+        # logic: high concentration detected if we see typing cadence and low speech
+        avg_transience = (
+            np.mean(self._history_transients) if self._history_transients else 0
+        )
+        is_zen = False
+        if current_rms < 0.05:  # Low background noise (silence)
+            if avg_transience > 1.5:  # Clear typing cadence detected
+                is_zen = True
+
         return ParalinguisticFeatures(
             pitch_estimate=pitch,
             speech_rate=rate,
             rms_variance=rms_var,
             spectral_centroid=centroid,
             engagement_score=engagement,
+            zen_mode=is_zen,
         )

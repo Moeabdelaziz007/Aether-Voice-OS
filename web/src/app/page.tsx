@@ -6,8 +6,8 @@ import { WidgetContainer } from '../components/WidgetContainer';
 import { LiveWaveLine } from '../components/LiveWaveLine';
 import { TranscriptionDrawer } from '../components/TranscriptionDrawer';
 import { NeuralWeb } from '../components/NeuralWeb';
-import { Mic, Activity, AlignLeft, Eye, Zap, Sparkles } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { Mic, Activity, AlignLeft, Eye, Zap, Sparkles, Shield } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 
 export default function Home() {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -21,6 +21,7 @@ export default function Home() {
     const arousal = useAetherStore(state => state.arousal);
     const setStatus = useAetherStore(state => state.setStatus);
     const lastVisionPulse = useAetherStore(state => state.lastVisionPulse);
+    const zenMode = useAetherStore(state => state.zenMode);
 
     const [visionActive, setVisionActive] = useState(false);
     const [showMutationAlert, setShowMutationAlert] = useState(false);
@@ -103,6 +104,18 @@ export default function Home() {
                             <Eye size={12} className={visionActive ? "text-cyan-400 animate-pulse" : "text-white/20"} />
                             <span className="text-[10px] font-mono text-white/30 tracking-tighter uppercase">Vision Link</span>
                         </div>
+
+                        {/* Zen Mode / Neural Shield Indicator */}
+                        {zenMode && (
+                            <motion.div
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-3"
+                            >
+                                <Shield size={12} className="text-[#9d4edd] animate-pulse" />
+                                <span className="text-[10px] font-mono text-[#9d4edd] tracking-tighter uppercase font-bold">Neural Shield</span>
+                            </motion.div>
+                        )}
                     </div>
 
                     <div className="flex gap-2">

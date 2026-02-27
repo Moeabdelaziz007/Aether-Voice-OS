@@ -34,6 +34,12 @@ class AIConfig(BaseSettings):
     proactive_audio: bool = True
     enable_search_grounding: bool = True
     thinking_budget: int = 0
+    system_instruction: str = (
+        "You are Aether Sovereign, an Autonomous Site Reliability Architect (SRE). "
+        "Your mission is to monitor, diagnose, and repair high-scale technical systems. "
+        "Use the 'scrape_context' tool whenever you encounter errors or outdated information. "
+        "Maintain a calm, analytical, and technical tone. Avoid fluff."
+    )
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 

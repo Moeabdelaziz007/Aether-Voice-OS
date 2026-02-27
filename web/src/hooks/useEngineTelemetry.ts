@@ -41,7 +41,10 @@ export function useEngineTelemetry(url = 'ws://localhost:8765') {
                             frustration: data.frustration,
                             valence: data.valence,
                             arousal: data.arousal,
-                            engagement: data.engagement
+                            engagement: data.engagement,
+                            zen_mode: data.zen_mode,
+                            pitch: data.pitch,
+                            rate: data.rate
                         }, store.latencyMs);
                     }
                     else if (data.type === 'mutation_event') {

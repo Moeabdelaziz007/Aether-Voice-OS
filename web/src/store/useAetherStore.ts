@@ -33,6 +33,8 @@ interface AetherState {
     arousal: number;
     engagement: number;
     frustrationScore: number;
+    pitch: number;
+    rate: number;
     latencyMs: number;
     lastMutation: string | null;
 
@@ -40,12 +42,13 @@ interface AetherState {
     neuralEvents: NeuralEvent[];
     systemLogs: string[];
     lastVisionPulse: string | null;
+    zenMode: boolean;
 
     // Actions
     setStatus: (status: ConnectionStatus) => void;
     setEngineState: (state: EngineState) => void;
     setAudioLevels: (mic: number, speaker: number) => void;
-    setTelemetry: (data: { frustration?: number, valence?: number, arousal?: number, engagement?: number }, latency: number) => void;
+    setTelemetry: (data: { frustration?: number, valence?: number, arousal?: number, engagement?: number, zen_mode?: boolean, pitch?: number, rate?: number }, latency: number) => void;
     setMutation: (mutation: string) => void;
     setVisionPulse: (lastVisionPulse: string) => void;
     addTranscriptMessage: (msg: Omit<TranscriptMessage, 'id' | 'timestamp'>) => void;
@@ -64,12 +67,15 @@ export const useAetherStore = create<AetherState>((set) => ({
     valence: 0,
     arousal: 0,
     engagement: 0,
+    pitch: 0,
+    rate: 0,
     latencyMs: 0,
     lastMutation: null,
     transcript: [],
     neuralEvents: [],
     systemLogs: [],
     lastVisionPulse: null,
+    zenMode: false,
 
     setStatus: (status) => set({ status }),
     setEngineState: (engineState) => set({ engineState }),
@@ -78,6 +84,7 @@ export const useAetherStore = create<AetherState>((set) => ({
         ...state,
         ...data,
         frustrationScore: data.frustration ?? state.frustrationScore,
+        zenMode: data.zen_mode ?? state.zenMode,
         latencyMs
     })),
     setMutation: (lastMutation) => set({ lastMutation }),

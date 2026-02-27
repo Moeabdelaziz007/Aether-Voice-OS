@@ -115,9 +115,11 @@ class FirebaseConnector:
         try:
             data = {
                 "timestamp": datetime.now(timezone.utc),
-                "valence": getattr(features, "valence", 0.0),
-                "arousal": getattr(features, "arousal", 0.0),
-                "emotion": getattr(features, "emotion", "neutral"),
+                "valence": getattr(features, "engagement_score", 0.0),
+                "arousal": getattr(features, "rms_variance", 0.0) / 500.0,
+                "pitch": getattr(features, "pitch_estimate", 0.0),
+                "rate": getattr(features, "speech_rate", 0.0),
+                "zen_mode": getattr(features, "zen_mode", False),
             }
 
             (
@@ -129,6 +131,48 @@ class FirebaseConnector:
         except Exception as e:
             # Debug level to avoid spamming logs
             logger.debug(f"Failed to log metrics: {e}")
+
+    async def log_knowledge(self, topic: str, content: str, source: str) -> None:
+        """Stores scraped context into the permanent cloud brain."""
+        if not self.is_connected:
+            return
+
+        try:
+            data = {
+                "topic": topic,
+                "content": content,
+                "source": source,
+                "session_id": self._session_id,
+                "timestamp": datetime.now(timezone.utc),
+            }
+            self._db.collection("knowledge").add(data)
+            logger.info(f"🔥 Firebase: Brain updated with knowledge on {topic}")
+        except Exception as e:
+            logger.error(f"Failed to log knowledge: {e}")
+
+    async def log_repair_event(
+        self, filepath: str, diagnosis: str, status: str = "applied"
+    ) -> None:
+        """Logs an autonomous healing action for the audit trail."""
+        if not self.is_connected or not self._session_id:
+            return
+
+        try:
+            data = {
+                "filepath": filepath,
+                "diagnosis": diagnosis,
+                "status": status,
+                "timestamp": datetime.now(timezone.utc),
+            }
+            (
+                self._db.collection("sessions")
+                .document(self._session_id)
+                .collection("repairs")
+                .add(data)
+            )
+            logger.info(f"🔥 Firebase: Repair logged for {filepath}")
+        except Exception as e:
+            logger.error(f"Failed to log repair: {e}")
 
     async def end_session(self, summary: dict) -> None:
         """Closes the session."""

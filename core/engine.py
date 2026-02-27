@@ -161,6 +161,7 @@ class AetherEngine:
     def _register_tools(self) -> None:
         """Register all tool modules with the Neural Dispatcher."""
         from core.tools import (
+            context_scraper,
             discovery_tool,
             hive_tool,
             memory_tool,
@@ -192,6 +193,7 @@ class AetherEngine:
         self._router.register_module(hive_tool)
         self._router.register_module(rag_tool)
         self._router.register_module(discovery_tool)
+        self._router.register_module(context_scraper)
 
         # Connect Hive to tools
         handoff.set_hive_params(self._hive, self._session_restart)
@@ -277,11 +279,13 @@ class AetherEngine:
             self._gateway.broadcast(
                 "affective_score",
                 {
-                    "frustration": (1.0 - valence)
-                    * arousal,  # Synthetic frustration score
-                    "valence": valence,
-                    "arousal": arousal,
-                    "engagement": getattr(features, "engagement", 0.0),
+                    "frustration": (1.0 - features.engagement_score)
+                    * (features.rms_variance / 500.0),
+                    "valence": features.engagement_score,
+                    "arousal": features.rms_variance / 500.0,
+                    "pitch": features.pitch_estimate,
+                    "rate": features.speech_rate,
+                    "zen_mode": features.zen_mode,
                 },
             )
         )
