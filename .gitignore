@@ -32,11 +32,12 @@ aether-cortex/Cargo.lock
 .DS_Store
 Thumbs.db
 
-# --- IDE ---
+# --- IDE & Backups ---
 .vscode/
 .idea/
 *.swp
 *.swo
+.git_stuck_backup/
 
 # --- Node / Frontend (for Phase 3) ---
 node_modules/

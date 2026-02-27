@@ -20,7 +20,18 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 # Security: Hardcoded blacklist of dangerous commands
-COMMAND_BLACKLIST = {"rm", "sudo", "mkfs", "kill", "shutdown", "reboot", "dd", "mv", ":(){ :|:& };:"}
+COMMAND_BLACKLIST = {
+    "rm",
+    "sudo",
+    "mkfs",
+    "kill",
+    "shutdown",
+    "reboot",
+    "dd",
+    "mv",
+    ":(){ :|:& };:",
+}
+
 
 async def get_current_time(**kwargs) -> dict:
     """
@@ -76,7 +87,7 @@ async def run_timer(minutes: int = 1, label: str = "Timer", **kwargs) -> dict:
 async def run_terminal_command(command: str, **kwargs) -> dict:
     """
     Executes a safe, sandboxed terminal command.
-    
+
     Security:
     - shell=False (prevents injection)
     - Blacklisted commands (rm, sudo, etc.) are blocked.
@@ -93,7 +104,10 @@ async def run_terminal_command(command: str, **kwargs) -> dict:
         # 2. Check Blacklist
         if base_cmd.lower() in COMMAND_BLACKLIST:
             logger.warning(f"Security Block: Attempted to run '{base_cmd}'")
-            return {"error": "Command blocked by security guardrails.", "violation": base_cmd.lower()}
+            return {
+                "error": "Command blocked by security guardrails.",
+                "violation": base_cmd.lower(),
+            }
 
         # 3. Execute with Isolation
         result = subprocess.run(
@@ -101,7 +115,7 @@ async def run_terminal_command(command: str, **kwargs) -> dict:
             capture_output=True,
             text=True,
             timeout=5,  # Strict timeout
-            shell=False # Prevent shell injection
+            shell=False,  # Prevent shell injection
         )
 
         return {
@@ -181,7 +195,10 @@ def get_tools() -> list[dict]:
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "command": {"type": "string", "description": "The terminal command to run"}
+                    "command": {
+                        "type": "string",
+                        "description": "The terminal command to run",
+                    }
                 },
                 "required": ["command"],
             },

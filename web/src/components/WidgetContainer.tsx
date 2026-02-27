@@ -22,6 +22,7 @@ export function WidgetContainer({ children, className, isExpanded = false }: Wid
                 isExpanded ? 'w-[400px] h-[550px]' : 'w-[320px] h-[120px]',
                 className
             )}
+            data-tauri-drag-region="true"
         >
             {/* Background Neon Accent */}
             <div className="absolute -top-20 -left-20 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl" />

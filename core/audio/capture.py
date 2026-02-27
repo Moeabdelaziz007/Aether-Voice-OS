@@ -15,8 +15,7 @@ from typing import Any, Callable, Optional
 import numpy as np
 import pyaudio
 
-from core.audio.paralinguistics import (ParalinguisticAnalyzer,
-                                        ParalinguisticFeatures)
+from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad
 from core.audio.state import audio_state
 from core.utils.config import AudioConfig

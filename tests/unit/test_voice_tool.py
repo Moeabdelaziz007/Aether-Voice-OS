@@ -12,8 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.tools.voice_tool import VoiceState, VoiceTool
-from core.utils.config import (AetherConfig, AIConfig, AudioConfig,
-                               GatewayConfig)
+from core.utils.config import AetherConfig, AIConfig, AudioConfig, GatewayConfig
 
 # ── Fixtures ────────────────────────────────────────────────
 

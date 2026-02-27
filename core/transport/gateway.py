@@ -19,8 +19,12 @@ from typing import Any, Optional
 import websockets
 from websockets.asyncio.server import Server, ServerConnection
 
-from core.transport.messages import (AckMessage, ChallengeMessage,
-                                     ErrorMessage, MessageType)
+from core.transport.messages import (
+    AckMessage,
+    ChallengeMessage,
+    ErrorMessage,
+    MessageType,
+)
 from core.utils.config import GatewayConfig
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
 

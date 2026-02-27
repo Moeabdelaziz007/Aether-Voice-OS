@@ -9,6 +9,7 @@ so the core session can inject it into the multimodal stream.
 
 import base64
 import logging
+
 import mss
 import mss.tools
 

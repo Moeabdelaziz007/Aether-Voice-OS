@@ -17,7 +17,7 @@ from core.tools.firebase_tool import FirebaseConnector
 logger = logging.getLogger(__name__)
 
 GENETIC_SYSTEM_PROMPT = """
-You are the Aether Evolutionary Engine. Your task is to optimize the 
+You are the Aether Evolutionary Engine. Your task is to optimize the
 System Instructions for a Voice AI agent based on performance telemetry.
 
 PERFORMANCE TELEMETRY:
@@ -30,8 +30,8 @@ CURRENT SYSTEM INSTRUCTIONS:
 
 GOAL:
 Analyze why the user might be disengaged (low score/declining trend).
-Mutate the instructions to be more empathetic, concise, or interactive 
-depending on the metrics. If the score is high, perform 'stabilizing selection' 
+Mutate the instructions to be more empathetic, concise, or interactive
+depending on the metrics. If the score is high, perform 'stabilizing selection'
 by refining nuances without radical change.
 
 OUTPUT FORMAT:

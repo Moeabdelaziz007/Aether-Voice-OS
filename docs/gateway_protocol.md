@@ -16,7 +16,7 @@ sequenceDiagram
     G->>C: connect.challenge {challenge, tickIntervalMs}
     C->>G: connect.response {identity, signature}
     G->>C: connect.ack {permissions, caps}
-    
+
     loop Every 15s
         G->>C: tick {timestamp}
     end

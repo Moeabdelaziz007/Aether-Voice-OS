@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { AetherBrain } from "../components/AetherBrain";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function RootLayout({
         <html lang="en">
             <body className="antialiased">
                 <main className="min-h-screen bg-transparent text-white">
+                    <AetherBrain />
                     {children}
                 </main>
             </body>

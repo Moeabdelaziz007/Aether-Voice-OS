@@ -7,8 +7,12 @@ find_zero_crossing, and energy_vad.
 
 import numpy as np
 
-from core.audio.processing import (HyperVADResult, RingBuffer, energy_vad,
-                                   find_zero_crossing)
+from core.audio.processing import (
+    HyperVADResult,
+    RingBuffer,
+    energy_vad,
+    find_zero_crossing,
+)
 
 
 class TestRingBuffer:

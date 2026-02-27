@@ -1,26 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { EmotionWaveform } from "@/components/visualizers/EmotionWaveform";
-import { StateVisualizer } from "@/components/visualizers/StateVisualizer";
+import { EmotionWaveform } from "../components/visualizers/EmotionWaveform";
+import { StateVisualizer } from "../components/visualizers/StateVisualizer";
+import { useAetherStore } from "../../store/useAetherStore";
+import { useEngineTelemetry } from "../../hooks/useEngineTelemetry";
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
-  const [machineState, setMachineState] = useState<any>("LISTENING");
+
+  // Call the telemetry hook to connect to Python backend
+  useEngineTelemetry();
+
+  const engineState = useAetherStore(state => state.engineState);
+  const systemLogs = useAetherStore(state => state.systemLogs);
+  const latencyMs = useAetherStore(state => state.latencyMs);
 
   // Prevent hydration errors
   useEffect(() => {
     setMounted(true);
-
-    // Demo simulation loop
-    const states = ["IDLE", "LISTENING", "THINKING", "SPEAKING", "INTERRUPTING"];
-    let idx = 1;
-    const interval = setInterval(() => {
-      idx = (idx + 1) % states.length;
-      setMachineState(states[idx]);
-    }, 4000);
-
-    return () => clearInterval(interval);
   }, []);
 
   if (!mounted) return null;
@@ -43,7 +41,7 @@ export default function Dashboard() {
             <span className="text-sm font-mono text-[#39ff14]">SECURE LINK</span>
           </div>
           <div className="text-xs font-mono text-gray-500 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-            LATENCY: <span className="text-white">182ms</span>
+            LATENCY: <span className="text-white">{latencyMs}ms</span>
           </div>
         </div>
       </header>
@@ -76,7 +74,7 @@ export default function Dashboard() {
 
         {/* Right Column: State Machine & Logs */}
         <div className="lg:col-span-2 space-y-6 flex flex-col">
-          <StateVisualizer currentState={machineState} />
+          <StateVisualizer currentState={engineState} />
 
           {/* Terminal / Logs panel */}
           <div className="glass-panel rounded-2xl p-6 flex-1 flex flex-col">
@@ -89,13 +87,18 @@ export default function Dashboard() {
               </span>
             </div>
             <div className="font-mono text-xs space-y-3 overflow-y-auto h-full pr-2 text-gray-400">
-              <p><span className="text-[#00f0ff]">[10:45:01]</span> Connected to Gateway (localhost:8765)</p>
-              <p><span className="text-[#00f0ff]">[10:45:02]</span> Initializing Thalamic Gate V2 [Software-Defined AEC]</p>
-              <p><span className="text-[#39ff14]">[10:45:05]</span> VAD stable. Awaiting acoustic input.</p>
-              <p className="text-gray-600 italic">// Simulated log stream for MVP UI checking...</p>
-              {machineState === "INTERRUPTING" && (
+              {systemLogs.length === 0 ? (
+                <p className="text-gray-600 italic">Awaiting telemetry stream...</p>
+              ) : (
+                systemLogs.map((log, i) => (
+                  <p key={i}>
+                    {log}
+                  </p>
+                ))
+              )}
+              {engineState === "INTERRUPTING" && (
                 <p className="text-[#ff3333] glow-text-red">
-                  [WARNING] FRUSTRATION PEAK DETECTED (0.91) - OVERRIDING OUTPUT
+                  [WARNING] FRUSTRATION PEAK DETECTED - OVERRIDING OUTPUT
                 </p>
               )}
             </div>

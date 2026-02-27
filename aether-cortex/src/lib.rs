@@ -4,7 +4,7 @@
 //! signal processing. The architecture mirrors the human auditory cortex:
 //!
 //! - `cochlea`   — Circular buffer (the ear's spiral organ)
-//! - `synapse`   — Voice Activity Detection (neural firing threshold)  
+//! - `synapse`   — Voice Activity Detection (neural firing threshold)
 //! - `axon`      — Zero-crossing detection (clean signal propagation)
 //! - `thalamus`  — Spectral noise reduction (sensory filtering)
 //!

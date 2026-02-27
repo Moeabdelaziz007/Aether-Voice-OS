@@ -35,7 +35,7 @@ def get_tools():
 async def handle_get_weather(city: str) -> dict:
     """Executes the weather lookup."""
     # Simulation: Replace with real API call (e.g., OpenWeatherMap)
-    await asyncio.sleep(0.5) 
+    await asyncio.sleep(0.5)
     return {
         "city": city,
         "temp": "22°C",

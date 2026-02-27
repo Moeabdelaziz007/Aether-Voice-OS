@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useAetherStore } from '../store/useAetherStore';
 import { WidgetContainer } from '../components/WidgetContainer';
 import { LiveWaveLine } from '../components/LiveWaveLine';
 import { TranscriptionDrawer } from '../components/TranscriptionDrawer';
@@ -9,30 +10,32 @@ import { Mic, Activity, AlignLeft, Network } from 'lucide-react';
 
 export default function Home() {
     const [isExpanded, setIsExpanded] = useState(false);
-    const [audioState, setAudioState] = useState<'idle' | 'listening' | 'thinking' | 'speaking'>('idle');
 
-    // Mock messages for UI development
-    const [messages, setMessages] = useState([
-        { role: 'agent' as const, content: 'Aether initialized. Ready for voice input.' }
-    ]);
+    const status = useAetherStore(state => state.status);
+    const engineState = useAetherStore(state => state.engineState);
+    const transcript = useAetherStore(state => state.transcript);
+    const neuralEvents = useAetherStore(state => state.neuralEvents);
+    const setStatus = useAetherStore(state => state.setStatus);
 
-    // Mock connecting state toggle
+    // Map global status to local audioState for the visualizer components
+    const audioState = (() => {
+        if (status === 'disconnected') return 'idle';
+        if (status === 'connecting') return 'thinking';
+        if (engineState === 'LISTENING') return 'listening';
+        if (engineState === 'THINKING') return 'thinking';
+        if (engineState === 'SPEAKING') return 'speaking';
+        return 'idle';
+    })();
+
+    // Toggle real connection
     const toggleListening = () => {
-        setAudioState(prev => prev === 'idle' ? 'listening' : 'idle');
-        if (audioState === 'idle') {
-            setTimeout(() => {
-                setAudioState('thinking');
-                setTimeout(() => {
-                    setMessages(prev => [...prev, { role: 'user', content: 'What is the weather today?' }]);
-                    setAudioState('speaking');
-                    setTimeout(() => {
-                        setMessages(prev => [...prev, { role: 'agent', content: 'The weather is optimal. Clear skies and 24 degrees Celsius.' }]);
-                        setAudioState('idle');
-                    }, 3000);
-                }, 1500);
-            }, 2000);
+        if (status === 'disconnected') {
+            setStatus('connecting'); // This will trigger AetherBrain to connect
+        } else {
+            setStatus('disconnected'); // This will trigger AetherBrain to disconnect
         }
     };
+
 
     return (
         <main className="min-h-screen p-8 flex items-center justify-center bg-transparent">
@@ -73,9 +76,8 @@ export default function Home() {
 
                     {/* ADK Visualization */}
                     <div className="px-4 mt-6">
-                        <NeuralWeb events={[
-                            { id: '1', fromAgent: 'Orchestrator', toAgent: 'Architect', task: 'Analyze task requirements', status: 'completed' },
-                            { id: '2', fromAgent: 'Architect', toAgent: 'Debugger', task: 'Verify code blueprint', status: 'active' }
+                        <NeuralWeb events={neuralEvents.length > 0 ? neuralEvents : [
+                            { id: '1', fromAgent: 'System', toAgent: 'Aether', task: 'Ready for inputs', status: 'completed' }
                         ]} />
                     </div>
 
@@ -93,7 +95,7 @@ export default function Home() {
                 </div>
 
                 {/* Expanding Drawer for Transcripts */}
-                <TranscriptionDrawer isOpen={isExpanded} messages={messages} />
+                <TranscriptionDrawer isOpen={isExpanded} messages={transcript.length > 0 ? transcript : [{ role: 'agent', content: 'Aether initialized. Ready for audio link.' }]} />
 
             </WidgetContainer>
         </main>
