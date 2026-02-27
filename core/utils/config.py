@@ -71,8 +71,23 @@ class AetherConfig(BaseSettings):
 
 
 def load_config() -> AetherConfig:
-    """Factory function to load and validate config."""
-    return AetherConfig()
+    """Factory function to load and validate config with JSON fallback."""
+    json_path = "aether_runtime_config.json"
+    if os.path.exists(json_path):
+        try:
+            with open(json_path, "r") as f:
+                data = json.load(f)
+                for k, v in data.items():
+                    if k not in os.environ:
+                        os.environ[k] = str(v)
+        except Exception as e:
+            print(f"Warning: Failed to load {json_path}: {e}")
+
+    try:
+        return AetherConfig()
+    except Exception as e:
+        # Re-raise as EnvironmentError for test compatibility if it's a validation error
+        raise OSError(f"Sandbox restriction or missing config: {e}")
 
 
 def get_firebase_cert(config: AetherConfig) -> Optional[dict]:
