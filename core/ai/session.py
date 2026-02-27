@@ -17,6 +17,7 @@ Uses the official `google-genai` SDK (not google-generativeai).
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 from typing import TYPE_CHECKING, Optional
 
@@ -261,7 +262,7 @@ class GeminiLiveSession:
 
         from core.audio.state import audio_state
         from core.tools.camera_tool import camera_instance
-        from core.tools.vision_tool import capture_screenshot
+        from core.tools.vision_tool import take_screenshot
 
         last_proactive_pulse = 0
         while self._running:
@@ -273,32 +274,26 @@ class GeminiLiveSession:
                 is_hard = audio_state.is_hard
 
                 # ── Pulse 1: Screen Capture (Rolling Buffer) ──
-                res = await capture_screenshot()
-                if res.get("status") == "ok":
-                    path = res["path"]
-                    if os.path.exists(path):
-                        with open(path, "rb") as f:
-                            image_bytes = f.read()
+                res = await take_screenshot()
+                if res.get("status") == "success":
+                    image_b64 = res["data"]
+                    image_bytes = base64.b64decode(image_b64)
 
-                        self._frame_buffer.append((now, image_bytes))
-                        if len(self._frame_buffer) > self._max_frames:
-                            self._frame_buffer.pop(0)
+                    self._frame_buffer.append((now, image_bytes))
+                    if len(self._frame_buffer) > self._max_frames:
+                        self._frame_buffer.pop(0)
 
-                        # Proactive Pulse (10s)
-                        if now - last_proactive_pulse > 10.0:
-                            logger.debug(
-                                "Proactive Vision: Sending screenshot to Gemini"
-                            )
-                            await session.send_realtime_input(
-                                parts=[
-                                    types.Part.from_bytes(
-                                        data=image_bytes, mime_type="image/jpeg"
-                                    )
-                                ]
-                            )
-                            last_proactive_pulse = now
-
-                        os.remove(path)
+                    # Proactive Pulse (10s)
+                    if now - last_proactive_pulse > 10.0:
+                        logger.debug("Proactive Vision: Sending screenshot to Gemini")
+                        await session.send_realtime_input(
+                            parts=[
+                                types.Part.from_bytes(
+                                    data=image_bytes, mime_type="image/png"
+                                )
+                            ]
+                        )
+                        last_proactive_pulse = now
 
                 # ── Pulse 2: Camera Capture (Hard Interrupt Grounding) ──
                 if is_hard:

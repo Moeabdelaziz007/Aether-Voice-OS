@@ -146,3 +146,59 @@ class FirebaseConnector:
             )
         except Exception as e:
             logger.error(f"Failed to end session: {e}")
+
+    async def get_session_affective_summary(self, session_id: str) -> dict:
+        """
+        Calculates fitness metrics for the genetic optimizer.
+        Aggregates valence/arousal from the 'metrics' subcollection.
+        """
+        if not self.is_connected or not self._db:
+            return {"status": "error", "message": "Firebase disconnected"}
+
+        try:
+            metrics_ref = (
+                self._db.collection("sessions")
+                .document(session_id)
+                .collection("metrics")
+            )
+            docs = metrics_ref.stream()
+
+            valence_sum = 0.0
+            arousal_sum = 0.0
+            count = 0
+
+            for doc in docs:
+                data = doc.to_dict()
+                valence_sum += data.get("valence", 0.0)
+                arousal_sum += data.get("arousal", 0.0)
+                count += 1
+
+            if count == 0:
+                return {"status": "empty", "message": "No telemetry data found"}
+
+            avg_valence = valence_sum / count
+            avg_arousal = arousal_sum / count
+
+            # Heuristic fitness matching GeneticOptimizer expectation
+            summary = {
+                "avg_engagement": (avg_valence + 1.0) / 2.0,  # Map -1..1 to 0..1
+                "avg_pitch": 160.0 + (avg_arousal * 40.0),  # Simulated pitch variance
+                "trend": "stable" if abs(avg_valence) < 0.2 else "improving",
+                "interaction_count": count,
+            }
+
+            return {"status": "success", "summary": summary}
+        except Exception as e:
+            logger.error(f"Failed to fetch affective summary: {e}")
+            return {"status": "error", "message": str(e)}
+
+    async def log_event(self, event_type: str, data: dict) -> None:
+        """Logs a generic event for analytics and auditing."""
+        if not self.is_connected or not self._db:
+            return
+
+        try:
+            data["timestamp"] = datetime.now(timezone.utc)
+            self._db.collection("events").add({"type": event_type, "payload": data})
+        except Exception as e:
+            logger.error(f"Failed to log event {event_type}: {e}")
