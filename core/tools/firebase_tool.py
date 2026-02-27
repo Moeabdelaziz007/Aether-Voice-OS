@@ -26,6 +26,7 @@ class FirebaseConnector:
         self._db: Optional[firestore.client] = None
         self._session_id: Optional[str] = None
         self.is_connected: bool = False
+        self._initialized: bool = False
 
     async def initialize(self) -> bool:
         """
@@ -50,6 +51,7 @@ class FirebaseConnector:
 
             self._db = firestore.client()
             self.is_connected = True
+            self._initialized = True
             return True
         except Exception as e:
             logger.warning(f"🔥 Firebase: Connection Failed (Offline Mode) - {e}")

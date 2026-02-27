@@ -8,22 +8,43 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AudioConfig(BaseModel):
-    mic_queue_max: int = 20
+    mic_queue_max: int = 5
     send_sample_rate: int = 16000
+    receive_sample_rate: int = 24000
+    channels: int = 1
+    chunk_size: int = 512
+    format_width: int = 2
     vad_window_sec: float = 5.0
     input_device_index: Optional[int] = None
     output_device_index: Optional[int] = None
 
 
+from enum import Enum
+
+
+class GeminiModel(str, Enum):
+    FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
+    LIVE_FLASH = "gemini-live-2.5-flash-preview"
+
+
 class AIConfig(BaseSettings):
     api_key: str = Field(..., alias="GOOGLE_API_KEY")
-    model: str = "gemini-2.5-flash"
+    model: GeminiModel = GeminiModel.LIVE_FLASH
+    enable_affective_dialog: bool = True
+    proactive_audio: bool = True
+    enable_search_grounding: bool = True
+    thinking_budget: int = 0
 
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 
 class GatewayConfig(BaseModel):
-    port: int = 8080
+    host: str = "0.0.0.0"
+    port: int = 18789
+    tick_interval_s: float = 15.0
+    max_missed_ticks: int = 2
+    handshake_timeout_s: float = 10.0
+    receive_sample_rate: int = 16000
 
 
 class AetherConfig(BaseSettings):
