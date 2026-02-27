@@ -29,19 +29,25 @@ interface AetherState {
     speakerLevel: number;
 
     // Affective Telemetry
+    valence: number;
+    arousal: number;
+    engagement: number;
     frustrationScore: number;
     latencyMs: number;
+    lastMutation: string | null;
 
-    // Data
     transcript: TranscriptMessage[];
     neuralEvents: NeuralEvent[];
     systemLogs: string[];
+    lastVisionPulse: string | null;
 
     // Actions
     setStatus: (status: ConnectionStatus) => void;
     setEngineState: (state: EngineState) => void;
     setAudioLevels: (mic: number, speaker: number) => void;
-    setTelemetry: (frustration: number, latency: number) => void;
+    setTelemetry: (data: { frustration?: number, valence?: number, arousal?: number, engagement?: number }, latency: number) => void;
+    setMutation: (mutation: string) => void;
+    setVisionPulse: (lastVisionPulse: string) => void;
     addTranscriptMessage: (msg: Omit<TranscriptMessage, 'id' | 'timestamp'>) => void;
     addNeuralEvent: (event: Omit<NeuralEvent, 'id'>) => void;
     updateNeuralEvent: (id: string, updates: Partial<NeuralEvent>) => void;
@@ -55,15 +61,27 @@ export const useAetherStore = create<AetherState>((set) => ({
     micLevel: 0,
     speakerLevel: 0,
     frustrationScore: 0,
+    valence: 0,
+    arousal: 0,
+    engagement: 0,
     latencyMs: 0,
+    lastMutation: null,
     transcript: [],
     neuralEvents: [],
     systemLogs: [],
+    lastVisionPulse: null,
 
     setStatus: (status) => set({ status }),
     setEngineState: (engineState) => set({ engineState }),
     setAudioLevels: (micLevel, speakerLevel) => set({ micLevel, speakerLevel }),
-    setTelemetry: (frustrationScore, latencyMs) => set({ frustrationScore, latencyMs }),
+    setTelemetry: (data, latencyMs) => set((state) => ({
+        ...state,
+        ...data,
+        frustrationScore: data.frustration ?? state.frustrationScore,
+        latencyMs
+    })),
+    setMutation: (lastMutation) => set({ lastMutation }),
+    setVisionPulse: (lastVisionPulse: string) => set({ lastVisionPulse }),
 
     addTranscriptMessage: (msg) => set((state) => ({
         transcript: [...state.transcript, {

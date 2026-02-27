@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAetherStore } from '../store/useAetherStore';
 import { WidgetContainer } from '../components/WidgetContainer';
 import { LiveWaveLine } from '../components/LiveWaveLine';
 import { TranscriptionDrawer } from '../components/TranscriptionDrawer';
 import { NeuralWeb } from '../components/NeuralWeb';
-import { Mic, Activity, AlignLeft, Network } from 'lucide-react';
+import { Mic, Activity, AlignLeft, Eye, Zap, Sparkles } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 
 export default function Home() {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -15,7 +16,14 @@ export default function Home() {
     const engineState = useAetherStore(state => state.engineState);
     const transcript = useAetherStore(state => state.transcript);
     const neuralEvents = useAetherStore(state => state.neuralEvents);
+    const lastMutation = useAetherStore(state => state.lastMutation);
+    const valence = useAetherStore(state => state.valence);
+    const arousal = useAetherStore(state => state.arousal);
     const setStatus = useAetherStore(state => state.setStatus);
+    const lastVisionPulse = useAetherStore(state => state.lastVisionPulse);
+
+    const [visionActive, setVisionActive] = useState(false);
+    const [showMutationAlert, setShowMutationAlert] = useState(false);
 
     // Map global status to local audioState for the visualizer components
     const audioState = (() => {
@@ -37,12 +45,45 @@ export default function Home() {
     };
 
 
+    // Auto-clear mutation alert
+    useEffect(() => {
+        if (lastMutation) {
+            setShowMutationAlert(true);
+            const timer = setTimeout(() => setShowMutationAlert(false), 5000);
+            return () => clearTimeout(timer);
+        }
+    }, [lastMutation]);
+
+    // Vision Pulse Feedback
+    useEffect(() => {
+        if (lastVisionPulse) {
+            setVisionActive(true);
+            const timer = setTimeout(() => setVisionActive(false), 1500);
+            return () => clearTimeout(timer);
+        }
+    }, [lastVisionPulse]);
+
     return (
         <main className="min-h-screen p-8 flex items-center justify-center bg-transparent">
-            {/*
-        This is the floating widget boundary.
-        In Tauri, the window will be transparent and frameless around this.
-      */}
+            {/* Mutation Alert Overlay */}
+            <AnimatePresence>
+                {
+                    showMutationAlert && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8, y: -20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                            className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+                        >
+                            <div className="bg-[#9d4edd]/20 backdrop-blur-md border border-[#9d4edd]/50 px-4 py-2 rounded-full flex items-center gap-2 shadow-[0_0_20px_#9d4edd33]">
+                                <Sparkles size={14} className="text-[#9d4edd]" />
+                                <span className="text-[10px] font-mono text-white tracking-widest uppercase">Genetic Leap Detected</span>
+                            </div>
+                        </motion.div>
+                    )
+                }
+            </AnimatePresence >
+
             <WidgetContainer isExpanded={isExpanded}>
                 {/* Top Header Bar */}
                 <div className="flex items-center justify-between mb-4">
@@ -56,6 +97,12 @@ export default function Home() {
                         <span className="font-mono text-xs tracking-widest uppercase text-white/50">
                             {audioState}
                         </span>
+
+                        {/* Vision Pulse Indicator */}
+                        <div className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-3">
+                            <Eye size={12} className={visionActive ? "text-cyan-400 animate-pulse" : "text-white/20"} />
+                            <span className="text-[10px] font-mono text-white/30 tracking-tighter uppercase">Vision Link</span>
+                        </div>
                     </div>
 
                     <div className="flex gap-2">
@@ -72,7 +119,7 @@ export default function Home() {
 
                 {/* Central Audio Visualizer */}
                 <div className="flex-1 flex flex-col justify-center relative z-10">
-                    <LiveWaveLine state={audioState} />
+                    <LiveWaveLine state={audioState} valence={valence} arousal={arousal} />
 
                     {/* ADK Visualization */}
                     <div className="px-4 mt-6">

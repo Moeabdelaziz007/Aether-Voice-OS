@@ -6,9 +6,11 @@ type AudioState = 'idle' | 'listening' | 'thinking' | 'speaking';
 
 interface LiveWaveLineProps {
     state: AudioState;
+    valence?: number;
+    arousal?: number;
 }
 
-export function LiveWaveLine({ state }: LiveWaveLineProps) {
+export function LiveWaveLine({ state, valence = 0.5, arousal = 0.5 }: LiveWaveLineProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
 
     useEffect(() => {
@@ -35,26 +37,26 @@ export function LiveWaveLine({ state }: LiveWaveLineProps) {
 
             switch (state) {
                 case 'listening':
-                    color = '#00f3ff';
-                    amplitude = 15;
+                    color = valence > 0.6 ? '#00f3ff' : '#ff9900'; // Cyan for happy, orange for alert
+                    amplitude = 15 * (1 + arousal);
                     frequency = 0.05;
                     glow = 15;
                     break;
                 case 'thinking':
-                    color = '#ff00ff'; // neon purple/pink
-                    amplitude = 20;
+                    color = '#9d4edd'; // purple
+                    amplitude = 20 * (1 + arousal);
                     frequency = 0.1;
                     glow = 20;
                     break;
                 case 'speaking':
-                    color = '#00f3ff';
-                    amplitude = 30 + Math.sin(time) * 10; // Dynamic amplitude mock
+                    color = valence > 0.6 ? '#00f3ff' : valence < 0.4 ? '#ff3333' : '#00f3ff';
+                    amplitude = (30 + Math.sin(time) * 10) * (1 + arousal);
                     frequency = 0.08;
                     glow = 25;
                     break;
                 case 'idle':
                 default:
-                    color = '#555555';
+                    color = '#333333';
                     amplitude = 3;
                     frequency = 0.01;
                     glow = 2;

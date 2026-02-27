@@ -293,6 +293,17 @@ class GeminiLiveSession:
                                 )
                             ]
                         )
+                        # Broadcast vision pulse to UI for explicit feedback
+                        if self._gateway:
+                            asyncio.create_task(
+                                self._gateway.broadcast(
+                                    "vision_pulse",
+                                    {
+                                        "status": "active",
+                                        "timestamp": datetime.now().isoformat(),
+                                    },
+                                )
+                            )
                         last_proactive_pulse = now
 
                 # ── Pulse 2: Camera Capture (Hard Interrupt Grounding) ──
@@ -403,6 +414,12 @@ class GeminiLiveSession:
                                     except asyncio.QueueEmpty:
                                         pass
                                 self._out_queue.put_nowait(part.inline_data.data)
+                                # UI Broadcast: Speaking state
+                                asyncio.create_task(
+                                    self._gateway.broadcast(
+                                        "engine_state", {"state": "SPEAKING"}
+                                    )
+                                )
 
                     # ── Handle barge-in / interruption ────────────────
                     if response.server_content and response.server_content.interrupted:
@@ -434,6 +451,11 @@ class GeminiLiveSession:
         logger.info("🧠 Brain Dispatch: Executing %d calls in parallel", len(calls))
 
         # 1. Create dispatch tasks
+        # UI Broadcast: Thinking state
+        asyncio.create_task(
+            self._gateway.broadcast("engine_state", {"state": "THINKING"})
+        )
+
         tasks = []
         for fc in calls:
             tasks.append(self._tool_router.dispatch(fc))

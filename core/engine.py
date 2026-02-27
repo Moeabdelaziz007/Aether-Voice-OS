@@ -139,6 +139,7 @@ class AetherEngine:
             registry=self._registry,
             router=self._router,
             default_soul_name="ArchitectExpert",
+            on_handover=self._on_agent_handover,
         )
         self._admin_api = AdminAPIServer(port=18790)
 
@@ -159,7 +160,22 @@ class AetherEngine:
 
     def _register_tools(self) -> None:
         """Register all tool modules with the Neural Dispatcher."""
-        from core.tools import rag_tool
+        from core.tools import (
+            discovery_tool,
+            hive_tool,
+            memory_tool,
+            rag_tool,
+            system_tool,
+            tasks_tool,
+            vision_tool,
+            voice_tool,
+        )
+
+        # Inject references into Discovery tool
+        discovery_tool.set_references(affective=self._proactive_engine, hive=self._hive)
+
+        # Inject Hive Coordinator into Hive tool
+        hive_tool.set_hive_coordinator(self._hive)
 
         # Inject vector index to RAG tool
         rag_tool.set_shared_index(self._router._vector_store)
@@ -171,11 +187,11 @@ class AetherEngine:
         self._router.register_module(system_tool)
         self._router.register_module(tasks_tool)
         self._router.register_module(memory_tool)
-        self._router.register_module(voice_tool_mod)
+        self._router.register_module(voice_tool)
         self._router.register_module(vision_tool)
-        self._router.register_module(handoff)
-        self._router.register_module(hive_memory)
+        self._router.register_module(hive_tool)
         self._router.register_module(rag_tool)
+        self._router.register_module(discovery_tool)
 
         # Connect Hive to tools
         handoff.set_hive_params(self._hive, self._session_restart)
@@ -255,6 +271,38 @@ class AetherEngine:
 
         if self._proactive_engine.should_intervene(valence, arousal):
             asyncio.create_task(self._trigger_intervention())
+
+        # UI Broadcast: Advanced Affective Metrics
+        asyncio.create_task(
+            self._gateway.broadcast(
+                "affective_score",
+                {
+                    "frustration": (1.0 - valence)
+                    * arousal,  # Synthetic frustration score
+                    "valence": valence,
+                    "arousal": arousal,
+                    "engagement": getattr(features, "engagement", 0.0),
+                },
+            )
+        )
+
+    def _on_agent_handover(self, from_agent: str, to_agent: str, task: str) -> None:
+        """Broadcasts a neural handover event to the UI."""
+        logger.info(f"Broadcast: Neural Handover [{from_agent}] -> [{to_agent}]")
+        if self._gateway:
+            asyncio.create_task(
+                self._gateway.broadcast(
+                    "neural_event",
+                    {
+                        "id": f"handover-{int(datetime.now().timestamp())}",
+                        "fromAgent": from_agent,
+                        "toAgent": to_agent,
+                        "task": task,
+                        "status": "active",
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                )
+            )
 
     async def _trigger_intervention(self) -> None:
         """
@@ -384,6 +432,11 @@ class AetherEngine:
 
                 await self._session.connect()
 
+                # UI Broadcast: State change
+                asyncio.create_task(
+                    self._gateway.broadcast("engine_state", {"state": "LISTENING"})
+                )
+
                 logger.info(
                     "✦ Hive Active: Expert '%s' taking control",
                     active_soul.manifest.name,
@@ -426,14 +479,41 @@ class AetherEngine:
                         current_instructions=active_soul.manifest.general_instructions,
                         session_id=self._firebase._session_id,
                     )
+
+                    # UI Broadcast: Start of evolution
+                    asyncio.create_task(
+                        self._gateway.broadcast(
+                            "neural_event",
+                            {
+                                "fromAgent": active_soul.manifest.name,
+                                "toAgent": "GeneticOptimizer",
+                                "task": "evolve_prompt",
+                                "status": "active",
+                            },
+                        )
+                    )
                     if mutation:
                         logger.info(
                             "🧬 Genetic Leap: Soul '%s' instruction set evolved.",
                             active_soul.manifest.name,
                         )
-                        # TODO: Hot-patch the in-memory registry if needed, or wait for next session
-                        # For now, we trust the registry watcher to handle file-system mutations
-                        # A higher-tier implementation would write back to the .ath file.
+                        # UI Broadcast: Mutation details
+                        asyncio.create_task(
+                            self._gateway.broadcast(
+                                "mutation_event", {"mutation": mutation}
+                            )
+                        )
+                        asyncio.create_task(
+                            self._gateway.broadcast(
+                                "neural_event",
+                                {
+                                    "fromAgent": "GeneticOptimizer",
+                                    "toAgent": active_soul.manifest.name,
+                                    "task": "evolve_prompt",
+                                    "status": "completed",
+                                },
+                            )
+                        )
 
                     await self._session.stop()
                     # Brief delay for audio cross-fade (simulated)

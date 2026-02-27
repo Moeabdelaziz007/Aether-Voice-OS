@@ -1,5 +1,5 @@
 import logging
-from typing import Any, List
+from typing import Any, Callable, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +21,9 @@ class MultiAgentOrchestrator:
     Coordinates interactions between multiple ADK Agents using the HandoverProtocol.
     """
 
-    def __init__(self):
+    def __init__(self, on_handover: Optional[callable] = None):
         self.active_agents = {}
+        self.on_handover = on_handover
 
     def register_agent(self, name: str, agent: Any):
         self.active_agents[name] = agent
@@ -32,6 +33,12 @@ class MultiAgentOrchestrator:
         """Executes a handover between two specialized agents."""
         logger.info(f"🔄 Handover: [{from_agent}] -> [{to_agent}]")
         context.add_history(f"Handed over from {from_agent} to {to_agent}")
+
+        if self.on_handover:
+            try:
+                self.on_handover(from_agent, to_agent, context.task)
+            except Exception as e:
+                logger.error(f"Failed to trigger handover callback: {e}")
 
         target = self.active_agents.get(to_agent)
         if not target:

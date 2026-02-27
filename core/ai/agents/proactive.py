@@ -16,8 +16,15 @@ class ProactiveInterventionEngine:
     def __init__(self, cooldown_minutes: int = 5):
         self.cooldown_seconds = cooldown_minutes * 60
         self.last_intervention_time = 0
-        self.frustration_threshold = 0.75  # Scale 0.0 to 1.0
+        self.frustration_threshold = 0.70  # Lowered slightly for more responsiveness
         self.calibrator = EmotionCalibrator()
+        self._message_bank = [
+            "أشعر بضيقك في هذا الجزء. هل تريد أن نلقي نظرة معاً على الكود لحلها؟",
+            "يبدو أن هذا الخطأ محبط حقاً. هل تريد مني تشغيل فحص للملفات المتأثرة؟",
+            "لا تقلق، النسق يبدو معقداً هنا. هل تريد أن آخذ لقطة للشاشة لأفهم ما تراه؟",
+            "ألاحظ بعض التوتر في نبرتك. فلنأخذ استراحة بسيطة أو نحل هذه المشكلة معاً الآن؟",
+        ]
+        self._message_index = 0
 
     def calculate_frustration(self, valence: float, arousal: float) -> float:
         """
@@ -74,7 +81,10 @@ class ProactiveInterventionEngine:
         return False
 
     def generate_empathetic_message(self) -> str:
-        return "أشعر بضيقك في هذا الجزء. هل تريد أن نلقي نظرة معاً على الكود لحلها؟"
+        """Cycles through empathetic messages to avoid repetition."""
+        msg = self._message_bank[self._message_index]
+        self._message_index = (self._message_index + 1) % len(self._message_bank)
+        return msg
 
 
 class CodeAwareProactiveAgent:

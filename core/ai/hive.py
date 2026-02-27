@@ -8,7 +8,7 @@ handoff lifecycle. Maintains the expertise-to-soul mapping.
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Callable, Dict, Optional
 
 if TYPE_CHECKING:
     from core.identity.package import AthPackage
@@ -33,11 +33,13 @@ class HiveCoordinator:
         registry: AetherRegistry,
         router: ToolRouter,
         default_soul_name: str = "ArchitectExpert",
+        on_handover: Optional[Callable] = None,
     ) -> None:
         self._registry = registry
         self._router = router
         self._active_soul: Optional[AthPackage] = None
         self._default_soul_name = default_soul_name
+        self._on_handover = on_handover
         self._context_bridge: Dict[str, str] = (
             {}
         )  # Key-value store for cross-soul state
@@ -68,7 +70,17 @@ class HiveCoordinator:
 
             # Store context for the next soul to pick up
             self._context_bridge["pending_task"] = task_context
+            from_name = (
+                self.active_soul.manifest.name if self._active_soul else "System"
+            )
             self._active_soul = target
+
+            # Trigger UI notification
+            if self._on_handover:
+                try:
+                    self._on_handover(from_name, target_name, task_context)
+                except Exception as e:
+                    logger.error("Failed to trigger handover callback: %s", e)
 
             # TODO: Integrate with engine to restart Gemini session with new config
             return True

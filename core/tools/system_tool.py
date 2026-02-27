@@ -130,6 +130,67 @@ async def run_terminal_command(command: str, **kwargs) -> dict:
         return {"error": f"Execution failed: {str(e)}"}
 
 
+async def list_codebase(path: str = ".", **kwargs) -> dict:
+    """
+    Returns a flat list of files in the project, ignoring common artifacts.
+    Efficient for giving the agent a map of the codebase.
+    """
+    import os
+
+    ignore_dirs = {
+        ".git",
+        "__pycache__",
+        "node_modules",
+        ".next",
+        ".venv",
+        "out",
+        "build",
+    }
+    file_list = []
+
+    try:
+        for root, dirs, files in os.walk(path):
+            # Prune ignore_dirs in-place to prevent os.walk from entering them
+            dirs[:] = [d for d in dirs if d not in ignore_dirs]
+            for file in files:
+                rel_path = os.path.relpath(os.path.join(root, file), path)
+                file_list.append(rel_path)
+
+        return {
+            "status": "success",
+            "file_count": len(file_list),
+            "files": file_list[:500],  # Truncate to avoid context overflow
+            "truncated": len(file_list) > 500,
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+async def read_file_content(filepath: str, **kwargs) -> dict:
+    """
+    Reads the content of a specific file.
+    Security: Limits content to 10,000 characters to prevent OOM.
+    """
+    import os
+
+    if not os.path.exists(filepath):
+        return {"status": "error", "message": "File not found."}
+
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            content = f.read(10001)  # Read slightly more to detect truncation
+
+        is_truncated = len(content) > 10000
+        return {
+            "status": "success",
+            "content": content[:10000],
+            "truncated": is_truncated,
+            "size_bytes": os.path.getsize(filepath),
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
 def get_tools() -> list[dict]:
     """
     Module-level tool registration.
@@ -203,5 +264,36 @@ def get_tools() -> list[dict]:
                 "required": ["command"],
             },
             "handler": run_terminal_command,
+        },
+        {
+            "name": "list_codebase",
+            "description": "Returns a map of all files in the current project directory, ignoring git/build artifacts.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string",
+                        "description": "The directory to list (default: .)",
+                    }
+                },
+            },
+            "handler": list_codebase,
+            "latency_tier": "low_latency",
+        },
+        {
+            "name": "read_file_content",
+            "description": "Reads the text content of a file. Use this to examine code or config files.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "filepath": {
+                        "type": "string",
+                        "description": "Path to the file to read",
+                    }
+                },
+                "required": ["filepath"],
+            },
+            "handler": read_file_content,
+            "latency_tier": "low_latency",
         },
     ]
