@@ -52,7 +52,48 @@ class AudioState:
                 cls._instance.is_hard = False
                 cls._instance.silence_type = "void"
                 cls._instance._playing_lock = threading.Lock()
+                # AEC (Acoustic Echo Cancellation) state
+                cls._instance.aec_converged = False
+                cls._instance.aec_convergence_progress = 0.0  # 0.0 to 1.0
+                cls._instance.aec_erle_db = 0.0  # Echo Return Loss Enhancement
+                cls._instance.aec_delay_ms = 0.0  # Estimated echo delay
+                cls._instance.aec_double_talk = False  # Double-talk detection
         return cls._instance
+
+    def update_aec_state(
+        self,
+        converged: bool = False,
+        convergence_progress: float = 0.0,
+        erle_db: float = 0.0,
+        delay_ms: float = 0.0,
+        double_talk: bool = False,
+    ) -> None:
+        """Update AEC state parameters atomically.
+
+        Args:
+            converged: Whether AEC filter has converged
+            convergence_progress: Convergence progress 0.0 to 1.0
+            erle_db: Echo Return Loss Enhancement in dB
+            delay_ms: Estimated echo delay in milliseconds
+            double_talk: Whether double-talk is detected
+        """
+        with self._lock:
+            self.aec_converged = converged
+            self.aec_convergence_progress = max(0.0, min(1.0, convergence_progress))
+            self.aec_erle_db = erle_db
+            self.aec_delay_ms = delay_ms
+            self.aec_double_talk = double_talk
+
+    def get_aec_state(self) -> dict:
+        """Get current AEC state as dictionary."""
+        with self._lock:
+            return {
+                "converged": self.aec_converged,
+                "convergence_progress": self.aec_convergence_progress,
+                "erle_db": self.aec_erle_db,
+                "delay_ms": self.aec_delay_ms,
+                "double_talk": self.aec_double_talk,
+            }
 
     def set_playing(self, playing: bool):
         """Atomic update for playback state with transition flags."""

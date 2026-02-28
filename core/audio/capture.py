@@ -15,6 +15,7 @@ from typing import Any, Callable, Optional
 import numpy as np
 import pyaudio
 
+from core.audio.dynamic_aec import DynamicAEC
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.state import audio_state
@@ -148,20 +149,29 @@ class AudioCapture:
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
 
-        from core.audio.leakage import LeakageDetector
         from core.audio.state import HysteresisGate
 
         self._hysteresis = HysteresisGate()
-        self._leakage = LeakageDetector()
+        # Dynamic AEC replaces LeakageDetector with adaptive echo cancellation
+        self._dynamic_aec = DynamicAEC(
+            sample_rate=self._config.send_sample_rate,
+            frame_size=self._config.chunk_size,
+            filter_length_ms=100.0,
+            step_size=0.5,
+            convergence_threshold_db=15.0,
+        )
         self._smooth_muter = SmoothMuter()
 
-        # Delay Compensation Counters
+        # Delay Compensation Counters (kept for hardware latency, AEC handles echo path)
         self._audio_latency_ms = 50  # hardware latency approximation
         self._latency_samples = int(
             self._audio_latency_ms * self._config.send_sample_rate // 1000
         )
         self._mute_delay_remaining = 0
         self._unmute_delay_remaining = 0
+
+        # Far-end buffer for AEC reference signal
+        self._far_end_buffer = np.array([], dtype=np.int16)
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
         """Thread-safe injection into the asyncio event loop."""
@@ -183,11 +193,37 @@ class AudioCapture:
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
-        # 1. Leakage & Correlation check (is it just echo?)
-        # Fetching spectrum from global state (updated by playback.py)
+        # 1. Dynamic AEC Processing
+        # Capture far-end (AI output) spectrum from global state
         if audio_state.ai_spectrum is not None:
-            self._leakage._ai_spectrum = audio_state.ai_spectrum
-        is_user = self._leakage.is_user_speaking(pcm_chunk)
+            # Convert spectrum back to approximate time-domain for AEC reference
+            # In a full implementation, playback.py would provide the actual PCM
+            self._dynamic_aec.capture_far_end(pcm_chunk)  # Placeholder reference
+
+        # Process through Dynamic AEC for echo cancellation
+        # Note: In real implementation, far_end should come from playback.py
+        # Here we use an empty reference or the buffered far-end signal
+        far_end_ref = (
+            self._far_end_buffer[: len(pcm_chunk)]
+            if len(self._far_end_buffer) >= len(pcm_chunk)
+            else np.zeros(len(pcm_chunk), dtype=np.int16)
+        )
+
+        cleaned_chunk, aec_state = self._dynamic_aec.process_frame(
+            pcm_chunk, far_end_ref
+        )
+
+        # Update global AEC state for monitoring
+        audio_state.update_aec_state(
+            converged=aec_state.converged,
+            convergence_progress=aec_state.convergence_progress,
+            erle_db=aec_state.erle_db,
+            delay_ms=aec_state.estimated_delay_ms,
+            double_talk=aec_state.double_talk_detected,
+        )
+
+        # Check if user is speaking (post-AEC analysis)
+        is_user = self._dynamic_aec.is_user_speaking(cleaned_chunk)
 
         # 2. Base Hysteresis update on AI state
         ai_playing_base = self._hysteresis.update(audio_state.is_playing)
@@ -222,8 +258,8 @@ class AudioCapture:
         else:
             self._smooth_muter.unmute()
 
-        # Apply Graceful Ramp
-        processed_chunk = self._smooth_muter.process(pcm_chunk)
+        # Apply Graceful Ramp to AEC-cleaned audio
+        processed_chunk = self._smooth_muter.process(cleaned_chunk)
 
         # Update VAD logic
         if should_mute and self._smooth_muter._current_gain < 0.1:

@@ -20,14 +20,16 @@ import asyncio
 import base64
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     from core.tools.router import ToolRouter
+    from core.transport.gateway import AetherGateway
 
 from google import genai
 from google.genai import types
 
+from core.ai.handover_protocol import HandoverContext, HandoverStatus
 from core.identity.package import SoulManifest
 from core.utils.config import AIConfig
 from core.utils.errors import AIConnectionError, AISessionExpiredError
@@ -51,6 +53,7 @@ class GeminiLiveSession:
         config: AIConfig,
         audio_in_queue: asyncio.Queue[dict[str, object]],
         audio_out_queue: asyncio.Queue[bytes],
+        gateway: "AetherGateway",
         on_interrupt: Optional[callable] = None,
         on_tool_call: Optional[callable] = None,
         tool_router: Optional["ToolRouter"] = None,
@@ -60,10 +63,10 @@ class GeminiLiveSession:
         self._soul = soul_manifest
         self._in_queue = audio_in_queue
         self._out_queue = audio_out_queue
+        self._gateway = gateway
         self._on_interrupt = on_interrupt
         self._on_tool_call = on_tool_call
         self._tool_router = tool_router
-        self._gateway = None  # Will be set by engine if available
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
@@ -72,6 +75,11 @@ class GeminiLiveSession:
         ] = []  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
         self._active_handoffs: dict[str, dict] = {}  # A2A V3 Handoff Tracking
+
+        # Deep Handover Protocol integration
+        self._injected_handover_context: Optional[HandoverContext] = None
+        self._handover_acknowledgments: Dict[str, str] = {}
+        self._soul_instruction_cache: Optional[str] = None
 
     def _build_session_config(self) -> types.LiveConnectConfig:
         """Build the LiveConnectConfig with tool declarations."""
@@ -93,17 +101,7 @@ class GeminiLiveSession:
             logger.info("Google Search grounding enabled")
 
         # ── Hive expert logic ──
-        system_instruction = self._config.system_instruction
-        if self._soul:
-            expertise = (
-                self._soul.manifest.expertise if hasattr(self._soul, "manifest") else {}
-            )
-            system_instruction = (
-                f"{self._soul.persona}\n\n"
-                f"Primary Domain: {expertise}\n\n"
-                f"{system_instruction}"
-            )
-            logger.info("A2A [SESSION] Applying Expert Soul: %s", self._soul.name)
+        system_instruction = self._build_system_instruction()
 
         # ── Voice Preference Mapping ──
         speech_config = None
@@ -295,16 +293,15 @@ class GeminiLiveSession:
                             ]
                         )
                         # Broadcast vision pulse to UI for explicit feedback
-                        if self._gateway:
-                            asyncio.create_task(
-                                self._gateway.broadcast(
-                                    "vision_pulse",
-                                    {
-                                        "status": "active",
-                                        "timestamp": datetime.now().isoformat(),
-                                    },
-                                )
+                        asyncio.create_task(
+                            self._gateway.broadcast(
+                                "vision_pulse",
+                                {
+                                    "status": "active",
+                                    "timestamp": datetime.now().isoformat(),
+                                },
                             )
+                        )
                         last_proactive_pulse = now
 
                 # ── Pulse 2: Camera Capture (Hard Interrupt Grounding) ──
@@ -393,12 +390,11 @@ class GeminiLiveSession:
                             if part.text:
                                 try:
                                     # Broadcast transcript segment directly to UI
-                                    if self._gateway:
-                                        asyncio.create_task(
-                                            self._gateway.broadcast(
-                                                "transcript", {"text": part.text}
-                                            )
+                                    asyncio.create_task(
+                                        self._gateway.broadcast(
+                                            "transcript", {"text": part.text}
                                         )
+                                    )
                                 except Exception as e:
                                     logger.debug(
                                         "Failed to broadcast transcript: %s", e
@@ -417,12 +413,11 @@ class GeminiLiveSession:
                                         pass
                                 self._out_queue.put_nowait(part.inline_data.data)
                                 # UI Broadcast: Speaking state
-                                if self._gateway:
-                                    asyncio.create_task(
-                                        self._gateway.broadcast(
-                                            "engine_state", {"state": "SPEAKING"}
-                                        )
+                                asyncio.create_task(
+                                    self._gateway.broadcast(
+                                        "engine_state", {"state": "SPEAKING"}
                                     )
+                                )
 
                     # ── Handle barge-in / interruption ────────────────
                     if response.server_content and response.server_content.interrupted:
@@ -455,10 +450,9 @@ class GeminiLiveSession:
 
         # 1. Create dispatch tasks
         # UI Broadcast: Thinking state
-        if self._gateway:
-            asyncio.create_task(
-                self._gateway.broadcast("engine_state", {"state": "THINKING"})
-            )
+        asyncio.create_task(
+            self._gateway.broadcast("engine_state", {"state": "THINKING"})
+        )
 
         tasks = []
         for fc in calls:
@@ -544,3 +538,278 @@ class GeminiLiveSession:
         """Signal the session to stop."""
         self._running = False
         logger.info("Gemini session stop requested")
+
+    # ── Deep Handover Protocol Methods ──
+
+    def _build_system_instruction(self) -> str:
+        """
+        Build the system instruction with soul-specific and handover context.
+
+        Merges:
+        1. Base system instruction from config
+        2. Soul persona and expertise
+        3. Injected handover context (if any)
+
+        Returns:
+            Complete system instruction string
+        """
+        # Start with base instruction
+        instruction_parts = []
+
+        # Add soul persona if available
+        if self._soul:
+            expertise = (
+                self._soul.manifest.expertise if hasattr(self._soul, "manifest") else {}
+            )
+            soul_instruction = (
+                f"{self._soul.persona}\n\n" f"Primary Domain: {expertise}"
+            )
+            instruction_parts.append(soul_instruction)
+            self._soul_instruction_cache = soul_instruction
+            logger.info("A2A [SESSION] Applying Expert Soul: %s", self._soul.name)
+
+        # Add handover context if injected
+        if self._injected_handover_context:
+            handover_section = self._format_handover_context_for_instruction()
+            if handover_section:
+                instruction_parts.append(handover_section)
+                logger.info(
+                    "A2A [SESSION] Injected handover context: %s",
+                    self._injected_handover_context.handover_id,
+                )
+
+        # Add base system instruction
+        if self._config.system_instruction:
+            instruction_parts.append(self._config.system_instruction)
+
+        # Join with clear separators
+        return "\n\n---\n\n".join(instruction_parts)
+
+    def _format_handover_context_for_instruction(self) -> str:
+        """
+        Format the injected handover context as a system instruction section.
+
+        Returns:
+            Formatted handover context string
+        """
+        if not self._injected_handover_context:
+            return ""
+
+        ctx = self._injected_handover_context
+        parts = ["# HANDOVER CONTEXT"]
+
+        # Basic info
+        parts.append(f"Handover ID: {ctx.handover_id}")
+        parts.append(f"From: {ctx.source_agent} → To: {ctx.target_agent}")
+        parts.append(f"Task: {ctx.task}")
+
+        # Task tree
+        if ctx.task_tree:
+            parts.append("\n## Task Tree")
+            for node in ctx.task_tree:
+                status_icon = "✓" if node.status == "completed" else "○"
+                parts.append(f"{status_icon} {node.description}")
+
+        # Working memory
+        if ctx.working_memory and ctx.working_memory.short_term:
+            parts.append("\n## Working Memory")
+            for key, value in ctx.working_memory.short_term.items():
+                parts.append(f"- {key}: {value}")
+
+        # Intent confidence
+        if ctx.intent_confidence:
+            parts.append("\n## Confidence")
+            parts.append(f"Score: {ctx.intent_confidence.confidence_score:.2%}")
+            parts.append(f"Reasoning: {ctx.intent_confidence.reasoning}")
+
+        # Code context
+        if ctx.code_context:
+            parts.append("\n## Code Context")
+            if ctx.code_context.files_modified:
+                parts.append(
+                    f"Modified files: {', '.join(ctx.code_context.files_modified)}"
+                )
+            if ctx.code_context.language:
+                parts.append(f"Language: {ctx.code_context.language}")
+            if ctx.code_context.framework:
+                parts.append(f"Framework: {ctx.code_context.framework}")
+
+        # Recent conversation (last 5 entries)
+        if ctx.conversation_history:
+            parts.append("\n## Recent Conversation")
+            for entry in ctx.conversation_history[-5:]:
+                parts.append(f"[{entry.speaker}]: {entry.message[:100]}...")
+
+        # History
+        if ctx.history:
+            parts.append("\n## Action History")
+            for entry in ctx.history[-5:]:
+                parts.append(f"- {entry}")
+
+        return "\n".join(parts)
+
+    def inject_handover_context(self, context: HandoverContext) -> bool:
+        """
+        Inject a handover context into the session.
+
+        This merges the handover context into the system instruction,
+        allowing the receiving agent to have full context awareness.
+
+        Args:
+            context: The handover context to inject
+
+        Returns:
+            True if injection was successful
+        """
+        try:
+            self._injected_handover_context = context
+
+            # Add acknowledgment entry
+            ack_id = f"ack-{context.handover_id}"
+            self._handover_acknowledgments[ack_id] = datetime.now().isoformat()
+
+            # Add acknowledgment to context
+            context.add_conversation_entry(
+                speaker=context.target_agent,
+                message=f"Handover acknowledged by {context.target_agent}. Ready to proceed.",
+                metadata={
+                    "type": "handover_acknowledgment",
+                    "acknowledgment_id": ack_id,
+                    "session_id": id(self),
+                },
+            )
+
+            logger.info(
+                "A2A [SESSION] Handover context injected: %s (Task: %s)",
+                context.handover_id,
+                context.task[:50],
+            )
+
+            return True
+
+        except Exception as e:
+            logger.error("Failed to inject handover context: %s", e)
+            return False
+
+    def clear_handover_context(self) -> None:
+        """Clear the injected handover context."""
+        if self._injected_handover_context:
+            logger.info(
+                "A2A [SESSION] Clearing handover context: %s",
+                self._injected_handover_context.handover_id,
+            )
+            self._injected_handover_context = None
+
+    def get_handover_acknowledgment(self, handover_id: str) -> Optional[str]:
+        """
+        Get the acknowledgment timestamp for a handover.
+
+        Args:
+            handover_id: The handover ID
+
+        Returns:
+            ISO timestamp of acknowledgment, or None if not acknowledged
+        """
+        ack_id = f"ack-{handover_id}"
+        return self._handover_acknowledgments.get(ack_id)
+
+    def is_handover_acknowledged(self, handover_id: str) -> bool:
+        """
+        Check if a handover has been acknowledged.
+
+        Args:
+            handover_id: The handover ID
+
+        Returns:
+            True if acknowledged
+        """
+        return self.get_handover_acknowledgment(handover_id) is not None
+
+    def get_active_handover(self) -> Optional[HandoverContext]:
+        """Get the currently active (injected) handover context."""
+        return self._injected_handover_context
+
+    def complete_handover_acknowledgment(
+        self, handover_id: str, success: bool, message: str = ""
+    ) -> bool:
+        """
+        Complete the handover acknowledgment protocol.
+
+        Args:
+            handover_id: The handover ID
+            success: Whether the handover was successful
+            message: Optional completion message
+
+        Returns:
+            True if completion was recorded
+        """
+        context = self._injected_handover_context
+        if not context or context.handover_id != handover_id:
+            logger.warning(
+                "Cannot complete handover acknowledgment: context mismatch or not found"
+            )
+            return False
+
+        # Update context status
+        if success:
+            context.update_status(HandoverStatus.COMPLETED)
+        else:
+            context.update_status(HandoverStatus.FAILED)
+
+        # Add completion entry
+        context.add_conversation_entry(
+            speaker=context.target_agent,
+            message=message or f"Handover {'completed' if success else 'failed'}",
+            metadata={
+                "type": "handover_completion",
+                "success": success,
+                "timestamp": datetime.now().isoformat(),
+            },
+        )
+
+        logger.info(
+            "A2A [SESSION] Handover acknowledgment completed: %s (success=%s)",
+            handover_id,
+            success,
+        )
+
+        return True
+
+    def export_handover_state(self) -> Dict[str, Any]:
+        """
+        Export the current handover state for persistence.
+
+        Returns:
+            Dictionary with handover state
+        """
+        return {
+            "has_active_handover": self._injected_handover_context is not None,
+            "handover_id": (
+                self._injected_handover_context.handover_id
+                if self._injected_handover_context
+                else None
+            ),
+            "acknowledgments": self._handover_acknowledgments.copy(),
+            "timestamp": datetime.now().isoformat(),
+        }
+
+    def restore_handover_state(self, state: Dict[str, Any]) -> bool:
+        """
+        Restore handover state from a persisted state dictionary.
+
+        Args:
+            state: The state dictionary to restore from
+
+        Returns:
+            True if restoration was successful
+        """
+        try:
+            self._handover_acknowledgments = state.get("acknowledgments", {})
+            logger.info(
+                "Restored handover acknowledgments: %d",
+                len(self._handover_acknowledgments),
+            )
+            return True
+        except Exception as e:
+            logger.error("Failed to restore handover state: %s", e)
+            return False

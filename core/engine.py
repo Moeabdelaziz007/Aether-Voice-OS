@@ -32,7 +32,6 @@ from google.adk.runners import InMemoryRunner
 from google.genai import types
 
 from core.admin_api import SHARED_STATE, AdminAPIServer
-from core.ai import handoff
 from core.ai.adk_agents import root_agent
 from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
@@ -40,7 +39,6 @@ from core.ai.agents.proactive import (
 )
 from core.ai.genetic import GeneticOptimizer
 from core.ai.hive import HiveCoordinator
-from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.playback import AudioPlayback
@@ -64,21 +62,14 @@ class AetherEngine:
       1. Load config from environment
       2. Initialize identity registry (.ath packages)
       3. Open audio devices (mic + speaker)
-      4. Connect to Gemini Live
-      5. Start gateway for external clients
-      6. Run pipeline until SIGINT/SIGTERM
-      7. Graceful shutdown: stop capture → drain queues → close session → stop gateway
+      4. Start gateway, which connects to Gemini Live
+      5. Run pipeline until SIGINT/SIGTERM
+      6. Graceful shutdown
     """
 
     def __init__(self, config: Optional[AetherConfig] = None) -> None:
         self._config = config or load_config()
         self._setup_logging()
-
-        # Pipeline queues
-        self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
-            maxsize=self._config.audio.mic_queue_max
-        )
-        self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 
         # Firebase persistence layer
         self._firebase = FirebaseConnector()
@@ -107,6 +98,24 @@ class AetherEngine:
             sample_rate=self._config.audio.send_sample_rate
         )
 
+        self._registry = AetherRegistry(
+            self._config.packages_dir, on_change=self._on_package_change
+        )
+        self._hive = HiveCoordinator(
+            registry=self._registry,
+            router=self._router,
+            default_soul_name="ArchitectExpert",
+            on_handover=self._on_agent_handover,
+        )
+
+        # Gateway is the Single Source of Truth for the session
+        self._gateway = AetherGateway(
+            gateway_config=self._config.gateway,
+            ai_config=self._config.ai,
+            tool_router=self._router,
+            hive=self._hive,
+        )
+
         # Components
         self._vad = AdaptiveVAD(
             window_size_sec=(
@@ -118,35 +127,15 @@ class AetherEngine:
         )
         self._capture = AudioCapture(
             self._config.audio,
-            self._audio_in,
+            self._gateway.audio_in_queue,  # Get queue from gateway
             vad_engine=self._vad,
             paralinguistic_analyzer=self._paralinguistics,
             on_affective_data=self._on_affective_data,
         )
-        self._gateway = AetherGateway(
-            self._config.gateway, on_audio_rx=self._audio_in.put
-        )
         self._playback = AudioPlayback(
             self._config.audio,
-            self._audio_out,
+            self._gateway.audio_out_queue,  # Get queue from gateway
             on_audio_tx=self._gateway.broadcast_binary,
-        )
-        self._session = GeminiLiveSession(
-            self._config.ai,
-            self._audio_in,
-            self._audio_out,
-            on_interrupt=self._on_interrupt,
-            on_tool_call=self._on_tool_call,
-            tool_router=self._router,
-        )
-        self._registry = AetherRegistry(
-            self._config.packages_dir, on_change=self._on_package_change
-        )
-        self._hive = HiveCoordinator(
-            registry=self._registry,
-            router=self._router,
-            default_soul_name="ArchitectExpert",
-            on_handover=self._on_agent_handover,
         )
         self._admin_api = AdminAPIServer(port=18790)
 
@@ -163,7 +152,6 @@ class AetherEngine:
         self._tools: dict[str, Any] = {}
 
         self._shutdown_event = asyncio.Event()
-        self._session_restart = asyncio.Event()
 
     def _register_tools(self) -> None:
         """Register all tool modules with the Neural Dispatcher."""
@@ -218,7 +206,7 @@ class AetherEngine:
         )
 
         # Connect Hive to tools
-        handoff.set_hive_params(self._hive, self._session_restart)
+        # handoff.set_hive_params(self._hive, self._session_restart) # This is now handled in gateway
         hive_memory.set_firebase_connector(self._firebase)
 
         logger.info(
@@ -247,10 +235,11 @@ class AetherEngine:
 
         # Optimization: Drain the outgoing audio queue to prevent stale audio playback
         # This ensures immediate silence when the user interrupts.
-        while not self._audio_out.empty():
+        audio_out_q = self._gateway.audio_out_queue
+        while not audio_out_q.empty():
             try:
-                self._audio_out.get_nowait()
-                self._audio_out.task_done()
+                audio_out_q.get_nowait()
+                audio_out_q.task_done()
             except asyncio.QueueEmpty:
                 break
 
@@ -281,11 +270,11 @@ class AetherEngine:
         response_text = await self._execute_adk_task(user_message)
         if (
             response_text
-            and self._session
-            and getattr(self._session, "_session", None) is not None
+            and self._gateway.session  # Check if session exists in gateway
+            and getattr(self._gateway.session, "_session", None) is not None
         ):
             logger.info("✅ ADK: Task complete, injecting response.")
-            await self._session._session.send_realtime_input(
+            await self._gateway.session._session.send_realtime_input(
                 parts=[types.Part.from_text(response_text)]
             )
         return response_text
@@ -328,20 +317,19 @@ class AetherEngine:
     def _on_agent_handover(self, from_agent: str, to_agent: str, task: str) -> None:
         """Broadcasts a neural handover event to the UI."""
         logger.info(f"Broadcast: Neural Handover [{from_agent}] -> [{to_agent}]")
-        if self._gateway:
-            asyncio.create_task(
-                self._gateway.broadcast(
-                    "neural_event",
-                    {
-                        "id": f"handover-{int(datetime.now().timestamp())}",
-                        "fromAgent": from_agent,
-                        "toAgent": to_agent,
-                        "task": task,
-                        "status": "active",
-                        "timestamp": datetime.now().isoformat(),
-                    },
-                )
+        asyncio.create_task(
+            self._gateway.broadcast(
+                "neural_event",
+                {
+                    "id": f"handover-{int(datetime.now().timestamp())}",
+                    "fromAgent": from_agent,
+                    "toAgent": to_agent,
+                    "task": task,
+                    "status": "active",
+                    "timestamp": datetime.now().isoformat(),
+                },
             )
+        )
 
     async def _trigger_intervention(self) -> None:
         """
@@ -361,8 +349,8 @@ class AetherEngine:
         logger.info("🚨 Proactive Intervention: %s", system_note)
 
         # Inject into session so Gemini knows to speak/act
-        if hasattr(self._session, "send_text"):
-            await self._session.send_text(system_note)
+        if hasattr(self._gateway, "send_text"):  # TODO: Need a send_text on gateway
+            await self._gateway.send_text(system_note)
 
     async def _on_tool_call(self, tool_name: str, args: dict, result: dict) -> None:
         """Log tool calls to Firestore for session analytics."""
@@ -454,118 +442,12 @@ class AetherEngine:
             # Integrate Admin API locally
             self._admin_api.start()
 
-            # The Hive Loop: Manages the Gemini session lifecycle and soul handoffs
-            while not self._shutdown_event.is_set():
-                self._session_restart.clear()
-
-                # Create a fresh session with the active expert soul
-                active_soul = self._hive.active_soul
-                self._session = GeminiLiveSession(
-                    self._config.ai,
-                    self._audio_in,
-                    self._audio_out,
-                    on_interrupt=self._on_interrupt,
-                    on_tool_call=self._on_tool_call,
-                    tool_router=self._router,
-                    soul_manifest=active_soul.manifest,
-                )
-
-                await self._session.connect()
-
-                # UI Broadcast: State change
-                asyncio.create_task(
-                    self._gateway.broadcast("engine_state", {"state": "LISTENING"})
-                )
-
-                logger.info(
-                    "✦ Hive Active: Expert '%s' taking control",
-                    active_soul.manifest.name,
-                )
-
-                # Run session alongside other background tasks
-                async with asyncio.TaskGroup() as tg:
-                    tg.create_task(self._capture.run(), name="audio-capture")
-                    tg.create_task(self._playback.run(), name="audio-playback")
-                    session_task = tg.create_task(
-                        self._session.run(), name="gemini-session"
-                    )
-                    tg.create_task(self._gateway.run(), name="gateway")
-                    tg.create_task(self._admin_sync_loop(), name="admin-sync")
-
-                    # Watcher for shutdown or restart
-                    restart_waiter = tg.create_task(
-                        self._session_restart.wait(), name="restart-waiter"
-                    )
-                    shutdown_waiter = tg.create_task(
-                        self._shutdown_event.wait(), name="shutdown-waiter"
-                    )
-
-                    # Wait for either session to end, restart triggered, or shutdown
-                    done, pending = await asyncio.wait(
-                        [session_task, restart_waiter, shutdown_waiter],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
-                    # Clean up pending tasks in the group
-                    for p in pending:
-                        p.cancel()
-
-                if self._session_restart.is_set():
-                    logger.info("🔄 Hive Handoff: Preparing next expert...")
-
-                    # TRIGGER GENETIC EVOLUTION
-                    # We evolve the 'soul' instructions based on the just-finished
-                    # session performance.
-                    mutation = await self._optimizer.evolve(
-                        current_instructions=active_soul.manifest.general_instructions,
-                        session_id=self._firebase._session_id,
-                    )
-
-                    # UI Broadcast: Start of evolution
-                    asyncio.create_task(
-                        self._gateway.broadcast(
-                            "neural_event",
-                            {
-                                "fromAgent": active_soul.manifest.name,
-                                "toAgent": "GeneticOptimizer",
-                                "task": "evolve_prompt",
-                                "status": "active",
-                            },
-                        )
-                    )
-                    if mutation:
-                        logger.info(
-                            "🧬 Genetic Leap: Soul '%s' instruction set evolved.",
-                            active_soul.manifest.name,
-                        )
-                        # UI Broadcast: Mutation details
-                        asyncio.create_task(
-                            self._gateway.broadcast(
-                                "mutation_event", {"mutation": mutation}
-                            )
-                        )
-                        asyncio.create_task(
-                            self._gateway.broadcast(
-                                "neural_event",
-                                {
-                                    "fromAgent": "GeneticOptimizer",
-                                    "toAgent": active_soul.manifest.name,
-                                    "task": "evolve_prompt",
-                                    "status": "completed",
-                                },
-                            )
-                        )
-
-                    await self._session.stop()
-                    # Brief delay for audio cross-fade (simulated)
-                    await asyncio.sleep(1.0)
-                else:
-                    # If session ended naturally and not because of restart/shutdown
-                    if not self._shutdown_event.is_set():
-                        logger.warning(
-                            "Gemini session ended unexpectedly. Restarting in 5s..."
-                        )
-                        await asyncio.sleep(5.0)
+            async with asyncio.TaskGroup() as tg:
+                tg.create_task(self._gateway.run(), name="gateway")
+                tg.create_task(self._capture.run(), name="audio-capture")
+                tg.create_task(self._playback.run(), name="audio-playback")
+                tg.create_task(self._admin_sync_loop(), name="admin-sync")
+                tg.create_task(self._wait_for_shutdown(), name="shutdown-watcher")
 
         except* KeyboardInterrupt:
             logger.info("Keyboard interrupt received")
@@ -627,9 +509,8 @@ class AetherEngine:
 
         # Stop in reverse order: capture first, then processor, then output
         await self._capture.stop()
-        await self._session.stop()
-        await self._playback.stop()
         await self._gateway.stop()
+        await self._playback.stop()
         self._registry.stop_watcher()
         self._admin_api.stop()
 

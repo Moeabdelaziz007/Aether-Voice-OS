@@ -81,9 +81,9 @@ async def test_e2e_singularity():
     vad_res = energy_vad(speech_signal, adaptive_engine=vad)
     assert vad_res.is_hard, f"Failed to detect speech. RMS: {vad_res.energy_rms}"
 
-    assert hive.active_soul.manifest.name == "ArchitectExpert", (
-        "Default must be Architect."
-    )
+    assert (
+        hive.active_soul.manifest.name == "ArchitectExpert"
+    ), "Default must be Architect."
     print(f"[E2E] Speech detected. Active Soul: {hive.active_soul.manifest.name}")
 
     # Simulate Gemini executing parallel write_memory calls
@@ -127,9 +127,9 @@ async def test_e2e_singularity():
 
     handoff_result = await router.dispatch(mock_fc_handoff)
 
-    assert handoff_result["result"].get("status") == "handoff_initiated", (
-        f"Handoff failed: {handoff_result}"
-    )
+    assert (
+        handoff_result["result"].get("status") == "handoff_initiated"
+    ), f"Handoff failed: {handoff_result}"
     assert restart_event.is_set(), "Session restart signal must be fired."
     print("[E2E] Autonomous Handoff OK.")
 
