@@ -43,6 +43,9 @@ class SoulManifest(BaseModel):
         description="Domain-specific expertise scores (0.0 to 1.0)",
     )
     author: Optional[str] = None
+    public_key: Optional[str] = Field(
+        None, description="Ed25519 public key (hex) for authentication"
+    )
     checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
 
     @field_validator("capabilities")

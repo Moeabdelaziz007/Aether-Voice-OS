@@ -9,7 +9,7 @@ import { useAetherStore } from '../store/useAetherStore';
  * Connects to the local Python WebSocket Server (port 8765 by default)
  * to receive real-time system logs, state machine transitions, and affective scores.
  */
-export function useEngineTelemetry(url = 'ws://localhost:8765') {
+export function useEngineTelemetry(url = 'ws://localhost:18789') {
     const store = useAetherStore();
     const wsRef = useRef<WebSocket | null>(null);
 
@@ -21,42 +21,43 @@ export function useEngineTelemetry(url = 'ws://localhost:8765') {
             wsRef.current = ws;
 
             ws.onopen = () => {
-                console.log('[Telemetry] Connected to Core Engine.');
+                console.log('[Telemetry] Connected to Aether Gateway.');
                 store.addSystemLog('[Telemetry] Local secure link established.');
             };
 
             ws.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
+                    const payload = data.payload || {};
 
                     if (data.type === 'log') {
-                        store.addSystemLog(`[Engine] ${data.message}`);
+                        store.addSystemLog(`[Engine] ${payload.message || data.message}`);
                     }
                     else if (data.type === 'engine_state') {
-                        store.setEngineState(data.state);
+                        store.setEngineState(payload.state || data.state);
                     }
                     else if (data.type === 'affective_score') {
                         // Advanced affective metrics
                         store.setTelemetry({
-                            frustration: data.frustration,
-                            valence: data.valence,
-                            arousal: data.arousal,
-                            engagement: data.engagement,
-                            zen_mode: data.zen_mode,
-                            pitch: data.pitch,
-                            rate: data.rate
+                            frustration: payload.frustration,
+                            valence: payload.valence,
+                            arousal: payload.arousal,
+                            engagement: payload.engagement,
+                            zen_mode: payload.zen_mode,
+                            pitch: payload.pitch,
+                            rate: payload.rate
                         }, store.latencyMs);
                     }
                     else if (data.type === 'mutation_event') {
-                        store.setMutation(data.mutation);
-                        store.addSystemLog(`[Evolution] Mutation detected: ${data.mutation.substring(0, 50)}...`);
+                        store.setMutation(payload.mutation);
+                        store.addSystemLog(`[Evolution] Mutation detected: ${payload.mutation.substring(0, 50)}...`);
                     }
                     else if (data.type === 'neural_event') {
                         store.addNeuralEvent({
-                            fromAgent: data.fromAgent,
-                            toAgent: data.toAgent,
-                            task: data.task,
-                            status: data.status
+                            fromAgent: payload.fromAgent,
+                            toAgent: payload.toAgent,
+                            task: payload.task,
+                            status: payload.status
                         });
                     }
                     else if (data.type === 'vision_pulse') {
@@ -92,4 +93,6 @@ export function useEngineTelemetry(url = 'ws://localhost:8765') {
             disconnect();
         };
     }, [connect, disconnect]);
+
+    return { connect, disconnect };
 }

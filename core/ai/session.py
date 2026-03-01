@@ -561,9 +561,7 @@ class GeminiLiveSession:
             expertise = (
                 self._soul.manifest.expertise if hasattr(self._soul, "manifest") else {}
             )
-            soul_instruction = (
-                f"{self._soul.persona}\n\n" f"Primary Domain: {expertise}"
-            )
+            soul_instruction = f"{self._soul.persona}\n\nPrimary Domain: {expertise}"
             instruction_parts.append(soul_instruction)
             self._soul_instruction_cache = soul_instruction
             logger.info("A2A [SESSION] Applying Expert Soul: %s", self._soul.name)
@@ -671,7 +669,10 @@ class GeminiLiveSession:
             # Add acknowledgment to context
             context.add_conversation_entry(
                 speaker=context.target_agent,
-                message=f"Handover acknowledged by {context.target_agent}. Ready to proceed.",
+                message=(
+                    f"Handover acknowledged by {context.target_agent}. "
+                    f"Ready to proceed."
+                ),
                 metadata={
                     "type": "handover_acknowledgment",
                     "acknowledgment_id": ack_id,

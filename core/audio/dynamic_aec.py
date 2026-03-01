@@ -11,6 +11,7 @@ Implements real-time adaptive echo cancellation using:
 from __future__ import annotations
 
 import logging
+import threading
 from collections import deque
 from dataclasses import dataclass
 
@@ -19,6 +20,32 @@ import numpy as np
 from core.audio.spectral import SpectralAnalyzer, erle, gcc_phat
 
 logger = logging.getLogger(__name__)
+
+
+class BoundedBuffer:
+    """A thread-safe bounded buffer for audio samples to prevent memory leaks."""
+
+    def __init__(self, max_samples: int):
+        self.max_samples = max_samples
+        self.buffer = np.array([], dtype=np.float64)
+        self._lock = threading.Lock()
+
+    def append(self, data: np.ndarray):
+        with self._lock:
+            self.buffer = np.concatenate([self.buffer, data])
+            if len(self.buffer) > self.max_samples:
+                self.buffer = self.buffer[-self.max_samples :]
+
+    def pop_left(self, n: int) -> np.ndarray:
+        with self._lock:
+            if len(self.buffer) < n:
+                return np.array([])
+            extracted = self.buffer[:n]
+            self.buffer = self.buffer[n:]
+            return extracted
+
+    def __len__(self):
+        return len(self.buffer)
 
 
 @dataclass
@@ -446,11 +473,13 @@ class DynamicAEC:
 
         # Ring buffers for delay compensation
         self.far_end_ring_buffer: deque[np.ndarray] = deque(maxlen=20)
-        self.accumulated_far_end = np.array([])
+        self.accumulated_far_end = BoundedBuffer(
+            max_samples=sample_rate * 5
+        )  # 5s limit
 
         # Frame accumulation for block processing
-        self.near_end_accumulator: deque[np.ndarray] = deque()
-        self.far_end_accumulator: deque[np.ndarray] = deque()
+        self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
+        self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
         self.accumulated_samples = 0
         self.block_size = filter_length  # Process in filter-length blocks
 
@@ -501,17 +530,13 @@ class DynamicAEC:
         # Accumulate frames for block processing
         self.near_end_accumulator.append(near_end_float.copy())
         self.far_end_accumulator.append(far_end_float.copy())
-        self.accumulated_samples += len(near_end_float)
+        self.accumulated_samples = len(self.near_end_accumulator)
 
         # Process when we have enough samples for a block
         if self.accumulated_samples >= self.block_size:
-            # Concatenate accumulated frames
-            near_block = np.concatenate(list(self.near_end_accumulator))
-            far_block = np.concatenate(list(self.far_end_accumulator))
-
-            # Take exactly block_size samples
-            near_block = near_block[: self.block_size]
-            far_block = far_block[: self.block_size]
+            # Pop exactly block_size samples
+            near_block = self.near_end_accumulator.pop_left(self.block_size)
+            far_block = self.far_end_accumulator.pop_left(self.block_size)
 
             # Get delay-compensated far-end signal
             delay_frames = (
@@ -549,10 +574,8 @@ class DynamicAEC:
             # Get the last frame_size samples of error for output
             output_error = error_signal[-self.frame_size :]
 
-            # Clear accumulators
-            self.near_end_accumulator.clear()
-            self.far_end_accumulator.clear()
-            self.accumulated_samples = 0
+            # Update accumulated_samples after popping
+            self.accumulated_samples = len(self.near_end_accumulator)
         else:
             # Not enough samples yet - return near-end as-is with reduced gain
             output_error = near_end_float * 0.9  # Slight attenuation while buffering
@@ -696,12 +719,9 @@ class DynamicAEC:
         # Avoid processing pure silence
         if len(pcm) > 0 and np.max(np.abs(pcm)) >= 10:
             # Accumulate in buffer for frame-wise processing
-            self.accumulated_far_end = np.concatenate(
-                [self.accumulated_far_end, pcm.astype(np.float64) / 32768.0]
-            )
+            self.accumulated_far_end.append(pcm.astype(np.float64) / 32768.0)
 
             # Process in frame_size chunks
             while len(self.accumulated_far_end) >= self.frame_size:
-                frame = self.accumulated_far_end[: self.frame_size]
-                self.accumulated_far_end = self.accumulated_far_end[self.frame_size :]
+                frame = self.accumulated_far_end.pop_left(self.frame_size)
                 self.far_end_ring_buffer.append(frame)

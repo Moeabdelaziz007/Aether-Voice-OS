@@ -443,7 +443,8 @@ class AetherGateway:
             )
         except asyncio.TimeoutError:
             raise HandshakeTimeoutError(
-                f"Client did not respond within {self._gateway_config.handshake_timeout_s}s"
+                f"Client did not respond within "
+                f"{self._gateway_config.handshake_timeout_s}s"
             )
 
         try:
@@ -485,9 +486,32 @@ class AetherGateway:
     ) -> bool:
         """
         Verify an Ed25519 signature.
+
+        Attempts to find a public key for the client_id in the registry,
+        or falls back to treat client_id as a hex public key.
         """
-        # TODO: Implement real Ed25519 verification with cryptography lib
-        return bool(signature)
+        from core.utils.security import verify_signature
+
+        # 1. Try to find the Soul in the registry
+        try:
+            soul = self._hive._registry.get(client_id)
+            if soul.manifest.public_key:
+                return verify_signature(soul.manifest.public_key, signature, challenge)
+        except Exception:
+            pass
+
+        # 2. Ephemeral/Direct Mode: If client_id is a 64-char hex string,
+        # treat as pubkey
+        is_hex = all(c in "0123456789abcdef" for c in client_id.lower())
+        if len(client_id) == 64 and is_hex:
+            return verify_signature(client_id, signature, challenge)
+
+        # 3. Global Auth Fallback (Development)
+        global_key = os.environ.get("AETHER_GLOBAL_PUBLIC_KEY")
+        if global_key:
+            return verify_signature(global_key, signature, challenge)
+
+        return False
 
     async def _route_binary(self, client_id: str, data: bytes) -> None:
         """Route incoming binary audio chunks to the session's input queue."""
@@ -495,7 +519,9 @@ class AetherGateway:
             await self._audio_in.put(
                 {
                     "data": data,
-                    "mime_type": f"audio/pcm;rate={self._gateway_config.receive_sample_rate}",
+                    "mime_type": (
+                        f"audio/pcm;rate={self._gateway_config.receive_sample_rate}"
+                    ),
                 }
             )
         except Exception as exc:
@@ -523,6 +549,9 @@ class AetherGateway:
         """Send periodic heartbeats and prune dead clients."""
         while self._running:
             await asyncio.sleep(self._gateway_config.tick_interval_s)
+
+            # Periodic cleanup of completed/failed handovers to prevent memory leaks
+            self._hive.cleanup_handovers()
 
             now = time.monotonic()
             dead_clients: list[str] = []

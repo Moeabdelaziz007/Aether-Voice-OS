@@ -3,7 +3,8 @@
 import { useEffect, useCallback } from 'react';
 import { useAetherStore } from '../store/useAetherStore';
 import { useAudioPipeline } from '../hooks/useAudioPipeline';
-import { useGeminiLive } from '../hooks/useGeminiLive';
+import { useAetherGateway } from '../hooks/useAetherGateway';
+import { useEngineTelemetry } from '../hooks/useEngineTelemetry';
 
 /**
  * AetherBrain
@@ -26,13 +27,14 @@ export function AetherBrain() {
     } = useAudioPipeline();
 
     const {
-        status: geminiStatus,
-        connect: connectGemini,
-        disconnect: disconnectGemini,
+        status: gatewayStatus,
+        connect: connectGateway,
+        disconnect: disconnectGateway,
         sendAudio,
-        onAudioResponse,
-        onInterrupt
-    } = useGeminiLive();
+        onAudioResponse
+    } = useAetherGateway();
+
+    const { connect: connectTelemetry } = useEngineTelemetry();
 
     // 1. Sync Audio RMS to Global Store for UI visualizing
     useEffect(() => {
@@ -41,14 +43,11 @@ export function AetherBrain() {
 
     // 2. Sync Global Status
     useEffect(() => {
-        if (geminiStatus === 'disconnected') store.setStatus('disconnected');
-        else if (geminiStatus === 'connecting') store.setStatus('connecting');
-        else store.setStatus('connected');
-
-        // Map Gemini statuses to EngineState for parity
-        if (geminiStatus === 'listening') store.setEngineState('LISTENING');
-        if (geminiStatus === 'speaking') store.setEngineState('SPEAKING');
-    }, [geminiStatus, store]);
+        if (gatewayStatus === 'disconnected') store.setStatus('disconnected');
+        else if (gatewayStatus === 'connecting' || gatewayStatus === 'handshaking') store.setStatus('connecting');
+        else if (gatewayStatus === 'connected') store.setStatus('connected');
+        else if (gatewayStatus === 'error') store.setStatus('error');
+    }, [gatewayStatus, store]);
 
     // 3. Handle Connections gracefully based on store status triggers
     const initializeConnection = useCallback(async () => {
@@ -56,21 +55,24 @@ export function AetherBrain() {
             store.addSystemLog('[Brain] Initializing Audio Pipeline...');
             await startAudio();
 
-            store.addSystemLog('[Brain] Connecting to Gemini Live Network...');
-            await connectGemini();
+            store.addSystemLog('[Brain] Connecting to local Aether Gateway...');
+            await connectGateway();
+
+            store.addSystemLog('[Brain] Opening telemetry channel...');
+            connectTelemetry();
         } catch (err) {
             store.addSystemLog('[Brain] Connection error occurred.');
             console.error(err);
             store.setStatus('error');
         }
-    }, [startAudio, connectGemini, store]);
+    }, [startAudio, connectGateway, connectTelemetry, store]);
 
     const terminateConnection = useCallback(() => {
         store.addSystemLog('[Brain] Terminating connections...');
         stopAudio();
-        disconnectGemini();
+        disconnectGateway();
         store.setEngineState('IDLE');
-    }, [stopAudio, disconnectGemini, store]);
+    }, [stopAudio, disconnectGateway, store]);
 
     // Connect automatically if global status dictates
     /* In the future, this can listen to a specific trigger. For now, we expose
@@ -78,25 +80,22 @@ export function AetherBrain() {
 
     // 4. Critical Pipeline Wiring
     useEffect(() => {
-        // Pipe Mic PCM -> Gemini
+        // Pipe Mic PCM -> Gateway -> Engine -> Gemini
         onPCMChunk.current = (pcm: ArrayBuffer) => {
-            if (geminiStatus === 'listening' || geminiStatus === 'speaking') {
+            if (gatewayStatus === 'connected') {
                 sendAudio(pcm);
             }
         };
 
-        // Pipe Gemini Audio -> Speaker
+        // Pipe Gateway Audio -> Speaker
         onAudioResponse.current = (pcm: ArrayBuffer) => {
-            // Assuming Gemini output is 24kHz
-            playPCM(pcm, 24000);
+            // Aether Gateway sends processed PCM (usually 16kHz or 24kHz)
+            playPCM(pcm, 16000); // Defaulting to 16kHz for Aether stream
         };
 
-        // Handle Interruptions (Barge-ins)
-        onInterrupt.current = () => {
-            store.setEngineState('INTERRUPTING');
-            store.addSystemLog('[Brain] ⚡ Barge-in detected, halting current output.');
-        };
-    }, [onPCMChunk, onAudioResponse, onInterrupt, geminiStatus, sendAudio, playPCM, store]);
+        // In the local Gateway model, interrupts and state transitions
+        // come via useEngineTelemetry (which updates store.setEngineState).
+    }, [onPCMChunk, onAudioResponse, gatewayStatus, sendAudio, playPCM, store]);
 
     // Provide cleanup
     useEffect(() => {
