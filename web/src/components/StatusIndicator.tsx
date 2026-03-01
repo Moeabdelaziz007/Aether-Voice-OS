@@ -10,9 +10,9 @@ interface StatusIndicatorProps {
 }
 
 const statusColors = {
-    online: { bg: "#00f3ff", text: "text-neon-blue", glow: "shadow-[0_0_8px_#00f3ff]" },
-    offline: { bg: "#555", text: "text-gray-500", glow: "" },
-    connecting: { bg: "#f0c040", text: "text-yellow-400", glow: "shadow-[0_0_8px_#f0c040]" },
+    online: { bg: "#00f3ff", text: "text-[#00f3ff]", glow: "shadow-[0_0_8px_#00f3ff]" },
+    offline: { bg: "#333", text: "text-white/20", glow: "" },
+    connecting: { bg: "#f0c040", text: "text-amber-400", glow: "shadow-[0_0_8px_#f0c040]" },
 };
 
 export const StatusIndicator: React.FC<StatusIndicatorProps> = ({ label, status, icon }) => {

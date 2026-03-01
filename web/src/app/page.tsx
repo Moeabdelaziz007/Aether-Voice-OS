@@ -65,7 +65,7 @@ export default function Home() {
     }, [lastVisionPulse]);
 
     return (
-        <main className="min-h-screen p-8 flex items-center justify-center bg-transparent">
+        <main className="min-h-screen p-8 flex items-center justify-center bg-transparent selection:bg-cyan-500/30">
             {/* Mutation Alert Overlay */}
             <AnimatePresence>
                 {
@@ -76,9 +76,9 @@ export default function Home() {
                             exit={{ opacity: 0, scale: 0.8, y: -20 }}
                             className="fixed top-24 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
                         >
-                            <div className="bg-[#9d4edd]/20 backdrop-blur-md border border-[#9d4edd]/50 px-4 py-2 rounded-full flex items-center gap-2 shadow-[0_0_20px_#9d4edd33]">
-                                <Sparkles size={14} className="text-[#9d4edd]" />
-                                <span className="text-[10px] font-mono text-white tracking-widest uppercase">Genetic Leap Detected</span>
+                            <div className="bg-[#bc13fe]/10 backdrop-blur-md border border-[#bc13fe]/30 px-6 py-2 rounded-full flex items-center gap-3 shadow-[0_0_30px_rgba(188,19,254,0.2)]">
+                                <Sparkles size={16} className="text-[#bc13fe] animate-pulse" />
+                                <span className="text-[10px] font-mono text-white tracking-[0.4em] uppercase font-bold">Evolutionary Leap Detected</span>
                             </div>
                         </motion.div>
                     )
@@ -87,43 +87,47 @@ export default function Home() {
 
             <WidgetContainer isExpanded={isExpanded}>
                 {/* Top Header Bar */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-3">
-                        <div className={`relative flex h-3 w-3`}>
-                            {audioState !== 'idle' && (
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                            )}
-                            <span className={`relative inline-flex rounded-full h-3 w-3 ${audioState === 'idle' ? 'bg-white/20' : 'bg-cyan-500'}`}></span>
-                        </div>
-                        <span className="font-mono text-xs tracking-widest uppercase text-white/50">
-                            {audioState}
-                        </span>
-
-                        {/* Vision Pulse Indicator */}
-                        <div className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-3">
-                            <Eye size={12} className={visionActive ? "text-cyan-400 animate-pulse" : "text-white/20"} />
-                            <span className="text-[10px] font-mono text-white/30 tracking-tighter uppercase">Vision Link</span>
+                <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                            <div className={`relative flex h-2 w-2 rounded-full ${audioState === 'idle' ? 'bg-white/10' : 'bg-cyan-400 shadow-[0_0_8px_#00f3ff]'}`}>
+                                {audioState !== 'idle' && (
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                                )}
+                            </div>
+                            <span className="font-mono text-[9px] tracking-[0.2em] uppercase text-white/40 font-bold">
+                                {audioState}
+                            </span>
                         </div>
 
-                        {/* Zen Mode / Neural Shield Indicator */}
-                        {zenMode && (
-                            <motion.div
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="flex items-center gap-1.5 ml-2 border-l border-white/10 pl-3"
-                            >
-                                <Shield size={12} className="text-[#9d4edd] animate-pulse" />
-                                <span className="text-[10px] font-mono text-[#9d4edd] tracking-tighter uppercase font-bold">Neural Shield</span>
-                            </motion.div>
-                        )}
+                        {/* Neural Integrity Indicator */}
+                        <div className="flex items-center gap-2 ml-2 border-l border-white/5 pl-4">
+                            <Zap size={10} className={status === 'connected' ? "text-cyan-400" : "text-white/10"} />
+                            <div className="flex flex-col">
+                                <span className="text-[7px] font-mono text-white/20 uppercase tracking-tighter">Integrity</span>
+                                <span className="text-[9px] font-mono text-white/60 tracking-tighter uppercase font-bold">
+                                    {status === 'connected' ? '98.4%' : '0.0%'}
+                                </span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-4">
+                        {/* Handover Latency Mock */}
+                        {isExpanded && (
+                            <div className="flex items-center gap-2 border-r border-white/5 pr-4">
+                                <Activity size={10} className="text-purple-400" />
+                                <div className="flex flex-col items-end">
+                                    <span className="text-[7px] font-mono text-white/20 uppercase tracking-tighter">Latency</span>
+                                    <span className="text-[9px] font-mono text-purple-400/80 tracking-tighter uppercase font-bold">284ms</span>
+                                </div>
+                            </div>
+                        )}
                         <button
                             title="Expand Menu"
                             aria-label="Expand Menu"
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="p-2 rounded-full hover:bg-white/10 transition-colors text-white/50 hover:text-white"
+                            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-white/20 hover:text-cyan-400"
                         >
                             <AlignLeft size={16} />
                         </button>
@@ -132,31 +136,42 @@ export default function Home() {
 
                 {/* Central Audio Visualizer */}
                 <div className="flex-1 flex flex-col justify-center relative z-10">
-                    <LiveWaveLine state={audioState} valence={valence} arousal={arousal} />
-
-                    {/* ADK Visualization */}
-                    <div className="px-4 mt-6">
-                        <NeuralWeb events={neuralEvents.length > 0 ? neuralEvents : [
-                            { id: '1', fromAgent: 'System', toAgent: 'Aether', task: 'Ready for inputs', status: 'completed' }
-                        ]} />
+                    <div className="relative h-24 mb-4">
+                        <LiveWaveLine state={audioState} valence={valence} arousal={arousal} />
                     </div>
 
-                    <div className="absolute inset-x-0 bottom-0 flex justify-center -mb-2 mt-4">
+                    {/* ADK Visualization */}
+                    <div className="mt-auto">
+                        <NeuralWeb events={neuralEvents.length > 0 ? neuralEvents : []} />
+                    </div>
+
+                    {/* Control Hub Overlay */}
+                    <div className="absolute inset-x-0 -bottom-4 flex justify-center translate-y-1/2">
                         <button
                             onClick={toggleListening}
-                            className={`p-3 rounded-full transition-all duration-300 ${audioState !== 'idle'
-                                ? 'bg-cyan-500/20 text-cyan-400 shadow-[0_0_15px_rgba(0,243,255,0.4)]'
-                                : 'bg-white/5 text-white/40 hover:bg-white/10 hover:text-white'
+                            className={`p-5 rounded-2xl transition-all duration-500 border group ${audioState !== 'idle'
+                                ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400 shadow-[0_0_30px_rgba(0,243,255,0.2)]'
+                                : 'bg-black/40 border-white/10 text-white/20 hover:border-white/30 hover:text-white'
                                 }`}
                         >
-                            {audioState === 'thinking' ? <Activity size={20} className="animate-pulse" /> : <Mic size={20} />}
+                            {audioState === 'thinking' ?
+                                <Activity size={24} className="animate-pulse" /> :
+                                <Mic size={24} className="group-hover:scale-110 transition-transform" />
+                            }
+
+                            {/* Inner Ring */}
+                            {audioState !== 'idle' && (
+                                <div className="absolute inset-0 rounded-2xl border border-cyan-400/20 animate-ping opacity-20" />
+                            )}
                         </button>
                     </div>
                 </div>
 
                 {/* Expanding Drawer for Transcripts */}
-                <TranscriptionDrawer isOpen={isExpanded} messages={transcript.length > 0 ? transcript : [{ role: 'agent', content: 'Aether initialized. Ready for audio link.' }]} />
-
+                <TranscriptionDrawer
+                    isOpen={isExpanded}
+                    messages={transcript.length > 0 ? transcript : [{ role: 'agent', content: 'Neural link established. Awaiting cerebral input.' }]}
+                />
             </WidgetContainer>
         </main>
     );

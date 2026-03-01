@@ -18,15 +18,19 @@ export function WidgetContainer({ children, className, isExpanded = false }: Wid
             animate={{ opacity: 1, scale: 1, y: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 25 }}
             className={cn(
-                'relative overflow-hidden rounded-3xl carbon-panel neon-border p-6 shadow-2xl transition-all duration-300',
-                isExpanded ? 'w-[400px] h-[550px]' : 'w-[320px] h-[120px]',
+                'relative overflow-hidden rounded-2xl carbon-panel p-6 shadow-2xl transition-all duration-500',
+                isExpanded ? 'w-[420px] h-[600px]' : 'w-[340px] h-[140px]',
+                isExpanded ? 'neon-glow-cyan' : 'border-white/5',
                 className
             )}
             data-tauri-drag-region="true"
         >
-            {/* Background Neon Accent */}
-            <div className="absolute -top-20 -left-20 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl" />
-            <div className="absolute -bottom-20 -right-20 h-40 w-40 rounded-full bg-cyan-500/10 blur-3xl" />
+            {/* Industrial Background Accents */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-[80px] -mr-16 -mt-16 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 blur-[80px] -ml-16 -mb-16 pointer-events-none" />
+
+            {/* Top Border Glow Line */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
             {/* Content wrapper to stay above the blurs */}
             <div className="relative z-10 flex h-full flex-col">
