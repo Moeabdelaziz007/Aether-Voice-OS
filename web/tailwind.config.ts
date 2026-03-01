@@ -11,14 +11,12 @@ module.exports = {
                 background: "var(--background)",
                 foreground: "var(--foreground)",
                 neon: {
-                    blue: "#00f3ff",
-                    purple: "#bc13fe",
-                    green: "#0f0",
+                    cyan: "hsla(var(--neon-cyan) / <alpha-value>)",
+                    purple: "hsla(var(--neon-purple) / <alpha-value>)",
                 },
                 carbon: {
-                    900: "#0a0a0a",
-                    800: "#1a1a1a",
-                    700: "#2a2a2a",
+                    900: "hsla(var(--carbon-900) / <alpha-value>)",
+                    800: "hsla(var(--carbon-800) / <alpha-value>)",
                 },
             },
         },

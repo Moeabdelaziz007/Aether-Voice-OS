@@ -14,28 +14,38 @@ export function WidgetContainer({ children, className, isExpanded = false }: Wid
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 20 }}
             className={cn(
-                'relative overflow-hidden rounded-2xl carbon-panel p-6 shadow-2xl transition-all duration-500',
-                isExpanded ? 'w-[420px] h-[600px]' : 'w-[340px] h-[140px]',
-                isExpanded ? 'neon-glow-cyan' : 'border-white/5',
+                'relative overflow-hidden rounded-[2.5rem] carbon-panel shadow-[0_32px_64px_rgba(0,0,0,0.6)]',
+                'transition-all duration-700 ease-out border-white/5',
+                isExpanded ? 'w-[440px] h-[640px] p-8' : 'w-[360px] h-[160px] p-6',
+                isExpanded ? 'neon-glow-cyan' : 'hover:border-white/10',
                 className
             )}
             data-tauri-drag-region="true"
         >
-            {/* Industrial Background Accents */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/5 blur-[80px] -mr-16 -mt-16 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-32 h-32 bg-purple-500/5 blur-[80px] -ml-16 -mb-16 pointer-events-none" />
+            {/* Draggable Surface Glow */}
+            <div
+                className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none"
+                data-tauri-drag-region="true"
+            />
 
-            {/* Top Border Glow Line */}
-            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+            {/* Industrial Background Accents */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/10 blur-[100px] -mr-24 -mt-24 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 blur-[100px] -ml-24 -mb-24 pointer-events-none" />
+
+            {/* Inner Glass Reflection */}
+            <div className="absolute inset-0 glass-reflection pointer-events-none opacity-50" />
 
             {/* Content wrapper to stay above the blurs */}
             <div className="relative z-10 flex h-full flex-col">
                 {children}
             </div>
+
+            {/* Subtle Diagnostic Light (Bottom) */}
+            <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-1 rounded-full bg-white/5" />
         </motion.div>
     );
 }

@@ -129,6 +129,7 @@ def main() -> None:
 
     try:
         engine = AetherEngine()
+        print(f"{CYAN}✦ Admin API Listening on http://localhost:18790/health (Tauri Bridge Active){RESET}")
         asyncio.run(engine.run())
     except KeyboardInterrupt:
         print(f"\n{DIM}Aether signing off. 🌑{RESET}")
