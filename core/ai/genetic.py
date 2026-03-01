@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Optional
 
-from core.tools.firebase_tool import FirebaseConnector
+from core.infra.cloud.firebase import FirebaseConnector
 
 logger = logging.getLogger(__name__)
 

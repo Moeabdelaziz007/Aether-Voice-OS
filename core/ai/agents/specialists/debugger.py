@@ -9,7 +9,7 @@ results and feedback to implementing and design agents.
 import logging
 from typing import Any, Dict, Optional
 
-from core.ai.handover.handler import HandoverContext, MultiAgentOrchestrator
+from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
 from core.ai.handover_protocol import DebuggerOutput, IntentConfidence
 
 logger = logging.getLogger(__name__)

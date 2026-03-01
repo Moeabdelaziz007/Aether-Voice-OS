@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from core.ai.session import GeminiLiveSession
-    from core.transport.bus import GlobalBus
+    from core.infra.transport.bus import GlobalBus
 
 logger = logging.getLogger(__name__)
 

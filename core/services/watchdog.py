@@ -11,7 +11,7 @@ import re
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
-from core.transport.bus import GlobalBus
+from core.infra.transport.bus import GlobalBus
 
 logger = logging.getLogger(__name__)
 

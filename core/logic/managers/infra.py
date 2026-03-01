@@ -2,7 +2,7 @@ import logging
 import asyncio
 import os
 from typing import Any
-from core.tools.firebase_tool import FirebaseConnector
+from core.infra.cloud.firebase import FirebaseConnector
 from core.services.watchdog import SREWatchdog
 
 logger = logging.getLogger(__name__)

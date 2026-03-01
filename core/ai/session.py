@@ -33,7 +33,7 @@ from core.ai.handover_protocol import HandoverContext, HandoverStatus
 from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
 from core.utils.errors import AIConnectionError, AISessionExpiredError
-from core.utils.telemetry import (
+from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
 

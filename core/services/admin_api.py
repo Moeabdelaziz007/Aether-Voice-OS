@@ -59,7 +59,10 @@ class AdminAPIServer:
         self.thread = None
 
     def start(self):
-        self.server = HTTPServer(("127.0.0.1", self.port), AdminAPIHandler)
+        class ReusableHTTPServer(HTTPServer):
+            allow_reuse_address = True
+        
+        self.server = ReusableHTTPServer(("127.0.0.1", self.port), AdminAPIHandler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         logger.info(f"Admin API started on http://127.0.0.1:{self.port}")

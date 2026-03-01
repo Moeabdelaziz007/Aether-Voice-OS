@@ -27,21 +27,29 @@ class AetherEngine:
         self._config = config or load_config()
         self._setup_logging()
         
+        print("  Engine: Initializing Managers...", flush=True)
         self._router = ToolRouter()
         self._setup_vector_store()
-
+        
+        print("  Engine: Initializing AgentManager...", flush=True)
         self._agents = AgentManager(self._config, self._router, self._on_agent_handover)
         
+        print("  Engine: Initializing Gateway...", flush=True)
         self._gateway = AetherGateway(
             gateway_config=self._config.gateway,
             ai_config=self._config.ai,
+            audio_config=self._config.audio,
             tool_router=self._router,
             hive=self._agents._hive,
         )
 
+        print("  Engine: Initializing AudioManager...", flush=True)
         self._audio = AudioManager(self._config, self._gateway, self._on_affective_data)
+        print("  Engine: Initializing InfraManager...", flush=True)
         self._infra = InfraManager(self._gateway)
+        print("  Engine: Initializing AdminAPI...", flush=True)
         self._admin_api = AdminAPIServer(port=18790)
+        print("  Engine: State Ready.", flush=True)
         
         self._shutdown_event = asyncio.Event()
 
@@ -100,6 +108,7 @@ class AetherEngine:
         self._router.register_module(context_scraper)
 
     async def run(self) -> None:
+        print("🚀 Aether Engine: Neural Stream Active.", flush=True)
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, lambda: self._shutdown_event.set())
@@ -109,9 +118,17 @@ class AetherEngine:
         self._register_tools()
 
         try:
+            print("  Engine: Starting Audio Manager...", flush=True)
             await self._audio.start()
+            print("  Engine: Audio Ready.", flush=True)
+            
+            print("  Engine: Starting Admin API...", flush=True)
             self._admin_api.start()
+            
+            print("  Engine: Starting Watchdog...", flush=True)
             self._infra.start_watchdog()
+            
+            print("  Engine: Spawning Core Tasks...", flush=True)
 
             async with asyncio.TaskGroup() as tg:
                 tg.create_task(self._gateway.run(), name="gateway")

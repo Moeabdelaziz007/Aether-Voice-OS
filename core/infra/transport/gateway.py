@@ -27,21 +27,21 @@ from google.genai import types
 from websockets.asyncio.server import Server, ServerConnection
 
 from core.ai.session import GeminiLiveSession
-from core.transport.messages import (
+from core.infra.transport.messages import (
     AckMessage,
     ChallengeMessage,
     ErrorMessage,
     MessageType,
 )
-from core.transport.bus import GlobalBus
-from core.transport.session_state import (
+from core.infra.transport.bus import GlobalBus
+from core.infra.transport.session_state import (
     SessionMetadata,
     SessionState,
     SessionStateManager,
 )
 from core.infra.config import AIConfig, GatewayConfig
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
-from core.utils.telemetry import get_tracer
+from core.infra.telemetry import get_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -78,11 +78,13 @@ class AetherGateway:
         self,
         gateway_config: GatewayConfig,
         ai_config: AIConfig,
+        audio_config: Any,
         tool_router: ToolRouter,
         hive: HiveCoordinator,
     ) -> None:
         self._gateway_config = gateway_config
         self._ai_config = ai_config
+        self._audio_config = audio_config
         self._tool_router = tool_router
         self._hive = hive
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
@@ -107,7 +109,7 @@ class AetherGateway:
 
         # Audio queues are now owned by the gateway
         self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
-            maxsize=self._ai_config.audio.mic_queue_max
+            maxsize=self._audio_config.mic_queue_max
         )
         self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 

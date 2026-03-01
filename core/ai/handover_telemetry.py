@@ -16,7 +16,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
-from core.utils.telemetry import get_tracer
+from core.infra.telemetry import get_tracer
 
 logger = logging.getLogger(__name__)
 

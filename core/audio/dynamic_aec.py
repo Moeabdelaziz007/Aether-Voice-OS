@@ -470,18 +470,19 @@ class DynamicAEC:
         )
 
         self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
-
+        
+        # Frame accumulation for block processing
+        self.block_size = filter_length  # Process in filter-length blocks
+        
         # Ring buffers for delay compensation
         self.far_end_ring_buffer: deque[np.ndarray] = deque(maxlen=20)
         self.accumulated_far_end = BoundedBuffer(
             max_samples=sample_rate * 5
         )  # 5s limit
 
-        # Frame accumulation for block processing
         self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
         self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
         self.accumulated_samples = 0
-        self.block_size = filter_length  # Process in filter-length blocks
 
         # State
         self.state = AECState()
@@ -694,7 +695,7 @@ class DynamicAEC:
         self.double_talk_detector.reset()
         self.spectral_analyzer.reset()
         self.far_end_ring_buffer.clear()
-        self.accumulated_far_end = np.array([])
+        self.accumulated_far_end = BoundedBuffer(max_samples=self.sample_rate * 5)
         self.near_end_accumulator.clear()
         self.far_end_accumulator.clear()
         self.accumulated_samples = 0
