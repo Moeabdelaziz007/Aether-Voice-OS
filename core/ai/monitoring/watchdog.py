@@ -26,6 +26,9 @@ class WatchdogLogHandler(logging.Handler):
         self._callback = callback
 
     def emit(self, record: logging.LogRecord):
+        # Prevent recursive monitoring: ignore logs from this module or SREWatchdog itself
+        if record.name == __name__ or "watchdog" in record.name.lower():
+            return
         if record.levelno >= logging.ERROR:
             self._callback(record)
 
@@ -64,6 +67,7 @@ class SREWatchdog:
 
     def start(self):
         """Hook into system logging and start the watchdog loop."""
+        # Use deep hook to catch logs from all modules
         logging.getLogger().addHandler(self._log_handler)
         self._is_running = True
         self._loop_task = asyncio.create_task(self._watchdog_loop())
@@ -81,7 +85,6 @@ class SREWatchdog:
         while self._is_running:
             try:
                 # Check system metrics (simulated for now)
-                # In production, check memory/CPU/latency
                 await self._check_vitals()
                 await asyncio.sleep(10.0)
             except asyncio.CancelledError:
@@ -101,12 +104,21 @@ class SREWatchdog:
     def _on_log_error(self, record: logging.LogRecord):
         """Called whenever an ERROR or higher is logged."""
         message = record.getMessage()
+        # Non-blocking processing
         asyncio.create_task(self._process_failure(message))
 
     async def _process_failure(self, message: str):
         """Analyze failure and trigger healing if a pattern matches."""
+
         for pattern, action in self._healing_registry.items():
             if re.search(pattern, message, re.IGNORECASE):
+                # Throttle check (prevent spamming alerts for same pattern)
+                now = datetime.now().timestamp()
+                last_time = self._last_alert_time.get(pattern, 0)
+                if now - last_time < 5.0:  # 5s cooldown per pattern
+                    return
+                
+                self._last_alert_time[pattern] = now
                 logger.warning("🚨 SRE Watchdog detected critical pattern: '%s'", pattern)
                 
                 # Signal global health alert
@@ -115,13 +127,17 @@ class SREWatchdog:
                         "node_id": self._node_id,
                         "severity": "CRITICAL",
                         "pattern": pattern,
-                        "message": message,
+                        "message": message[:200], # Truncate message
                         "timestamp": datetime.now().isoformat(),
                     })
 
                 # Trigger autonomous healing
                 try:
-                    await action()
+                    logger.info("🛠️ Watchdog: Executing healing action for %s", pattern)
+                    result = action()
+                    if asyncio.iscoroutine(result):
+                        await result
+                    logger.info("✅ Watchdog: Healing action complete for %s", pattern)
                 except Exception as e:
                     logger.error("Failed to execute healing action for %s: %s", pattern, e)
                 return

@@ -229,6 +229,11 @@ class AetherGateway:
 
         return True
 
+    async def request_restart(self, reason: str = "System Requested") -> None:
+        """Triggers a session restart/reconnection."""
+        logger.info("🔄 Gateway Restart Requested: %s", reason)
+        self._session_restart_event.set()
+
     async def request_handoff(self, target_soul: str, reason: str = "") -> bool:
         """
         Request a handoff to a different soul/expert using Deep Handover (ADK 2.0).

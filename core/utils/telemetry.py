@@ -70,6 +70,27 @@ class TelemetryManager:
             # Fallback to a no-op tracer
             self.tracer = trace_api.get_no_op_tracer()
 
+    def record_usage(self, session_id: str, prompt_tokens: int, completion_tokens: int, model: str = "gemini-2.0-flash"):
+        """Record token usage and estimate cost."""
+        # Pricing constants (approximate for Gemini 2.0 Flash)
+        prices = {
+            "gemini-2.0-flash": {"input": 0.10 / 1_000_000, "output": 0.40 / 1_000_000},
+            "gemini-2.0-pro": {"input": 1.25 / 1_000_000, "output": 5.00 / 1_000_000},
+        }
+        
+        rates = prices.get(model, prices["gemini-2.0-flash"])
+        cost = (prompt_tokens * rates["input"]) + (completion_tokens * rates["output"])
+        
+        logger.info("💸 [COST] Session %s: Prompt=%d, Completion=%d, Estimated Cost=$%.6f", 
+                    session_id, prompt_tokens, completion_tokens, cost)
+        
+        # Add to current span if any
+        span = trace_api.get_current_span()
+        if span.is_recording():
+            span.set_attribute("gen_ai.usage.prompt_tokens", prompt_tokens)
+            span.set_attribute("gen_ai.usage.completion_tokens", completion_tokens)
+            span.set_attribute("gen_ai.usage.cost", cost)
+
     def get_tracer(self) -> trace_api.Tracer:
         if not self._is_initialized:
             self.initialize()
@@ -80,3 +101,6 @@ _manager = TelemetryManager()
 
 def get_tracer() -> trace_api.Tracer:
     return _manager.get_tracer()
+
+def record_usage(session_id: str, prompt_tokens: int, completion_tokens: int, model: str = "gemini-2.0-flash"):
+    _manager.record_usage(session_id, prompt_tokens, completion_tokens, model)

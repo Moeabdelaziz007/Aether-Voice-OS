@@ -33,6 +33,9 @@ from core.ai.handover_protocol import HandoverContext, HandoverStatus
 from core.identity.package import SoulManifest
 from core.utils.config import AIConfig
 from core.utils.errors import AIConnectionError, AISessionExpiredError
+from core.utils.telemetry import (
+    record_usage,
+)  # Import record_usage from telemetry module
 
 logger = logging.getLogger(__name__)
 
@@ -378,6 +381,9 @@ class GeminiLiveSession:
             try:
                 turn = session.receive()
                 async for response in turn:
+                    # ── Handle Usage Metadata (Cost Tracking) ────────
+                    self._handle_usage(response)
+
                     # ── Handle tool calls (function calling) ─────────
                     if response.tool_call:
                         await self._handle_tool_call(session, response.tool_call)
@@ -434,6 +440,20 @@ class GeminiLiveSession:
                     break
                 logger.error("Receive error: %s", exc, exc_info=True)
                 await asyncio.sleep(0.5)  # Brief backoff before retry
+
+    def _handle_usage(self, response: types.LiveConnectResponse) -> None:
+        """Extract and record token usage from the response."""
+        if hasattr(response, "usage_metadata") and response.usage_metadata:
+            usage = response.usage_metadata
+            prompt_tokens = usage.prompt_token_count or 0
+            completion_tokens = usage.candidates_token_count or 0
+            if prompt_tokens > 0 or completion_tokens > 0:
+                record_usage(
+                    session_id=str(id(self)),
+                    prompt_tokens=prompt_tokens,
+                    completion_tokens=completion_tokens,
+                    model=self._config.model.value,
+                )
 
     async def _handle_tool_call(self, session, tool_call) -> None:
         """

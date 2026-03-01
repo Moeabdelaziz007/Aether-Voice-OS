@@ -43,6 +43,7 @@ from core.audio.capture import AudioCapture
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.playback import AudioPlayback
 from core.audio.processing import AdaptiveVAD
+from core.ai.monitoring.watchdog import SREWatchdog
 from core.identity.package import AthPackage
 from core.identity.registry import AetherRegistry
 from core.tools import hive_memory, memory_tool, system_tool, tasks_tool, vision_tool
@@ -146,9 +147,15 @@ class AetherEngine:
             self._firebase, api_key=self._config.ai.api_key
         )
 
-        # Phase 4: Proactive Intelligence Engine
         self._proactive_engine = ProactiveInterventionEngine()
         self._proactive_agent = CodeAwareProactiveAgent()
+
+        # Phase 5: SRE Autonomy Watchdog
+        self._watchdog = SREWatchdog(
+            node_id=f"aether-node-{os.getpid()}",
+            bus=self._gateway._bus,  # Use gateway's bus
+            gateway=self._gateway,
+        )
 
         # ADK Tool Registry (legacy — kept for backward compat)
         self._tools: dict[str, Any] = {}
@@ -450,6 +457,9 @@ class AetherEngine:
                 tg.create_task(self._playback.run(), name="audio-playback")
                 tg.create_task(self._admin_sync_loop(), name="admin-sync")
                 tg.create_task(self._wait_for_shutdown(), name="shutdown-watcher")
+                
+                # Start Watchdog
+                self._watchdog.start()
 
         except* KeyboardInterrupt:
             logger.info("Keyboard interrupt received")
@@ -515,6 +525,7 @@ class AetherEngine:
         await self._playback.stop()
         self._registry.stop_watcher()
         self._admin_api.stop()
+        self._watchdog.stop()
 
         # End Firebase session with summary
         if self._firebase.is_connected:

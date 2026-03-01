@@ -140,11 +140,18 @@ class SessionStateManager:
                     node_id,
                     reason,
                 )
+                # Save state change locally
                 async with self._lock:
-                    old_state = self._state
                     self._state = new_state
                     self._state_change_event.set()
                     self._state_change_event.clear()
+                
+                # If we received a state change from another node, 
+                # we might need to restore our local metadata if it's missing
+                if not self._metadata and self._bus:
+                    session_id = data.get("session_id")
+                    if session_id:
+                        await self.restore_from_bus(session_id)
 
                 # Notify local clients of the synced change
                 if self._broadcast:
@@ -251,7 +258,36 @@ class SessionStateManager:
             self._state_change_event.set()
             self._state_change_event.clear()
 
+            # Persist to Redis (Aether Persistent Snapshot)
+            if self._bus and self._metadata:
+                await self.persist_to_bus()
+
             return True
+
+    async def persist_to_bus(self) -> bool:
+        """Persist current session metadata to the Global Bus KV store."""
+        if not self._bus or not self._metadata:
+            return False
+            
+        snapshot = await self.create_snapshot()
+        # Save by session ID
+        success = await self._bus.set_state(f"session:{self._metadata.session_id}", snapshot, ex=3600) # 1hr TTL
+        if success:
+            # Mark as active session for discovery
+            await self._bus.set_state("active_session_id", self._metadata.session_id, ex=3600)
+            logger.debug("A2A [STATE] Persisted session %s to Redis", self._metadata.session_id)
+        return success
+
+    async def restore_from_bus(self, session_id: str) -> bool:
+        """Restore session metadata from the Global Bus KV store."""
+        if not self._bus:
+            return False
+            
+        snapshot = await self._bus.get_state(f"session:{session_id}")
+        if snapshot:
+            logger.info("A2A [STATE] Found persistent snapshot for %s, restoring...", session_id)
+            return await self.restore_from_snapshot(snapshot)
+        return False
 
     def _is_valid_transition(
         self, from_state: SessionState, to_state: SessionState
@@ -316,6 +352,9 @@ class SessionStateManager:
         if self._metadata:
             self._metadata.message_count += 1
             self._metadata.last_activity = datetime.now()
+            # Proactively persist on activity
+            if self._bus:
+                asyncio.create_task(self.persist_to_bus())
 
     def increment_handoff_count(self) -> None:
         """Increment the handoff counter in metadata."""
