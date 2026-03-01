@@ -137,6 +137,7 @@ class HandoverContext(BaseModel):
     # Payload and history
     payload: Dict[str, Any] = Field(default_factory=dict)
     history: List[str] = Field(default_factory=list)
+    compressed_seed: Optional[Dict[str, Any]] = None
 
     # Timing
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())

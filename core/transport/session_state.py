@@ -52,6 +52,7 @@ class SessionMetadata:
     last_activity: datetime = field(default_factory=datetime.now)
     handoff_count: int = 0
     error_count: int = 0
+    compressed_seed: Optional[dict[str, Any]] = None
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary for WebSocket broadcast."""
@@ -63,6 +64,7 @@ class SessionMetadata:
             "last_activity": self.last_activity.isoformat(),
             "handoff_count": self.handoff_count,
             "error_count": self.error_count,
+            "compressed_seed": self.compressed_seed,
         }
 
 

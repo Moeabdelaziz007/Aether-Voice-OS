@@ -30,6 +30,7 @@ from core.ai.handover_protocol import (
     ValidationCheckpoint,
     get_handover_protocol,
 )
+from core.ai.compression import NeuralSummarizer
 from core.ai.handover_telemetry import (
     FailureCategory,
     HandoverOutcome,
@@ -60,6 +61,7 @@ class HiveCoordinator:
         default_soul_name: str = "ArchitectExpert",
         on_handover: Optional[Callable] = None,
         enable_deep_handover: bool = True,
+        ai_config: Optional[AIConfig] = None,
     ) -> None:
         self._registry = registry
         self._router = router
@@ -79,6 +81,9 @@ class HiveCoordinator:
         self._telemetry = get_telemetry() if enable_deep_handover else None
         self._active_handovers: Dict[str, HandoverContext] = {}
         self._handover_history: List[str] = []
+
+        # Neural Summarizer (Context Compression)
+        self._summarizer = NeuralSummarizer(ai_config) if ai_config else None
 
         # Safety: Rollback and Checkpointing
         self._last_successful_soul: Optional[AthPackage] = (
@@ -209,6 +214,14 @@ class HiveCoordinator:
                         failure_reason=message,
                     )
                 return False, None, message
+
+            # Trigger Neural Compression (Semantic Seed generation)
+            if self._summarizer and self._summarizer.should_compress(context):
+                logger.info("✦ Compressing context for handover %s", context.handover_id)
+                # Note: This is an async call in a potentially legacy sync context.
+                # In ADK 2.0, most Hive operations are transitioning to async.
+                # For now, we'll create a task to run it.
+                asyncio.create_task(self._apply_compression(context))
 
             # Store active handover
             self._active_handovers[context.handover_id] = context
@@ -631,3 +644,16 @@ class HiveCoordinator:
             # Only suggest if the expertise score is significantly high
             return best_expert.manifest.name
         return None
+
+    async def _apply_compression(self, context: HandoverContext) -> None:
+        """Background helper to compress context and update it."""
+        if not self._summarizer:
+            return
+
+        try:
+            seed = await self._summarizer.compress(context)
+            if seed:
+                context.compressed_seed = seed
+                logger.info("✦ Handover %s now has a Semantic Seed.", context.handover_id)
+        except Exception as e:
+            logger.error("Failed to apply compression: %s", e)

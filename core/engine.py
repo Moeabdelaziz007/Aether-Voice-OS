@@ -107,6 +107,7 @@ class AetherEngine:
             router=self._router,
             default_soul_name="ArchitectExpert",
             on_handover=self._on_agent_handover,
+            ai_config=self._config.ai,
         )
 
         # Gateway is the Single Source of Truth for the session
