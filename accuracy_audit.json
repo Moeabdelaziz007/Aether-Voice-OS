@@ -1,0 +1,25 @@
+{
+    "timestamp": 1772372420.051976,
+    "healing_accuracy": [
+        {
+            "case": "Syntax Error",
+            "success": true,
+            "captured_context": true
+        },
+        {
+            "case": "Import Error",
+            "success": true,
+            "captured_context": true
+        },
+        {
+            "case": "Key Error",
+            "success": true,
+            "captured_context": true
+        }
+    ],
+    "handover_integrity": {
+        "hops": 10,
+        "success": true,
+        "bits_preserved": "100%"
+    }
+}
