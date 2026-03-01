@@ -29,16 +29,16 @@ and autonomous behaviors into a portable, verifiable archive.
 {
   "name": "AetherCore",
   "version": "1.0.0",
-  "author": "The Aether Architect",
-  "description": "Core Aether persona with full multimodal capabilities",
-  "capabilities": ["voice.stream", "vision.render", "tool.execute"],
-  "min_runtime": "0.1.0",
-  "rbac": {
-    "workspace": "ro",
-    "network": "restricted",
-    "filesystem": "sandbox"
+  "persona": "The core systems architect for Aether OS...",
+  "voice_id": "Puck",
+  "language": "ar-EG",
+  "capabilities": ["audio.input", "audio.output", "tool.execute"],
+  "expertise": {
+    "python_coding": 0.95,
+    "cloud_architecture": 0.88
   },
-  "checksum_algorithm": "sha256"
+  "public_key": "ed25519-public-key-hex",
+  "checksum": "sha256-of-all-files-except-this-one"
 }
 ```
 
@@ -46,54 +46,48 @@ and autonomous behaviors into a portable, verifiable archive.
 
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `name` | string | ✅ | Unique package identifier |
-| `version` | semver | ✅ | Package version (Major.Minor.Patch) |
-| `author` | string | ✅ | Package author or organization |
-| `capabilities` | string[] | ✅ | Requested permissions |
-| `min_runtime` | semver | ❌ | Minimum Aether OS version |
-| `rbac` | object | ❌ | Fine-grained access controls |
+| `name` | string | ✅ | Unique package identifier (1-64 chars) |
+| `version` | semver | ✅ | Package version (e.g., `1.0.0`) |
+| `persona` | string | ✅ | Behavioral identity description |
+| `capabilities` | string[] | ✅ | Permissions (e.g., `audio.input`, `ui.render`) |
+| `voice_id` | string | ❌ | Gemini voice name (Default: `Puck`) |
+| `public_key` | hex | ❌ | Ed25519 public key for gateway auth |
+| `checksum` | hex | ❌ | SHA256 integrity hash |
 
 ---
 
-## Capability RBAC Matrix
+## Capability Matrix
 
-| Capability | Risk | Description | Auto-Granted |
-| :--- | :--- | :--- | :--- |
-| `voice.stream` | Low | Real-time audio I/O | ✅ |
-| `vision.render` | Medium | UI/Canvas manipulation | ✅ |
-| `tool.execute` | High | System command execution | ❌ |
-| `workspace.rw` | Critical | Write access to codebase | ❌ |
+| Capability | Risk | Description |
+| :--- | :--- | :--- |
+| `audio.input` | Low | Real-time mic stream access |
+| `audio.output` | Low | Speaker playback access |
+| `tool.execute` | High | Sandboxed system tool execution |
+| `memory.read` | Medium | Read-only access to Firebase long-term memory |
+| `ui.render` | Low | Next.js visualizer updates |
 
 ---
 
 ## Integrity Verification
 
-All packages must include a `checksums.sha256` file:
-
-```
-e3b0c44298fc1c149afbf4c8996fb924...  manifest.json
-a7ffc6f8bf1ed76651c14756a061d662...  Soul.md
-d7a8fbb307d7809469ca9abcb0082e4f...  Skills.md
-```
-
-### Verification Flow
+The `.ath` package uses deterministic SHA256 hashing. The `checksum` in `manifest.json` must match the hash of all other files in the directory (sorted alphabetically).
 
 ```python
-from core.registry import AthPackage
+from core.identity.package import AthPackage
 
-pkg = AthPackage("brain/packages/AetherCore")
-assert pkg.verify_integrity(), "Package integrity check failed!"
+pkg = AthPackage.load(Path("agents/AetherCore"))
+# Automatically verifies checksum if present in manifest
 ```
 
 ---
 
-## Hot-Swap Protocol
+## Expert-Level Expertise Scores
 
-1. New package is dropped into `brain/packages/`.
-2. `AetherRegistry.scan()` detects the new directory.
-3. Integrity verification runs automatically.
-4. If valid, state migration transfers context from old to new persona.
-5. Old package is archived (not deleted) for rollback safety.
+The `expertise` mapping allows the `HiveCoordinator` to select the best agent for a given task:
+
+- `0.0 - 0.3`: Familiarity
+- `0.4 - 0.7`: Competency
+- `0.8 - 1.0`: Expert Mastery
 
 ---
 

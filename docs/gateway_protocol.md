@@ -1,146 +1,124 @@
-# 🛰️ OpenClaw Gateway Protocol — Aether Implementation
+# 🛰️ OpenClaw Gateway Protocol V2 — Aether OS
 
-> Secure, low-latency WebSocket protocol for AI agent orchestration.
-> Port: **18789** | Auth: **Ed25519** | Heartbeat: **15,000ms**
+> Secure, Zero-Latency Neural Handshake & Handover Protocol.
+> Port: **18789** | Auth: **Ed25519 (L3)** | Handover: **ADK 2.0 (Deep)**
 
 ---
 
-## 📡 Connection Lifecycle
+## 📡 Modern Connection Lifecycle
 
 ```mermaid
 sequenceDiagram
-    participant C as Client
+    participant C as Client (e.g. Dashboard)
     participant G as Aether Gateway
+    participant H as Hive Coordinator
 
-    C->>G: WebSocket Connect (ws://host:18789)
-    G->>C: connect.challenge {challenge, tickIntervalMs}
-    C->>G: connect.response {identity, signature}
-    G->>C: connect.ack {permissions, caps}
+    C->>G: WebSocket Connect
+    G->>C: connect.challenge {challenge_hex, server_version}
+    C->>G: connect.response {client_id, signature, capabilities}
+    G->>C: connect.ack {session_id, tick_interval_s, granted_caps}
 
-    loop Every 15s
-        G->>C: tick {timestamp}
+    rect rgb(20, 20, 30)
+    Note right of G: Steady State (Heartbeat every 15s)
+    G->>C: tick {timestamp}
+    C->>G: pong
     end
 
-    C->>G: audio.chunk / tool.call / ui.update
-    G->>C: audio.response / tool.result / ui.state
+    rect rgb(30, 20, 20)
+    Note right of G: Deep Handover (ADK 2.0)
+    G->>H: request_handoff(target_soul)
+    H->>G: pre_warm_soul(target_soul)
+    G->>C: ui.update {state: "HANDING_OFF"}
+    end
 ```
 
 ---
 
-## Phase 1: Handshake
+## Phase 1: Cryptographic Handshake
+
+The V2 protocol uses a non-interactive challenge-response based on Ed25519.
 
 ### `connect.challenge` (Server → Client)
-
-The gateway issues a unique challenge upon connection.
 
 ```json
 {
   "type": "connect.challenge",
-  "challenge": "a3f8e2c1-7b4d-4e9f-b6a2-1c3d5e7f9a0b",
-  "tickIntervalMs": 15000,
-  "serverVersion": "0.1.0",
-  "serverIdentity": "AetherGateway"
+  "challenge": "7f8b...", // 32 bytes random hex
+  "server_version": "2.0.0"
 }
 ```
 
 ### `connect.response` (Client → Server)
 
-Client signs the challenge with its Ed25519 private key.
-
 ```json
 {
   "type": "connect.response",
-  "identity": "base64-encoded-public-key",
-  "signature": "base64-encoded-signature-of-challenge",
-  "clientVersion": "1.0.0",
-  "requestedCaps": ["voice.stream", "tool.execute"]
+  "client_id": "AetherDashboard", // Or public-key-hex
+  "signature": "...", // Ed25519 sign(challenge)
+  "capabilities": ["audio.input", "ui.render"]
 }
 ```
 
 ### `connect.ack` (Server → Client)
 
-Server validates signature and returns granted capabilities.
-
 ```json
 {
   "type": "connect.ack",
-  "sessionId": "uuid-v4",
-  "permissions": ["voice.stream"],
-  "deniedCaps": ["tool.execute"],
-  "caps": {
-    "multimodal": true,
-    "workspace": "ro",
-    "isolation": "sandbox"
-  }
+  "session_id": "u-u-i-d",
+  "granted_capabilities": ["audio.input"],
+  "tick_interval_s": 15.0
 }
 ```
 
-> ⚠️ If `tool.execute` is denied, the client must request elevated
-> permissions through a separate `caps.elevate` message.
+---
+
+## Phase 2: Performance Optimizations
+
+### ⚡ Speculative Pre-warming
+
+When a handover is initiated, the Gateway speculatively initializes the `GeminiLiveSession` for the target soul *before* the current session disconnects. This reduces the effective latency between experts by **~800ms**.
+
+### 🔗 Deep Handover (ADK 2.0)
+
+Handovers now transfer **Full Neural Context** (compressed delta diffs) between agents.
+
+1. `prepare_handoff`: Serializes current session state.
+2. `negotiate`: Target agent reviews the task context.
+3. `commit`: Final transition and session swap.
 
 ---
 
-## Phase 2: Steady State
+## Message Schema V2
 
-### `tick` (Server → Client, every 15s)
+### Audio Transport (Binary)
 
-```json
-{
-  "type": "tick",
-  "timestamp": 1740422400000,
-  "activeClients": 3,
-  "serverLoad": 0.42
-}
-```
+Client sends raw **16kHz 16-bit Mono PCM** as binary WebSocket frames. Server broadcasts the same back to visualizers/speakers.
 
-**Dead Client Pruning:** Clients that fail to respond to 2 consecutive
-ticks are automatically disconnected and their session state archived.
+### JSON Control Plane
+
+| Type | Direction | Payload Example |
+| :--- | :--- | :--- |
+| `tick` | S → C | `{"timestamp": 1740...}` |
+| `audio.chunk` | C → S | `{"data": "...", "mime": "audio/pcm"}` |
+| `tool.call` | S → C | `{"name": "get_weather", "args": {...}}` |
+| `ui.update` | S → C | `{"state": "CONNECTED", "soul": "Moe"}` |
 
 ---
 
-## Message Types
+## Error & Status Codes
 
-### Audio
-
-| Message | Direction | Description |
+| Code | Label | Meaning |
 | :--- | :--- | :--- |
-| `audio.chunk` | Client → Server | PCM 16kHz mono, base64 encoded |
-| `audio.response` | Server → Client | Gemini TTS response audio |
-| `audio.interrupt` | Server → Client | Barge-in signal for clean cut |
-
-### Tools
-
-| Message | Direction | Description |
-| :--- | :--- | :--- |
-| `tool.call` | Server → Client | Function call from Gemini |
-| `tool.result` | Client → Server | Execution result |
-| `tool.error` | Client → Server | Execution failure |
-
-### UI
-
-| Message | Direction | Description |
-| :--- | :--- | :--- |
-| `ui.update` | Server → Client | State changes for visualizer |
-| `ui.event` | Client → Server | User interaction events |
+| `100` | `SUCCESS` | Operation normal |
+| `401` | `AUTH_FAILED` | Invalid Ed25519 signature |
+| `403` | `CAP_DENIED` | Missing required capability |
+| `408` | `TIMEOUT` | Handshake or Tick timeout |
+| `500` | `CRASH` | Internal engine failure |
 
 ---
 
-## Error Codes
+## Security (First Principles)
 
-| Code | Name | Description |
-| :--- | :--- | :--- |
-| `4001` | `AUTH_FAILED` | Signature verification failed |
-| `4002` | `CAP_DENIED` | Requested capability not granted |
-| `4003` | `TICK_TIMEOUT` | Client missed 2+ heartbeats |
-| `4004` | `RATE_LIMITED` | Too many requests per second |
-| `4005` | `INVALID_MSG` | Malformed message payload |
-
----
-
-## Security Considerations
-
-1. **Transport:** TLS 1.3 enforced in production.
-2. **Authentication:** Ed25519 signatures prevent replay attacks.
-3. **Authorization:** Least-privilege CBAC model.
-4. **Isolation:** Tool execution runs in sandboxed containers.
-5. **Audit:** All messages logged with timestamps for forensic analysis.
+- **Zero Trust**: Every tool execution requires internal `BiometricMiddleware` check.
+- **Identity Integrity**: All `.ath` packages must be signed and verified by the Registry.
+- **Telemetry**: All handshakes and tool calls are traced via OTLP for real-time audit logs.
