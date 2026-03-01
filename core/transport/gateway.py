@@ -33,6 +33,7 @@ from core.transport.messages import (
     ErrorMessage,
     MessageType,
 )
+from core.transport.bus import GlobalBus
 from core.transport.session_state import (
     SessionMetadata,
     SessionState,
@@ -86,8 +87,17 @@ class AetherGateway:
         self._hive = hive
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
 
+        # Global State Bus
+        self._bus = GlobalBus(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=int(os.getenv("REDIS_PORT", 6379)),
+        )
+
         # Session State Manager (Single Source of Truth)
-        self._state_manager = SessionStateManager(broadcast_callback=self.broadcast)
+        self._state_manager = SessionStateManager(
+            broadcast_callback=self.broadcast,
+            bus=self._bus,
+        )
 
         # Legacy session reference (now managed by state manager)
         self._server: Optional[Server] = None
@@ -298,6 +308,10 @@ class AetherGateway:
 
     async def run(self) -> None:
         """Start the WebSocket server and the main session management loop."""
+        
+        # Connect to Global Bus
+        await self._bus.connect()
+
         self._running = True
         self._server = await websockets.serve(
             self._handle_connection,

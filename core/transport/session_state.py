@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any, Optional
 
 if TYPE_CHECKING:
     from core.ai.session import GeminiLiveSession
+    from core.transport.bus import GlobalBus
 
 logger = logging.getLogger(__name__)
 
@@ -96,17 +97,58 @@ class SessionStateManager:
         SessionState.SHUTDOWN: [],  # Terminal state
     }
 
-    def __init__(self, broadcast_callback: Optional[callable] = None) -> None:
+    def __init__(
+        self,
+        broadcast_callback: Optional[callable] = None,
+        bus: Optional["GlobalBus"] = None,
+    ) -> None:
         self._state = SessionState.INITIALIZING
         self._metadata: Optional[SessionMetadata] = None
         self._session: Optional["GeminiLiveSession"] = None
         self._lock = asyncio.Lock()
         self._broadcast = broadcast_callback
+        self._bus = bus
         self._state_change_event = asyncio.Event()
         self._health_check_task: Optional[asyncio.Task] = None
         self._last_health_check: datetime = datetime.now()
         self._consecutive_errors: int = 0
         self._max_consecutive_errors: int = 3
+
+        if self._bus:
+            asyncio.create_task(self._setup_bus_subscriptions())
+
+    async def _setup_bus_subscriptions(self) -> None:
+        """Subscribe to global state changes."""
+        if self._bus:
+            await self._bus.subscribe("state_change", self._on_global_state_change)
+
+    async def _on_global_state_change(self, data: dict[str, Any]) -> None:
+        """Handle state changes published by other nodes."""
+        new_state_name = data.get("state")
+        reason = data.get("reason", "Global sync")
+        node_id = data.get("node_id", "Unknown")
+
+        try:
+            new_state = SessionState[new_state_name]
+            if new_state != self._state:
+                logger.info(
+                    "A2A [STATE] Global Sync: %s -> %s (Node: %s, Reason: %s)",
+                    self._state.name,
+                    new_state.name,
+                    node_id,
+                    reason,
+                )
+                async with self._lock:
+                    old_state = self._state
+                    self._state = new_state
+                    self._state_change_event.set()
+                    self._state_change_event.clear()
+
+                # Notify local clients of the synced change
+                if self._broadcast:
+                    await self._broadcast("engine_state", {"state": new_state.name})
+        except (KeyError, ValueError):
+            logger.warning("A2A [STATE] Received invalid global state: %s", new_state_name)
 
     @property
     def state(self) -> SessionState:
@@ -191,6 +233,17 @@ class SessionStateManager:
 
             # Broadcast state change
             await self._broadcast_state_change(old_state, new_state, reason)
+
+            # Publish to Global Bus
+            if self._bus:
+                await self._bus.publish(
+                    "state_change",
+                    {
+                        "state": new_state.name,
+                        "reason": reason,
+                        "timestamp": datetime.now().isoformat(),
+                    },
+                )
 
             # Set event for waiters
             self._state_change_event.set()

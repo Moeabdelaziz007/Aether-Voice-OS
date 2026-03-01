@@ -44,3 +44,7 @@ opentelemetry-api>=1.25.0
 opentelemetry-sdk>=1.25.0
 opentelemetry-exporter-otlp>=1.25.0
 arize-phoenix>=4.0.0
+
+# Redis (Global State Bus)
+redis>=5.0.0
+hiredis>=3.0.0
