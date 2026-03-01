@@ -9,7 +9,7 @@ implementing and verification agents.
 import logging
 from typing import Optional
 
-from core.ai.agents.orchestrator import HandoverContext, MultiAgentOrchestrator
+from core.ai.handover.handler import HandoverContext, MultiAgentOrchestrator
 from core.ai.handover_protocol import ArchitectOutput, IntentConfidence
 
 logger = logging.getLogger(__name__)

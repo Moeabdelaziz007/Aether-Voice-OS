@@ -7,7 +7,7 @@ try:
 except ImportError:
     firestore = None
 
-from core.cloud.firebase.schemas import SessionMetadata
+from core.infra.cloud.firebase.schemas import SessionMetadata
 
 logger = logging.getLogger(__name__)
 

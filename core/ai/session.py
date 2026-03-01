@@ -24,14 +24,14 @@ from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     from core.tools.router import ToolRouter
-    from core.transport.gateway import AetherGateway
+    from core.infra.transport.gateway import AetherGateway
 
 from google import genai
 from google.genai import types
 
 from core.ai.handover_protocol import HandoverContext, HandoverStatus
 from core.identity.package import SoulManifest
-from core.utils.config import AIConfig
+from core.infra.config import AIConfig
 from core.utils.errors import AIConnectionError, AISessionExpiredError
 from core.utils.telemetry import (
     record_usage,
@@ -83,6 +83,7 @@ class GeminiLiveSession:
         self._injected_handover_context: Optional[HandoverContext] = None
         self._handover_acknowledgments: Dict[str, str] = {}
         self._soul_instruction_cache: Optional[str] = None
+        self._start_time: datetime = datetime.now()
 
     def _build_session_config(self) -> types.LiveConnectConfig:
         """Build the LiveConnectConfig with tool declarations."""
@@ -288,11 +289,15 @@ class GeminiLiveSession:
                     # Proactive Pulse (10s)
                     if now - last_proactive_pulse > 10.0:
                         logger.debug("Proactive Vision: Sending screenshot to Gemini")
+                        # Pulse with Temporal Grounding
                         await session.send_realtime_input(
                             parts=[
                                 types.Part.from_bytes(
                                     data=image_bytes, mime_type="image/png"
-                                )
+                                ),
+                                types.Part.from_text(
+                                    text=f"[Temporal Grounding: T+{int(now - self._start_time.timestamp())}s]"
+                                ),
                             ]
                         )
                         # Broadcast vision pulse to UI for explicit feedback

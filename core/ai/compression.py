@@ -16,7 +16,7 @@ from google import genai
 from google.genai import types
 
 from core.ai.handover_protocol import HandoverContext
-from core.utils.config import AIConfig
+from core.infra.config import AIConfig
 
 logger = logging.getLogger(__name__)
 

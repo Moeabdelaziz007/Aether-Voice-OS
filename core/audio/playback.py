@@ -18,7 +18,7 @@ from typing import Optional
 import pyaudio
 
 from core.audio.state import audio_state
-from core.utils.config import AudioConfig
+from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
 
 logger = logging.getLogger(__name__)

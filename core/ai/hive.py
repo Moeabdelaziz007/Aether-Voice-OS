@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from core.identity.package import AthPackage
-    from core.identity.registry import AetherRegistry
+    from core.services.registry import AetherRegistry
     from core.tools.router import ToolRouter
 
 from core.ai.handover_protocol import (

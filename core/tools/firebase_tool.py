@@ -6,7 +6,7 @@ from typing import Any, Optional
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-from core.utils.config import get_firebase_cert, load_config
+from core.infra.config import get_firebase_cert, load_config
 
 logger = logging.getLogger(__name__)
 

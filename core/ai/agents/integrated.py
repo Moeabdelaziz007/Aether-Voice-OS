@@ -1,7 +1,7 @@
 import logging
 
 from core.ai.agents.bridge import ADKGeminiBridge
-from core.ai.agents.orchestrator import MultiAgentOrchestrator
+from core.ai.handover.handler import MultiAgentOrchestrator
 from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
     ProactiveInterventionEngine,

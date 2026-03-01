@@ -29,7 +29,7 @@ from typing import Callable, Optional
 from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
 from core.audio.playback import AudioPlayback
-from core.utils.config import AetherConfig, load_config
+from core.infra.config import AetherConfig, load_config
 
 logger = logging.getLogger(__name__)
 

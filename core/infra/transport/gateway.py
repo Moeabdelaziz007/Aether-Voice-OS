@@ -39,7 +39,7 @@ from core.transport.session_state import (
     SessionState,
     SessionStateManager,
 )
-from core.utils.config import AIConfig, GatewayConfig
+from core.infra.config import AIConfig, GatewayConfig
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
 from core.utils.telemetry import get_tracer
 
