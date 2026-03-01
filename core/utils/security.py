@@ -15,23 +15,28 @@ import nacl.signing
 logger = logging.getLogger(__name__)
 
 
-def verify_signature(public_key_hex: str, signature_hex: str, message: bytes) -> bool:
+def verify_signature(public_key: str | bytes, signature: str | bytes, message: str | bytes) -> bool:
     """
     Verify an Ed25519 signature using PyNaCl.
 
     Args:
-        public_key_hex: The 32-byte public key in hex format.
-        signature_hex: The 64-byte signature in hex format.
-        message: The raw bytes that were signed.
+        public_key: The 32-byte public key (hex string or bytes).
+        signature: The 64-byte signature (hex string or bytes).
+        message: The raw message bytes or string that was signed.
 
     Returns:
         True if the signature is valid, False otherwise.
     """
     try:
-        verify_key = nacl.signing.VerifyKey(
-            public_key_hex, encoder=nacl.encoding.HexEncoder
-        )
-        verify_key.verify(message, signature_hex, encoder=nacl.encoding.HexEncoder)
+        # Convert hex inputs to bytes if needed
+        import nacl.encoding
+        
+        pk_bytes = public_key if isinstance(public_key, bytes) else bytes.fromhex(public_key)
+        sig_bytes = signature if isinstance(signature, bytes) else bytes.fromhex(signature)
+        msg_bytes = message if isinstance(message, bytes) else message.encode() if isinstance(message, str) else message
+
+        verify_key = nacl.signing.VerifyKey(pk_bytes)
+        verify_key.verify(msg_bytes, sig_bytes)
         return True
     except (nacl.exceptions.BadSignatureError, Exception) as exc:
         logger.warning("Signature verification failed: %s", exc)

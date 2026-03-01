@@ -40,8 +40,11 @@ from core.transport.session_state import (
 )
 from core.utils.config import AIConfig, GatewayConfig
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
+from core.utils.telemetry import get_tracer
 
 logger = logging.getLogger(__name__)
+
+tracer = get_tracer()
 
 
 class ClientSession:
@@ -81,6 +84,7 @@ class AetherGateway:
         self._ai_config = ai_config
         self._tool_router = tool_router
         self._hive = hive
+        self._hive.set_pre_warm_callback(self.pre_warm_soul)
 
         # Session State Manager (Single Source of Truth)
         self._state_manager = SessionStateManager(broadcast_callback=self.broadcast)
@@ -100,6 +104,10 @@ class AetherGateway:
         # Client management
         self._clients: dict[str, ClientSession] = {}
         self._lock = asyncio.Lock()
+
+        # Speculative Pre-warming
+        self._pre_warmed_session: Optional[GeminiLiveSession] = None
+        self._pre_warm_lock = asyncio.Lock()
 
     @property
     def audio_in_queue(self) -> asyncio.Queue[dict[str, object]]:
@@ -248,6 +256,46 @@ class AetherGateway:
         logger.error("⚡ Deep Handoff failed: %s", message)
         return False
 
+    async def pre_warm_soul(self, soul_name: str) -> None:
+        """
+        Speculatively initialize a session for the next soul.
+        This runs in the background to hide connection latency.
+        """
+        async with self._pre_warm_lock:
+            if self._pre_warmed_session:
+                if self._pre_warmed_session._soul.name == soul_name:
+                    logger.debug("Soul %s already pre-warmed", soul_name)
+                    return
+                # Cancel previous pre-warm if different soul
+                await self._pre_warmed_session.stop()
+                self._pre_warmed_session = None
+
+            logger.info("⚡ Speculative Pre-warm: Initializing '%s' in background...", soul_name)
+            try:
+                target_soul = self._hive._registry.get(soul_name)
+                session = GeminiLiveSession(
+                    config=self._ai_config,
+                    audio_in_queue=self._audio_in,
+                    audio_out_queue=self._audio_out,
+                    on_interrupt=self._on_interrupt,
+                    on_tool_call=self._on_tool_call,
+                    tool_router=self._tool_router,
+                    soul_manifest=target_soul.manifest,
+                    gateway=self,
+                )
+
+                # Inject handover context if available
+                pending = self._hive.get_pending_handover_for_target(soul_name)
+                if pending:
+                    session.inject_handover_context(pending)
+
+                # Start connection in background
+                # Note: We don't await connect() here to non-block the main flow
+                asyncio.create_task(session.connect())
+                self._pre_warmed_session = session
+            except Exception as e:
+                logger.error("Failed to pre-warm soul %s: %s", soul_name, e)
+
     async def run(self) -> None:
         """Start the WebSocket server and the main session management loop."""
         self._running = True
@@ -297,20 +345,30 @@ class AetherGateway:
             )
 
             # Create session through state manager
-            session = GeminiLiveSession(
-                config=self._ai_config,
-                audio_in_queue=self._audio_in,
-                audio_out_queue=self._audio_out,
-                on_interrupt=self._on_interrupt,
-                on_tool_call=self._on_tool_call,
-                tool_router=self._tool_router,
-                soul_manifest=active_soul.manifest,
-                gateway=self,
-            )
+            async with self._pre_warm_lock:
+                if self._pre_warmed_session and self._pre_warmed_session._soul.name == soul_name:
+                    logger.info("🚀 Using pre-warmed session for %s (Latency reduction: ~800ms)", soul_name)
+                    session = self._pre_warmed_session
+                    self._pre_warmed_session = None
+                else:
+                    if self._pre_warmed_session:
+                        await self._pre_warmed_session.stop()
+                        self._pre_warmed_session = None
 
-            # Inject pending handover context if available
+                    session = GeminiLiveSession(
+                        config=self._ai_config,
+                        audio_in_queue=self._audio_in,
+                        audio_out_queue=self._audio_out,
+                        on_interrupt=self._on_interrupt,
+                        on_tool_call=self._on_tool_call,
+                        tool_router=self._tool_router,
+                        soul_manifest=active_soul.manifest,
+                        gateway=self,
+                    )
+
+            # Inject pending handover context if available (if not already injected during pre-warming)
             pending_handover = self._hive.get_pending_handover_for_target(soul_name)
-            if pending_handover:
+            if pending_handover and not session._injected_handover_context:
                 logger.info(
                     "A2A [GATEWAY] Injecting Deep Handover context: %s (Task: %s)",
                     pending_handover.handover_id,
@@ -321,7 +379,8 @@ class AetherGateway:
             self._state_manager.set_session(session)
 
             try:
-                await session.connect()
+                if not session._running:
+                    await session.connect()
 
                 # Transition to CONNECTED
                 await self._state_manager.transition_to(

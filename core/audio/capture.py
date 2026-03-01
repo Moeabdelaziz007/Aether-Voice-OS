@@ -17,6 +17,7 @@ import numpy as np
 import pyaudio
 
 from core.audio.dynamic_aec import DynamicAEC
+from core.audio.cortex import AECBridge
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.state import audio_state
@@ -162,6 +163,7 @@ class AudioCapture:
             step_size=0.5,
             convergence_threshold_db=15.0,
         )
+        self._aec_bridge = AECBridge(filter_size=self._config.chunk_size)
         self._smooth_muter = SmoothMuter()
 
         # Delay Compensation Counters (kept for hardware latency, AEC handles echo path)
@@ -214,6 +216,15 @@ class AudioCapture:
         cleaned_chunk, aec_state = self._dynamic_aec.process_frame(
             pcm_chunk, far_end_ref
         )
+
+        # 1.5 ✦ Aether Cortex Acceleration (Rust Pass)
+        # This will evolve to replace dynamic_aec.process_frame for ultra-low latency
+        if self._aec_bridge.use_rust:
+            # Note: Rust implementation expects float32/f32
+            cleaned_float = cleaned_chunk.astype(np.float32) / 32768.0
+            ref_float = far_end_ref.astype(np.float32) / 32768.0
+            accelerated = self._aec_bridge.process(cleaned_float, ref_float)
+            cleaned_chunk = (accelerated * 32768.0).astype(np.int16)
 
         # Update global AEC state for monitoring
         audio_state.update_aec_state(

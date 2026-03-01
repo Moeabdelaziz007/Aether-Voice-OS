@@ -16,7 +16,11 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
 
+from core.utils.telemetry import get_tracer
+
 logger = logging.getLogger(__name__)
+
+tracer = get_tracer()
 
 
 class HandoverOutcome(Enum):
@@ -304,6 +308,7 @@ class HandoverTelemetry:
         self._max_records = max_records
         self._analytics = HandoverAnalytics()
         self._active_recordings: Dict[str, HandoverRecord] = {}
+        self._active_spans: Dict[str, Any] = {}
         self._performance_metrics = PerformanceMetrics()
 
         logger.info("HandoverTelemetry initialized (max_records=%d)", max_records)
@@ -324,6 +329,19 @@ class HandoverTelemetry:
             started_at=datetime.now().isoformat(),
         )
         self._active_recordings[handover_id] = record
+        
+        # OTLP Instrument
+        span = tracer.start_as_current_span(
+            f"handover:{source_agent}->{target_agent}",
+            attributes={
+                "handover.id": handover_id,
+                "agent.source": source_agent,
+                "agent.target": target_agent,
+                "task.description": task_description
+            }
+        )
+        self._active_spans[handover_id] = span
+        
         logger.debug("Started recording handover %s", handover_id)
         return record
 
@@ -364,6 +382,19 @@ class HandoverTelemetry:
             record.failure_category = failure_category.value
         if failure_reason:
             record.failure_reason = failure_reason
+
+        # Finalize OTLP Span
+        span = self._active_spans.pop(handover_id, None)
+        if span:
+            span.set_attribute("handover.outcome", outcome.value)
+            if outcome == HandoverOutcome.SUCCESS:
+                span.set_status(Status(StatusCode.OK))
+            else:
+                span.set_status(Status(StatusCode.ERROR, description=failure_reason or "Handover failed"))
+                if failure_category:
+                    span.set_attribute("handover.error_category", failure_category.value)
+            
+            span.end()
 
         # Calculate total duration
         if record.started_at and record.completed_at:

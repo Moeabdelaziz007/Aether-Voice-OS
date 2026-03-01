@@ -37,6 +37,7 @@ class HandoverStatus(Enum):
     PREPARING = auto()
     VALIDATING = auto()
     TRANSFERRING = auto()
+    PRE_WARMING = auto()
     COMPLETED = auto()
     FAILED = auto()
     ROLLED_BACK = auto()
@@ -885,6 +886,19 @@ class HandoverProtocol:
         context.update_status(HandoverStatus.VALIDATING)
         logger.info("Handover %s prepared for transfer", handover_id)
         return True, "Handover prepared successfully"
+
+    def pre_warm_target(self, handover_id: str) -> bool:
+        """
+        Transition handover to pre-warming state.
+        This signals that the system should start initializing the target agent.
+        """
+        context = self._active_handovers.get(handover_id)
+        if not context:
+            return False
+
+        context.update_status(HandoverStatus.PRE_WARMING)
+        context.add_history("Speculative pre-warming initiated")
+        return True
 
     def complete_handoff(self, handover_id: str) -> Tuple[bool, str]:
         """

@@ -66,6 +66,7 @@ class HiveCoordinator:
         self._active_soul: Optional[AthPackage] = None
         self._default_soul_name = default_soul_name
         self._on_handover = on_handover
+        self._pre_warm_callback: Optional[Callable[[str], Any]] = None
         self._enable_deep_handover = enable_deep_handover
 
         # Legacy context bridge (for backward compatibility)
@@ -126,6 +127,10 @@ class HiveCoordinator:
         except Exception as e:
             logger.error("Handoff failed: %s", e)
             return False
+
+    def set_pre_warm_callback(self, callback: Callable[[str], Any]) -> None:
+        """Set the callback for speculative pre-warming."""
+        self._pre_warm_callback = callback
 
     def prepare_handoff(
         self,
@@ -207,6 +212,18 @@ class HiveCoordinator:
                 context.update_status(HandoverStatus.NEGOTIATING)
                 negotiation = self._initiate_negotiation(context)
                 context.negotiation = negotiation
+            else:
+                # Speculative pre-warming for zero-friction handovers
+                self._handover_protocol.pre_warm_target(context.handover_id)
+                if self._pre_warm_callback:
+                    # Non-blocking trigger of gateway pre-warm
+                    if asyncio.iscoroutinefunction(self._pre_warm_callback):
+                        asyncio.create_task(self._pre_warm_callback(target_name))
+                    else:
+                        self._pre_warm_callback(target_name)
+
+                if self._on_handover:
+                    self._on_handover(source_name, target_name, "PRE_WARMING")
 
             logger.info(
                 "A2A [HIVE] Handover prepared: %s -> %s (ID: %s)",
