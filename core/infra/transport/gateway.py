@@ -686,15 +686,21 @@ class AetherGateway:
         """Broadcast a message to all connected clients."""
         data = json.dumps({"type": msg_type, "payload": payload})
 
-        async with self._lock:
-            dead: list[str] = []
-            for cid, session in self._clients.items():
-                try:
-                    await session.ws.send(data)
-                except websockets.exceptions.ConnectionClosed:
-                    dead.append(cid)
-            for cid in dead:
-                self._clients.pop(cid, None)
+        try:
+            async with asyncio.timeout(2.0):
+                async with self._lock:
+                    dead: list[str] = []
+                    for cid, session in self._clients.items():
+                        try:
+                            await session.ws.send(data)
+                        except websockets.exceptions.ConnectionClosed:
+                            dead.append(cid)
+                    for cid in dead:
+                        self._clients.pop(cid, None)
+        except TimeoutError:
+            logger.warning("Gateway broadcast lock timeout — skipped")
+        except Exception as e:
+            logger.error(f"Broadcast failed: {e}")
 
     async def broadcast_binary(self, data: bytes) -> None:
         """Broadcast raw binary data to all connected clients."""
@@ -728,8 +734,9 @@ class AetherGateway:
         """Shut down the gateway."""
         self._running = False
         self._shutdown_event.set()
-        if self._session:
-            await self._session.stop()
+        session = self.get_session()
+        if session:
+            await session.stop()
         if self._server:
             self._server.close()
             await self._server.wait_closed()

@@ -63,8 +63,8 @@ class GlobalBus:
                 password=self._password,
                 decode_responses=True,
             )
-            # Ping to verify
-            await self._client.ping()
+            # Ping to verify with safety timeout
+            await asyncio.wait_for(self._client.ping(), timeout=5.0)
             self._running = True
             logger.info("✦ A2A [BUS] Connected to Global State Bus (Redis: %s:%d)", self._host, self._port)
             return True

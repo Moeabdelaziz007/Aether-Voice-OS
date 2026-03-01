@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT))
 from core.infra.config import load_config
 from core.engine import AetherEngine
 
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
 
 class AetherBenchmarker:
@@ -41,16 +41,40 @@ class AetherBenchmarker:
         print("⚙️ [BENCHMARK] Launching Engine Tasks...", flush=True)
         engine_task = asyncio.create_task(self.engine.run())
         
-        # Wait for engine to stabilize
-        print("⏳ [BENCHMARK] Waiting 5s for Neural Stabilization...", flush=True)
-        await asyncio.sleep(5)
+        # Wait for engine to stabilize (Health Check)
+        print("⏳ [BENCHMARK] Waiting for Engine Health Check...", flush=True)
+        import http.client
+        engine_ready = False
+        for _ in range(30): # 30s timeout
+            try:
+                conn = http.client.HTTPConnection("127.0.0.1", self.port if hasattr(self, 'port') else 18790)
+                conn.request("GET", "/api/status")
+                resp = conn.getresponse()
+                if resp.status == 200:
+                    data = json.loads(resp.read().decode())
+                    if data.get("status") == "online":
+                        engine_ready = True
+                        break
+            except Exception:
+                pass
+            await asyncio.sleep(1.0)
+        
+        if not engine_ready:
+            print("❌ [BENCHMARK] Engine failed to stabilize in 30s. Aborting.", flush=True)
+            self.engine._shutdown_event.set()
+            await engine_task
+            return
+        
+        print("🚀 [BENCHMARK] Engine stabilized. Proceeding.", flush=True)
         
         print("📊 [BENCHMARK] Injecting synthetic probes...", flush=True)
         for i in range(iterations):
             start = time.perf_counter()
             # Simulate a "Barge-in" trigger or high-RMS speech event
             # We use the gateway's broadcast to trace the round-trip
+            print(f"  [Probe {i+1}] Broadcasting...", flush=True)
             await self.engine._gateway.broadcast("benchmark_probe", {"id": i, "ts": start})
+            print(f"  [Probe {i+1}] Broadcast done.", flush=True)
             
             # In a real test, we'd wait for the actual audio output byte
             # Here we simulate the processing overhead
@@ -60,7 +84,7 @@ class AetherBenchmarker:
             end = time.perf_counter()
             latency_ms = (end - start) * 1000
             self.latencies.append(latency_ms)
-            print(f"  [Probe {i+1}] Latency: {latency_ms:.2f}ms")
+            print(f"  [Probe {i+1}] Latency: {latency_ms:.2f}ms", flush=True)
             await asyncio.sleep(1)
 
         self._report()

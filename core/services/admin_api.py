@@ -51,6 +51,13 @@ class AdminAPIHandler(BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
 
+    def address_string(self):
+        """Prevent reverse DNS lookups."""
+        return self.client_address[0]
+
+
+class ReusableHTTPServer(HTTPServer):
+    allow_reuse_address = True
 
 class AdminAPIServer:
     def __init__(self, port: int = 18790):
@@ -59,10 +66,16 @@ class AdminAPIServer:
         self.thread = None
 
     def start(self):
-        class ReusableHTTPServer(HTTPServer):
-            allow_reuse_address = True
-        
-        self.server = ReusableHTTPServer(("127.0.0.1", self.port), AdminAPIHandler)
+        try:
+            self.server = ReusableHTTPServer(("127.0.0.1", self.port), AdminAPIHandler)
+        except OSError as e:
+            if e.errno == 48:
+                logger.warning(f"Port {self.port} occupied. Falling back to dynamic allocation.")
+                self.server = ReusableHTTPServer(("127.0.0.1", 0), AdminAPIHandler)
+                self.port = self.server.server_address[1]
+            else:
+                raise e
+
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         logger.info(f"Admin API started on http://127.0.0.1:{self.port}")

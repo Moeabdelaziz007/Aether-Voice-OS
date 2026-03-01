@@ -1,59 +1,79 @@
-# 📚 Aether OS API Reference
+# 📚 AetherOS: Neural API Codex (V2.0)
 
-## 🛠️ Core Modules
+> **"Code is the implementation; the Codex is the intent."**
+> A functional reference for the core Python classes of the AetherOS engine.
+
+---
+
+## 🧠 Core Orchestration
 
 ### `core.engine.AetherEngine`
 
-The central orchestrator of the OS.
+The central nervous system of AetherOS.
 
-- `__init__(config: Optional[AetherConfig])`: Initializes all sub-components.
-- `run()`: Starts the TaskGroup containing audio capture, playback, Gemini session, and gateway.
-- `register_tool(name: str, tool: Any)`: Registers a legacy ADK tool.
+- **`__init__(config: Optional[AetherConfig] = None)`**
+  - Initializes all managers (Audio, Agent, Infra) and the ToolRouter.
+  - Loads local vector indices for semantic search.
+- **`run()`** (Async)
+  - **Latency Tier**: `cold_start` (~44s) / `warm_start` (<5s)
+  - Orchestrates the `asyncio.TaskGroup` for all sub-services.
+- **`_on_affective_data(features: Any)`**
+  - Handles real-time paralinguistic data (frustration, valence).
+  - Broadcasts `affective_score` events to the gateway.
+
+---
+
+## 📡 Communication & Streaming
+
+### `core.infra.transport.gateway.AetherGateway`
+
+The secure single source of truth for all AI sessions.
+
+- **`broadcast(msg_type: str, payload: dict)`** (Async)
+  - **Performance**: Thread-safe with `asyncio.timeout(2.0)` guard.
+  - Dispatches JSON events to all authenticated WebSocket clients.
+- **`broadcast_binary(data: bytes)`** (Async)
+  - Routes raw PCM audio data directly to the playback buffers.
+- **`request_handoff(target_soul: str)`** (Async)
+  - **Pattern**: Deep Handover (ADK 2.0).
+  - Initiates state serialization and speculate-warms the target agent session.
 
 ### `core.ai.session.GeminiLiveSession`
 
-Manages the bidirectional WebSocket to Gemini.
+Manages the raw multimodal stream to Google's Gemini API.
 
-- `connect()`: Establishes the connection.
-- `run()`: Starts the `_send_loop` and `_receive_loop`.
-- `_handle_tool_call(session, tool_call)`: Dispatches function calls to the `ToolRouter`.
+- **`connect()`** (Async)
+  - Establishes the `LiveConnect` WebSocket.
+- **`inject_handover_context(context: HandoverContext)`**
+  - Merges external history and memory into the current system instruction.
+- **`_receive_loop(session)`** (Async internal)
+  - The "Neural Switchboard" that handles audio, tool calls, and barge-in interruptions.
 
-### `core.transport.gateway.AetherGateway`
+---
 
-The secure entry point for external UI clients.
+## 🛠️ Tool Dispatching (ADK 2.0)
 
-- `run()`: Binds the WebSocket server (Port 18789).
-- `broadcast(event: str, data: dict)`: Sends a message to all connected clients.
-- `verify_handshake(token: str)`: Ed25519 signature verification.
+### `core.tools.router.ToolRouter`
 
-### `core.audio.processing`
+The high-performance kernel for tool execution.
 
-High-performance audio utilities (Rust-accelerated).
+- **`register_module(module: Any)`**
+  - Introspects modules for `get_tools()` and adds them to the registry.
+- **`dispatch(function_call: types.FunctionCall)`** (Async)
+  - **Middleware**: Executes `BiometricMiddleware` (Soul-Lock) for sensitive tools.
+  - **Parallelism**: Runs independent tools concurrently via `TaskGroup`.
+- **`get_performance_report()`**
+  - Returns p50, p95, and p99 metrics for every registered tool.
 
-- `RingBuffer(capacity_samples: int)`: O(1) circular buffer.
-- `find_zero_crossing(pcm_data, ...)`: Finds clean cut points.
-- `energy_vad(pcm_chunk, threshold)`: Local energy-based VAD.
+---
 
-### `core.identity.registry.AetherRegistry`
+## ☁️ Infrastructure & Persistence
 
-Package manager for `.ath` files.
+### `core.logic.managers.infra.InfraManager`
 
-- `scan()`: Scans `brain/packages/` for valid manifests.
-- `get_package(name: str)`: Returns a `SoulManifest` object.
+Manages cloud lifecycle and system health.
 
-## 🔧 Tools (ADK)
-
-### `core.tools.system_tool`
-
-- `get_current_time()`: Returns the current ISO timestamp.
-- `get_system_info()`: Detailed hardware/OS metadata.
-
-### `core.tools.tasks_tool`
-
-- `create_task(title: str)`: Writes a new task to Firestore.
-- `list_tasks()`: Retrieves pending tasks from Firestore.
-
-### `core.tools.memory_tool`
-
-- `save_memory(key, value)`: Stores semantic context in long-term memory.
-- `recall_memory(key)`: Retrieves stored context.
+- **`initialize()`** (Async)
+  - Sets up the `FirebaseConnector` and begins the session audit trail.
+- **`start_watchdog()`**
+  - Spawns the SRE Watchdog to monitor node health and handle autonomous recovery.
