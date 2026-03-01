@@ -151,5 +151,15 @@ class AthPackage:
             hasher.update(file_path.read_bytes())
         return hasher.hexdigest()
 
+    def get_expertise_string(self) -> str:
+        """Consolidate package expertise and persona into a single searchable string."""
+        domains = ", ".join(self.manifest.expertise.keys())
+        return (
+            f"Package: {self.manifest.name}. "
+            f"Persona: {self.manifest.persona}. "
+            f"Expertise: {domains}. "
+            f"Capabilities: {', '.join(self.manifest.capabilities)}"
+        )
+
     def __repr__(self) -> str:
         return f"AthPackage({self.manifest.name} v{self.manifest.version})"

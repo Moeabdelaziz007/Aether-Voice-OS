@@ -80,6 +80,12 @@ class HiveCoordinator:
         self._active_handovers: Dict[str, HandoverContext] = {}
         self._handover_history: List[str] = []
 
+        # Safety: Rollback and Checkpointing
+        self._last_successful_soul: Optional[AthPackage] = (
+            self._active_soul if hasattr(self, "_active_soul") else None
+        )
+        self._last_handover_id: Optional[str] = None
+
     @property
     def active_soul(self) -> AthPackage:
         if not self._active_soul:
@@ -310,6 +316,10 @@ class HiveCoordinator:
             success, message = self._handover_protocol.complete_handoff(handover_id)
 
             if success:
+                # Save checkpoints for potential future rollbacks (Safety Net)
+                self._last_successful_soul = self._active_soul
+                self._last_handover_id = handover_id
+
                 # Switch the active soul
                 target = self._registry.get(context.target_agent)
                 from_name = (
@@ -524,10 +534,34 @@ class HiveCoordinator:
         )
 
         context = self._active_handovers.get(handover_id)
-        if context:
-            context.validation_checkpoint = checkpoint
-
         return checkpoint
+
+    def rollback_handover(self, handover_id: str) -> bool:
+        """
+        Roll back a failed handover to the previous stable state.
+        Triggered by AetherGateway if the next expert fails to heart-beat.
+        """
+        context = self._active_handovers.get(handover_id)
+        if not context:
+            logger.warning("Rollback target '%s' not found in history.", handover_id)
+            return False
+
+        # 1. Restore context state if snapshot exists
+        if context.restore_snapshot():
+            logger.info("A2A [HIVE] Context restored from snapshot for %s", handover_id)
+
+        # 2. Revert active soul to the last known-good expert
+        if self._last_successful_soul:
+            logger.info(
+                "A2A [HIVE] Reverting active expert: %s -> %s",
+                self._active_soul.manifest.name,
+                self._last_successful_soul.manifest.name,
+            )
+            self._active_soul = self._last_successful_soul
+
+        # 3. Update status to prevent re-triggered handovers
+        context.update_status(HandoverStatus.ROLLED_BACK)
+        return True
 
     def get_handover_context(self, handover_id: str) -> Optional[HandoverContext]:
         """Retrieve an active handover context by ID."""
@@ -583,13 +617,17 @@ class HiveCoordinator:
             return 0
         return self._telemetry.export_records(filepath)
 
-    def evaluate_intent(self, query: str) -> Optional[str]:
+    async def evaluate_intent(self, query: str) -> Optional[str]:
         """
         Check if a better expert exists for the user's query.
         Returns the name of the better expert if found.
         """
-        best_expert = self._registry.find_expert(query)
-        if best_expert and best_expert.manifest.name != self.active_soul.manifest.name:
+        best_expert = await self._registry.find_expert(query)
+        if (
+            best_expert
+            and self._active_soul
+            and best_expert.manifest.name != self._active_soul.manifest.name
+        ):
             # Only suggest if the expertise score is significantly high
             return best_expert.manifest.name
         return None

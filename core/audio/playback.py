@@ -82,8 +82,13 @@ class AudioPlayback:
             pcm += heartbeat
             self._phase = (self._phase + t[-1]) % 1.0
 
-            # 3. Capture AI spectrum for Echo/Leakage detection in Thalamic Gate
+            # 3. Feed AEC reference buffer (24kHz -> 16kHz resampling)
             if len(pcm) > 0:
+                t_old = np.arange(len(pcm))
+                t_new = np.arange(0, len(pcm), 1.5)  # 24/16 = 1.5 ratio
+                pcm_16k = np.interp(t_new, t_old, pcm).astype(np.int16)
+                audio_state.far_end_pcm.write(pcm_16k)
+                # Capture AI spectrum for legacy monitoring
                 audio_state.ai_spectrum = np.abs(np.fft.rfft(pcm))
 
             data = pcm.astype(np.int16).tobytes()

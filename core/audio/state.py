@@ -6,6 +6,7 @@ across C-callback threads and the main asyncio event loop.
 """
 
 import threading
+from core.audio.processing import RingBuffer
 
 
 class HysteresisGate:
@@ -58,6 +59,8 @@ class AudioState:
                 cls._instance.aec_erle_db = 0.0  # Echo Return Loss Enhancement
                 cls._instance.aec_delay_ms = 0.0  # Estimated echo delay
                 cls._instance.aec_double_talk = False  # Double-talk detection
+                # Reference buffer for loopback AEC (2 seconds @ 16kHz)
+                cls._instance.far_end_pcm = RingBuffer(32000)
         return cls._instance
 
     def update_aec_state(

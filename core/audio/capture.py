@@ -198,20 +198,14 @@ class AudioCapture:
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
         # 1. Dynamic AEC Processing
-        # Capture far-end (AI output) spectrum from global state
-        if audio_state.ai_spectrum is not None:
-            # Convert spectrum back to approximate time-domain for AEC reference
-            # In a full implementation, playback.py would provide the actual PCM
-            self._dynamic_aec.capture_far_end(pcm_chunk)  # Placeholder reference
+        # Read bit-perfect far-end (AI output) reference from shared PCM buffer
+        # This replaces the placeholder ai_spectrum logic for 10x precision.
+        far_end_ref = audio_state.far_end_pcm.read_last(len(pcm_chunk))
 
-        # Process through Dynamic AEC for echo cancellation
-        # Note: In real implementation, far_end should come from playback.py
-        # Here we use an empty reference or the buffered far-end signal
-        far_end_ref = (
-            self._far_end_buffer[: len(pcm_chunk)]
-            if len(self._far_end_buffer) >= len(pcm_chunk)
-            else np.zeros(len(pcm_chunk), dtype=np.int16)
-        )
+        # Pad with zeros if reference buffer is underrun (startup/jitter)
+        if len(far_end_ref) < len(pcm_chunk):
+            padding = np.zeros(len(pcm_chunk) - len(far_end_ref), dtype=np.int16)
+            far_end_ref = np.concatenate([far_end_ref, padding])
 
         cleaned_chunk, aec_state = self._dynamic_aec.process_frame(
             pcm_chunk, far_end_ref

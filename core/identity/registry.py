@@ -58,6 +58,7 @@ class AetherRegistry:
         self._packages: dict[str, AthPackage] = {}
         self._on_change = on_change
         self._observer: Optional[Observer] = None
+        self._vector_store: Optional[Any] = None
 
     def scan(self) -> int:
         """Scan the packages directory and load all valid packages."""
@@ -84,6 +85,7 @@ class AetherRegistry:
         try:
             package = AthPackage.load(path)
             self._packages[package.manifest.name] = package
+            self._index_package(package)
             return package
         except IdentityError as exc:
             logger.error("Failed to load package at %s: %s", path.name, exc)
@@ -140,16 +142,64 @@ class AetherRegistry:
             raise PackageNotFoundError(f"Package '{name}' not found")
         return pkg
 
+    def initialize_vector_store(self, api_key: str) -> None:
+        """Initialize the local vector store for semantic expert discovery."""
+        from core.tools.vector_store import LocalVectorStore
+
+        self._vector_store = LocalVectorStore(api_key=api_key)
+        # Re-index all existing packages
+        for pkg in self._packages.values():
+            self._index_package(pkg)
+
+    def _index_package(self, package: AthPackage) -> None:
+        """Index a package's expertise into the vector store."""
+        if not self._vector_store:
+            return
+
+        import asyncio
+
+        text = package.get_expertise_string()
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(
+                self._vector_store.add_text(
+                    text, metadata={"name": package.manifest.name}
+                )
+            )
+        except RuntimeError:
+            # No event loop (e.g. during sync initialization)
+            pass
+
     def list_packages(self) -> list[str]:
         return list(self._packages.keys())
 
-    def find_expert(self, query: str) -> Optional[AthPackage]:
+    async def find_expert(self, query: str) -> Optional[AthPackage]:
         """
-        Find the best Expert Soul for a given query based on Expertise Matrix.
+        Find the best Expert Soul for a given query using Semantic Search.
+        Falls back to keyword matching if Vector DB is unavailable or low-confidence.
+        """
+        if self._vector_store:
+            try:
+                results = await self._vector_store.search(query, k=1)
+                if results:
+                    name = results[0].metadata.get("name")
+                    if name in self._packages:
+                        # Semantic match with confidence check
+                        if results[0].score > 0.7:
+                            logger.info(
+                                "Semantic Match: Found expert '%s' (score: %.2f)",
+                                name,
+                                results[0].score,
+                            )
+                            return self._packages[name]
+            except Exception as e:
+                logger.warning("Semantic search failed, falling back: %s", e)
 
-        Simple keyword-based implementation for now. In Phase 3.3,
-        this will use Vector Search.
-        """
+        # Fallback: Keyword-based discovery
+        return self._find_expert_keyword(query)
+
+    def _find_expert_keyword(self, query: str) -> Optional[AthPackage]:
+        """Legacy keyword-based expertise matching."""
         query = query.lower()
         candidates: list[tuple[AthPackage, float]] = []
 

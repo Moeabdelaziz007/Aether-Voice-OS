@@ -101,6 +101,7 @@ class AetherEngine:
         self._registry = AetherRegistry(
             self._config.packages_dir, on_change=self._on_package_change
         )
+        self._registry.initialize_vector_store(self._config.ai.api_key)
         self._hive = HiveCoordinator(
             registry=self._registry,
             router=self._router,

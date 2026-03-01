@@ -380,7 +380,24 @@ class AetherGateway:
 
             try:
                 if not session._running:
-                    await session.connect()
+                    try:
+                        # Safety: 10s watchdog for new expert arrival
+                        await asyncio.wait_for(session.connect(), timeout=10.0)
+                    except (asyncio.TimeoutError, Exception) as e:
+                        logger.error("✦ Critical: Expert '%s' failed to stabilize. Rolling back...", soul_name)
+                        
+                        # Recover last handover ID from hive for context restoration
+                        # We use the private access here as Gateway and Hive are tightly coupled in the core engine
+                        fail_handover_id = getattr(self._hive, "_last_handover_id", None)
+                        if fail_handover_id:
+                            self._hive.rollback_handover(fail_handover_id)
+
+                        await self._state_manager.transition_to(
+                            SessionState.ERROR, f"Expert handshake timeout: {str(e)}"
+                        )
+                        # Trigger restart which will now pick up the rolled-back 'last_successful_soul'
+                        self._session_restart_event.set()
+                        continue
 
                 # Transition to CONNECTED
                 await self._state_manager.transition_to(
