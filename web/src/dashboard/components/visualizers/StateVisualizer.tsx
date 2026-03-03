@@ -1,11 +1,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Activity, Mic, Brain, MessageSquare, AlertTriangle } from "lucide-react";
+import { Activity, Mic, Brain, MessageSquare, AlertTriangle, type LucideIcon } from "lucide-react";
 
 type StateType = "IDLE" | "LISTENING" | "THINKING" | "SPEAKING" | "INTERRUPTING";
 
-const STATES: { id: StateType; label: string; icon: React.ElementType }[] = [
+const STATES: { id: StateType; label: string; icon: LucideIcon }[] = [
     { id: "IDLE", label: "Standby", icon: Activity },
     { id: "LISTENING", label: "Acoustic Input", icon: Mic },
     { id: "THINKING", label: "Cognitive Load", icon: Brain },
@@ -27,6 +27,7 @@ export function StateVisualizer({ currentState = "LISTENING", className }: { cur
                 {STATES.map((state) => {
                     const isActive = state.id === currentState;
                     const isInterrupt = state.id === "INTERRUPTING";
+                    const IconComponent = state.icon;
 
                     return (
                         <div key={state.id} className="flex flex-col items-center gap-3">
@@ -40,7 +41,7 @@ export function StateVisualizer({ currentState = "LISTENING", className }: { cur
                                         : "bg-[#18181b] border border-[#27272a]"
                                 )}
                             >
-                                <state.icon
+                                <IconComponent
                                     className={cn(
                                         "w-5 h-5",
                                         isActive ? (isInterrupt ? "text-white" : "text-black") : "text-gray-500"

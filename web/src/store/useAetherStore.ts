@@ -23,6 +23,8 @@ interface AetherState {
     // Global Connection State
     status: ConnectionStatus;
     engineState: EngineState;
+    connectionMode: 'gemini' | 'gateway';
+    sessionStartTime: number | null;
 
     // Real-time Audio Levels (0.0 to 1.0)
     micLevel: number;
@@ -47,7 +49,10 @@ interface AetherState {
     // Actions
     setStatus: (status: ConnectionStatus) => void;
     setEngineState: (state: EngineState) => void;
+    setConnectionMode: (mode: 'gemini' | 'gateway') => void;
+    setSessionStartTime: (time: number | null) => void;
     setAudioLevels: (mic: number, speaker: number) => void;
+    setLatencyMs: (latencyMs: number) => void;
     setTelemetry: (data: { frustration?: number, valence?: number, arousal?: number, engagement?: number, zen_mode?: boolean, pitch?: number, rate?: number }, latency: number) => void;
     setMutation: (mutation: string) => void;
     setVisionPulse: (lastVisionPulse: string) => void;
@@ -61,6 +66,8 @@ interface AetherState {
 export const useAetherStore = create<AetherState>((set) => ({
     status: "disconnected",
     engineState: "IDLE",
+    connectionMode: 'gemini',
+    sessionStartTime: null,
     micLevel: 0,
     speakerLevel: 0,
     frustrationScore: 0,
@@ -79,7 +86,10 @@ export const useAetherStore = create<AetherState>((set) => ({
 
     setStatus: (status) => set({ status }),
     setEngineState: (engineState) => set({ engineState }),
+    setConnectionMode: (connectionMode) => set({ connectionMode }),
+    setSessionStartTime: (sessionStartTime) => set({ sessionStartTime }),
     setAudioLevels: (micLevel, speakerLevel) => set({ micLevel, speakerLevel }),
+    setLatencyMs: (latencyMs) => set({ latencyMs }),
     setTelemetry: (data, latencyMs) => set((state) => ({
         ...state,
         ...data,

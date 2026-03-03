@@ -229,6 +229,38 @@ graph TD;
 
 ---
 
+## 🌀 Living Voice Portal | بوابة الصوت الحية
+
+> **A voice-first UI that replaces the chatbot paradigm with a living, breathing organism.**
+
+The Aether Living Voice Portal is a radical departure from traditional AI interfaces. No text input box, no chat bubbles — just a sentient orb, floating words, and atmospheric intelligence.
+
+### Frontend Components
+
+| Component | File | Description |
+|:---:|:---|:---|
+| 🔮 | `web/src/components/AetherOrb.tsx` | Canvas-based breathing orb with state-reactive colors, mic-energy ripples, and click-to-talk |
+| 💬 | `web/src/components/AmbientTranscript.tsx` | Floating ambient text — AI words drift down, user words drift up (no chatbox) |
+| 📊 | `web/src/components/HUDCards.tsx` | Ephemeral glassmorphism telemetry cards (RTT, session timer, connection mode) |
+| 🧠 | `web/src/components/AetherBrain.tsx` | Core conductor: VAD gate, Gemini wiring, playback pipe, barge-in handling |
+
+### Voice Pipeline Hooks
+
+| Hook | File | Description |
+|:---:|:---|:---|
+| 🎙️ | `web/src/hooks/useGeminiLive.ts` | Direct WebSocket to Gemini Live API with transcript extraction, real RTT, exponential backoff |
+| 🔊 | `web/src/hooks/useAudioPipeline.ts` | Dual AudioContext (16kHz mic + native playback), gapless scheduled queue, instant barge-in |
+| ⚡ | `web/public/pcm-processor.js` | AudioWorklet: ring buffer accumulation, Float32→Int16, RMS calculation, zero-copy transfer |
+
+### Design Philosophy
+
+- **The Orb IS the product** — it breathes, pulses, and reacts to voice energy
+- **Chromatic Atmosphere** — background gradients shift with engine state (idle→listening→thinking→speaking)
+- **Ambient Typography** — conversation text floats and fades like living breath
+- **Zero-friction interaction** — tap the orb to talk, tap again to stop
+
+---
+
 ## 🚀 Getting Started | البداية
 
 ### Prerequisites
@@ -376,6 +408,7 @@ python -c "import pyaudio; p=pyaudio.PyAudio(); [print(i, p.get_device_info_by_i
 ✅ Phase 7: Thalamic Gate Audio Engine ················· COMPLETE
 ✅ Phase 8: Admin Dashboard UI & Analytics ············· COMPLETE
 ✅ Phase 9: GCP Deployment Guide & DevPost Submission ·· VERIFIED
+✅ Phase 10: Living Voice Portal & Voice Pipeline ······ COMPLETE
 ```
 
 ---

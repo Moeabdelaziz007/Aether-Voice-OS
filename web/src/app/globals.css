@@ -1,119 +1,347 @@
+/* ═══════════════════════════════════════════════════════
+   AETHER VOICE OS — Living Voice Portal Design System
+   ═══════════════════════════════════════════════════════
+   Philosophy: The Environment IS the Conversation.
+   No chatbox. No text-first thinking. A living organism.
+   ═══════════════════════════════════════════════════════ */
+
 @import "tailwindcss";
 
+/* ─── Design Tokens ──────────────────────────────────── */
 :root {
-  --background: #00000000;
-  /* Fully transparent for Tauri */
-  --foreground: #ffffff;
+  /* Atmospheric tokens (driven by JS via inline styles) */
+  --atm-hue: 240;
+  --atm-sat: 15%;
+  --atm-brightness: 5%;
 
-  /* Premium HSL Silicon Valley / Cyberpunk Palette */
-  --neon-cyan: 184 100% 50%;
-  --neon-purple: 284 98% 54%;
-  --carbon-900: 240 10% 4%;
-  --carbon-800: 240 6% 10%;
-
+  /* Core palette */
+  --void: #050510;
+  --void-soft: #0a0a1a;
+  --glass: rgba(255, 255, 255, 0.04);
   --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-reflection: rgba(255, 255, 255, 0.03);
+  --glass-strong: rgba(255, 255, 255, 0.08);
+  --neon-cyan: #22d3ee;
+  --neon-purple: #a855f7;
+  --neon-amber: #f59e0b;
+  --text-primary: rgba(255, 255, 255, 0.92);
+  --text-ghost: rgba(255, 255, 255, 0.35);
+  --text-dim: rgba(255, 255, 255, 0.18);
+
+  /* Font stack */
+  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+  --font-display: "Inter", "SF Pro Display", system-ui, sans-serif;
+}
+
+/* ─── Base Reset & Body ──────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-display);
+  color: var(--text-primary);
+  background: var(--void);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  color: var(--foreground);
-  background: transparent !important;
-  /* Critical for Tauri Transparency */
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  overflow: hidden;
-  -webkit-font-smoothing: antialiased;
+  /* Atmospheric gradient — the living background */
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 50%,
+      hsla(var(--atm-hue), var(--atm-sat), var(--atm-brightness), 0.4) 0%,
+      transparent 70%),
+    radial-gradient(circle at 20% 80%,
+      hsla(280, 30%, 8%, 0.5) 0%,
+      transparent 50%),
+    radial-gradient(circle at 80% 20%,
+      hsla(200, 30%, 6%, 0.5) 0%,
+      transparent 50%),
+    var(--void);
+  transition: background 1.5s ease;
 }
 
-html {
-  background: transparent !important;
-}
-
-/* --- Premium Glassmorphism Design System --- */
-
-.carbon-panel {
-  background: hsla(240, 10%, 4%, 0.6);
-  -webkit-backdrop-filter: blur(40px) saturate(200%);
-  backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid var(--glass-border);
-  box-shadow:
-    0 20px 50px rgba(0, 0, 0, 0.5),
-    inset 0 1px 1px var(--glass-reflection);
+/* ─── Portal Layout ──────────────────────────────────── */
+.portal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100vw;
   position: relative;
   overflow: hidden;
 }
 
-/* Top "Crest" Highlight */
-.carbon-panel::after {
-  content: "";
+/* ─── Aether Orb ─────────────────────────────────────── */
+.aether-orb {
+  z-index: 10;
+  border-radius: 50%;
+  transition: filter 0.3s ease;
+}
+
+.aether-orb:hover {
+  filter: brightness(1.15);
+}
+
+.aether-orb:focus-visible {
+  outline: 2px solid var(--neon-cyan);
+  outline-offset: 8px;
+  border-radius: 50%;
+}
+
+/* ─── Ambient Transcript Zones ───────────────────────── */
+.ambient-zone {
   position: absolute;
-  top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg,
-      transparent 0%,
-      hsla(var(--neon-cyan) / 0.3) 50%,
-      transparent 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.ambient-zone--top {
+  top: 8vh;
+  gap: 12px;
+}
+
+.ambient-zone--bottom {
+  bottom: 15vh;
+  gap: 8px;
+}
+
+.ambient-text {
+  font-family: var(--font-display);
+  text-align: center;
+  max-width: 70vw;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+}
+
+.ambient-text--agent {
+  font-size: clamp(1rem, 2.5vw, 1.5rem);
+  font-weight: 300;
+  color: var(--neon-cyan);
+  text-shadow: 0 0 30px rgba(34, 211, 238, 0.2);
+}
+
+.ambient-text--user {
+  font-size: clamp(0.85rem, 2vw, 1.15rem);
+  font-weight: 400;
+  color: var(--text-ghost);
+  font-style: italic;
+}
+
+/* ─── HUD Cards ──────────────────────────────────────── */
+.hud-cards {
+  position: absolute;
+  bottom: 5vh;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
   z-index: 20;
 }
 
-.neon-glow-cyan {
-  box-shadow: 0 0 40px hsla(var(--neon-cyan) / 0.15);
-  border-color: hsla(var(--neon-cyan) / 0.4) !important;
+.hud-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-.neon-glow-purple {
-  box-shadow: 0 0 40px hsla(var(--neon-purple) / 0.15);
-  border-color: hsla(var(--neon-purple) / 0.4) !important;
+.hud-card:hover {
+  background: var(--glass-strong);
+  border-color: rgba(255, 255, 255, 0.12);
 }
 
-.sci-fi-text {
-  letter-spacing: 0.2em;
+.hud-card__icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.hud-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.hud-card__label {
+  font-family: var(--font-mono);
+  font-size: 9px;
   text-transform: uppercase;
-  font-family: 'JetBrains Mono', monospace;
-  background: linear-gradient(to right, #fff, #888);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
 }
 
-/* --- Micro-Animations --- */
+.hud-card__value {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
 
-@keyframes pulse-cyan {
-  0% {
-    box-shadow: 0 0 10px hsla(var(--neon-cyan) / 0.2);
+/* ─── Status Indicator ───────────────────────────────── */
+.status-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-right: 6px;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+.status-dot--idle {
+  background: #4a3080;
+}
+
+.status-dot--connecting {
+  background: var(--neon-amber);
+  animation-duration: 0.8s;
+}
+
+.status-dot--listening {
+  background: #6366f1;
+}
+
+.status-dot--speaking {
+  background: var(--neon-cyan);
+}
+
+.status-dot--error {
+  background: #ef4444;
+  animation-duration: 0.5s;
+}
+
+/* ─── Orb Label ──────────────────────────────────────── */
+.orb-label {
+  position: absolute;
+  bottom: calc(50% - 160px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  transition: color 0.5s ease;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* ─── Animations ─────────────────────────────────────── */
+@keyframes pulse-dot {
+
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
   }
 
   50% {
-    box-shadow: 0 0 25px hsla(var(--neon-cyan) / 0.5);
+    opacity: 1;
+    transform: scale(1.3);
+  }
+}
+
+@keyframes aurora-drift {
+  0% {
+    --atm-hue: 240;
+  }
+
+  25% {
+    --atm-hue: 260;
+  }
+
+  50% {
+    --atm-hue: 220;
+  }
+
+  75% {
+    --atm-hue: 250;
   }
 
   100% {
-    box-shadow: 0 0 10px hsla(var(--neon-cyan) / 0.2);
+    --atm-hue: 240;
   }
 }
 
-.animate-pulse-cyan {
-  animation: pulse-cyan 3s infinite ease-in-out;
+/* ─── NeuralWeb (retained, minimal) ──────────────────── */
+.neural-web-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0.3;
+  pointer-events: none;
 }
 
-/* Glass Surface Reflection */
-.glass-reflection {
-  background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.05) 0%,
-      rgba(255, 255, 255, 0) 50%,
-      rgba(255, 255, 255, 0.02) 100%);
-}
-
-/* Neural Trace Animation */
-.neural-trace {
-  stroke-dasharray: 1000;
-  stroke-dashoffset: 1000;
-  animation: trace-flow 10s linear infinite;
-}
-
-@keyframes trace-flow {
-  to {
-    stroke-dashoffset: 0;
+/* ─── Responsive ─────────────────────────────────────── */
+@media (max-width: 640px) {
+  .hud-cards {
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 0 16px;
   }
+
+  .hud-card {
+    padding: 6px 10px;
+  }
+
+  .hud-card__label {
+    font-size: 8px;
+  }
+
+  .hud-card__value {
+    font-size: 11px;
+  }
+
+  .ambient-text--agent {
+    font-size: 1rem;
+  }
+
+  .ambient-text--user {
+    font-size: 0.85rem;
+  }
+}
+
+/* ─── Reduced Motion ─────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Scrollbar (hidden globally) ────────────────────── */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
 }

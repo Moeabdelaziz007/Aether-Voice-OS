@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
-import { AetherBrain } from "../components/AetherBrain";
+import AetherBrain from "@/components/AetherBrain";
 import "./globals.css";
 
 export const metadata: Metadata = {
     title: "Aether OS | Live Voice Interface",
-    description: "Advanced Multimodal Voice Agent Shell",
+    description: "Next-generation multimodal voice agent — AetherOS Live Voice Portal",
 };
 
 export default function RootLayout({
@@ -14,11 +14,9 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body className="antialiased">
-                <main className="min-h-screen bg-transparent text-white">
-                    <AetherBrain />
-                    {children}
-                </main>
+            <body>
+                <AetherBrain />
+                {children}
             </body>
         </html>
     );
