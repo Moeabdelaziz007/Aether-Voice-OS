@@ -89,6 +89,12 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Tauri-specific transparency hack */
+html:has(body[data-tauri-drag-region]),
+body:has(.orb-container) {
+  background: transparent !important;
+}
+
 /* ── Atmospheric Background — Multi-layer Gemini-style gradients ── */
 body {
   background:

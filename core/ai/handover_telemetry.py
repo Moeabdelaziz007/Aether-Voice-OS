@@ -149,8 +149,7 @@ class HandoverRecord(BaseModel):
     # Additional metadata
     metadata: Dict[str, Any] = Field(default_factory=dict)
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {"arbitrary_types_allowed": True}
 
     @property
     def duration_seconds(self) -> float:

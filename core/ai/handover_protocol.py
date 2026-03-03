@@ -152,8 +152,7 @@ class HandoverContext(BaseModel):
     snapshot: Optional[Dict[str, Any]] = None
     rollback_available: bool = False
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = {"arbitrary_types_allowed": True}
 
     def add_history(self, action: str, agent: Optional[str] = None) -> None:
         """Add an action to the history log."""

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from core.tools.vector_store import LocalVectorStore
+from core.tools.firestore_vector_store import FirestoreVectorStore
 
 # Configure minimal logging
 logging.basicConfig(
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Settings
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-INDEX_FILE = ROOT_DIR / ".aether_index.pkl"
+# INDEX_FILE = ROOT_DIR / ".aether_index.pkl"  # Deprecated in V6 Cloud RAG
 EXTENSIONS = {".py", ".ts", ".tsx", ".md", ".json"}
 IGNORE_DIRS = {
     ".git",
@@ -61,7 +61,8 @@ async def index_codebase() -> None:
         logger.error("No Google API Key found. Ensure .env is set.")
         return
 
-    vector_store = LocalVectorStore(api_key=api_key)
+    vector_store = FirestoreVectorStore(api_key=api_key)
+    await vector_store.initialize()
     # Attempt to load existing to append/update, but typically we want to
     # overwrite entirely. For this script, we'll start fresh to guarantee no
     # stale vectors.
@@ -102,6 +103,7 @@ async def index_codebase() -> None:
                     metadata={"file": str(rel_path), "chunk": i},
                 )
                 total_chunks += 1
+                await asyncio.sleep(0.5) # Avoid 429s
 
             logger.info(
                 "[%d/%d] Processed: %s (Chunks: %d)",
@@ -112,14 +114,14 @@ async def index_codebase() -> None:
             )
 
             # Save incrementally every 50 files
-            if idx % 50 == 0:
-                vector_store.save(INDEX_FILE)
-                logger.info("Checkpoint saved.")
+            # if idx % 50 == 0:
+            #     vector_store.save(INDEX_FILE)
+            #     logger.info("Checkpoint saved.")
         except Exception as e:
             logger.error("Could not process %s: %s", filepath, e)
 
     # Final save
-    vector_store.save(INDEX_FILE)
+    # vector_store.save(INDEX_FILE)
     logger.info("Indexing complete! Total chunks embedded: %d", total_chunks)
 
 

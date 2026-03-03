@@ -39,13 +39,13 @@ pub fn run() {
                 }
             }
 
-            // Register Mac hotkey: Cmd+Option+Space
-            let ctrl_alt_space =
-                Shortcut::new(Some(Modifiers::SUPER | Modifiers::ALT), Code::Space);
+            // Register Mac hotkey: Cmd+Shift+Space
+            let cmd_shift_space =
+                Shortcut::new(Some(Modifiers::SUPER | Modifiers::SHIFT), Code::Space);
             app.handle().plugin(
                 tauri_plugin_global_shortcut::Builder::new()
                     .with_handler(move |app_handle, shortcut, event| {
-                        if shortcut == &ctrl_alt_space {
+                        if shortcut == &cmd_shift_space {
                             if event.state() == ShortcutState::Pressed {
                                 if let Some(window) = app_handle.get_webview_window("main") {
                                     if window.is_visible().unwrap_or(false) {

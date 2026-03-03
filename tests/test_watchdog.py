@@ -6,7 +6,7 @@ import asyncio
 import logging
 import pytest
 from core.infra.transport.bus import GlobalBus
-from core.ai.monitoring.watchdog import SREWatchdog
+from core.services.watchdog import SREWatchdog
 
 @pytest.mark.asyncio
 async def test_watchdog_real_healing():
