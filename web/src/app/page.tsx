@@ -1,92 +1,161 @@
 "use client";
-/**
- * Aether Voice Portal — Main Page.
- *
- * The Living Voice Portal: an immersive, voice-first interface
- * centered on the AetherOrb, with ambient floating transcript
- * and ephemeral HUD telemetry cards.
- *
- * No chatbox. No text input. A breathing, chromatic organism.
- */
-
 import { useEffect, useRef } from "react";
-import AetherOrb from "@/components/AetherOrb";
-import AmbientTranscript from "@/components/AmbientTranscript";
-import HUDCards from "@/components/HUDCards";
-import { useAetherStore, type EngineState } from "@/store/useAetherStore";
+import AetherLine from "@/components/AetherLine";
+import {
+    useAetherStore,
+    ACCENT_COLORS,
+    SUPERPOWER_META,
+    type EngineState
+} from "@/store/useAetherStore";
+// Import some basic icons if lucide-react is installed, if not we fall back to emojis from store.
+// The store has emojis in SUPERPOWER_META so we'll just use those to avoid dependency issues.
 
-// Atmospheric color map per engine state
-const ATM_COLORS: Record<EngineState, { hue: number; sat: number; brightness: number }> = {
-    IDLE: { hue: 240, sat: 10, brightness: 4 },
-    LISTENING: { hue: 245, sat: 25, brightness: 8 },
-    THINKING: { hue: 35, sat: 40, brightness: 10 },
-    SPEAKING: { hue: 190, sat: 35, brightness: 10 },
-    INTERRUPTING: { hue: 0, sat: 40, brightness: 12 },
-};
+// Helper to map engine state to a base hue offset or intensity, 
+// though the new CSS mostly relies on persona colors.
+export default function AmbientVoicePortal() {
+    const {
+        status,
+        engineState,
+        visionActive,
+        persona,
+        preferences,
+        toggleSuperpower
+    } = useAetherStore();
 
-export default function VoicePortal() {
-    const engineState = useAetherStore((s) => s.engineState);
-    const status = useAetherStore((s) => s.status);
-    const visionActive = useAetherStore((s) => s.visionActive);
     const portalRef = useRef<HTMLDivElement>(null);
 
-    // ─── Chromatic Atmosphere: update CSS custom properties ─────
+    // ─── 1. Apply Persona Colors to CSS Variables ───────────
     useEffect(() => {
         const root = document.documentElement;
-        const target = ATM_COLORS[engineState] || ATM_COLORS.IDLE;
-        root.style.setProperty("--atm-hue", String(target.hue));
-        root.style.setProperty("--atm-sat", `${target.sat}%`);
-        root.style.setProperty("--atm-brightness", `${target.brightness}%`);
-    }, [engineState]);
+        const colorToken = ACCENT_COLORS[preferences.accentColor] || ACCENT_COLORS.cyan;
 
-    // Status label based on current state (minimal text, no chatbot labels)
-    const stateLabel = (() => {
-        switch (status) {
-            case "disconnected": return "tap to begin";
-            case "connecting": return "awakening…";
-            case "connected":
-            case "listening": return "listening";
-            case "speaking": return "speaking";
-            case "error": return "reconnecting…";
-            default: return "";
-        }
-    })();
+        // Extract RGB array from the config "r, g, b"
+        const rgbVals = colorToken.rgb.split(',').map(v => parseInt(v.trim()));
 
-    const statusDotClass = (() => {
-        switch (status) {
-            case "connecting": return "status-dot--connecting";
-            case "listening":
-            case "connected": return "status-dot--listening";
-            case "speaking": return "status-dot--speaking";
-            case "error": return "status-dot--error";
-            default: return "status-dot--idle";
-        }
-    })();
+        // Calculate a rough Hue for the radial gradient background
+        // Simple approximation: check highest value
+        let h = 190; // default cyan
+        if (preferences.accentColor === 'rose') h = 340;
+        if (preferences.accentColor === 'emerald') h = 150;
+        if (preferences.accentColor === 'amber') h = 40;
+        if (preferences.accentColor === 'purple') h = 280;
 
-    return (
-        <div ref={portalRef} className="portal">
-            {/* Vision Active indicator */}
-            {visionActive && (
-                <div className="vision-indicator">
-                    <span className="vision-indicator__dot" />
-                    Vision Active
+        // Increase brightness based on engine state
+        let glowAlpha = 0.2;
+        if (engineState === 'LISTENING') glowAlpha = 0.4;
+        if (engineState === 'THINKING') glowAlpha = 0.6;
+        if (engineState === 'SPEAKING') glowAlpha = 0.8;
+        if (engineState === 'INTERRUPTING') { h = 0; glowAlpha = 0.9; }
+
+        root.style.setProperty("--persona-hue", String(h));
+        root.style.setProperty("--persona-glow", `rgba(${colorToken.rgb}, ${glowAlpha})`);
+    }, [preferences.accentColor, engineState]);
+
+
+    // ─── 2. Top Header: Persona & Multimodal ────────────────
+    const renderHeader = () => (
+        <header className="portal-header">
+            {/* Persona Identity */}
+            <div className="persona-badge">
+                <h1 className="persona-name">{persona.name}</h1>
+                <div className="persona-role">
+                    {persona.role} • LVL {preferences.experienceLevel.toUpperCase()}
                 </div>
-            )}
-
-            {/* Ambient AI transcript (top) */}
-            <AmbientTranscript />
-
-            {/* The Orb — the hero element */}
-            <AetherOrb size={220} />
-
-            {/* Minimal status label */}
-            <div className="orb-label">
-                <span className={`status-dot ${statusDotClass}`} />
-                {stateLabel}
+                {persona.feeling && (
+                    <div className="persona-feeling">{persona.feeling}</div>
+                )}
             </div>
 
-            {/* HUD telemetry cards (bottom) */}
-            <HUDCards />
+            {/* Multimodal Active Nodes */}
+            <div className="multimodal-nodes hidden sm:flex">
+                <div className={`node ${status === 'connected' || status === 'listening' || status === 'speaking' ? 'active' : ''}`} data-mode="voice" title="Voice Channel">
+                    🎙️
+                </div>
+                <div className={`node ${visionActive ? 'active' : ''}`} data-mode="vision" title="Vision Channel">
+                    👁️
+                </div>
+                <div className={`node ${preferences.superpowers.codeSearch ? 'active' : ''}`} data-mode="code" title="Codebase RAG">
+                    {/* Using a code bracket or file icon */}
+                    {'</>'}
+                </div>
+            </div>
+        </header>
+    );
+
+    // ─── 3. Footer: Superpowers HUD ─────────────────────────
+    const renderFooter = () => (
+        <footer className="portal-footer">
+            {/* Left: Active Superpowers Toggle */}
+            <div className="superpowers-bar hide-scrollbar overflow-x-auto max-w-[70vw] pb-2 sm:pb-0">
+                {(Object.keys(SUPERPOWER_META) as (keyof typeof SUPERPOWER_META)[]).map((key) => {
+                    const meta = SUPERPOWER_META[key];
+                    const isActive = preferences.superpowers[key];
+                    return (
+                        <button
+                            key={key}
+                            onClick={() => toggleSuperpower(key)}
+                            className={`power-pill ${isActive ? 'active' : ''}`}
+                            title={meta.desc}
+                        >
+                            <span className="power-icon">{meta.icon}</span>
+                            <span className="hidden sm:inline">{meta.label}</span>
+                        </button>
+                    )
+                })}
+            </div>
+
+            {/* Right: Minimal Connection Status */}
+            <div className="conn-status" data-state={status}>
+                <span className="conn-dot" />
+                {status === 'disconnected' ? 'OFFLINE' :
+                    status === 'connecting' ? 'BOOTING...' :
+                        status === 'error' ? 'FAULT' : 'SYNCED'}
+            </div>
+        </footer>
+    );
+
+    // ─── 4. Ephemeral Transcripts (Whispers) ────────────────
+    const renderWhispers = () => {
+        const transcript = useAetherStore(s => s.transcript);
+        if (preferences.transcriptMode === 'hidden' || transcript.length === 0) return null;
+
+        // Get the latest user message and the latest agent message
+        const lastUser = [...transcript].reverse().find(m => m.role === 'user');
+        const lastAgent = [...transcript].reverse().find(m => m.role === 'agent');
+
+        return (
+            <div className="whisper-container">
+                {lastUser && (
+                    <div className="whisper-text user fade-in-up">
+                        "{lastUser.content}"
+                    </div>
+                )}
+                {lastAgent && (
+                    <div className="whisper-text agent fade-in-up">
+                        {lastAgent.content}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ─── Render full UI ─────────────────────────────────────
+    return (
+        <div ref={portalRef} className="portal">
+            {renderHeader()}
+
+            <main className="portal-hero">
+                {renderWhispers()}
+                {/* 
+                  The AetherLine serves as the primary visualizer. 
+                  We let it fill the space. 
+                */}
+                <div className="w-full h-full flex items-center justify-center">
+                    <AetherLine />
+                </div>
+            </main>
+
+            {renderFooter()}
         </div>
     );
 }

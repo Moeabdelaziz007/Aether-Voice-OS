@@ -147,11 +147,7 @@ export default function LivePage() {
                     position: "relative",
                 }}
             >
-                <AetherLine
-                    micLevel={audio.micLevel}
-                    speakerLevel={audio.speakerLevel}
-                    status={lineStatus}
-                />
+                <AetherLine />
             </div>
 
             {/* Status text */}

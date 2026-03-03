@@ -1,38 +1,42 @@
 /* ═══════════════════════════════════════════════════════
-   AETHER VOICE OS — Living Voice Portal Design System
+   AETHER VOICE OS — V4 Ambient Architecture
    ═══════════════════════════════════════════════════════
-   Philosophy: The Environment IS the Conversation.
-   No chatbox. No text-first thinking. A living organism.
+   Philosophy: OpenClaw Multimodal Agent Integration.
+   Voice-first, cinematic, reflecting Soul, Mood, and Skills.
    ═══════════════════════════════════════════════════════ */
 
 @import "tailwindcss";
 
 /* ─── Design Tokens ──────────────────────────────────── */
 :root {
-  /* Atmospheric tokens (driven by JS via inline styles) */
-  --atm-hue: 240;
-  --atm-sat: 15%;
-  --atm-brightness: 5%;
+  /* Dynamic Persona Tokens (overridden by JS inline styles) */
+  --persona-hue: 190;
+  --persona-sat: 100%;
+  --persona-lum: 50%;
+  --persona-glow: rgba(0, 243, 255, 0.4);
 
-  /* Core palette */
-  --void: #050510;
-  --void-soft: #0a0a1a;
-  --glass: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.08);
-  --glass-strong: rgba(255, 255, 255, 0.08);
-  --neon-cyan: #22d3ee;
-  --neon-purple: #a855f7;
-  --neon-amber: #f59e0b;
-  --text-primary: rgba(255, 255, 255, 0.92);
-  --text-ghost: rgba(255, 255, 255, 0.35);
-  --text-dim: rgba(255, 255, 255, 0.18);
+  /* Core Industrial/Sci-Fi Palette */
+  --void: #030308;
+  --void-soft: #080812;
+  --glass: rgba(15, 15, 25, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass-strong: rgba(255, 255, 255, 0.1);
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-ghost: rgba(255, 255, 255, 0.4);
+  --text-dim: rgba(255, 255, 255, 0.25);
 
-  /* Font stack */
+  /* Semantic Multimodal Colors */
+  --mode-voice: #22d3ee;
+  --mode-vision: #a855f7;
+  --mode-code: #f59e0b;
+  --mode-system: #f43f5e;
+
+  /* Fonts */
   --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
   --font-display: "Inter", "SF Pro Display", system-ui, sans-serif;
 }
 
-/* ─── Base Reset & Body ──────────────────────────────── */
+/* ─── Base Reset & Environment ───────────────────────── */
 *,
 *::before,
 *::after {
@@ -52,54 +56,122 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* The atmospheric living background matching the Persona */
 body {
-  /* Atmospheric gradient — the living background */
   background:
-    radial-gradient(ellipse 80% 60% at 50% 50%,
-      hsla(var(--atm-hue), var(--atm-sat), var(--atm-brightness), 0.4) 0%,
-      transparent 70%),
-    radial-gradient(circle at 20% 80%,
-      hsla(280, 30%, 8%, 0.5) 0%,
-      transparent 50%),
-    radial-gradient(circle at 80% 20%,
-      hsla(200, 30%, 6%, 0.5) 0%,
-      transparent 50%),
+    radial-gradient(circle at 50% 120%, var(--persona-glow) 0%, transparent 60%),
+    radial-gradient(ellipse at 50% 50%, rgba(10, 10, 20, 0.5) 0%, var(--void) 100%),
     var(--void);
-  transition: background 1.5s ease;
+  transition: background 2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ─── Portal Layout ──────────────────────────────────── */
+/* ─── Immersive Fullscreen Layout ────────────────────── */
 .portal {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas:
+    "header"
+    "hero"
+    "footer";
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  z-index: 10;
+}
+
+/* ─── Header: Persona & Multimodal Status ────────────── */
+.portal-header {
+  grid-area: header;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 2rem 3rem;
+  z-index: 20;
+}
+
+/* Persona Badge */
+.persona-badge {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.persona-name {
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+  text-shadow: 0 0 10px var(--persona-glow);
+}
+
+.persona-role {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-ghost);
+}
+
+.persona-feeling {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  font-style: italic;
+  margin-top: 0.2rem;
+}
+
+/* Multimodal Nodes */
+.multimodal-nodes {
+  display: flex;
+  gap: 1rem;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  color: var(--text-dim);
+  transition: all 0.3s ease;
+}
+
+.node.active {
+  color: var(--text-primary);
+  box-shadow: 0 0 15px currentColor;
+  border-color: currentColor;
+}
+
+.node[data-mode="voice"].active {
+  color: var(--mode-voice);
+}
+
+.node[data-mode="vision"].active {
+  color: var(--mode-vision);
+}
+
+.node[data-mode="code"].active {
+  color: var(--mode-code);
+}
+
+/* ─── Hero: The Voice Interface (AetherLine) ─────────── */
+.portal-hero {
+  grid-area: hero;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100vh;
-  width: 100vw;
   position: relative;
-  overflow: hidden;
+  width: 100%;
+  height: 100%;
 }
 
-/* ─── Aether Orb ─────────────────────────────────────── */
-.aether-orb {
-  z-index: 10;
-  border-radius: 50%;
-  transition: filter 0.3s ease;
-}
-
-.aether-orb:hover {
-  filter: brightness(1.15);
-}
-
-.aether-orb:focus-visible {
-  outline: 2px solid var(--neon-cyan);
-  outline-offset: 8px;
-  border-radius: 50%;
-}
-
-/* ─── Ambient Transcript Zones ───────────────────────── */
-.ambient-zone {
+/* ─── Whispers: Ephemeral Transcript ─────────────────── */
+.whisper-container {
   position: absolute;
+  top: 15%;
   left: 0;
   right: 0;
   display: flex;
@@ -109,354 +181,141 @@ body {
   z-index: 5;
 }
 
-.ambient-zone--top {
-  top: 8vh;
-  gap: 12px;
-}
-
-.ambient-zone--bottom {
-  bottom: 15vh;
-  gap: 8px;
-}
-
-.ambient-text {
-  font-family: var(--font-display);
+.whisper-text {
+  font-size: clamp(1.25rem, 3vw, 2rem);
+  font-weight: 300;
   text-align: center;
   max-width: 70vw;
-  line-height: 1.5;
+  line-height: 1.4;
   letter-spacing: -0.01em;
+  color: var(--text-primary);
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
 }
 
-.ambient-text--agent {
-  font-size: clamp(1rem, 2.5vw, 1.5rem);
-  font-weight: 300;
-  color: var(--neon-cyan);
-  text-shadow: 0 0 30px rgba(34, 211, 238, 0.2);
-}
-
-.ambient-text--user {
-  font-size: clamp(0.85rem, 2vw, 1.15rem);
-  font-weight: 400;
+.whisper-text.user {
+  font-size: clamp(1rem, 2vw, 1.5rem);
   color: var(--text-ghost);
   font-style: italic;
+  margin-bottom: 2rem;
 }
 
-/* ─── HUD Cards ──────────────────────────────────────── */
-.hud-cards {
-  position: absolute;
-  bottom: 5vh;
-  left: 50%;
-  transform: translateX(-50%);
+/* ─── Footer: Skills & Superpowers HUD ───────────────── */
+.portal-footer {
+  grid-area: footer;
   display: flex;
-  gap: 12px;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding: 2rem 3rem;
   z-index: 20;
 }
 
-.hud-card {
+/* Superpowers Bar */
+.superpowers-bar {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.power-pill {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  gap: 0.5rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 20px;
   background: var(--glass);
   border: 1px solid var(--glass-border);
-  border-radius: 12px;
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  -webkit-user-select: none;
-  user-select: none;
-  transition: background 0.3s ease, border-color 0.3s ease;
-}
-
-.hud-card:hover {
-  background: var(--glass-strong);
-  border-color: rgba(255, 255, 255, 0.12);
-}
-
-.hud-card__icon {
-  font-size: 14px;
-  line-height: 1;
-}
-
-.hud-card__content {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.hud-card__label {
   font-family: var(--font-mono);
-  font-size: 9px;
+  font-size: 0.75rem;
+  color: var(--text-ghost);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+  user-select: none;
+  cursor: pointer;
+}
+
+.power-pill.active {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--persona-glow);
+  color: var(--text-primary);
+  box-shadow: 0 0 10px var(--persona-glow) inset;
+}
+
+.power-icon {
+  font-size: 0.9rem;
+}
+
+/* Connection Status Minimalist */
+.conn-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--text-dim);
 }
 
-.hud-card__value {
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-/* ─── Status Indicator ───────────────────────────────── */
-.status-dot {
-  display: inline-block;
+.conn-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  margin-right: 6px;
-  animation: pulse-dot 2s ease-in-out infinite;
+  background: currentColor;
 }
 
-.status-dot--idle {
-  background: #4a3080;
+.conn-status[data-state="connected"] {
+  color: var(--mode-voice);
 }
 
-.status-dot--connecting {
-  background: var(--neon-amber);
-  animation-duration: 0.8s;
+.conn-status[data-state="error"] {
+  color: #ef4444;
 }
 
-.status-dot--listening {
-  background: #6366f1;
-}
-
-.status-dot--speaking {
-  background: var(--neon-cyan);
-}
-
-.status-dot--error {
-  background: #ef4444;
-  animation-duration: 0.5s;
-}
-
-/* ─── Orb Label ──────────────────────────────────────── */
-.orb-label {
-  position: absolute;
-  bottom: calc(50% - 160px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  transition: color 0.5s ease;
-  pointer-events: none;
-  z-index: 15;
-}
-
-/* ─── Animations ─────────────────────────────────────── */
-@keyframes pulse-dot {
-
-  0%,
-  100% {
-    opacity: 0.5;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.3);
-  }
-}
-
-@keyframes aurora-drift {
-  0% {
-    --atm-hue: 240;
-  }
-
-  25% {
-    --atm-hue: 260;
-  }
-
-  50% {
-    --atm-hue: 220;
-  }
-
-  75% {
-    --atm-hue: 250;
-  }
-
-  100% {
-    --atm-hue: 240;
-  }
-}
-
-/* ─── Silent Hint Cards ─────────────────────────────── */
-.silent-hint {
-  position: fixed;
-  bottom: 120px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  max-width: 420px;
-  padding: 14px 18px;
-  -webkit-backdrop-filter: blur(24px) saturate(1.4);
-  backdrop-filter: blur(24px) saturate(1.4);
-  background: rgba(255, 200, 50, 0.06);
-  border: 1px solid rgba(255, 200, 50, 0.2);
-  border-radius: 14px;
-  color: rgba(255, 255, 255, 0.92);
-  font-size: 13px;
-  line-height: 1.5;
-  z-index: 100;
-  box-shadow: 0 0 20px rgba(255, 200, 50, 0.08),
-    0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.silent-hint--warning {
-  background: rgba(255, 160, 40, 0.08);
-  border-color: rgba(255, 160, 40, 0.3);
-  box-shadow: 0 0 20px rgba(255, 160, 40, 0.1),
-    0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.silent-hint--suggestion {
-  background: rgba(80, 220, 140, 0.06);
-  border-color: rgba(80, 220, 140, 0.2);
-  box-shadow: 0 0 20px rgba(80, 220, 140, 0.08),
-    0 4px 16px rgba(0, 0, 0, 0.3);
-}
-
-.silent-hint__icon {
-  flex-shrink: 0;
-  font-size: 18px;
-  margin-top: 1px;
-}
-
-.silent-hint__body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.silent-hint__text {
-  font-weight: 500;
-}
-
-.silent-hint__code {
-  background: rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-family: "SF Mono", "Fira Code", monospace;
-  font-size: 11px;
-  line-height: 1.6;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  color: rgba(180, 220, 255, 0.9);
-  margin: 0;
-}
-
-.silent-hint__explanation {
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.55);
-  font-style: italic;
-}
-
-/* ─── Vision Active Indicator ────────────────────────── */
-.vision-indicator {
-  position: fixed;
-  top: 24px;
-  right: 24px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
-  background: rgba(80, 200, 255, 0.06);
-  border: 1px solid rgba(80, 200, 255, 0.15);
-  border-radius: 20px;
-  color: rgba(80, 200, 255, 0.8);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 0.5px;
-  z-index: 50;
-}
-
-.vision-indicator__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(80, 200, 255, 0.7);
-  animation: vision-pulse 2s ease-in-out infinite;
-}
-
-@keyframes vision-pulse {
-
-  0%,
-  100% {
-    opacity: 0.5;
-  }
-
-  50% {
-    opacity: 1;
-  }
-}
-
-/* ─── NeuralWeb (retained, minimal) ──────────────────── */
-.neural-web-container {
+/* ─── Settings Panel (Glassmorphism) ─────────────────── */
+.settings-overlay {
   position: absolute;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1;
-  opacity: 0.3;
-  pointer-events: none;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* ─── Responsive ─────────────────────────────────────── */
-@media (max-width: 640px) {
-  .hud-cards {
-    gap: 6px;
-    flex-wrap: wrap;
-    justify-content: center;
-    padding: 0 16px;
-  }
-
-  .hud-card {
-    padding: 6px 10px;
-  }
-
-  .hud-card__label {
-    font-size: 8px;
-  }
-
-  .hud-card__value {
-    font-size: 11px;
-  }
-
-  .ambient-text--agent {
-    font-size: 1rem;
-  }
-
-  .ambient-text--user {
-    font-size: 0.85rem;
-  }
+.settings-panel {
+  background: var(--void-soft);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  width: 90%;
+  max-width: 800px;
+  max-height: 85vh;
+  overflow-y: auto;
+  padding: 2rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
 
-/* ─── Reduced Motion ─────────────────────────────────── */
-@media (prefers-reduced-motion: reduce) {
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ─── Scrollbar (hidden globally) ────────────────────── */
-::-webkit-scrollbar {
+/* Hide scrollbar for settings */
+.settings-panel::-webkit-scrollbar {
   display: none;
 }
 
-* {
+.settings-panel {
+  -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+/* ─── Typography & Utilities ─────────────────────────── */
+h2,
+h3 {
+  font-weight: 300;
+  letter-spacing: -0.02em;
+}
+
+.mono {
+  font-family: var(--font-mono);
 }
