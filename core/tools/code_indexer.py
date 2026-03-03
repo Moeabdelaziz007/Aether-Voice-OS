@@ -27,6 +27,7 @@ IGNORE_DIRS = {
     ".idx",
     "node_modules",
     ".next",
+    ".next",
     "out",
     "venv",
     "__pycache__",
@@ -55,7 +56,7 @@ def chunk_text(text: str, chunk_size: int = 1500, overlap: int = 200) -> list[st
 async def index_codebase() -> None:
     logger.info("Initializing Codebase Indexer...")
     load_dotenv(ROOT_DIR / ".env")
-    api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("AETHER_AI_API_KEY")
+    api_key = os.getenv("GOOGLE_API_KEY")
 
     if not api_key:
         logger.error("No Google API Key found. Ensure .env is set.")
