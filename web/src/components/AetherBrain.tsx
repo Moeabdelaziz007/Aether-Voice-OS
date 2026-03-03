@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useAetherStore } from '../store/useAetherStore';
 import { useAudioPipeline } from '../hooks/useAudioPipeline';
 import { useAetherGateway } from '../hooks/useAetherGateway';
@@ -14,7 +14,11 @@ import { useEngineTelemetry } from '../hooks/useEngineTelemetry';
  * Gemini Live WebSocket and updates the global Zustand store in real-time.
  */
 export function AetherBrain() {
-    const store = useAetherStore();
+    // Extract individual setters to avoid the whole store object changing reference
+    const setAudioLevels = useAetherStore(state => state.setAudioLevels);
+    const setStatus = useAetherStore(state => state.setStatus);
+    const addSystemLog = useAetherStore(state => state.addSystemLog);
+    const setEngineState = useAetherStore(state => state.setEngineState);
 
     const {
         state: audioState,
@@ -36,43 +40,54 @@ export function AetherBrain() {
 
     const { connect: connectTelemetry } = useEngineTelemetry();
 
+    // Refs to prevent dependency cycles in callbacks
+    const isTerminating = useRef(false);
+
     // 1. Sync Audio RMS to Global Store for UI visualizing
     useEffect(() => {
-        store.setAudioLevels(micLevel, speakerLevel);
-    }, [micLevel, speakerLevel, store]);
+        setAudioLevels(micLevel, speakerLevel);
+    }, [micLevel, speakerLevel, setAudioLevels]);
 
     // 2. Sync Global Status
     useEffect(() => {
-        if (gatewayStatus === 'disconnected') store.setStatus('disconnected');
-        else if (gatewayStatus === 'connecting' || gatewayStatus === 'handshaking') store.setStatus('connecting');
-        else if (gatewayStatus === 'connected') store.setStatus('connected');
-        else if (gatewayStatus === 'error') store.setStatus('error');
-    }, [gatewayStatus, store]);
+        if (gatewayStatus === 'disconnected') setStatus('disconnected');
+        else if (gatewayStatus === 'connecting' || gatewayStatus === 'handshaking') setStatus('connecting');
+        else if (gatewayStatus === 'connected') setStatus('connected');
+        else if (gatewayStatus === 'error') setStatus('error');
+    }, [gatewayStatus, setStatus]);
 
     // 3. Handle Connections gracefully based on store status triggers
+    // Initialize connection (currently unused directly by component logic, but exposed)
     const initializeConnection = useCallback(async () => {
         try {
-            store.addSystemLog('[Brain] Initializing Audio Pipeline...');
+            addSystemLog('[Brain] Initializing Audio Pipeline...');
             await startAudio();
 
-            store.addSystemLog('[Brain] Connecting to local Aether Gateway...');
+            addSystemLog('[Brain] Connecting to local Aether Gateway...');
             await connectGateway();
 
-            store.addSystemLog('[Brain] Opening telemetry channel...');
+            addSystemLog('[Brain] Opening telemetry channel...');
             connectTelemetry();
         } catch (err) {
-            store.addSystemLog('[Brain] Connection error occurred.');
+            addSystemLog('[Brain] Connection error occurred.');
             console.error(err);
-            store.setStatus('error');
+            setStatus('error');
         }
-    }, [startAudio, connectGateway, connectTelemetry, store]);
+    }, [startAudio, connectGateway, connectTelemetry, addSystemLog, setStatus]);
 
+    // Ref prevent infinite unmount loop
     const terminateConnection = useCallback(() => {
-        store.addSystemLog('[Brain] Terminating connections...');
+        if (isTerminating.current) return;
+        isTerminating.current = true;
+
+        addSystemLog('[Brain] Terminating connections...');
         stopAudio();
         disconnectGateway();
-        store.setEngineState('IDLE');
-    }, [stopAudio, disconnectGateway, store]);
+        setEngineState('IDLE');
+
+        // Reset after a short delay to allow reconnection later
+        setTimeout(() => { isTerminating.current = false; }, 500);
+    }, [stopAudio, disconnectGateway, addSystemLog, setEngineState]);
 
     // Connect automatically if global status dictates
     /* In the future, this can listen to a specific trigger. For now, we expose
@@ -95,11 +110,12 @@ export function AetherBrain() {
 
         // In the local Gateway model, interrupts and state transitions
         // come via useEngineTelemetry (which updates store.setEngineState).
-    }, [onPCMChunk, onAudioResponse, gatewayStatus, sendAudio, playPCM, store]);
+    }, [onPCMChunk, onAudioResponse, gatewayStatus, sendAudio, playPCM]);
 
     // Provide cleanup
     useEffect(() => {
         return () => {
+            // Only run terminateConnection logic if component is unmounting to avoid hot-reload loops
             terminateConnection();
         };
     }, [terminateConnection]);
