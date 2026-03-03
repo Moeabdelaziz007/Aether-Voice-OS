@@ -283,6 +283,121 @@ body {
   }
 }
 
+/* ─── Silent Hint Cards ─────────────────────────────── */
+.silent-hint {
+  position: fixed;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 420px;
+  padding: 14px 18px;
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  backdrop-filter: blur(24px) saturate(1.4);
+  background: rgba(255, 200, 50, 0.06);
+  border: 1px solid rgba(255, 200, 50, 0.2);
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 13px;
+  line-height: 1.5;
+  z-index: 100;
+  box-shadow: 0 0 20px rgba(255, 200, 50, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.silent-hint--warning {
+  background: rgba(255, 160, 40, 0.08);
+  border-color: rgba(255, 160, 40, 0.3);
+  box-shadow: 0 0 20px rgba(255, 160, 40, 0.1),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.silent-hint--suggestion {
+  background: rgba(80, 220, 140, 0.06);
+  border-color: rgba(80, 220, 140, 0.2);
+  box-shadow: 0 0 20px rgba(80, 220, 140, 0.08),
+    0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.silent-hint__icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  margin-top: 1px;
+}
+
+.silent-hint__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.silent-hint__text {
+  font-weight: 500;
+}
+
+.silent-hint__code {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  color: rgba(180, 220, 255, 0.9);
+  margin: 0;
+}
+
+.silent-hint__explanation {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+}
+
+/* ─── Vision Active Indicator ────────────────────────── */
+.vision-indicator {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  background: rgba(80, 200, 255, 0.06);
+  border: 1px solid rgba(80, 200, 255, 0.15);
+  border-radius: 20px;
+  color: rgba(80, 200, 255, 0.8);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  z-index: 50;
+}
+
+.vision-indicator__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(80, 200, 255, 0.7);
+  animation: vision-pulse 2s ease-in-out infinite;
+}
+
+@keyframes vision-pulse {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 /* ─── NeuralWeb (retained, minimal) ──────────────────── */
 .neural-web-container {
   position: absolute;

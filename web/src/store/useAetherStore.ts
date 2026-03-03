@@ -11,6 +11,16 @@ export interface TranscriptMessage {
     timestamp: number;
 }
 
+export interface SilentHint {
+    id: string;
+    text: string;
+    code?: string;
+    explanation?: string;
+    priority: 'info' | 'warning' | 'suggestion';
+    type: 'hint' | 'code';
+    timestamp: number;
+}
+
 export interface NeuralEvent {
     id: string;
     fromAgent: string;
@@ -43,6 +53,8 @@ interface AetherState {
     transcript: TranscriptMessage[];
     neuralEvents: NeuralEvent[];
     systemLogs: string[];
+    silentHints: SilentHint[];
+    visionActive: boolean;
     lastVisionPulse: string | null;
     zenMode: boolean;
 
@@ -60,6 +72,9 @@ interface AetherState {
     addNeuralEvent: (event: Omit<NeuralEvent, 'id'>) => void;
     updateNeuralEvent: (id: string, updates: Partial<NeuralEvent>) => void;
     addSystemLog: (log: string) => void;
+    addSilentHint: (hint: SilentHint) => void;
+    dismissHint: (id: string) => void;
+    setVisionActive: (active: boolean) => void;
     clearTranscript: () => void;
 }
 
@@ -81,6 +96,8 @@ export const useAetherStore = create<AetherState>((set) => ({
     transcript: [],
     neuralEvents: [],
     systemLogs: [],
+    silentHints: [],
+    visionActive: false,
     lastVisionPulse: null,
     zenMode: false,
 
@@ -122,6 +139,16 @@ export const useAetherStore = create<AetherState>((set) => ({
         const newLogs = [...state.systemLogs, log];
         return { systemLogs: newLogs.slice(-50) }; // Keep last 50 logs
     }),
+
+    addSilentHint: (hint) => set((state) => ({
+        silentHints: [...state.silentHints, hint].slice(-10) // Keep last 10 hints
+    })),
+
+    dismissHint: (id) => set((state) => ({
+        silentHints: state.silentHints.filter(h => h.id !== id)
+    })),
+
+    setVisionActive: (visionActive) => set({ visionActive }),
 
     clearTranscript: () => set({ transcript: [] })
 }));

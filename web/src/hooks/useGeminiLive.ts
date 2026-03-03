@@ -1,10 +1,12 @@
 "use client";
 /**
- * Aether Voice OS — Gemini Live Session Hook.
+ * Aether Voice OS — Gemini Live Session Hook (V3 Multimodal).
  *
  * Manages the WebSocket connection to Gemini's Multimodal Live API.
  * Features:
  *   - Real-time PCM audio streaming (16kHz Int16 → base64)
+ *   - Vision frame streaming (JPEG base64 at 1 FPS)
+ *   - Tool call support for silent UI orchestration
  *   - Gapless audio response handling with base64 decode
  *   - Barge-in (interruption) support
  *   - Transcript extraction from model text parts
@@ -23,18 +25,30 @@ export type SessionStatus =
     | "thinking"
     | "error";
 
+/** Tool call from Gemini */
+export interface GeminiToolCall {
+    name: string;
+    args: Record<string, unknown>;
+    id: string;
+}
+
 interface GeminiLiveReturn {
     status: SessionStatus;
     latencyMs: number;
     connect: () => Promise<void>;
     disconnect: () => void;
     sendAudio: (pcm: ArrayBuffer) => void;
+    sendVisionFrame: (b64Jpeg: string) => void;
+    sendToolResponse: (callId: string, result: Record<string, unknown>) => void;
     onAudioResponse: React.MutableRefObject<
         ((audio: ArrayBuffer) => void) | null
     >;
     onInterrupt: React.MutableRefObject<(() => void) | null>;
     onTranscript: React.MutableRefObject<
         ((text: string, role: "user" | "ai") => void) | null
+    >;
+    onToolCall: React.MutableRefObject<
+        ((toolCall: GeminiToolCall) => void) | null
     >;
 }
 
@@ -64,6 +78,9 @@ export function useGeminiLive(): GeminiLiveReturn {
     const onTranscript = useRef<
         ((text: string, role: "user" | "ai") => void) | null
     >(null);
+    const onToolCall = useRef<
+        ((toolCall: GeminiToolCall) => void) | null
+    >(null);
 
     // Latency tracking
     const lastSendTime = useRef(0);
@@ -85,7 +102,7 @@ export function useGeminiLive(): GeminiLiveReturn {
                 console.log("✦ Gemini Live WebSocket opened");
                 retryCount.current = 0; // Reset retries on successful connect
 
-                // Send setup message with model config
+                // Send setup message with model config + tools
                 const setup = {
                     setup: {
                         model: MODEL,
@@ -103,15 +120,70 @@ export function useGeminiLive(): GeminiLiveReturn {
                             parts: [
                                 {
                                     text:
-                                        "You are Aether — a calm, wise AI voice companion. " +
-                                        "You speak clearly and concisely. You are helpful, " +
-                                        "warm, and deeply knowledgeable. Keep responses short " +
-                                        "and conversational for voice interaction. " +
-                                        "Never use markdown, bullet points, or formatting — " +
-                                        "speak naturally as in a real conversation.",
+                                        "You are Aether — a calm, wise AI ambient companion with vision capabilities. " +
+                                        "You can SEE the user's screen through periodic vision frames. " +
+                                        "You speak clearly and concisely. You are helpful, warm, and deeply knowledgeable. " +
+                                        "Keep responses short and conversational for voice interaction. " +
+                                        "Never use markdown, bullet points, or formatting — speak naturally. " +
+                                        "\n\nSILENT TOOLS: You have tools to show information on the user's screen " +
+                                        "WITHOUT speaking. Use show_silent_hint to display a brief helpful hint " +
+                                        "(e.g., spotted an error, a suggestion). Use show_code_suggestion for code fixes. " +
+                                        "Use these tools proactively when you notice something in the screen — " +
+                                        "you do NOT need to speak when using tools. The hint appears as a card on the UI.",
                                 },
                             ],
                         },
+                        tools: [
+                            {
+                                function_declarations: [
+                                    {
+                                        name: "show_silent_hint",
+                                        description:
+                                            "Display a silent hint card on the user's screen without speaking. " +
+                                            "Use when you notice something helpful in the user's screen.",
+                                        parameters: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                text: {
+                                                    type: "STRING",
+                                                    description: "The hint text to display (max 120 chars)",
+                                                },
+                                                priority: {
+                                                    type: "STRING",
+                                                    enum: ["info", "warning", "suggestion"],
+                                                    description: "The priority level of the hint",
+                                                },
+                                            },
+                                            required: ["text"],
+                                        },
+                                    },
+                                    {
+                                        name: "show_code_suggestion",
+                                        description:
+                                            "Display a code suggestion card on the user's screen. " +
+                                            "Use when you spot a bug, improvement, or fix in the visible code.",
+                                        parameters: {
+                                            type: "OBJECT",
+                                            properties: {
+                                                title: {
+                                                    type: "STRING",
+                                                    description: "Short title for the suggestion",
+                                                },
+                                                code: {
+                                                    type: "STRING",
+                                                    description: "The code snippet or fix",
+                                                },
+                                                explanation: {
+                                                    type: "STRING",
+                                                    description: "Brief explanation of the suggestion",
+                                                },
+                                            },
+                                            required: ["title", "code"],
+                                        },
+                                    },
+                                ],
+                            },
+                        ],
                     },
                 };
 
@@ -225,6 +297,29 @@ export function useGeminiLive(): GeminiLiveReturn {
                     }
                 }
             }
+
+            // ─── Tool Calls from Gemini ─────────────────────────────
+            const toolCallMsg = msg.toolCall as
+                | Record<string, unknown>
+                | undefined;
+            if (toolCallMsg) {
+                const functionCalls = toolCallMsg.functionCalls as
+                    | Array<Record<string, unknown>>
+                    | undefined;
+                if (functionCalls) {
+                    for (const fc of functionCalls) {
+                        const call: GeminiToolCall = {
+                            name: fc.name as string,
+                            args: (fc.args as Record<string, unknown>) || {},
+                            id: (fc.id as string) || crypto.randomUUID(),
+                        };
+                        console.log("🔧 Tool call:", call.name, call.args);
+                        if (onToolCall.current) {
+                            onToolCall.current(call);
+                        }
+                    }
+                }
+            }
         },
         []
     );
@@ -264,6 +359,49 @@ export function useGeminiLive(): GeminiLiveReturn {
 
         ws.send(JSON.stringify(msg));
     }, []);
+
+    /** Send a vision frame (JPEG base64) to Gemini */
+    const sendVisionFrame = useCallback((b64Jpeg: string) => {
+        const ws = wsRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN || !setupDone.current)
+            return;
+
+        const msg = {
+            realtimeInput: {
+                mediaChunks: [
+                    {
+                        mimeType: "image/jpeg",
+                        data: b64Jpeg,
+                    },
+                ],
+            },
+        };
+
+        ws.send(JSON.stringify(msg));
+    }, []);
+
+    /** Send a tool response back to Gemini after executing a tool call */
+    const sendToolResponse = useCallback(
+        (callId: string, result: Record<string, unknown>) => {
+            const ws = wsRef.current;
+            if (!ws || ws.readyState !== WebSocket.OPEN) return;
+
+            const msg = {
+                toolResponse: {
+                    functionResponses: [
+                        {
+                            id: callId,
+                            name: callId,
+                            response: result,
+                        },
+                    ],
+                },
+            };
+
+            ws.send(JSON.stringify(msg));
+        },
+        []
+    );
 
     /** Calculate RTT and update rolling average */
     const measureLatency = useCallback(() => {
@@ -336,8 +474,11 @@ export function useGeminiLive(): GeminiLiveReturn {
         connect,
         disconnect,
         sendAudio,
+        sendVisionFrame,
+        sendToolResponse,
         onAudioResponse,
         onInterrupt,
         onTranscript,
+        onToolCall,
     };
 }

@@ -27,6 +27,7 @@ const ATM_COLORS: Record<EngineState, { hue: number; sat: number; brightness: nu
 export default function VoicePortal() {
     const engineState = useAetherStore((s) => s.engineState);
     const status = useAetherStore((s) => s.status);
+    const visionActive = useAetherStore((s) => s.visionActive);
     const portalRef = useRef<HTMLDivElement>(null);
 
     // ─── Chromatic Atmosphere: update CSS custom properties ─────
@@ -64,6 +65,14 @@ export default function VoicePortal() {
 
     return (
         <div ref={portalRef} className="portal">
+            {/* Vision Active indicator */}
+            {visionActive && (
+                <div className="vision-indicator">
+                    <span className="vision-indicator__dot" />
+                    Vision Active
+                </div>
+            )}
+
             {/* Ambient AI transcript (top) */}
             <AmbientTranscript />
 
