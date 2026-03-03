@@ -23,65 +23,88 @@ export function LiveWaveLine({ state, valence = 0.5, arousal = 0.5 }: LiveWaveLi
         let animationFrameId: number;
         let time = 0;
 
+        // Custom noise generator for organic movement
+        const noise = (x: number, t: number) => Math.sin(x * 0.05 + t) * Math.cos(x * 0.03 - t * 0.8);
+
         const render = () => {
             time += 0.05;
 
-            // Clear canvas with transparent background
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Clear canvas with transparent dark blend
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.3)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
 
             // Define visual properties based on state
-            let color = '#333333';
-            let amplitude = 2;
-            let frequency = 0.02;
-            let glow = 0;
+            let baseColor = '51, 51, 51';
+            let amplitudeBase = 3;
+            let layers = 1;
+            let frequency = 0.01;
+            let glitchFactor = 0;
 
             switch (state) {
                 case 'listening':
-                    color = valence > 0.6 ? '#00f3ff' : '#ff9900'; // Cyan for happy, orange for alert
-                    amplitude = 15 * (1 + arousal);
-                    frequency = 0.05;
-                    glow = 15;
+                    baseColor = valence > 0.6 ? '0, 243, 255' : '255, 153, 0'; // Cyan / Orange
+                    amplitudeBase = 15 * (1 + arousal);
+                    frequency = 0.04;
+                    layers = 3;
                     break;
                 case 'thinking':
-                    color = '#9d4edd'; // purple
-                    amplitude = 20 * (1 + arousal);
-                    frequency = 0.1;
-                    glow = 20;
+                    baseColor = '188, 19, 254'; // Purple
+                    amplitudeBase = 25 * (1 + arousal);
+                    frequency = 0.08;
+                    layers = 4;
+                    // Introduce erratic high-frequency noise
+                    glitchFactor = arousal * 10;
                     break;
                 case 'speaking':
-                    color = valence > 0.6 ? '#00f3ff' : valence < 0.4 ? '#ff3333' : '#00f3ff';
-                    amplitude = (30 + Math.sin(time) * 10) * (1 + arousal);
-                    frequency = 0.08;
-                    glow = 25;
+                    baseColor = valence > 0.6 ? '0, 243, 255' : valence < 0.4 ? '255, 51, 51' : '0, 243, 255';
+                    amplitudeBase = (35 + Math.sin(time * 2) * 15) * (1 + arousal);
+                    frequency = 0.06;
+                    layers = 3;
+                    if (valence < 0.4) glitchFactor = 20; // Frustration causes glitchy peaks
                     break;
                 case 'idle':
                 default:
-                    color = '#333333';
-                    amplitude = 3;
-                    frequency = 0.01;
-                    glow = 2;
+                    baseColor = '100, 100, 100';
+                    amplitudeBase = 2;
+                    frequency = 0.005;
+                    layers = 1;
                     break;
             }
 
-            ctx.beginPath();
-            ctx.moveTo(0, canvas.height / 2);
+            // Draw multi-layered waves
+            for (let l = 0; l < layers; l++) {
+                const layerOffset = l * Math.PI * 0.5;
+                const layerAmplitude = amplitudeBase * (1 - l * 0.2);
+                const layerAlpha = 1 - l * 0.2;
 
-            for (let x = 0; x < canvas.width; x++) {
-                // Create a sine wave combined with some noise/secondary wave for organic feel
-                const y = canvas.height / 2 +
-                    Math.sin(x * frequency + time) * amplitude *
-                    Math.sin(x * 0.01);
-                ctx.lineTo(x, y);
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height / 2);
+
+                for (let x = 0; x < canvas.width; x++) {
+                    // Core sine wave
+                    let yOffset = Math.sin(x * frequency + time + layerOffset) * layerAmplitude;
+
+                    // Modulate with organic noise
+                    yOffset *= (1 + noise(x, time) * 0.5);
+
+                    // Inject Glitch factor (Sharp high-frequency peaks)
+                    if (glitchFactor > 0 && Math.random() < 0.05) {
+                        yOffset += (Math.random() - 0.5) * glitchFactor;
+                    }
+
+                    const y = canvas.height / 2 + yOffset;
+                    ctx.lineTo(x, y);
+                }
+
+                ctx.strokeStyle = `rgba(${baseColor}, ${layerAlpha})`;
+                ctx.lineWidth = l === 0 ? 3 : 1;
+
+                // Deep Bloom Pass
+                ctx.shadowBlur = l === 0 ? 20 : 10;
+                ctx.shadowColor = `rgb(${baseColor})`;
+
+                ctx.stroke();
             }
-
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 3;
-
-            // Add glow effect
-            ctx.shadowBlur = glow;
-            ctx.shadowColor = color;
-
-            ctx.stroke();
 
             animationFrameId = requestAnimationFrame(render);
         };
@@ -91,16 +114,16 @@ export function LiveWaveLine({ state, valence = 0.5, arousal = 0.5 }: LiveWaveLi
         return () => {
             cancelAnimationFrame(animationFrameId);
         };
-    }, [state]);
+    }, [state, valence, arousal]);
 
-    // Make canvas responsive to its container width using 100% width, fixed internal resolution
     return (
-        <div className="w-full h-16 flex items-center justify-center">
+        <div className="w-full h-24 flex items-center justify-center relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#00f3ff]/5 to-transparent blur-2xl pointer-events-none" />
             <canvas
                 ref={canvasRef}
-                width={300}
-                height={64}
-                className="w-full h-full object-contain"
+                width={400}
+                height={96}
+                className="w-full h-full object-contain mix-blend-screen"
             />
         </div>
     );
