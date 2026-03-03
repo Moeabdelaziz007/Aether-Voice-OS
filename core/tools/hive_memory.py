@@ -50,7 +50,7 @@ async def write_collective_memory(
 
     try:
         doc_ref = _firebase._db.collection("hive_memory").document(key)
-        await doc_ref.set(memory_data, merge=True)
+        doc_ref.set(memory_data, merge=True)
         logger.info("A2A [MEMORY] Persisted collective state: %s", key)
         return {"status": "success", "message": f"Memory '{key}' synced to Hive."}
     except Exception as e:
@@ -65,7 +65,7 @@ async def read_collective_memory(key: str) -> dict[str, object]:
 
     try:
         doc_ref = _firebase._db.collection("hive_memory").document(key)
-        doc = await doc_ref.get()
+        doc = doc_ref.get()
         if doc.exists:
             return {"status": "success", "data": doc.to_dict()}
         return {"status": "not_found", "message": f"Memory slot '{key}' is empty."}

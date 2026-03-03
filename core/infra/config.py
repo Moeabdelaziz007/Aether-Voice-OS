@@ -28,10 +28,12 @@ class GeminiModel(str, Enum):
 class AIConfig(BaseSettings):
     api_key: str = Field(..., alias="GOOGLE_API_KEY")
     model: GeminiModel = GeminiModel.LIVE_FLASH
+    api_version: str = "v1alpha"
     enable_affective_dialog: bool = True
     proactive_audio: bool = True
     enable_search_grounding: bool = True
-    thinking_budget: int = 0
+    enable_proactive_vision: bool = True
+    thinking_budget: Optional[int] = None
     system_instruction: str = (
         "You are Aether Sovereign, the ultimate neural interface and Autonomous "
         "Site Reliability Architect (ASRA). Built on Google ADK and Gemini 2.5 "

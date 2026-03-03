@@ -198,6 +198,24 @@ Watch the demo video to see:
 
 Aether is built on a **Pipeline Architecture** with the new **Thalamic Gate Audio Layer**. Each stage is an independent task communicating via thread-safe `queue.Queue` bridged to `asyncio`.
 
+```mermaid
+graph TD;
+    U[User Audio] -->|PCM Stream| TG(Thalamic Gate v2)
+    TG -->|VAD Hysteresis| O[RMS Filter]
+    O -.-> |Emotional Spikes| E[Affective Analyzer]
+    O -->|Voice Chunk| GW[Aether Gateway]
+    GW --> GS(Gemini Native Audio)
+    GS -->|tool_call| TR{Neural Router}
+    TR -.->|Semantic Search| VS[(Vector Space)]
+    TR -->|Executes| T[Tools / Hive Memory]
+    T --> GS
+    GS -->|Audio Response| GW
+    GW -->|PCM Stream| S[Speaker out]
+    
+    classDef cyberpunk fill:#0d1117,stroke:#00f3ff,stroke-width:2px,color:#fff;
+    class U,S,TG,O,E,GW,GS,TR,VS,T cyberpunk;
+```
+
 ### Core Modules
 
 | Layer | Module | Description |

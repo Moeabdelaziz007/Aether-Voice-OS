@@ -12,7 +12,7 @@ import pytest
 
 from core.ai import handoff
 from core.ai.hive import HiveCoordinator
-from core.identity.registry import AetherRegistry
+from core.services.registry import AetherRegistry
 from core.tools import hive_memory
 
 

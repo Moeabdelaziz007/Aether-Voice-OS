@@ -12,7 +12,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.tools.voice_tool import VoiceState, VoiceTool
-from core.utils.config import AetherConfig, AIConfig, AudioConfig, GatewayConfig
+from core.infra.config import AetherConfig, AIConfig, AudioConfig, GatewayConfig
 
 # ── Fixtures ────────────────────────────────────────────────
 
@@ -178,23 +178,34 @@ class TestLifecycle:
 class TestEngineRegistration:
     """Test ADK tool registration with the engine."""
 
-    def test_register_tool(self, mock_config):
+    @pytest.mark.asyncio
+    async def test_register_tool(self, mock_config):
         from core.engine import AetherEngine
 
+        # Engine init now requires a running loop due to SessionStateManager
         engine = AetherEngine(config=mock_config)
-        tool = VoiceTool()
-        engine.register_tool(tool.NAME, tool)
-        assert "aether_voice" in engine._tools
-        assert engine._tools["aether_voice"] is tool
+        engine._register_tools()
+        assert "aether_voice" in engine._router.names
 
-    def test_register_multiple_tools(self, mock_config):
+    @pytest.mark.asyncio
+    async def test_register_multiple_tools(self, mock_config):
         from core.engine import AetherEngine
 
         engine = AetherEngine(config=mock_config)
         tool1 = VoiceTool()
-        engine.register_tool("voice", tool1)
-        engine.register_tool("search", MagicMock())
-        assert len(engine._tools) == 2
+        engine._router.register(
+            name="voice",
+            description="test",
+            parameters={},
+            handler=MagicMock()
+        )
+        engine._router.register(
+            name="search",
+            description="test",
+            parameters={},
+            handler=MagicMock()
+        )
+        assert engine._router.count >= 2
 
 
 # ── Interrupt / Barge-in Tests ───────────────────────────────

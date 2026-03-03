@@ -4,8 +4,8 @@ Aether Voice OS — Global State Bus Real Integration Tests.
 
 import pytest
 import asyncio
-from core.transport.bus import GlobalBus
-from core.transport.session_state import SessionStateManager, SessionState
+from core.infra.transport.bus import GlobalBus
+from core.infra.transport.session_state import SessionStateManager, SessionState
 
 @pytest.mark.asyncio
 async def test_bus_publish_subscribe_real():

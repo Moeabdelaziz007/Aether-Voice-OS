@@ -59,10 +59,10 @@ class MockSoul:
 @pytest.mark.asyncio
 async def test_gateway_handshake_e2e():
     # 1. Setup Gateway Backend
-    from core.transport.gateway import AetherGateway
+    from core.infra.transport.gateway import AetherGateway
     from core.tools.router import ToolRouter
     from core.ai.hive import HiveCoordinator
-    from core.identity.registry import AetherRegistry
+    from core.services.registry import AetherRegistry
     
     gw_cfg = MockGatewayConfig(port=18840)
     ai_cfg = UnifiedMockAIConfig()

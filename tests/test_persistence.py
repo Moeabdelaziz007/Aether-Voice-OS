@@ -4,8 +4,8 @@ Aether Voice OS — Session State Persistence Real Integration Tests.
 
 import asyncio
 import pytest
-from core.transport.bus import GlobalBus
-from core.transport.session_state import SessionStateManager, SessionMetadata, SessionState
+from core.infra.transport.bus import GlobalBus
+from core.infra.transport.session_state import SessionStateManager, SessionMetadata, SessionState
 
 @pytest.mark.asyncio
 async def test_persistence_real_redis():

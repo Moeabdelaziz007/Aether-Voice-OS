@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import MagicMock
 from core.ai.compression import NeuralSummarizer
 from core.ai.handover_protocol import HandoverContext, ConversationEntry, WorkingMemory
-from core.utils.config import AIConfig
+from core.infra.config import AIConfig
 
 @pytest.fixture
 def mock_config():

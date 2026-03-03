@@ -11,7 +11,7 @@ import os
 from pathlib import Path
 
 # Aether Core Imports
-from core.utils.telemetry import TelemetryManager
+from core.infra.telemetry import TelemetryManager
 from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
 @pytest.mark.asyncio

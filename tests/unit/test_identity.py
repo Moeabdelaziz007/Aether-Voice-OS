@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from core.identity.package import AthPackage, SoulManifest
-from core.identity.registry import AetherRegistry
+from core.services.registry import AetherRegistry
 from core.utils.errors import ManifestValidationError, PackageCorruptError
 
 

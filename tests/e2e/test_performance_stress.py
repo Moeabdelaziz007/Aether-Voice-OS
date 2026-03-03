@@ -13,10 +13,10 @@ import nacl.signing
 from pathlib import Path
 
 # Aether Core Imports
-from core.transport.gateway import AetherGateway
+from core.infra.transport.gateway import AetherGateway
 from core.ai.hive import HiveCoordinator
 from core.tools.router import ToolRouter
-from core.identity.registry import AetherRegistry
+from core.services.registry import AetherRegistry
 
 class PerfGatewayConfig:
     def __init__(self, port=18996):
@@ -65,8 +65,10 @@ async def test_handshake_latency():
         
     registry = AetherRegistry(packages_dir=str(reg_path))
     registry.scan()
+    from tests.e2e.test_system_alpha_e2e import E2EAudioConfig
     gateway = AetherGateway(
         gateway_config=PerfGatewayConfig(),
+        audio_config=E2EAudioConfig(),
         ai_config=PerfAIConfig(),
         tool_router=ToolRouter(),
         hive=HiveCoordinator(registry=registry, router=ToolRouter())

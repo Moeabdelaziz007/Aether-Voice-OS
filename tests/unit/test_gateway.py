@@ -4,9 +4,23 @@ import json
 import pytest
 import websockets
 
-from core.transport.gateway import AetherGateway
-from core.transport.messages import MessageType
-from core.utils.config import GatewayConfig
+from unittest.mock import MagicMock
+from core.infra.transport.gateway import AetherGateway
+from core.infra.transport.messages import MessageType
+from core.infra.config import GatewayConfig, AIConfig, AudioConfig
+
+
+class SoulManifestStub:
+    def __init__(self, name="AetherArchitect", voice_id="Puck"):
+        from dataclasses import dataclass
+        @dataclass
+        class Manifest:
+            name: str
+            voice_id: str
+            expertise: dict = None
+        self.manifest = Manifest(name=name, voice_id=voice_id, expertise={"sysadmin": 1.0})
+        self.persona = "Stub persona"
+        self.name = name
 
 
 @pytest.fixture
@@ -22,7 +36,28 @@ def gateway_config():
 
 @pytest.fixture
 async def gateway(gateway_config):
-    gw = AetherGateway(gateway_config)
+    ai_config = AIConfig(GOOGLE_API_KEY="test", _env_file=None)
+    audio_config = AudioConfig()
+    
+    # Tool Router with concrete count
+    tool_router = MagicMock()
+    tool_router.count = 0
+    tool_router.names = []
+    
+    # Soul with concrete attributes instead of MagicMocks
+    active_soul_obj = SoulManifestStub()
+    
+    hive = MagicMock()
+    hive.get_active_soul.return_value = active_soul_obj
+    hive.get_pending_handover_for_target.return_value = None
+    
+    gw = AetherGateway(
+        gateway_config,
+        ai_config,
+        audio_config,
+        tool_router,
+        hive
+    )
     task = asyncio.create_task(gw.run())
     # Give the server a moment to start
     await asyncio.sleep(0.1)
@@ -47,7 +82,7 @@ async def test_handshake_success(gateway, gateway_config):
         # Send response
         response = {
             "client_id": "test_client_123",
-            "signature": "dummy_sig",
+            "signature": "0" * 128,
             "capabilities": ["audio_levels"],
         }
         await ws.send(json.dumps(response))
@@ -85,7 +120,7 @@ async def test_heartbeat_tick_and_pong(gateway, gateway_config):
     uri = f"ws://{gateway_config.host}:{gateway_config.port}"
     async with websockets.connect(uri) as ws:
         await ws.recv()  # Challenge
-        await ws.send(json.dumps({"client_id": "test_ticker", "signature": "dummy"}))
+        await ws.send(json.dumps({"client_id": "test_ticker", "signature": "0" * 128}))
         await ws.recv()  # ACK
 
         # Wait for TICK
@@ -106,7 +141,7 @@ async def test_pruning_dead_clients(gateway, gateway_config):
     uri = f"ws://{gateway_config.host}:{gateway_config.port}"
     async with websockets.connect(uri) as ws:
         await ws.recv()  # Challenge
-        await ws.send(json.dumps({"client_id": "dead_client", "signature": "dummy"}))
+        await ws.send(json.dumps({"client_id": "dead_client", "signature": "0" * 128}))
         await ws.recv()  # ACK
 
         assert "dead_client" in gateway._clients
@@ -127,12 +162,12 @@ async def test_broadcast(gateway, gateway_config):
     async with websockets.connect(uri) as ws1, websockets.connect(uri) as ws2:
         # Authenticate client 1
         await ws1.recv()
-        await ws1.send(json.dumps({"client_id": "c1", "signature": "s"}))
+        await ws1.send(json.dumps({"client_id": "c1", "signature": "0" * 128}))
         await ws1.recv()
 
         # Authenticate client 2
         await ws2.recv()
-        await ws2.send(json.dumps({"client_id": "c2", "signature": "s"}))
+        await ws2.send(json.dumps({"client_id": "c2", "signature": "0" * 128}))
         await ws2.recv()
 
         # Broadcast message

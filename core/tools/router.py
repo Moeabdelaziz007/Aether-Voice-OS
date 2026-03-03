@@ -252,7 +252,7 @@ class ToolRouter:
                 try:
                     query_vec = await self._vector_store.get_query_embedding(name)
                     hits = self._vector_store.search(query_vec, limit=1)
-                    if hits and hits[0]["similarity"] > 0.85:
+                    if hits and hits[0]["similarity"] > 0.75:
                         match = hits[0]["key"]
                         logger.info(
                             "🎯 Semantic Match Found: %s -> %s (Sim: %.2f)",
@@ -266,7 +266,7 @@ class ToolRouter:
                         return {
                             "error": (
                                 f"Tool '{name}' not found and no close semantic "
-                                "matches (>0.85)."
+                                "matches (>0.75)."
                             ),
                             "available_tools": self.names,
                             "x-a2a-status": 404,

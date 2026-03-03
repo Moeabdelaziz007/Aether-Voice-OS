@@ -9,7 +9,8 @@ Validates:
 """
 
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+import os
+from google.genai import types
 
 import numpy as np
 import pytest
@@ -31,13 +32,10 @@ async def test_parallel_tool_stress():
 
     router.register("slow_tool", "A slow tool", {"x": {"type": "integer"}}, slow_tool)
 
-    # Mock function calls
-    class MockCall:
-        def __init__(self, name, args):
-            self.name = name
-            self.args = args
-
-    calls = [MockCall("slow_tool", {"x": i}) for i in range(10)]
+    calls = [
+        types.FunctionCall(name="slow_tool", args={"x": i}) 
+        for i in range(10)
+    ]
 
     # Dispatch in parallel (simulating session._handle_tool_call logic)
     tasks = [router.dispatch(c) for c in calls]
@@ -53,29 +51,24 @@ async def test_parallel_tool_stress():
 async def test_semantic_recovery_success():
     """Phase 7.3: Verify Neural Dispatcher V3 recovers typos via semantic search."""
     router = ToolRouter()
-    # We need a real API key for embeddings, but for test we mock the vector store
-    router._vector_store = MagicMock()
-    router._vector_store.get_query_embedding = AsyncMock(return_value=np.zeros(768))
-    router._vector_store.search = MagicMock(
-        return_value=[
-            {
-                "key": "delegate_to_agent",
-                "similarity": 0.95,
-                "metadata": {"name": "delegate_to_agent"},
-            }
-        ]
-    )
-    router._vector_store.add_text = (
-        AsyncMock()
-    )  # Must be AsyncMock for asyncio.create_task
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        pytest.skip("GEMINI_API_KEY required for real semantic recovery test")
+        
+    router.init_vector_store(api_key=api_key)
 
     # Register the real tool
     router.register_module(handoff)
 
-    # Mock function call object
-    mock_fc = MagicMock()
-    mock_fc.name = "delgate_to_agent_TYPO"
-    mock_fc.args = {"target_agent_id": "test", "task_description": "test"}
+    # Allow vector index to propagate (Gemini API)
+    await asyncio.sleep(2.0)
+
+    # Genuine Google GenAI FunctionCall
+    mock_fc = types.FunctionCall(
+        name="delegate_to_agnt", 
+        args={"target_agent_id": "test", "task_description": "test"}
+    )
 
     result = await router.dispatch(mock_fc)
 

@@ -15,10 +15,10 @@ import nacl.encoding
 from pathlib import Path
 
 # Aether Core Imports
-from core.transport.gateway import AetherGateway
+from core.infra.transport.gateway import AetherGateway
 from core.ai.hive import HiveCoordinator
 from core.tools.router import ToolRouter
-from core.identity.registry import AetherRegistry
+from core.services.registry import AetherRegistry
 
 # Configuration for Test Environment
 class E2EGatewayConfig:
@@ -86,6 +86,7 @@ async def test_aether_system_alpha_full_cycle():
     gw_cfg = E2EGatewayConfig()
     gateway = AetherGateway(
         gateway_config=gw_cfg,
+        audio_config=E2EAudioConfig(),
         ai_config=E2EAIConfig(),
         tool_router=ToolRouter(),
         hive=hive

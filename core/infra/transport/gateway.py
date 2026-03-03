@@ -319,6 +319,9 @@ class AetherGateway:
         # Connect to Global Bus
         await self._bus.connect()
 
+        # Initialize State Manager (Subscriptions)
+        await self._state_manager.initialize()
+
         self._running = True
         self._server = await websockets.serve(
             self._handle_connection,

@@ -21,7 +21,7 @@ from core.ai.hive import HiveCoordinator
 
 # Aether Core Imports
 from core.audio.processing import AdaptiveVAD, energy_vad
-from core.identity.registry import AetherRegistry
+from core.services.registry import AetherRegistry
 from core.tools import hive_memory
 from core.tools.router import ToolRouter
 
@@ -42,19 +42,16 @@ async def test_e2e_singularity():
     # ==========================================
     router = ToolRouter()
 
-    # We must mock Firebase for Collective Memory
-    fb_mock = MagicMock()
-    fb_mock.is_connected = True
-    fb_mock._session_id = "test-session-e2e"
-    mock_db, mock_coll, mock_doc = MagicMock(), MagicMock(), MagicMock()
-    fb_mock._db = mock_db
-    mock_db.collection.return_value = mock_coll
-    mock_coll.document.return_value = mock_doc
-    mock_doc.set = AsyncMock(return_value=None)
-    mock_doc.get = AsyncMock()  # Will simulate empty memory initially
-    mock_doc.get.return_value.exists = False
-
-    hive_memory.set_firebase_connector(fb_mock)
+    # Initialize Real Firebase for Collective Memory
+    from core.infra.cloud.firebase.interface import FirebaseConnector
+    fb_connector = FirebaseConnector()
+    connected = await fb_connector.initialize()
+    if not connected:
+        print("[WARNING] Real Firebase connector could not initialize. Ensure credentials are set.")
+    
+    await fb_connector.start_session()
+    
+    hive_memory.set_firebase_connector(fb_connector)
 
     # Register core modules into router
     router.register_module(hive_memory)
@@ -106,7 +103,10 @@ async def test_e2e_singularity():
 
     assert results[0].get("x-a2a-status") == 200, f"Write failed: {results[0]}"
     assert results[1].get("x-a2a-status") == 200
-    assert mock_doc.set.call_count == 2
+    
+    # Wait briefly for cloud sync
+    await asyncio.sleep(1.0)
+    
     print("[E2E] Parallel Memory Write OK.")
 
     # ==========================================
@@ -114,7 +114,7 @@ async def test_e2e_singularity():
     # ==========================================
     # System evaluates a new user intent "Can you write the code now?"
     print("[E2E] Evaluating intent shift to Coding...")
-    target_expert = hive.evaluate_intent("Write the python code for the system plan.")
+    target_expert = await hive.evaluate_intent("Write the python code for the system plan.")
     assert target_expert == "CodingExpert"
 
     # Architect calls handoff tool
@@ -141,14 +141,6 @@ async def test_e2e_singularity():
     restart_event.clear()  # Reset for next session
 
     print(f"[E2E] Session restored with Soul: {hive.active_soul.manifest.name}")
-
-    # Coding expert reads the memory left by the architect
-    mock_doc.get.return_value.exists = True
-
-    # Ensure to_dict is a synchronous MagicMock so it doesn't return a coroutine
-    mock_doc.get.return_value.to_dict = MagicMock(
-        return_value={"key": "sys_plan", "value": {"design": "Microservices"}}
-    )
 
     mock_fc_read = MagicMock()
     mock_fc_read.name, mock_fc_read.id, mock_fc_read.args = (

@@ -79,6 +79,7 @@ class SessionStateManager:
     # Valid state transitions (from_state → [allowed_to_states])
     _VALID_TRANSITIONS: dict[SessionState, list[SessionState]] = {
         SessionState.INITIALIZING: [
+            SessionState.INITIALIZING,  # Allow re-init for testing/recovery
             SessionState.CONNECTED,
             SessionState.ERROR,
             SessionState.SHUTDOWN,
@@ -116,8 +117,11 @@ class SessionStateManager:
         self._consecutive_errors: int = 0
         self._max_consecutive_errors: int = 3
 
+    async def initialize(self) -> None:
+        """Initialize background subscriptions and monitoring."""
         if self._bus:
-            asyncio.create_task(self._setup_bus_subscriptions())
+            # Re-spawn subscription task
+            await self._setup_bus_subscriptions()
 
     async def _setup_bus_subscriptions(self) -> None:
         """Subscribe to global state changes."""

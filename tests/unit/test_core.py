@@ -29,7 +29,7 @@ class TestConfig:
     """Test configuration loading and validation."""
 
     def test_audio_config_defaults(self):
-        from core.utils.config import AudioConfig
+        from core.infra.config import AudioConfig
 
         cfg = AudioConfig()
         assert cfg.send_sample_rate == 16_000
@@ -40,7 +40,7 @@ class TestConfig:
         assert cfg.mic_queue_max == 5
 
     def test_gateway_config_defaults(self):
-        from core.utils.config import GatewayConfig
+        from core.infra.config import GatewayConfig
 
         cfg = GatewayConfig()
         assert cfg.host == "0.0.0.0"
@@ -49,7 +49,7 @@ class TestConfig:
         assert cfg.max_missed_ticks == 2
 
     def test_ai_config_requires_api_key(self):
-        from core.utils.config import AIConfig
+        from core.infra.config import AIConfig
 
         # Pass _env_file=None explicitly to avoid scanning
         cfg = AIConfig(GOOGLE_API_KEY="test-key-123", _env_file=None)
@@ -57,7 +57,7 @@ class TestConfig:
         assert cfg.enable_affective_dialog is True
 
     def test_gemini_model_enum(self):
-        from core.utils.config import GeminiModel
+        from core.infra.config import GeminiModel
 
         assert (
             GeminiModel.FLASH_NATIVE_AUDIO.value
@@ -68,11 +68,11 @@ class TestConfig:
     def test_load_config_with_env(self):
         from unittest.mock import MagicMock
 
-        from core.utils.config import load_config
+        from core.infra.config import load_config
 
         with patch("os.path.exists", return_value=False):
             with patch.dict(os.environ, {"GOOGLE_API_KEY": "test-key-for-loading"}):
-                with patch("core.utils.config.AetherConfig") as mock_class:
+                with patch("core.infra.config.AetherConfig") as mock_class:
                     mock_cfg = MagicMock()
                     mock_cfg.ai.api_key = "test-key-for-loading"
                     mock_class.return_value = mock_cfg
@@ -84,7 +84,7 @@ class TestConfig:
         """Test the TCC Bypass logic using JSON config via mocks."""
         from unittest.mock import MagicMock, mock_open
 
-        from core.utils.config import load_config
+        from core.infra.config import load_config
 
         test_data = {
             "GOOGLE_API_KEY": "json-key-123",
@@ -97,7 +97,7 @@ class TestConfig:
         ):
             with patch("builtins.open", mock_open(read_data=json_str)):
                 with patch.dict(os.environ, {}, clear=True):
-                    with patch("core.utils.config.AetherConfig") as mock_class:
+                    with patch("core.infra.config.AetherConfig") as mock_class:
                         mock_cfg = MagicMock()
                         mock_cfg.ai.api_key = "json-key-123"
                         mock_class.return_value = mock_cfg
@@ -106,7 +106,7 @@ class TestConfig:
                         assert cfg.ai.api_key == "json-key-123"
 
     def test_load_config_missing_key_raises(self):
-        from core.utils.config import load_config
+        from core.infra.config import load_config
 
         with patch("os.path.exists", return_value=False):
             with patch.dict(os.environ, {}, clear=True):
@@ -317,7 +317,7 @@ class TestFirebaseConnector:
     """Test FirebaseConnector in offline mode."""
 
     def test_init_defaults(self):
-        from core.tools.firebase_tool import FirebaseConnector
+        from core.infra.cloud.firebase import FirebaseConnector
 
         fb = FirebaseConnector()
         assert fb._initialized is False
@@ -325,7 +325,7 @@ class TestFirebaseConnector:
         assert fb._session_id is None
 
     def test_is_connected_false_initially(self):
-        from core.tools.firebase_tool import FirebaseConnector
+        from core.infra.cloud.firebase import FirebaseConnector
 
         fb = FirebaseConnector()
         assert fb.is_connected is False
@@ -333,7 +333,7 @@ class TestFirebaseConnector:
     @pytest.mark.asyncio
     async def test_initialize_without_firebase_admin(self):
         """Should gracefully handle missing firebase-admin."""
-        from core.tools.firebase_tool import FirebaseConnector
+        from core.infra.cloud.firebase import FirebaseConnector
 
         fb = FirebaseConnector()
         # If firebase-admin is not installed, should return False

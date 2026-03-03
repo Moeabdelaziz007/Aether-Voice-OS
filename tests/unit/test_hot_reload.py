@@ -3,7 +3,7 @@ import json
 
 import pytest
 
-from core.identity.registry import AetherRegistry
+from core.services.registry import AetherRegistry
 
 
 @pytest.mark.asyncio

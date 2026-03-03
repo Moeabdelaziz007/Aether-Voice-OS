@@ -6,8 +6,8 @@ import asyncio
 import logging
 from datetime import datetime
 from unittest.mock import MagicMock
-from core.transport.bus import GlobalBus
-from core.transport.session_state import SessionStateManager, SessionMetadata, SessionState
+from core.infra.transport.bus import GlobalBus
+from core.infra.transport.session_state import SessionStateManager, SessionMetadata, SessionState
 
 async def verify_persistence():
     logging.basicConfig(level=logging.INFO)

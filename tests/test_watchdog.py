@@ -5,7 +5,7 @@ Aether Voice OS — SRE Watchdog Real Integration Tests.
 import asyncio
 import logging
 import pytest
-from core.transport.bus import GlobalBus
+from core.infra.transport.bus import GlobalBus
 from core.ai.monitoring.watchdog import SREWatchdog
 
 @pytest.mark.asyncio
