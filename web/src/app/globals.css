@@ -1,42 +1,74 @@
-/* ═══════════════════════════════════════════════════════
-   AETHER VOICE OS — V4 Ambient Architecture
-   ═══════════════════════════════════════════════════════
-   Philosophy: OpenClaw Multimodal Agent Integration.
-   Voice-first, cinematic, reflecting Soul, Mood, and Skills.
-   ═══════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════
+   AETHER VOICE OS — V5 Expert-Level Design System
+   ═══════════════════════════════════════════════════════════════════
+   INSPIRED BY:
+   • Apple Siri iOS 18: Edge-glow chromatic border animation
+   • Whispr Flow:      Invisible UI, OS-level minimalism
+   • ChatGPT AVM:      Dynamic animated presence orb
+   • Gemini Live:      Amorphous radial gradients, generative color
+   ═══════════════════════════════════════════════════════════════════ */
 
 @import "tailwindcss";
 
-/* ─── Design Tokens ──────────────────────────────────── */
+/* ────────────────────────────── DESIGN TOKENS ────────────────────────────── */
 :root {
-  /* Dynamic Persona Tokens (overridden by JS inline styles) */
-  --persona-hue: 190;
-  --persona-sat: 100%;
-  --persona-lum: 50%;
-  --persona-glow: rgba(0, 243, 255, 0.4);
+  /* Dynamic — driven by JS for persona/state reactivity */
+  --accent-r: 0;
+  --accent-g: 243;
+  --accent-b: 255;
+  --glow-intensity: 0.3;
+  --edge-glow-opacity: 0;
 
-  /* Core Industrial/Sci-Fi Palette */
-  --void: #030308;
-  --void-soft: #080812;
-  --glass: rgba(15, 15, 25, 0.65);
-  --glass-border: rgba(255, 255, 255, 0.05);
-  --glass-strong: rgba(255, 255, 255, 0.1);
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-ghost: rgba(255, 255, 255, 0.4);
-  --text-dim: rgba(255, 255, 255, 0.25);
+  /* Core Void Palette — True Black Depth */
+  --void: #020206;
+  --void-mid: #060610;
+  --void-soft: #0a0a18;
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --glass-hover: rgba(255, 255, 255, 0.08);
+  --glass-active: rgba(255, 255, 255, 0.12);
 
-  /* Semantic Multimodal Colors */
-  --mode-voice: #22d3ee;
-  --mode-vision: #a855f7;
-  --mode-code: #f59e0b;
-  --mode-system: #f43f5e;
+  /* Text Hierarchy — Ultra-refined opacity scale */
+  --text-100: rgba(255, 255, 255, 0.95);
+  --text-70: rgba(255, 255, 255, 0.7);
+  --text-40: rgba(255, 255, 255, 0.4);
+  --text-20: rgba(255, 255, 255, 0.2);
+  --text-10: rgba(255, 255, 255, 0.1);
+  --text-05: rgba(255, 255, 255, 0.05);
 
-  /* Fonts */
-  --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
-  --font-display: "Inter", "SF Pro Display", system-ui, sans-serif;
+  /* Semantic Mode Colors */
+  --c-voice: 0, 243, 255;
+  --c-vision: 168, 85, 247;
+  --c-code: 245, 158, 11;
+  --c-error: 239, 68, 68;
+  --c-success: 34, 197, 94;
+
+  /* Typography */
+  --f-display: "Inter", "SF Pro Display", -apple-system, system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", "SF Mono", "Fira Code", "Cascadia Code", monospace;
+
+  /* Spacing scale */
+  --s-xs: 0.25rem;
+  --s-sm: 0.5rem;
+  --s-md: 1rem;
+  --s-lg: 1.5rem;
+  --s-xl: 2rem;
+  --s-2xl: 3rem;
+  --s-3xl: 4rem;
+
+  /* Radius */
+  --r-pill: 100px;
+  --r-card: 16px;
+  --r-sm: 8px;
+
+  /* Transitions */
+  --t-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-smooth: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-slow: 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  --t-glacial: 2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ─── Base Reset & Environment ───────────────────────── */
+/* ────────────────────────────── GLOBAL RESET ─────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -49,257 +81,450 @@ html,
 body {
   height: 100%;
   overflow: hidden;
-  font-family: var(--font-display);
-  color: var(--text-primary);
+  font-family: var(--f-display);
+  color: var(--text-100);
   background: var(--void);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* The atmospheric living background matching the Persona */
+/* ── Atmospheric Background — Multi-layer Gemini-style gradients ── */
 body {
   background:
-    radial-gradient(circle at 50% 120%, var(--persona-glow) 0%, transparent 60%),
-    radial-gradient(ellipse at 50% 50%, rgba(10, 10, 20, 0.5) 0%, var(--void) 100%),
+    /* Layer 1: Persona-driven center glow */
+    radial-gradient(ellipse 60% 50% at 50% 55%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), calc(var(--glow-intensity) * 0.15)) 0%,
+      transparent 70%),
+    /* Layer 2: Subtle top-left atmospheric haze */
+    radial-gradient(circle at 15% 20%,
+      rgba(100, 60, 180, 0.04) 0%,
+      transparent 50%),
+    /* Layer 3: Subtle bottom-right warm haze */
+    radial-gradient(circle at 85% 80%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.02) 0%,
+      transparent 40%),
     var(--void);
-  transition: background 2s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: background var(--t-glacial);
 }
 
-/* ─── Immersive Fullscreen Layout ────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   SIRI-INSPIRED EDGE GLOW — Chromatic screen border
+   ═══════════════════════════════════════════════════════════════════ */
+.edge-glow {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: var(--edge-glow-opacity);
+  transition: opacity var(--t-slow);
+}
+
+.edge-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
+  border: 2px solid transparent;
+  background: linear-gradient(var(--void), var(--void)) padding-box,
+    linear-gradient(135deg,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.6) 0%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.1) 25%,
+      transparent 50%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.1) 75%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.6) 100%) border-box;
+  animation: edge-rotate 4s linear infinite;
+}
+
+.edge-glow::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background:
+    linear-gradient(to right,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.15) 0%,
+      transparent 15%,
+      transparent 85%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.15) 100%),
+    linear-gradient(to bottom,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.15) 0%,
+      transparent 15%,
+      transparent 85%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.15) 100%);
+  filter: blur(12px);
+}
+
+@keyframes edge-rotate {
+  0% {
+    filter: hue-rotate(0deg);
+  }
+
+  100% {
+    filter: hue-rotate(360deg);
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   PORTAL — Main Fullscreen Layout
+   ════════════════════════════════════════════════════════════════════ */
 .portal {
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-  grid-template-areas:
-    "header"
-    "hero"
-    "footer";
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   width: 100vw;
   position: relative;
   z-index: 10;
 }
 
-/* ─── Header: Persona & Multimodal Status ────────────── */
-.portal-header {
-  grid-area: header;
+/* ── Top Bar — Ultra-minimal (Whispr-inspired) ── */
+.top-bar {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 2rem 3rem;
+  align-items: center;
+  padding: var(--s-lg) var(--s-2xl);
+  flex-shrink: 0;
   z-index: 20;
 }
 
-/* Persona Badge */
-.persona-badge {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.persona-name {
-  font-size: 1.25rem;
-  font-weight: 500;
-  letter-spacing: -0.02em;
-  color: var(--text-primary);
-  text-shadow: 0 0 10px var(--persona-glow);
-}
-
-.persona-role {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+.brand-mark {
+  font-family: var(--f-display);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.35em;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-ghost);
+  color: var(--text-20);
+  -webkit-user-select: none;
+  user-select: none;
+  transition: color var(--t-smooth);
 }
 
-.persona-feeling {
-  font-size: 0.85rem;
-  color: var(--text-dim);
-  font-style: italic;
-  margin-top: 0.2rem;
+.brand-mark:hover {
+  color: var(--text-40);
 }
 
-/* Multimodal Nodes */
-.multimodal-nodes {
-  display: flex;
-  gap: 1rem;
-}
-
-.node {
+/* Mode Indicators — Tiny breathing dots */
+.mode-indicators {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
+  gap: 0.75rem;
+}
+
+.mode-dot {
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  color: var(--text-dim);
-  transition: all 0.3s ease;
+  background: var(--text-10);
+  transition: all var(--t-smooth);
+  position: relative;
 }
 
-.node.active {
-  color: var(--text-primary);
-  box-shadow: 0 0 15px currentColor;
-  border-color: currentColor;
+.mode-dot.active {
+  background: rgb(var(--c-voice));
+  box-shadow: 0 0 8px rgba(var(--c-voice), 0.5);
 }
 
-.node[data-mode="voice"].active {
-  color: var(--mode-voice);
+.mode-dot[data-mode="vision"].active {
+  background: rgb(var(--c-vision));
+  box-shadow: 0 0 8px rgba(var(--c-vision), 0.5);
 }
 
-.node[data-mode="vision"].active {
-  color: var(--mode-vision);
+.mode-dot[data-mode="code"].active {
+  background: rgb(var(--c-code));
+  box-shadow: 0 0 8px rgba(var(--c-code), 0.5);
 }
 
-.node[data-mode="code"].active {
-  color: var(--mode-code);
-}
-
-/* ─── Hero: The Voice Interface (AetherLine) ─────────── */
-.portal-hero {
-  grid-area: hero;
+/* ── Hero — The Voice Presence Zone ── */
+.hero-zone {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   position: relative;
-  width: 100%;
-  height: 100%;
+  min-height: 0;
 }
 
-/* ─── Whispers: Ephemeral Transcript ─────────────────── */
-.whisper-container {
+/* User Whisper — Ghost text floating above the orb */
+.user-whisper {
   position: absolute;
-  top: 15%;
-  left: 0;
-  right: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  pointer-events: none;
-  z-index: 5;
-}
-
-.whisper-text {
-  font-size: clamp(1.25rem, 3vw, 2rem);
-  font-weight: 300;
+  top: 12%;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 60vw;
   text-align: center;
-  max-width: 70vw;
-  line-height: 1.4;
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-  text-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
-}
-
-.whisper-text.user {
-  font-size: clamp(1rem, 2vw, 1.5rem);
-  color: var(--text-ghost);
+  font-size: clamp(0.85rem, 1.8vw, 1.1rem);
+  font-weight: 400;
   font-style: italic;
-  margin-bottom: 2rem;
+  color: var(--text-20);
+  letter-spacing: 0.01em;
+  line-height: 1.5;
+  pointer-events: none;
+  animation: whisper-in 0.6s ease-out;
 }
 
-/* ─── Footer: Skills & Superpowers HUD ───────────────── */
-.portal-footer {
-  grid-area: footer;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  padding: 2rem 3rem;
-  z-index: 20;
-}
-
-/* Superpowers Bar */
-.superpowers-bar {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.power-pill {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.4rem 0.8rem;
-  border-radius: 20px;
-  background: var(--glass);
-  border: 1px solid var(--glass-border);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  color: var(--text-ghost);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-  user-select: none;
-  cursor: pointer;
-}
-
-.power-pill.active {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: var(--persona-glow);
-  color: var(--text-primary);
-  box-shadow: 0 0 10px var(--persona-glow) inset;
-}
-
-.power-icon {
-  font-size: 0.9rem;
-}
-
-/* Connection Status Minimalist */
-.conn-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-dim);
-}
-
-.conn-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
-.conn-status[data-state="connected"] {
-  color: var(--mode-voice);
-}
-
-.conn-status[data-state="error"] {
-  color: #ef4444;
-}
-
-/* ─── Settings Panel (Glassmorphism) ─────────────────── */
-.settings-overlay {
+/* Agent Response — Elegant ephemeral text below orb */
+.agent-whisper {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 100;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 65vw;
+  text-align: center;
+  font-size: clamp(1.1rem, 2.5vw, 1.6rem);
+  font-weight: 300;
+  color: var(--text-70);
+  letter-spacing: -0.01em;
+  line-height: 1.45;
+  pointer-events: none;
+  animation: whisper-in 0.8s ease-out;
+  text-shadow: 0 0 40px rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.15);
+}
+
+@keyframes whisper-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ── The Orb Container (AetherLine lives here) ── */
+.orb-container {
+  position: relative;
+  width: clamp(200px, 35vw, 320px);
+  height: clamp(200px, 35vw, 320px);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.settings-panel {
-  background: var(--void-soft);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  width: 90%;
-  max-width: 800px;
-  max-height: 85vh;
-  overflow-y: auto;
-  padding: 2rem;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+/* Orb ambient glow ring — like ChatGPT AVM's presence */
+.orb-aura {
+  position: absolute;
+  inset: -30%;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), calc(var(--glow-intensity) * 0.12)) 0%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), calc(var(--glow-intensity) * 0.04)) 40%,
+      transparent 70%);
+  filter: blur(40px);
+  transition: all var(--t-glacial);
+  pointer-events: none;
+  animation: aura-breathe 4s ease-in-out infinite;
 }
 
-/* Hide scrollbar for settings */
+@keyframes aura-breathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+
+  50% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}
+
+/* State label — ultra-subtle under the orb */
+.state-label {
+  position: absolute;
+  bottom: -2.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--f-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--text-10);
+  transition: color var(--t-smooth);
+  pointer-events: none;
+}
+
+.state-label.active {
+  color: var(--text-40);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   COMMAND BAR — Floating glassmorphism pill (Bottom)
+   Based on Whispr Flow's minimal dock presence
+   ═══════════════════════════════════════════════════════════════════ */
+.command-bar {
+  position: fixed;
+  bottom: var(--s-xl);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: var(--s-xs);
+  padding: var(--s-xs) var(--s-sm);
+  background: rgba(12, 12, 20, 0.7);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-pill);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  backdrop-filter: blur(24px) saturate(1.2);
+  z-index: 30;
+  transition: all var(--t-smooth);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.command-bar:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+}
+
+/* Individual power button — icon only, no text */
+.power-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-20);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all var(--t-fast);
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  outline: none;
+}
+
+.power-btn:hover {
+  background: var(--glass);
+  color: var(--text-40);
+}
+
+.power-btn.active {
+  color: var(--text-100);
+  background: rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.1);
+}
+
+.power-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgb(var(--accent-r), var(--accent-g), var(--accent-b));
+  box-shadow: 0 0 6px rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.6);
+}
+
+/* Divider between powers and status */
+.bar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--text-05);
+  margin: 0 var(--s-xs);
+}
+
+/* Connection heartbeat dot */
+.heartbeat {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-10);
+  margin: 0 var(--s-sm);
+  transition: all var(--t-smooth);
+}
+
+.heartbeat.connected {
+  background: rgb(var(--c-success));
+  box-shadow: 0 0 8px rgba(var(--c-success), 0.4);
+  animation: pulse 2.5s ease-in-out infinite;
+}
+
+.heartbeat.error {
+  background: rgb(var(--c-error));
+  box-shadow: 0 0 8px rgba(var(--c-error), 0.4);
+  animation: pulse 0.8s ease-in-out infinite;
+}
+
+.heartbeat.connecting {
+  background: rgb(var(--c-code));
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SETTINGS OVERLAY — Premium glassmorphism panel
+   ══════════════════════════════════════════════════════════════════ */
+.settings-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(30px) saturate(0.8);
+  backdrop-filter: blur(30px) saturate(0.8);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: overlay-in 0.3s ease-out;
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+.settings-panel {
+  background: rgba(10, 10, 18, 0.95);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-card);
+  width: 92%;
+  max-width: 720px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: var(--s-2xl);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  animation: panel-in 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes panel-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
 .settings-panel::-webkit-scrollbar {
   display: none;
 }
@@ -309,13 +534,252 @@ body {
   scrollbar-width: none;
 }
 
-/* ─── Typography & Utilities ─────────────────────────── */
+/* Settings section headers */
+.settings-section {
+  margin-bottom: var(--s-xl);
+}
+
+.settings-section__title {
+  font-family: var(--f-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-20);
+  margin-bottom: var(--s-md);
+  padding-bottom: var(--s-sm);
+  border-bottom: 1px solid var(--text-05);
+}
+
+/* Settings toggle chips */
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-sm);
+}
+
+.chip {
+  display: flex;
+  align-items: center;
+  gap: var(--s-sm);
+  padding: var(--s-sm) var(--s-md);
+  border-radius: var(--r-sm);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  font-family: var(--f-mono);
+  font-size: 0.72rem;
+  color: var(--text-40);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: all var(--t-fast);
+}
+
+.chip:hover {
+  background: var(--glass-hover);
+  color: var(--text-70);
+}
+
+.chip.selected {
+  background: rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.08);
+  border-color: rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.3);
+  color: var(--text-100);
+}
+
+/* Color picker circles */
+.color-picker {
+  display: flex;
+  gap: var(--s-md);
+}
+
+.color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+.color-swatch:hover {
+  transform: scale(1.15);
+}
+
+.color-swatch.selected {
+  border-color: white;
+  box-shadow: 0 0 12px currentColor;
+}
+
+/* Close button for settings */
+.settings-close {
+  position: absolute;
+  top: var(--s-lg);
+  right: var(--s-lg);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--glass);
+  color: var(--text-40);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all var(--t-fast);
+}
+
+.settings-close:hover {
+  background: var(--glass-hover);
+  color: var(--text-100);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SILENT HINTS — Floating contextual cards
+   ══════════════════════════════════════════════════════════════════ */
+.hints-container {
+  position: fixed;
+  top: var(--s-3xl);
+  right: var(--s-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-sm);
+  z-index: 25;
+  max-width: 320px;
+  pointer-events: none;
+}
+
+.hint-card {
+  padding: var(--s-md);
+  background: rgba(10, 10, 20, 0.85);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-sm);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  pointer-events: auto;
+  animation: hint-slide 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all var(--t-fast);
+}
+
+.hint-card:hover {
+  border-color: rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.2);
+}
+
+.hint-card__text {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--text-70);
+  line-height: 1.5;
+}
+
+.hint-card__code {
+  margin-top: var(--s-sm);
+  padding: var(--s-sm);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  font-family: var(--f-mono);
+  font-size: 0.7rem;
+  color: var(--text-40);
+  overflow-x: auto;
+}
+
+@keyframes hint-slide {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   TYPOGRAPHY & UTILITY
+   ══════════════════════════════════════════════════════════════════ */
 h2,
 h3 {
   font-weight: 300;
   letter-spacing: -0.02em;
+  color: var(--text-100);
 }
 
 .mono {
-  font-family: var(--font-mono);
+  font-family: var(--f-mono);
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Focus-visible for accessibility */
+:focus-visible {
+  outline: 2px solid rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.5);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Tooltip for power buttons */
+.power-btn[title] {
+  position: relative;
+}
+
+.power-btn[title]:hover::before {
+  content: attr(title);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(10, 10, 20, 0.9);
+  border: 1px solid var(--glass-border);
+  font-family: var(--f-mono);
+  font-size: 0.6rem;
+  color: var(--text-70);
+  white-space: nowrap;
+  pointer-events: none;
+  animation: tooltip-in 0.2s ease-out;
+}
+
+@keyframes tooltip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+/* ─── Responsive ─────────────────────────────── */
+@media (max-width: 640px) {
+  .top-bar {
+    padding: var(--s-md) var(--s-lg);
+  }
+
+  .command-bar {
+    bottom: var(--s-md);
+    padding: var(--s-xs) var(--s-xs);
+  }
+
+  .power-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
+  }
+
+  .user-whisper,
+  .agent-whisper {
+    max-width: 85vw;
+  }
 }

@@ -28,10 +28,10 @@ The architecture is composed of four primary layers:
 - **Async Execution:** Tools run concurrently without blocking the audio stream.
 - **Grounding:** Google Search tools are injected directly into the Gemini session for real-time factual accuracy.
 
-### 4. The Persistence Layer (Firebase/OpenClaw)
+### 4. The Persistence Layer (Firebase/Aether)
 
 - **FirebaseConnector:** Manages session state, long-term memory, and task tracking.
-- **OpenClaw Gateway:** Secure Ed25519-encrypted handshake for external UI/CLI clients.
+- **Aether Gateway:** Secure Ed25519-encrypted handshake for external UI/CLI clients.
 - **Broadcast System:** Real-time event propagation (e.g., VAD levels, tool results) to the visualizer.
 
 ## 🔄 Data Flow Map

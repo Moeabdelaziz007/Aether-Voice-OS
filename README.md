@@ -58,7 +58,7 @@
 
 - ⚡ **Gemini 2.5 Flash Native Audio** for sub-200ms real-time voice streaming
 - 🧠 **Google ADK** for multi-agent orchestration and reasoning
-- 🔐 **OpenClaw Gateway** for secure, sandboxed tool execution
+- 🔐 **Aether Gateway** for secure, sandboxed tool execution
 - 🔥 **Firebase** for persistent memory and serverless infrastructure
 
 The result? An AI that doesn't just *respond* — it **executes**, **remembers**, and **empathizes**.

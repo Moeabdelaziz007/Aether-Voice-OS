@@ -34,7 +34,7 @@ core/
   identity/
     registry.py     # Hot-Reloading package observer
     package.py      # .ath SoulManifest & Integrity Verification
-  gateway.py        # OpenClaw WebSocket Layer (Ed25519)
+  gateway.py        # Aether WebSocket Layer (Ed25519)
 brain/
   packages/         # Live-loadable Agent Souls (.ath)
 tests/

@@ -3,7 +3,7 @@ Aether Voice OS — Voice Tool.
 
 Exposes the voice pipeline as a callable tool within the agent.
 Compatible with ADK (Agent Development Kit) tool interfaces
-and OpenClaw skill specifications.
+and Aether skill specifications.
 
 This tool manages the full audio lifecycle:
   - Microphone capture (PyAudio → asyncio.Queue)
@@ -52,7 +52,7 @@ class VoiceTool:
     Voice interaction as an ADK-compatible tool.
 
     Lifecycle follows: setup → execute → teardown
-    Compatible with OpenClaw skill registration.
+    Compatible with Aether skill registration.
 
     Events:
       on_state_change(old, new)  — state machine transitions

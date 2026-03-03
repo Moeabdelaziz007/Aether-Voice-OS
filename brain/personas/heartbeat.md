@@ -17,5 +17,5 @@
 
 1. **Listen:** Audio stream ingress.
 2. **Think:** Gemini 2.0 reasoning.
-3. **Act:** OpenClaw Skill invocation.
+3. **Act:** Aether Skill invocation.
 4. **Speak:** Voice engine response.

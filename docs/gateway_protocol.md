@@ -1,4 +1,4 @@
-# 🛰️ OpenClaw Gateway Protocol V2 — Aether OS
+# 🛰️ Aether Gateway Protocol V2 — Aether OS
 
 > Secure, Zero-Latency Neural Handshake & Handover Protocol.
 > Port: **18789** | Auth: **Ed25519 (L3)** | Handover: **ADK 2.0 (Deep)**

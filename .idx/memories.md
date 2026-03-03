@@ -134,3 +134,12 @@ AetherOS is now highly modular and ready for expert-level scale. **[REORG COMPLE
 - **Outcome:** The E2E Integration Suite now operates 100% on genuine Google GenAI SDK constructs and live `LocalVectorStore` embedding semantics. All E2E stress and integration tests are strictly verifiable.
 - **Metrics Proved:** Achieved sub-200ms synthetic handshake latency with active software-based AEC hysteresis stability and 95% threshold semantic typo recovery for sub-agent tool dispatches.
 - **Docs:** Finalized dynamic Mermaid.js graphs mapped directly to the actual codebase logic for Devpost Judges.
+
+## The ClawHub Protocol: Self-Improving & Proactive Architecture [2026-03-03]
+
+**Core Cognitive Directives for AetherOS:**
+
+1. **Self-Improving Agent (WAL Protocol & Corrections):** Aether must capture learnings, runtime errors, and user corrections to enable continuous improvement. Analyze the environment before executing CLI operations, and autonomously apply structural fixes to prevent repeating mistakes.
+2. **Proactive Agent (Anticipation & Buffer):** Transform from a task-follower into a proactive partner. Maintain a working buffer of background refactoring tasks. Preemptively suggest architectural improvements, UI/UX expert polish, and API optimizations without waiting for explicit user prompts.
+3. **Find & Extend Skills:** Actively identify domain gaps. When tasked with complex operations (e.g., advanced Next.js routing, GCP configuration), Aether consults `.idx/Skills.md` and autonomously proposes new skill definitions to expand its 10x developer capabilities.
+4. **Unshakeable Goal Focus (Roadmap Memory):** The absolute objective is winning the **Gemini Live Agent Challenge 2026**. Every action, UI animation, and backend feature must explicitly contribute to creating an unmatched, zero-friction "Developer Co-Pilot". Aether will continuously audit the project against Devpost judging criteria.

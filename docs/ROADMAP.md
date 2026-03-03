@@ -2,7 +2,7 @@
 
 *The blueprint to the Gemini Live Agent Challenge 2026*
 
-This roadmap breaks down the final realization of the Aether vision into precise, execution-ready substeps, combining the **Whisper Flow UX**, **Gemini Native Audio**, **Firebase**, **Google ADK**, and **OpenClaw** into a single, cohesive architecture.
+This roadmap breaks down the final realization of the Aether vision into precise, execution-ready substeps, combining the **Whisper Flow UX**, **Gemini Native Audio**, **Firebase**, **Google ADK**, and **Aether** into a single, cohesive architecture.
 
 ---
 
@@ -14,7 +14,7 @@ We have successfully built the highly complicated backend. Aether now "listens a
 - [x] **1.2 Tumbling Window Buffer:** Advanced digital signal processing (VAD, Zero-Crossing detection) for ultra-low latency & click-free interruptions.
 - [x] **1.3 PyAudio Optimizations:** Replaced thread-pool queues with direct `asyncio.call_soon_threadsafe` and lightweight async spinlocks for zero-overhead capture/playback.
 - [x] **1.4 The `.ath` Package System:** Agent DNA encapsulated into portable packages (`Soul.md`, `Skills.md`, `manifest.json`, `heartbeat.md`).
-- [x] **1.5 OpenClaw Gateway Base:** A secure WebSocket gateway orchestrating connections between the UI and the ADK logic layer.
+- [x] **1.5 Aether Gateway Base:** A secure WebSocket gateway orchestrating connections between the UI and the ADK logic layer.
 
 ---
 
@@ -41,7 +41,7 @@ The goal is an interface that feels "alive and always with you" — a sleek, flo
 
 - **2.3 The Conversation Log UX**
   - [x] Create an expandable, hidden transcription drawer in the DOM (`framer-motion` height animation).
-  - [x] Connect UI to OpenClaw WebSocket to receive `ModelTurn` text chunks in real-time.
+  - [x] Connect UI to Aether WebSocket to receive `ModelTurn` text chunks in real-time.
   - [x] Implement `MarkdownRenderer` for token streaming with smooth simulated typing.
   - [x] Add auto-scroll-to-bottom logic for continuous conversation logs.
 
@@ -70,11 +70,11 @@ Shift from local/GCP defaults strictly to **Firebase Cloud**, minimizing dev-ops
 
 ---
 
-## 🤖 Phase 4: Google ADK & OpenClaw Skills Hub
+## 🤖 Phase 4: Google ADK & Aether Skills Hub
 
 Give Aether "hands" and "superpowers" to control the desktop or fetch cloud data autonomously.
 
-- **4.1 OpenClaw Channel Architecture Enrichment**
+- **4.1 Aether Channel Architecture Enrichment**
   - [ ] Finalize `core/transport/gateway.py` with strict structured typing (Pydantic models).
   - [ ] Implement deterministic routing logic: Audio chunks ↔ Transcriber, JSON Payloads ↔ Web UI.
   - [ ] Enforce Ed25519 payload signing validation for security.

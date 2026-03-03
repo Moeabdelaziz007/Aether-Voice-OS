@@ -15,7 +15,7 @@ The frontend is orchestrated by an invisible component called `AetherBrain.tsx`.
 
 ---
 
-## 🔐 The OpenClaw Gateway Bridge
+## 🔐 The Aether Gateway Bridge
 
 The `useAetherGateway` hook implements a **Zero-Trust Handshake**:
 

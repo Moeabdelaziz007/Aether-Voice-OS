@@ -12,7 +12,7 @@ The agent will:
   3. Connect to Gemini Live over the internet
   4. Start listening immediately — just talk
 
-Compatible with OpenClaw skill specifications and
+Compatible with Aether skill specifications and
 ADK (Agent Development Kit) lifecycle patterns.
 """
 
