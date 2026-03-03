@@ -20,7 +20,7 @@ export function WidgetContainer({ children, className, isExpanded = false }: Wid
             className={cn(
                 'relative overflow-hidden rounded-[2.5rem] carbon-panel shadow-[0_32px_64px_rgba(0,0,0,0.6)]',
                 'transition-all duration-700 ease-out border-white/5',
-                isExpanded ? 'w-[440px] h-[640px] p-8' : 'w-[360px] h-[160px] p-6',
+                isExpanded ? 'w-[440px] h-[720px] p-8' : 'w-[400px] h-[190px] p-6',
                 isExpanded ? 'neon-glow-cyan' : 'hover:border-white/10',
                 className
             )}
@@ -33,8 +33,8 @@ export function WidgetContainer({ children, className, isExpanded = false }: Wid
             />
 
             {/* Industrial Background Accents */}
-            <div className="absolute top-0 right-0 w-48 h-48 bg-cyan-500/10 blur-[100px] -mr-24 -mt-24 pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/10 blur-[100px] -ml-24 -mb-24 pointer-events-none" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-[#00f3ff]/10 blur-[100px] -mr-24 -mt-24 pointer-events-none" />
+            <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#bc13fe]/10 blur-[100px] -ml-24 -mb-24 pointer-events-none" />
 
             {/* Inner Glass Reflection */}
             <div className="absolute inset-0 glass-reflection pointer-events-none opacity-50" />

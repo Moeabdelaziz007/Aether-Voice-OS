@@ -6,7 +6,7 @@ import { WidgetContainer } from '../components/WidgetContainer';
 import { LiveWaveLine } from '../components/LiveWaveLine';
 import { TranscriptionDrawer } from '../components/TranscriptionDrawer';
 import { NeuralWeb } from '../components/NeuralWeb';
-import { Mic, Activity, AlignLeft, Eye, Zap, Sparkles, Shield } from 'lucide-react';
+import { Mic, Activity, AlignLeft, Zap, Sparkles } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
 export default function Home() {
@@ -21,8 +21,8 @@ export default function Home() {
     const arousal = useAetherStore(state => state.arousal);
     const setStatus = useAetherStore(state => state.setStatus);
     const lastVisionPulse = useAetherStore(state => state.lastVisionPulse);
-    const zenMode = useAetherStore(state => state.zenMode);
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [visionActive, setVisionActive] = useState(false);
     const [showMutationAlert, setShowMutationAlert] = useState(false);
 
@@ -65,7 +65,7 @@ export default function Home() {
     }, [lastVisionPulse]);
 
     return (
-        <main className="min-h-screen p-8 flex items-center justify-center bg-transparent selection:bg-cyan-500/30">
+        <main className="min-h-screen p-8 flex items-center justify-center bg-transparent selection:bg-[#00f3ff]/30">
             {/* Mutation Alert Overlay */}
             <AnimatePresence>
                 {
@@ -87,12 +87,12 @@ export default function Home() {
 
             <WidgetContainer isExpanded={isExpanded}>
                 {/* Top Header Bar */}
-                <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center justify-between mb-4 z-20 relative">
                     <div className="flex items-center gap-4">
                         <div className="flex items-center gap-2">
-                            <div className={`relative flex h-2 w-2 rounded-full ${audioState === 'idle' ? 'bg-white/10' : 'bg-cyan-400 shadow-[0_0_8px_#00f3ff]'}`}>
+                            <div className={`relative flex h-2 w-2 rounded-full ${audioState === 'idle' ? 'bg-white/10' : 'bg-[#00f3ff] shadow-[0_0_8px_#00f3ff]'}`}>
                                 {audioState !== 'idle' && (
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00f3ff] opacity-75"></span>
                                 )}
                             </div>
                             <span className="font-mono text-[9px] tracking-[0.2em] uppercase text-white/40 font-bold">
@@ -102,7 +102,7 @@ export default function Home() {
 
                         {/* Neural Integrity Indicator */}
                         <div className="flex items-center gap-2 ml-2 border-l border-white/5 pl-4">
-                            <Zap size={10} className={status === 'connected' ? "text-cyan-400" : "text-white/10"} />
+                            <Zap size={10} className={status === 'connected' ? "text-[#00f3ff]" : "text-white/10"} />
                             <div className="flex flex-col">
                                 <span className="text-[7px] font-mono text-white/20 uppercase tracking-tighter">Integrity</span>
                                 <span className="text-[9px] font-mono text-white/60 tracking-tighter uppercase font-bold">
@@ -115,19 +115,23 @@ export default function Home() {
                     <div className="flex gap-4">
                         {/* Handover Latency Mock */}
                         {isExpanded && (
-                            <div className="flex items-center gap-2 border-r border-white/5 pr-4">
-                                <Activity size={10} className="text-purple-400" />
+                            <motion.div
+                                initial={{ opacity: 0, x: 10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                className="flex items-center gap-2 border-r border-white/5 pr-4"
+                            >
+                                <Activity size={10} className="text-[#bc13fe]" />
                                 <div className="flex flex-col items-end">
                                     <span className="text-[7px] font-mono text-white/20 uppercase tracking-tighter">Latency</span>
-                                    <span className="text-[9px] font-mono text-purple-400/80 tracking-tighter uppercase font-bold">284ms</span>
+                                    <span className="text-[9px] font-mono text-[#bc13fe]/80 tracking-tighter uppercase font-bold">284ms</span>
                                 </div>
-                            </div>
+                            </motion.div>
                         )}
                         <button
                             title="Expand Menu"
                             aria-label="Expand Menu"
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-white/20 hover:text-cyan-400"
+                            className="p-1.5 rounded-lg hover:bg-white/5 transition-colors text-white/20 hover:text-[#00f3ff]"
                         >
                             <AlignLeft size={16} />
                         </button>
@@ -136,22 +140,31 @@ export default function Home() {
 
                 {/* Central Audio Visualizer */}
                 <div className="flex-1 flex flex-col justify-center relative z-10">
-                    <div className="relative h-24 mb-4">
+                    <div className="relative h-24 mb-2 shrink-0">
                         <LiveWaveLine state={audioState} valence={valence} arousal={arousal} />
                     </div>
 
-                    {/* ADK Visualization */}
-                    <div className="mt-auto">
-                        <NeuralWeb events={neuralEvents.length > 0 ? neuralEvents : []} />
-                    </div>
+                    {/* ADK Visualization (Only when expanded to save space) */}
+                    <AnimatePresence>
+                        {isExpanded && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-2"
+                            >
+                                <NeuralWeb events={neuralEvents.length > 0 ? neuralEvents : []} />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {/* Control Hub Overlay */}
-                    <div className="absolute inset-x-0 -bottom-4 flex justify-center translate-y-1/2">
+                    <div className="absolute inset-x-0 -bottom-8 flex justify-center z-30 pointer-events-none">
                         <button
                             onClick={toggleListening}
-                            className={`p-5 rounded-2xl transition-all duration-500 border group ${audioState !== 'idle'
-                                ? 'bg-cyan-500/10 border-cyan-500/40 text-cyan-400 shadow-[0_0_30px_rgba(0,243,255,0.2)]'
-                                : 'bg-black/40 border-white/10 text-white/20 hover:border-white/30 hover:text-white'
+                            className={`pointer-events-auto p-5 rounded-2xl transition-all duration-500 border group ${audioState !== 'idle'
+                                ? 'bg-[#00f3ff]/10 border-[#00f3ff]/40 text-[#00f3ff] shadow-[0_0_30px_rgba(0,243,255,0.2)]'
+                                : 'bg-[#050505]/80 border-white/10 text-white/20 hover:border-white/30 hover:text-white backdrop-blur-md'
                                 }`}
                         >
                             {audioState === 'thinking' ?
@@ -161,7 +174,7 @@ export default function Home() {
 
                             {/* Inner Ring */}
                             {audioState !== 'idle' && (
-                                <div className="absolute inset-0 rounded-2xl border border-cyan-400/20 animate-ping opacity-20" />
+                                <div className="absolute inset-0 rounded-2xl border border-[#00f3ff]/20 animate-ping opacity-20" />
                             )}
                         </button>
                     </div>
