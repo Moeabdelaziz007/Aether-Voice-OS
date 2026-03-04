@@ -78,23 +78,27 @@ class SmoothMuter:
 
         if ramp_len > 0:
             ramp = np.linspace(
-                self._current_gain,
+                self._current_gain + step,         # Start one step ahead
                 self._current_gain + (step * ramp_len),
                 ramp_len,
                 dtype=np.float32,
             )
-            gains[:ramp_len] = ramp
-            gains[ramp_len:] = (
-                gains[ramp_len - 1] if ramp_len > 0 else self._target_gain
-            )
-            self._current_gain = float(gains[-1])
 
-            # Snap to target if very close
-            if abs(self._current_gain - self._target_gain) < 0.05:
-                self._current_gain = self._target_gain
-        else:
+            # If we are finishing the ramp in this chunk, make SURE the last value is exactly target
+            if ramp_len == steps_needed:
+                ramp[-1] = self._target_gain
+
+            gains[:ramp_len] = ramp
+            self._current_gain = float(ramp[-1])
+
+        # Fill the rest of the chunk with whatever the current gain is
+        if ramp_len < chunk_len:
+            gains[ramp_len:] = self._target_gain
             self._current_gain = self._target_gain
-            gains[:] = self._current_gain
+
+        # Optional: Keep a very tiny snap just for IEEE float math drift
+        if abs(self._current_gain - self._target_gain) < 1e-4:
+            self._current_gain = self._target_gain
 
         return (pcm_chunk * gains).astype(np.int16)
 
@@ -182,6 +186,8 @@ class AudioCapture:
         except asyncio.QueueFull:
             try:
                 self._async_queue.get_nowait()
+                if hasattr(audio_state, 'capture_queue_drops'):
+                    audio_state.capture_queue_drops += 1
             except asyncio.QueueEmpty:
                 pass
             self._async_queue.put_nowait(msg)
@@ -287,12 +293,13 @@ class AudioCapture:
         audio_state.is_soft = vad.is_soft
         audio_state.is_hard = vad.is_hard
 
-        zero_crossings = np.where(np.diff(np.sign(processed_chunk)))[0]
-        audio_state.last_zcr = (
-            len(zero_crossings) / len(processed_chunk)
-            if len(processed_chunk) > 0
-            else 0
-        )
+        if len(processed_chunk) > 1:
+            s1 = processed_chunk[:-1].astype(np.int32)
+            s2 = processed_chunk[1:].astype(np.int32)
+            signs = s1 * s2
+            audio_state.last_zcr = float(np.count_nonzero(signs < 0)) / len(processed_chunk)
+        else:
+            audio_state.last_zcr = 0.0
 
         # Architecture of Silence: Classify silence if no clear speech
         if not vad.is_hard:

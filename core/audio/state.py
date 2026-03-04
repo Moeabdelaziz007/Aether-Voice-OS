@@ -52,6 +52,7 @@ class AudioState:
                 cls._instance.is_soft = False
                 cls._instance.is_hard = False
                 cls._instance.silence_type = "void"
+                cls._instance.capture_queue_drops = 0
                 cls._instance._playing_lock = threading.Lock()
                 # AEC (Acoustic Echo Cancellation) state
                 cls._instance.aec_converged = False

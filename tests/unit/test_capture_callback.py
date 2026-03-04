@@ -46,6 +46,9 @@ def mock_dependencies():
         
         mock_smooth_muter_instance = MockSmoothMuter.return_value
         mock_smooth_muter_instance._current_gain = 1.0
+
+        # Hysteresis gate just mirrors is_playing
+        MockHysteresis.return_value.update.side_effect = lambda x: x
         
         yield {
             "config": mock_config,
@@ -84,7 +87,11 @@ def test_callback_when_ai_is_silent_and_user_speaks(capture_instance, mock_depen
     Scenario: AI is not playing, user speaks.
     Expected: SmoothMuter.unmute() is called.
     """
-    mock_audio_state.is_playing = False
+    import core.audio.capture
+    core.audio.capture.audio_state.is_playing = False
+    core.audio.capture.audio_state.just_started_playing = False
+    core.audio.capture.audio_state.just_stopped_playing = False
+
     aec_instance = mock_dependencies['MockDynamicAEC'].return_value
     aec_instance.is_user_speaking.return_value = True
     in_data = (np.ones(CHUNK_SIZE, dtype=np.int16) * 1000).tobytes()
@@ -100,7 +107,11 @@ def test_callback_thalamic_gate_mutes_echo(capture_instance, mock_dependencies):
     Scenario: AI is playing, and the incoming audio is determined to be echo.
     Expected: SmoothMuter.mute() is called.
     """
-    mock_audio_state.is_playing = True
+    import core.audio.capture
+    core.audio.capture.audio_state.is_playing = True
+    core.audio.capture.audio_state.just_started_playing = False
+    core.audio.capture.audio_state.just_stopped_playing = False
+
     aec_instance = mock_dependencies['MockDynamicAEC'].return_value
     aec_instance.is_user_speaking.return_value = False
     in_data = (np.ones(CHUNK_SIZE, dtype=np.int16) * 1000).tobytes()
@@ -116,7 +127,11 @@ def test_callback_thalamic_gate_allows_barge_in(capture_instance, mock_dependenc
     Scenario: AI is playing, but the user speaks over it (barge-in).
     Expected: SmoothMuter.unmute() is called.
     """
-    mock_audio_state.is_playing = True
+    import core.audio.capture
+    core.audio.capture.audio_state.is_playing = True
+    core.audio.capture.audio_state.just_started_playing = False
+    core.audio.capture.audio_state.just_stopped_playing = False
+
     aec_instance = mock_dependencies['MockDynamicAEC'].return_value
     aec_instance.is_user_speaking.return_value = True
     in_data = (np.ones(CHUNK_SIZE, dtype=np.int16) * 1000).tobytes()
