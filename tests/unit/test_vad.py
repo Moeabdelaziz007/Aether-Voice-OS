@@ -14,17 +14,23 @@ on semantic outcomes rather than exact numerical equality.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
-from core.audio.processing import AdaptiveVAD, HyperVADResult, SilentAnalyzer, SilenceType, energy_vad
-
+from core.audio.processing import (
+    AdaptiveVAD,
+    HyperVADResult,
+    SilenceType,
+    SilentAnalyzer,
+    energy_vad,
+)
 
 SAMPLE_RATE = 16000
 CHUNK_DURATION_S = 0.1
 CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_DURATION_S)
 
 
-def _sine_pcm16(freq_hz: float, amp: float, n: int = CHUNK_SAMPLES, sr: int = SAMPLE_RATE) -> np.ndarray:
+def _sine_pcm16(
+    freq_hz: float, amp: float, n: int = CHUNK_SAMPLES, sr: int = SAMPLE_RATE
+) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
@@ -121,8 +127,8 @@ def test_silent_analyzer_classification_void_and_thinking_and_breathing():
     st2 = analyzer.classify(thinking, current_rms=rms_thinking)
     assert st2 in (SilenceType.THINKING, SilenceType.VOID)
 
-    # BREATHING requires variance across history and low ZCR; simulate small oscillations
-    # across multiple frames to build variance.
+    # BREATHING requires variance across history and low ZCR; simulate small
+    # oscillations across multiple frames to build variance.
     for amp in (0.006, 0.009, 0.007, 0.009, 0.006, 0.009):
         fr = _sine_pcm16(freq_hz=80.0, amp=amp)
         rms = float(np.sqrt(np.mean((fr.astype(np.float32) / 32768.0) ** 2)))

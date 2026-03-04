@@ -295,8 +295,7 @@ class ToolRouter:
             if not authorized:
                 return {
                     "error": (
-                        "Security Exception: Biometric Soul-Lock "
-                        "verification failed."
+                        "Security Exception: Biometric Soul-Lock verification failed."
                     ),
                     "x-a2a-status": 403,
                 }

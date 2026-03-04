@@ -37,6 +37,7 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
     if not _shared_index:
         # Auto-initialize if not set (for standalone tool usage)
         from core.infra.config import load_config
+
         config = load_config()
         api_key = config.get("google_api_key")
         _shared_index = FirestoreVectorStore(api_key=api_key)
@@ -58,7 +59,7 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
                     "file": file_path,
                     "chunk": chunk_idx,
                     "similarity": round(r["similarity"], 3),
-                    "text": r.get("text", "")[:300] + "..." # Return a snippet
+                    "text": r.get("text", "")[:300] + "...",  # Return a snippet
                 }
             )
 

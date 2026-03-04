@@ -149,8 +149,8 @@ class SessionStateManager:
                     self._state = new_state
                     self._state_change_event.set()
                     self._state_change_event.clear()
-                
-                # If we received a state change from another node, 
+
+                # If we received a state change from another node,
                 # we might need to restore our local metadata if it's missing
                 if not self._metadata and self._bus:
                     session_id = data.get("session_id")
@@ -161,7 +161,9 @@ class SessionStateManager:
                 if self._broadcast:
                     await self._broadcast("engine_state", {"state": new_state.name})
         except (KeyError, ValueError):
-            logger.warning("A2A [STATE] Received invalid global state: %s", new_state_name)
+            logger.warning(
+                "A2A [STATE] Received invalid global state: %s", new_state_name
+            )
 
     @property
     def state(self) -> SessionState:
@@ -272,24 +274,32 @@ class SessionStateManager:
         """Persist current session metadata to the Global Bus KV store."""
         if not self._bus or not self._metadata:
             return False
-            
+
         snapshot = await self.create_snapshot()
         # Save by session ID
-        success = await self._bus.set_state(f"session:{self._metadata.session_id}", snapshot, ex=3600) # 1hr TTL
+        success = await self._bus.set_state(
+            f"session:{self._metadata.session_id}", snapshot, ex=3600
+        )  # 1hr TTL
         if success:
             # Mark as active session for discovery
-            await self._bus.set_state("active_session_id", self._metadata.session_id, ex=3600)
-            logger.debug("A2A [STATE] Persisted session %s to Redis", self._metadata.session_id)
+            await self._bus.set_state(
+                "active_session_id", self._metadata.session_id, ex=3600
+            )
+            logger.debug(
+                "A2A [STATE] Persisted session %s to Redis", self._metadata.session_id
+            )
         return success
 
     async def restore_from_bus(self, session_id: str) -> bool:
         """Restore session metadata from the Global Bus KV store."""
         if not self._bus:
             return False
-            
+
         snapshot = await self._bus.get_state(f"session:{session_id}")
         if snapshot:
-            logger.info("A2A [STATE] Found persistent snapshot for %s, restoring...", session_id)
+            logger.info(
+                "A2A [STATE] Found persistent snapshot for %s, restoring...", session_id
+            )
             return await self.restore_from_snapshot(snapshot)
         return False
 
@@ -401,7 +411,7 @@ class SessionStateManager:
             return
 
         # Check for stuck states
-        time_in_state = (datetime.now() - self._last_health_check).total_seconds()
+        (datetime.now() - self._last_health_check).total_seconds()
 
         if self._state == SessionState.ERROR:
             if self._consecutive_errors >= self._max_consecutive_errors:

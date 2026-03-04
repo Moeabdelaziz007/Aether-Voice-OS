@@ -26,10 +26,8 @@ import logging
 import os
 import sys
 import time
-import wave
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 
@@ -39,6 +37,7 @@ sys.path.insert(0, str(ROOT))
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv(ROOT / ".env")
 except ImportError:
     pass
@@ -53,9 +52,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message
 # Data Models
 # ═══════════════════════════════════════════════════════════
 
+
 @dataclass
 class BenchmarkResult:
     """Stores the results of a single benchmark run."""
+
     test_name: str
     metric: str
     value: float
@@ -68,6 +69,7 @@ class BenchmarkResult:
 @dataclass
 class VoiceBenchmarkReport:
     """Complete voice quality benchmark report."""
+
     results: list[BenchmarkResult] = field(default_factory=list)
     suggestions: list[str] = field(default_factory=list)
     timestamp: str = ""
@@ -96,14 +98,18 @@ class VoiceBenchmarkReport:
             status = "✅ PASS" if r.passed else "❌ FAIL"
             name = r.test_name[:28].ljust(28)
             val = f"{r.value:.1f}{r.unit}".ljust(9)
-            thr = f"<{r.threshold}{r.unit}".ljust(8) if r.threshold > 0 else "N/A".ljust(8)
+            thr = (
+                f"<{r.threshold}{r.unit}".ljust(8)
+                if r.threshold > 0
+                else "N/A".ljust(8)
+            )
             lines.append(f"│ {name} │ {val} │ {thr} │ {status} │")
 
         lines.append("└──────────────────────────────┴───────────┴──────────┴────────┘")
 
         passed = sum(1 for r in self.results if r.passed)
         total = len(self.results)
-        lines.append(f"\n  Score: {passed}/{total} ({passed/total*100:.0f}%)")
+        lines.append(f"\n  Score: {passed}/{total} ({passed / total * 100:.0f}%)")
 
         if self.suggestions:
             lines.append("\n  ════ Voice Quality Improvement Suggestions ════")
@@ -118,21 +124,24 @@ class VoiceBenchmarkReport:
 # Benchmark Tests
 # ═══════════════════════════════════════════════════════════
 
-def generate_test_tone(freq_hz: float = 440.0, duration_s: float = 1.0,
-                        sample_rate: int = 16000) -> bytes:
+
+def generate_test_tone(
+    freq_hz: float = 440.0, duration_s: float = 1.0, sample_rate: int = 16000
+) -> bytes:
     """Generate a pure sine wave tone as PCM16 bytes."""
     t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
     samples = (np.sin(2 * np.pi * freq_hz * t) * 16000).astype(np.int16)
     return samples.tobytes()
 
 
-def generate_speech_like_signal(duration_s: float = 2.0,
-                                 sample_rate: int = 16000) -> bytes:
+def generate_speech_like_signal(
+    duration_s: float = 2.0, sample_rate: int = 16000
+) -> bytes:
     """Generate a speech-like signal with formants for testing."""
     t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
     # Simulate speech with multiple formants
-    f1 = np.sin(2 * np.pi * 150 * t) * 8000   # Fundamental (male voice)
-    f2 = np.sin(2 * np.pi * 500 * t) * 4000   # First formant
+    f1 = np.sin(2 * np.pi * 150 * t) * 8000  # Fundamental (male voice)
+    f2 = np.sin(2 * np.pi * 500 * t) * 4000  # First formant
     f3 = np.sin(2 * np.pi * 1500 * t) * 2000  # Second formant
     f4 = np.sin(2 * np.pi * 2500 * t) * 1000  # Third formant
 
@@ -176,21 +185,21 @@ async def benchmark_round_trip_latency(
             async with client.aio.live.connect(model=model, config=config) as session:
                 start = time.perf_counter()
                 await session.send_client_content(
-                    turns=[types.Content(parts=[types.Part(text=f"Ping #{i+1}")])]
+                    turns=[types.Content(parts=[types.Part(text=f"Ping #{i + 1}")])]
                 )
                 async for response in session.receive():
                     if response.data:
                         latency_ms = (time.perf_counter() - start) * 1000
                         latencies.append(latency_ms)
-                        logger.info(f"  Iteration {i+1}: {latency_ms:.0f}ms")
+                        logger.info(f"  Iteration {i + 1}: {latency_ms:.0f}ms")
                         break
                     if response.text:
                         latency_ms = (time.perf_counter() - start) * 1000
                         latencies.append(latency_ms)
-                        logger.info(f"  Iteration {i+1}: {latency_ms:.0f}ms (text)")
+                        logger.info(f"  Iteration {i + 1}: {latency_ms:.0f}ms (text)")
                         break
         except Exception as e:
-            logger.warning(f"  Iteration {i+1} failed: {e}")
+            logger.warning(f"  Iteration {i + 1} failed: {e}")
             latencies.append(5000.0)
 
     avg = sum(latencies) / len(latencies) if latencies else 9999.0
@@ -259,7 +268,7 @@ Respond in this exact JSON format:
                 temperature=0.3,
             ),
         )
-        
+
         result_text = response.text.strip()
         # Parse JSON response
         data = json.loads(result_text)
@@ -322,7 +331,9 @@ def benchmark_aec_effectiveness() -> BenchmarkResult:
     noise = (np.random.randn(len(t)) * 200).astype(np.int16)
 
     mic_full = np.zeros_like(far_end_full)
-    mic_full[delay_samples:] = (far_end_full[:-delay_samples] * echo_gain).astype(np.int16)
+    mic_full[delay_samples:] = (far_end_full[:-delay_samples] * echo_gain).astype(
+        np.int16
+    )
     mic_full += noise
 
     erle_values = []
@@ -336,7 +347,7 @@ def benchmark_aec_effectiveness() -> BenchmarkResult:
         erle_values.append(state.erle_db)
 
     # Average ERLE over last 60% of frames (after convergence)
-    converged_erle = erle_values[int(len(erle_values) * 0.4):]
+    converged_erle = erle_values[int(len(erle_values) * 0.4) :]
     avg_erle = np.mean(converged_erle) if converged_erle else 0.0
 
     return BenchmarkResult(
@@ -360,7 +371,6 @@ def benchmark_vad_accuracy() -> BenchmarkResult:
     from core.audio.processing import AdaptiveVAD, energy_vad
 
     vad = AdaptiveVAD()
-    sample_rate = 16000
     correct = 0
     total = 0
 
@@ -418,8 +428,12 @@ def benchmark_thalamic_gate_latency() -> BenchmarkResult:
     )
 
     # Pre-generate test frames
-    mic_frames = [(np.random.randn(frame_size) * 5000).astype(np.int16) for _ in range(100)]
-    ref_frames = [(np.random.randn(frame_size) * 3000).astype(np.int16) for _ in range(100)]
+    mic_frames = [
+        (np.random.randn(frame_size) * 5000).astype(np.int16) for _ in range(100)
+    ]
+    ref_frames = [
+        (np.random.randn(frame_size) * 3000).astype(np.int16) for _ in range(100)
+    ]
 
     # Warmup
     for i in range(10):
@@ -451,6 +465,7 @@ def benchmark_thalamic_gate_latency() -> BenchmarkResult:
 # Main Runner
 # ═══════════════════════════════════════════════════════════
 
+
 async def run_all_benchmarks() -> VoiceBenchmarkReport:
     """Execute the full voice quality benchmark suite."""
     api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
@@ -475,7 +490,11 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         report.add(result)
     except Exception as e:
         logger.error(f"Latency benchmark failed: {e}")
-        report.add(BenchmarkResult("Round-Trip Latency", "latency_ms", 9999, "ms", False, 500, str(e)))
+        report.add(
+            BenchmarkResult(
+                "Round-Trip Latency", "latency_ms", 9999, "ms", False, 500, str(e)
+            )
+        )
 
     # 2. Voice Quality Analysis & Suggestions
     try:
@@ -500,7 +519,9 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         report.add(result)
     except Exception as e:
         logger.error(f"VAD benchmark failed: {e}")
-        report.add(BenchmarkResult("VAD Accuracy", "accuracy_%", 0, "%", False, 85, str(e)))
+        report.add(
+            BenchmarkResult("VAD Accuracy", "accuracy_%", 0, "%", False, 85, str(e))
+        )
 
     # 5. Thalamic Gate Latency
     try:
@@ -508,7 +529,9 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         report.add(result)
     except Exception as e:
         logger.error(f"Gate latency benchmark failed: {e}")
-        report.add(BenchmarkResult("Gate Latency", "gate_ms", 999, "ms", False, 2, str(e)))
+        report.add(
+            BenchmarkResult("Gate Latency", "gate_ms", 999, "ms", False, 2, str(e))
+        )
 
     report.total_duration_s = time.perf_counter() - start_time
 

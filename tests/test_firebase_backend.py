@@ -1,7 +1,5 @@
 import asyncio
 import logging
-import unittest
-from unittest.mock import patch, MagicMock
 
 from core.infra.cloud.firebase import FirebaseConnector
 

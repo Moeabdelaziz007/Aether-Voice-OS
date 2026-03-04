@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from core.services.registry import AetherRegistry
     from core.tools.router import ToolRouter
 
+from core.ai.compression import NeuralSummarizer
 from core.ai.handover_protocol import (
     HandoverContext,
     HandoverNegotiation,
@@ -30,7 +31,6 @@ from core.ai.handover_protocol import (
     ValidationCheckpoint,
     get_handover_protocol,
 )
-from core.ai.compression import NeuralSummarizer
 from core.ai.handover_telemetry import (
     FailureCategory,
     HandoverOutcome,
@@ -217,7 +217,9 @@ class HiveCoordinator:
 
             # Trigger Neural Compression (Semantic Seed generation)
             if self._summarizer and self._summarizer.should_compress(context):
-                logger.info("✦ Compressing context for handover %s", context.handover_id)
+                logger.info(
+                    "✦ Compressing context for handover %s", context.handover_id
+                )
                 # Note: This is an async call in a potentially legacy sync context.
                 # In ADK 2.0, most Hive operations are transitioning to async.
                 # For now, we'll create a task to run it.
@@ -546,7 +548,7 @@ class HiveCoordinator:
             partial_output=partial_output,
         )
 
-        context = self._active_handovers.get(handover_id)
+        self._active_handovers.get(handover_id)
         return checkpoint
 
     def rollback_handover(self, handover_id: str) -> bool:
@@ -654,6 +656,8 @@ class HiveCoordinator:
             seed = await self._summarizer.compress(context)
             if seed:
                 context.compressed_seed = seed
-                logger.info("✦ Handover %s now has a Semantic Seed.", context.handover_id)
+                logger.info(
+                    "✦ Handover %s now has a Semantic Seed.", context.handover_id
+                )
         except Exception as e:
             logger.error("Failed to apply compression: %s", e)

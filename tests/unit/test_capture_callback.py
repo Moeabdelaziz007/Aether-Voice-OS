@@ -24,18 +24,23 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-
 # Patch the audio_state module before importing AudioCapture
 mock_audio_state = MagicMock()
 mock_audio_state.far_end_pcm.read_last.return_value = np.zeros(512, dtype=np.int16)
 mock_audio_state.capture_queue_drops = 0
 
-patcher = patch.dict("sys.modules", {"core.audio.state": MagicMock(audio_state=mock_audio_state, HysteresisGate=MagicMock())})
+patcher = patch.dict(
+    "sys.modules",
+    {
+        "core.audio.state": MagicMock(
+            audio_state=mock_audio_state, HysteresisGate=MagicMock()
+        )
+    },
+)
 patcher.start()
 
 from core.audio.capture import AudioCapture, SmoothMuter  # noqa: E402
 from core.infra.config import AudioConfig  # noqa: E402
-
 
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 512
@@ -81,7 +86,9 @@ def mock_dependencies():
             "MockSmoothMuter": MockSmoothMuter,
         }
 
-def _sine_pcm16(freq_hz: float, amp: float, n: int = CHUNK_SIZE, sr: int = SAMPLE_RATE) -> np.ndarray:
+def _sine_pcm16(
+    freq_hz: float, amp: float, n: int = CHUNK_SIZE, sr: int = SAMPLE_RATE
+) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
@@ -107,7 +114,7 @@ def test_smooth_muter_ramp_is_gradual_and_hits_target():
     assert np.all(y2[-10:] == 0)
 
     muter.unmute()
-    y3 = muter.process(x)
+    muter.process(x)
     # After unmute, gain should have risen (ramp_samples=256 fits inside chunk of 512)
     assert muter._current_gain == 1.0
 
@@ -138,7 +145,9 @@ def capture_instance():
     mock_audio_state.is_playing = False
     mock_audio_state.just_started_playing = False
     mock_audio_state.just_stopped_playing = False
-    mock_audio_state.far_end_pcm.read_last.return_value = np.zeros(CHUNK_SIZE, dtype=np.int16)
+    mock_audio_state.far_end_pcm.read_last.return_value = np.zeros(
+        CHUNK_SIZE, dtype=np.int16
+    )
     mock_audio_state.capture_queue_drops = 0
 
     config = AudioConfig(send_sample_rate=SAMPLE_RATE, chunk_size=CHUNK_SIZE)
@@ -247,10 +256,13 @@ def test_callback_thalamic_gate_allows_barge_in(capture_instance, mock_dependenc
     aec_instance = mock_dependencies['MockDynamicAEC'].return_value
     aec_instance.is_user_speaking.return_value = True
     in_data = (np.ones(CHUNK_SIZE, dtype=np.int16) * 1000).tobytes()
-    
+
     capture_instance._callback(in_data, frame_count=CHUNK_SIZE, time_info={}, status=0)
 
-def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(capture_instance: AudioCapture):
+
+def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(
+    capture_instance: AudioCapture,
+):
     # Simulate QueueFull once, then success.
     q = capture_instance._async_queue
 
