@@ -61,7 +61,7 @@ gcloud run deploy aether-engine \
 For production security, move keys into GCP Secret Manager:
 
 ```bash
-echo -n "AIzaSy..." | gcloud secrets create GEMINI_KEY --data-file=-
+echo -n "YOUR_GOOGLE_API_KEY" | gcloud secrets create GEMINI_KEY --data-file=-
 gcloud run deploy aether-engine --update-secrets=GOOGLE_API_KEY=GEMINI_KEY:latest
 ```
 
