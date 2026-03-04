@@ -128,6 +128,13 @@ AetherOS is now highly modular and ready for expert-level scale. **[REORG COMPLE
 - **Improvements:** Fixed DynamicAEC initialization order, optimized Admin API port reuse, and synchronized AI handover manager naming.
 - **Status:** Architecture validated for 10x scaling.
 
+## V2 Architecture
+
+- 🎙️ **Voice Hub V2**: Uses `SoundDevice` for high-quality audio streaming. Voice Activity Detection (VAD) via `webrtcvad`. Throttles RMS/Gain metrics out to the frontend at 15Hz (`audio_telemetry`).
+- ⚡️ **Websocket Gateway**: A seamless FastAPI bridge. Bridges all `frontend_events` published on the `GlobalBus` to the React client via `ws://localhost:18789`.
+- 🩺 **Watchdog Healing**: The `watchdog.py` autonomously heals connection/timeout issues. Emits exact states (`diagnosing` -> `applied` -> `failed`) directly to the frontend via `repair_state` gateway messages.
+- 📺 **HUD React Layer**: A Next.js portal driven by Zustand (`useAetherStore`). Features a central `AetherOrb` reacting dynamically to audio levels, and a `SystemFailure` glitch-overlay responding to the watchdog.
+
 ### Phase 3-6: True E2E Scale & Semantic Recovery (2026-03-03)
 
 - **Objective:** Establish zero-mock testing constraints to validate the Neural Switchboard and Thalamic Gate under production acoustic latency paradigms.

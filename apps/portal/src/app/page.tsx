@@ -14,6 +14,7 @@ import RealmController from "@/components/realms/RealmController";
 import CommandBar from "@/components/shared/CommandBar";
 import EdgeGlow from "@/components/shared/EdgeGlow";
 import HUDContainer from "@/components/HUD/HUDContainer";
+import SystemFailure from "@/components/HUD/SystemFailure";
 import PoweredByStrip from "@/components/shared/PoweredByStrip";
 import ParticleField from "@/components/shared/ParticleField";
 import SilentHintsOverlay from "@/components/shared/SilentHintsOverlay";
@@ -72,6 +73,9 @@ export default function AetherPortal() {
                 <div className="relative w-full h-screen overflow-hidden aether-boot-enter">
                     {/* The Orb — always visible, morphs between realms */}
                     <AetherOrb />
+
+                    {/* Autonomous Repair Overlay */}
+                    <SystemFailure />
 
                     {/* Active realm content */}
                     <RealmController />

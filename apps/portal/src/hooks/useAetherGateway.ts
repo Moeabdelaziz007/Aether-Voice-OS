@@ -168,6 +168,16 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                         useAetherStore.getState().setAudioLevels(msg.payload.rms || 0, msg.payload.gain || 0);
                     }
 
+                    // ── Repair State (Watchdog → Frontend healing) ──
+                    else if (msg.type === "repair_state") {
+                        useAetherStore.getState().setRepairState({
+                            status: msg.payload?.status || msg.status || 'diagnosing',
+                            message: msg.payload?.message || msg.message || '',
+                            log: msg.payload?.log || msg.log || '',
+                            timestamp: Date.now(),
+                        });
+                    }
+
                     // ── Neural Event (Hive agent activity) ──
                     else if (msg.type === "neural_event") {
                         store.addNeuralEvent({

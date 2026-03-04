@@ -18,6 +18,16 @@ export type ExperienceLevel = 'beginner' | 'intermediate' | 'expert' | 'wizard';
 export type EmotionDisplay = 'aura' | 'text' | 'both' | 'hidden';
 export type SkillFocus = 'coding' | 'debugging' | 'architecture' | 'devops' | 'learning' | 'creative';
 
+// ─── System Repair State ───────────────────────────────────
+export type RepairStatus = 'idle' | 'diagnosing' | 'applied' | 'failed';
+
+export interface RepairState {
+    status: RepairStatus;
+    message: string;
+    log: string;
+    timestamp: number;
+}
+
 // ─── Data Interfaces ───────────────────────────────────────
 export interface TranscriptMessage {
     id: string;
@@ -221,6 +231,7 @@ interface AetherState {
     visionActive: boolean;
     lastVisionPulse: string | null;
     zenMode: boolean;
+    repairState: RepairState;
 
     // Multi-Agent (Hive)
     activeSoul: string | null;
@@ -256,6 +267,8 @@ interface AetherState {
     dismissHint: (id: string) => void;
     setVisionActive: (active: boolean) => void;
     clearTranscript: () => void;
+    setRepairState: (state: RepairState) => void;
+    clearRepairState: () => void;
 
     // Actions — Multi-Agent (Hive)
     setActiveSoul: (soul: string | null) => void;
@@ -297,6 +310,7 @@ export const useAetherStore = create<AetherState>()(
             visionActive: false,
             lastVisionPulse: null,
             zenMode: false,
+            repairState: { status: 'idle', message: '', log: '', timestamp: 0 },
             activeSoul: null,
             toolCallHistory: [],
             persona: DEFAULT_PERSONA,
@@ -359,6 +373,8 @@ export const useAetherStore = create<AetherState>()(
 
             setVisionActive: (visionActive) => set({ visionActive }),
             clearTranscript: () => set({ transcript: [] }),
+            setRepairState: (repairState) => set({ repairState }),
+            clearRepairState: () => set({ repairState: { status: 'idle', message: '', log: '', timestamp: 0 } }),
 
             // Multi-Agent actions
             setActiveSoul: (activeSoul) => set({ activeSoul }),
