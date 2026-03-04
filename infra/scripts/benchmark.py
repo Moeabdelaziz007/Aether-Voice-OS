@@ -9,10 +9,8 @@ import asyncio
 import json
 import logging
 import sys
-<<<<<<< ours
-=======
 import time
->>>>>>> theirs
+import tracemalloc
 from pathlib import Path
 
 import numpy as np
@@ -34,12 +32,16 @@ class AetherBenchmarker:
         self.latencies = []
         self.engine = None
         self._start_time = 0
+        self.mem_stats = {}
 
     async def run_benchmark(self, iterations: int = 10):
         print(
             f"🚀 [BENCHMARK] Starting Real-World E2E Audit ({iterations} iterations)...",
             flush=True,
         )
+        # Start tracemalloc to track GC pauses/leaks in zero-allocation frames
+        tracemalloc.start()
+        snapshot_start = tracemalloc.take_snapshot()
         print("🔍 [BENCHMARK] Initializing Aether Engine...", flush=True)
         self.engine = AetherEngine(self.config)
 
@@ -79,50 +81,114 @@ class AetherBenchmarker:
 
         print("🚀 [BENCHMARK] Engine stabilized. Proceeding.", flush=True)
 
-        print("📊 [BENCHMARK] Injecting synthetic probes...", flush=True)
+        print("📊 [BENCHMARK] Measuring True Network RTT via Gemini WebSocket Ping...", flush=True)
+        # Extract active Gemini Live Session websocket
+        session = self.engine._gateway.get_session()
+        if not session or not session._session or not hasattr(session._session, '_ws'):
+            print("❌ [BENCHMARK] Could not find active Gemini Live WebSocket. Aborting.")
+            self.engine._shutdown_event.set()
+            await engine_task
+            return
+
+        ws = session._session._ws
         for i in range(iterations):
-            start = time.perf_counter()
-            # Simulate a "Barge-in" trigger or high-RMS speech event
-            # We use the gateway's broadcast to trace the round-trip
-            print(f"  [Probe {i + 1}] Broadcasting...", flush=True)
-            await self.engine._gateway.broadcast(
-                "benchmark_probe", {"id": i, "ts": start}
-            )
-            print(f"  [Probe {i + 1}] Broadcast done.", flush=True)
+            try:
+                # Manually measure RTT around ping/pong since the future might return None
+                ping_start = time.perf_counter()
+                pong_waiter = await ws.ping()
+                await pong_waiter
+                ping_end = time.perf_counter()
 
-            # In a real test, we'd wait for the actual audio output byte
-            # Here we simulate the processing overhead
-            # TODO: Link this to real AudioPlayback.on_audio_tx
-            await asyncio.sleep(0.5)  # Minimum inference delay simulation
+                latency_ms = (ping_end - ping_start) * 1000
+                self.latencies.append(latency_ms)
+                print(f"  [Probe {i + 1}] RTT Latency: {latency_ms:.2f}ms", flush=True)
+                await asyncio.sleep(1)
+            except Exception as e:
+                print(f"  [Probe {i + 1}] Failed: {e}", flush=True)
 
-            end = time.perf_counter()
-            latency_ms = (end - start) * 1000
-            self.latencies.append(latency_ms)
-            print(f"  [Probe {i + 1}] Latency: {latency_ms:.2f}ms", flush=True)
-            await asyncio.sleep(1)
+        snapshot_end = tracemalloc.take_snapshot()
+        self._compute_memory_stats(snapshot_start, snapshot_end)
+
+        print("🔥 [BENCHMARK] Running Concurrent Firebase Load Test...", flush=True)
+        firebase = self.engine._infra._firebase
+        if not firebase.is_connected:
+            print("⚠️ [BENCHMARK] Firebase not connected. Skipping Load Test.")
+            self.fb_latencies = []
+        else:
+            self.fb_latencies = []
+
+            async def write_task(idx):
+                start_time = time.perf_counter()
+                await firebase.log_message(role="benchmark", content=f"Probe {idx}")
+                end_time = time.perf_counter()
+                return (end_time - start_time) * 1000
+
+            tasks = [write_task(i) for i in range(50)]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+            for res in results:
+                if isinstance(res, Exception):
+                    print(f"❌ [BENCHMARK] Write failed: {res}")
+                else:
+                    self.fb_latencies.append(res)
+            print(f"✅ [BENCHMARK] Load test complete. 50 writes processed.", flush=True)
 
         self._report()
 
         # Shutdown
         self.engine._shutdown_event.set()
         await engine_task
+        tracemalloc.stop()
+
+    def _compute_memory_stats(self, snap1, snap2):
+        print("🧠 [BENCHMARK] Computing Memory Allocation Stats...")
+        stats = snap2.compare_to(snap1, 'lineno')
+        top_allocations = []
+        for stat in stats[:10]:
+            top_allocations.append(str(stat))
+
+        current, peak = tracemalloc.get_traced_memory()
+        self.mem_stats = {
+            "current_bytes": current,
+            "peak_bytes": peak,
+            "top_diff": top_allocations
+        }
 
     def _report(self):
         lats = np.array(self.latencies)
         report = {
-            "p50": float(np.percentile(lats, 50)),
-            "p95": float(np.percentile(lats, 95)),
-            "p99": float(np.percentile(lats, 99)),
-            "min": float(np.min(lats)),
-            "max": float(np.max(lats)),
-            "count": len(lats),
+            "network_rtt_ms": {
+                "p50": float(np.percentile(lats, 50)) if len(lats) > 0 else 0,
+                "p95": float(np.percentile(lats, 95)) if len(lats) > 0 else 0,
+                "p99": float(np.percentile(lats, 99)) if len(lats) > 0 else 0,
+                "min": float(np.min(lats)) if len(lats) > 0 else 0,
+                "max": float(np.max(lats)) if len(lats) > 0 else 0,
+                "count": len(lats),
+            },
+            "memory_stats": self.mem_stats
         }
+
+        if hasattr(self, 'fb_latencies') and len(self.fb_latencies) > 0:
+            fb_lats = np.array(self.fb_latencies)
+            report["firebase_writes_ms"] = {
+                "p50": float(np.percentile(fb_lats, 50)),
+                "p95": float(np.percentile(fb_lats, 95)),
+                "p99": float(np.percentile(fb_lats, 99)),
+                "min": float(np.min(fb_lats)),
+                "max": float(np.max(fb_lats)),
+                "count": len(fb_lats),
+            }
 
         print("\n" + "═" * 40)
         print("🏁 BENCHMARK RESULTS")
-        print(f"  p50 (Median): {report['p50']:.2f}ms")
-        print(f"  p95 (Target): {report['p95']:.2f}ms")
-        print(f"  p99 (Peak):   {report['p99']:.2f}ms")
+        print(f"  [Network RTT]")
+        print(f"  p50 (Median): {report['network_rtt_ms']['p50']:.2f}ms")
+        print(f"  p95 (Target): {report['network_rtt_ms']['p95']:.2f}ms")
+        print(f"  p99 (Peak):   {report['network_rtt_ms']['p99']:.2f}ms")
+        if "firebase_writes_ms" in report:
+            print(f"\n  [Firebase Load Test (50 Concurrent Writes)]")
+            print(f"  p50 (Median): {report['firebase_writes_ms']['p50']:.2f}ms")
+            print(f"  p95 (Target): {report['firebase_writes_ms']['p95']:.2f}ms")
+            print(f"  p99 (Peak):   {report['firebase_writes_ms']['p99']:.2f}ms")
         print("═" * 40)
 
         with open("performance_audit.json", "w") as f:
