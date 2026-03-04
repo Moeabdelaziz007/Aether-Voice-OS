@@ -4,23 +4,28 @@
 # ═══════════════════════════════════════════════════════════
 # Multi-stage build:
 #   Stage 1: Build Rust signal layer (aether-cortex)
+#   Stage 1: Build Rust signal layer (cortex)
 #   Stage 2: Slim Python runtime with Rust .so
 # ═══════════════════════════════════════════════════════════
 
 # ── Stage 1: Rust build ──────────────────────────────────
-FROM rust:1.83-slim-bookworm AS rust-builder
+FROM rust:bookworm as rust-builder
 
-WORKDIR /build
-COPY aether-cortex/ ./aether-cortex/
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3-dev \
+RUN apt-get update && apt-get install -y \
+    clang \
+    libasound2-dev \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /build/aether-cortex
-RUN cargo build --release \
-    && cp target/release/libaether_cortex.so /build/aether_cortex.so 2>/dev/null || \
-    cp target/release/libaether_cortex.dylib /build/aether_cortex.so 2>/dev/null || true
+WORKDIR /build
+COPY cortex/ ./cortex/
+
+# Ensure we use release profile for max performance
+RUN cd cortex && \
+    cargo build --release
+
+# We'll copy the cdylib (.so or .dylib depending on cross-compilation quirks)
+RUN cp target/release/libcortex.so /build/cortex.so 2>/dev/null || \
+    cp target/release/libcortex.dylib /build/cortex.so 2>/dev/null || true
 
 
 # ── Stage 2: Python runtime ─────────────────────────────

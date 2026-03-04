@@ -55,15 +55,20 @@ except ImportError:
         potential_paths = [
             # Standard location (should be here if cp worked)
             os.path.join(os.path.dirname(__file__), "aether_cortex.so"),
-            # Local release build
-            os.path.join(
-                base_dir, "aether-cortex", "target", "release", "libaether_cortex.dylib"
-            ),
-            # Local debug build
-            os.path.join(
-                base_dir, "aether-cortex", "target", "debug", "libaether_cortex.dylib"
-            ),
         ]
+        # Native development path
+        release_path = os.path.join(
+            base_dir, "cortex", "target", "release", "libaether_cortex.dylib"
+        )
+        debug_path = os.path.join(
+            base_dir, "cortex", "target", "debug", "libaether_cortex.dylib"
+        )
+
+        if os.path.exists(release_path):
+            potential_paths.append(release_path)
+        elif os.path.exists(debug_path):
+            potential_paths.append(debug_path)
+
 
         for path in potential_paths:
             if os.path.exists(path):

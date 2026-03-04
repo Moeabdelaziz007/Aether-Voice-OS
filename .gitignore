@@ -18,9 +18,11 @@ dist/
 build/
 .eggs/
 
-# --- Rust (aether-cortex) ---
-aether-cortex/target/
-aether-cortex/Cargo.lock
+# --- Rust (cortex) ---
+cortex/target/
+cortex/Cargo.lock
+apps/portal/src-tauri/target/
+apps/portal/src-tauri/Cargo.lock
 
 # --- Environment & Secrets ---
 .env
@@ -51,3 +53,4 @@ logs/
 # --- Aether Internal ---
 brain/packages/*/secrets/
 .git_stuck_backup/
+\ndump.rdb\n.coverage

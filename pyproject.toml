@@ -1,7 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
-norecursedirs = ["web", "node_modules", "venv", ".venv", "target"]
+norecursedirs = ["apps/portal", "node_modules", "venv", ".venv", "target"]
 
 [tool.ruff]
 line-length = 88

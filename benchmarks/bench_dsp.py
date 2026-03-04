@@ -19,7 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core", "audio"
 # Optimization: Point directly to release artifact to bypass TCC move blocks
 sys.path.insert(
     0,
-    os.path.join(os.path.dirname(__file__), "..", "aether-cortex", "target", "release"),
+    os.path.join(os.path.dirname(__file__), "..", "cortex", "target", "release"),
 )
 
 # ── Import Rust backend ──
