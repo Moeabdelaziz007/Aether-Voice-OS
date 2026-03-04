@@ -49,7 +49,8 @@ async def test_e2e_singularity():
     connected = await fb_connector.initialize()
     if not connected:
         print(
-            "[WARNING] Real Firebase connector could not initialize. Ensure credentials are set."
+            "[WARNING] Real Firebase connector could not initialize. "
+            "Ensure credentials are set."
         )
 
     await fb_connector.start_session()

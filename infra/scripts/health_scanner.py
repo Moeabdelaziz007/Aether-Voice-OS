@@ -157,7 +157,8 @@ def check_python_imports(filepath: str, source: str):
                         "BROKEN_IMPORT",
                         "ERROR",
                         f"Import '{module}' does not resolve to a file on disk",
-                        f"Check if '{module}' was renamed or deleted. Update the import path.",
+                        f"Check if '{module}' was renamed or deleted. "
+                        "Update the import path.",
                     )
 
 
@@ -207,7 +208,8 @@ def check_python_patterns(filepath: str, source: str):
                     "SECURITY",
                     "ERROR",
                     msg,
-                    "Move secrets to environment variables (.env) and load via os.getenv().",
+                    "Move secrets to environment variables (.env) "
+                    "and load via os.getenv().",
                 )
 
         if re.search(r"\beval\s*\(", stripped) or re.search(r"\bexec\s*\(", stripped):
@@ -217,7 +219,8 @@ def check_python_patterns(filepath: str, source: str):
                 "SECURITY",
                 "WARNING",
                 "Usage of eval()/exec()",
-                "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval().",
+                "Avoid eval(). If parsing JSON, use json.loads(). "
+                "If parsing literals, use ast.literal_eval().",
             )
 
     try:
@@ -235,7 +238,8 @@ def check_python_patterns(filepath: str, source: str):
                         "MUTABLE_DEFAULT",
                         "WARNING",
                         f"Mutable default argument in '{node.name}()'",
-                        "Change to 'arg=None', and set 'arg = arg or []' inside the function body.",
+                        "Change to 'arg=None', and set 'arg = arg or []' "
+                        "inside the function body.",
                     )
 
         if isinstance(node, ast.ExceptHandler):
@@ -251,7 +255,8 @@ def check_python_patterns(filepath: str, source: str):
                         "SWALLOWED_EXCEPTION",
                         "WARNING",
                         "Exception caught and silently swallowed with 'pass'",
-                        "Log the exception via logging.warning() or logger.error() instead of quietly passing.",
+                        "Log the exception via logging.warning() or logger.error() "
+                        "instead of quietly passing.",
                     )
 
 
@@ -269,7 +274,8 @@ def check_file_metrics(filepath: str, source: str):
             "COMPLEXITY",
             "WARNING",
             f"File has {line_count} lines",
-            "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic).",
+            "Split this file into smaller sub-modules (e.g., separate Models "
+            "from Handlers/Business Logic).",
         )
 
     try:
@@ -289,7 +295,8 @@ def check_file_metrics(filepath: str, source: str):
             "COMPLEXITY",
             "INFO",
             f"File has {len(funcs)} functions",
-            "Consider refactoring related functions into a Class to encapsulate state and logic.",
+            "Consider refactoring related functions into a Class "
+            "to encapsulate state and logic.",
         )
 
     for func in funcs:
@@ -305,7 +312,8 @@ def check_file_metrics(filepath: str, source: str):
                 "LONG_FUNCTION",
                 "INFO",
                 f"Function '{func.name}()' is {func_lines} lines long",
-                "Extract pure, stateless parts of this function into smaller helper generic functions.",
+                "Extract pure, stateless parts of this function "
+                "into smaller helper generic functions.",
             )
 
 
@@ -325,7 +333,8 @@ def check_typescript_file(filepath: str, source: str):
                 "CONSOLE_LOG",
                 "INFO",
                 "console.log() found",
-                "Remove simple console.log statements or replace with structured logging (e.g., pino).",
+                "Remove simple console.log statements or replace with "
+                "structured logging (e.g., pino).",
             )
 
         if "@ts-ignore" in stripped or "@ts-nocheck" in stripped:
@@ -335,7 +344,8 @@ def check_typescript_file(filepath: str, source: str):
                 "TS_SUPPRESS",
                 "WARNING",
                 "TypeScript error suppression",
-                "Define a proper interface for the object instead of skipping type checking.",
+                "Define a proper interface for the object instead "
+                "of skipping type checking.",
             )
 
         if re.search(r":\s*any\b", stripped):
@@ -345,7 +355,8 @@ def check_typescript_file(filepath: str, source: str):
                 "ANY_TYPE",
                 "INFO",
                 "Usage of 'any' type",
-                "Replace 'any' with 'unknown' (and narrow) or a detailed Interface type.",
+                "Replace 'any' with 'unknown' (and narrow) "
+                "or a detailed Interface type.",
             )
 
 
@@ -529,7 +540,8 @@ def generate_report(py_count: int, ts_count: int, output_json: bool = False):
                 print(f"    {issue}")
             if len(cat_issues) > 5:
                 print(
-                    f"    ... and {len(cat_issues) - 5} more. View full JSON for detail."
+                    f"    ... and {len(cat_issues) - 5} more. View "
+                    "full JSON for detail."
                 )
 
     # 2. Print Macro Architectural Self-Improvement Intel

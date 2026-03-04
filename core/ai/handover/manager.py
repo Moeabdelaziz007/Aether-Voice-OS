@@ -585,18 +585,6 @@ class MultiAgentOrchestrator:
         """
         logger.info("Orchestrating task: '%s' starting with %s.", task, primary_agent)
 
-        # Detect ambiguous destructive tasks
-        destructive_keywords = ["deploy", "delete", "remove", "drop", "destroy", "wipe"]
-        ambiguous_keywords = ["the thing", "it", "stuff", "that"]
-
-        task_lower = task.lower()
-        has_destructive = any(word in task_lower for word in destructive_keywords)
-        has_ambiguous = any(word in task_lower for word in ambiguous_keywords)
-
-        if has_destructive and has_ambiguous:
-            logger.warning("Detected ambiguous destructive task: %s", task)
-            return "clarification_request: The task is too ambiguous for a potentially destructive operation. Please clarify."
-
         # Create rich context
         context = self._protocol.create_handover(
             source_agent="Orchestrator",
@@ -618,9 +606,6 @@ class MultiAgentOrchestrator:
         )
 
         if success and final_context:
-            result = final_context.payload.get("handover_result", "")
-            if result:
-                return str(result)
             return (
                 f"Task: {task}\n"
                 f"Status: {final_context.status.value}\n"

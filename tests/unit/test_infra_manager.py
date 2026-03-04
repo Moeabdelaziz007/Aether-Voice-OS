@@ -7,24 +7,23 @@ from unittest.mock import AsyncMock, MagicMock, patch
 # that could interfere with other tests in a real environment.
 def setup_mocks():
     mock_modules = [
-        "firebase_admin",
-        "firebase_admin.credentials",
-        "firebase_admin.firestore",
-        "google.cloud.firestore",
-        "numpy",
-        "pydantic",
-        "pydantic_settings",
-        "websockets",
-        "google.genai",
-        "pyaudio",
-        "watchdog",
-        "watchdog.observers",
-        "watchdog.events",
+        'firebase_admin',
+        'firebase_admin.credentials',
+        'firebase_admin.firestore',
+        'google.cloud.firestore',
+        'numpy',
+        'pydantic',
+        'pydantic_settings',
+        'websockets',
+        'google.genai',
+        'pyaudio',
+        'watchdog',
+        'watchdog.observers',
+        'watchdog.events',
     ]
     for module_name in mock_modules:
         if module_name not in sys.modules:
             sys.modules[module_name] = MagicMock()
-
 
 # Initialize mocks for this module
 setup_mocks()
@@ -40,21 +39,16 @@ def mock_gateway():
     gateway._bus = MagicMock()
     return gateway
 
-
 @pytest.fixture
 def infra_manager(mock_gateway):
     # We still want to patch these in the test to ensure they are the ones we control
-    with (
-        patch("core.logic.managers.infra.FirebaseConnector"),
-        patch("core.logic.managers.infra.SREWatchdog"),
-    ):
+    with patch("core.logic.managers.infra.FirebaseConnector"), \
+         patch("core.logic.managers.infra.SREWatchdog"):
         manager = InfraManager(mock_gateway)
         return manager
 
-
 # Note: Using asyncio.run(infra_manager.initialize()) instead of @pytest.mark.asyncio
 # because pytest-asyncio is not available in the current environment.
-
 
 def test_infra_manager_initialize_success(infra_manager):
     infra_manager._firebase.initialize = AsyncMock(return_value=True)
@@ -66,7 +60,6 @@ def test_infra_manager_initialize_success(infra_manager):
     infra_manager._firebase.initialize.assert_called_once()
     infra_manager._firebase.start_session.assert_called_once()
 
-
 def test_infra_manager_initialize_failure(infra_manager):
     infra_manager._firebase.initialize = AsyncMock(return_value=False)
     infra_manager._firebase.start_session = AsyncMock()
@@ -77,16 +70,13 @@ def test_infra_manager_initialize_failure(infra_manager):
     infra_manager._firebase.initialize.assert_called_once()
     infra_manager._firebase.start_session.assert_not_called()
 
-
 def test_infra_manager_start_watchdog(infra_manager):
     infra_manager.start_watchdog()
     infra_manager._watchdog.start.assert_called_once()
 
-
 def test_infra_manager_stop(infra_manager):
     infra_manager.stop()
     infra_manager._watchdog.stop.assert_called_once()
-
 
 def test_infra_manager_end_session(infra_manager):
     infra_manager._firebase.is_connected = True
@@ -97,13 +87,10 @@ def test_infra_manager_end_session(infra_manager):
 
     asyncio.run(infra_manager.end_session(mock_router))
 
-    infra_manager._firebase.end_session.assert_called_once_with(
-        {
-            "tools_used": ["tool1", "tool2"],
-            "tool_count": 2,
-        }
-    )
-
+    infra_manager._firebase.end_session.assert_called_once_with({
+        "tools_used": ["tool1", "tool2"],
+        "tool_count": 2,
+    })
 
 def test_infra_manager_end_session_disconnected(infra_manager):
     infra_manager._firebase.is_connected = False

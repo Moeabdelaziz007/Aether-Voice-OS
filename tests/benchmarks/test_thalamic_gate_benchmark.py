@@ -12,8 +12,8 @@ mock_audio_state.far_end_pcm.read_last.return_value = np.zeros(512, dtype=np.int
 patcher = patch.dict("sys.modules", {"core.audio.state": mock_audio_state})
 patcher.start()
 
-from core.audio.capture import AudioCapture
-from core.infra.config import AudioConfig
+from core.audio.capture import AudioCapture  # noqa: E402
+from core.infra.config import AudioConfig  # noqa: E402
 
 # Constants
 SAMPLE_RATE = 16000

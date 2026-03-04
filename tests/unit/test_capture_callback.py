@@ -39,7 +39,10 @@ patcher = patch.dict(
 )
 patcher.start()
 
-import sys; from unittest.mock import Mock; sys.modules['pyaudio'] = Mock()
+import sys  # noqa: E402
+from unittest.mock import Mock  # noqa: E402
+
+sys.modules['pyaudio'] = Mock()
 from core.audio.capture import AudioCapture, SmoothMuter  # noqa: E402
 from core.infra.config import AudioConfig  # noqa: E402
 
@@ -59,7 +62,7 @@ def mock_dependencies():
     with (patch('core.audio.capture.DynamicAEC') as MockDynamicAEC,
           patch('core.audio.capture.SmoothMuter') as MockSmoothMuter,
           patch('core.audio.capture.HysteresisGate') as MockHysteresis,
-          patch('core.audio.capture.AECBridge') as MockAECBridge):
+          patch('core.audio.capture.AECBridge')):
         
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
@@ -69,7 +72,9 @@ def mock_dependencies():
         mock_aec_state.erle_db = 25.0
         mock_aec_state.estimated_delay_ms = 0.0
         mock_aec_state.double_talk_detected = False
-        mock_aec_instance.process_frame.return_value = (np.zeros(CHUNK_SIZE, dtype=np.int16), mock_aec_state)
+        mock_aec_instance.process_frame.return_value = (
+            np.zeros(CHUNK_SIZE, dtype=np.int16), mock_aec_state
+        )
         
         mock_smooth_muter_instance = MockSmoothMuter.return_value
         mock_smooth_muter_instance._current_gain = 1.0
@@ -194,7 +199,9 @@ def capture_instance():
     instance._loop = MagicMock()
     return instance
 
-def test_callback_when_ai_is_silent_and_user_speaks(capture_instance, mock_dependencies):
+def test_callback_when_ai_is_silent_and_user_speaks(
+    capture_instance, mock_dependencies
+):
     """
     Scenario: AI is not playing, user speaks.
     Expected: SmoothMuter.unmute() is called.

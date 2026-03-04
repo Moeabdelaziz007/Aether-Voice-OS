@@ -1,4 +1,3 @@
-import asyncio
 import logging
 import uuid
 from datetime import datetime, timezone
@@ -67,17 +66,14 @@ class FirebaseConnector:
         self._session_id = str(uuid.uuid4())
         try:
             doc_ref = self._db.collection("sessions").document(self._session_id)
-
-            def _write():
-                doc_ref.set(
-                    {
-                        "started_at": datetime.now(timezone.utc),
-                        "status": "active",
-                        "agent_version": "2.0-alpha",
-                        "device": "desktop-mac",
-                    }
-                )
-            await asyncio.to_thread(_write)
+            doc_ref.set(
+                {
+                    "started_at": datetime.now(timezone.utc),
+                    "status": "active",
+                    "agent_version": "2.0-alpha",
+                    "device": "desktop-mac",
+                }
+            )
             logger.info(f"Session ID: {self._session_id}")
         except Exception as e:
             logger.error(f"Failed to create session doc: {e}")
@@ -100,14 +96,14 @@ class FirebaseConnector:
                 "timestamp": datetime.now(timezone.utc),
             }
 
-            def _write():
-                (
-                    self._db.collection("sessions")
-                    .document(self._session_id)
-                    .collection("messages")
-                    .add(msg_data)
-                )
-            await asyncio.to_thread(_write)
+            # Add to subcollection
+            (
+                self._db.collection("sessions")
+                .document(self._session_id)
+                .collection("messages")
+                .add(msg_data)
+            )
+
         except Exception as e:
             logger.error(f"Failed to log message: {e}")
 
@@ -126,14 +122,12 @@ class FirebaseConnector:
                 "zen_mode": getattr(features, "zen_mode", False),
             }
 
-            def _write():
-                (
-                    self._db.collection("sessions")
-                    .document(self._session_id)
-                    .collection("metrics")
-                    .add(data)
-                )
-            await asyncio.to_thread(_write)
+            (
+                self._db.collection("sessions")
+                .document(self._session_id)
+                .collection("metrics")
+                .add(data)
+            )
         except Exception as e:
             # Debug level to avoid spamming logs
             logger.debug(f"Failed to log metrics: {e}")
@@ -151,11 +145,7 @@ class FirebaseConnector:
                 "session_id": self._session_id,
                 "timestamp": datetime.now(timezone.utc),
             }
-
-            def _write():
-                self._db.collection("knowledge").add(data)
-
-            await asyncio.to_thread(_write)
+            self._db.collection("knowledge").add(data)
             logger.info(f"🔥 Firebase: Brain updated with knowledge on {topic}")
         except Exception as e:
             logger.error(f"Failed to log knowledge: {e}")

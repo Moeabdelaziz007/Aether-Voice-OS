@@ -9,10 +9,6 @@ logging.basicConfig(level=logging.INFO)
 
 def test_synergy():
     orchestrator = MultiAgentOrchestrator()
-    # Register dummy Orchestrator agent to satisfy collaborate checks
-    class DummyOrchestrator:
-        def process(self, context): return "OK"
-    orchestrator.register_agent("Orchestrator", DummyOrchestrator())
     orchestrator.register_agent("Architect", ArchitectAgent())
     orchestrator.register_agent("Debugger", DebuggerAgent())
 
@@ -22,8 +18,8 @@ def test_synergy():
     print(f"\n--- Final Result ---\n{result}\n--------------------")
 
     assert "Synergy Complete" in result
-    assert "Architect" in result
-    assert "Handover ID" in result
+    assert "Architect generated structural blueprint" in result
+    assert "Debugger verified and approved" in result
 
 
 if __name__ == "__main__":

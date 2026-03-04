@@ -19,7 +19,6 @@ ADK (Agent Development Kit) lifecycle patterns.
 from __future__ import annotations
 
 import asyncio
-import importlib
 import os
 import sys
 from pathlib import Path
@@ -88,15 +87,15 @@ def check_dependencies() -> list[str]:
     """Check that critical dependencies are available."""
     missing = []
     try:
-        importlib.import_module("pyaudio")
+        import pyaudio  # noqa: F401
     except ImportError:
         missing.append("pyaudio")
     try:
-        importlib.import_module("google.genai")
+        from google import genai  # noqa: F401
     except ImportError:
         missing.append("google-genai")
     try:
-        importlib.import_module("pydantic_settings")
+        from pydantic_settings import BaseSettings  # noqa: F401
     except ImportError:
         missing.append("pydantic-settings")
     return missing
@@ -131,8 +130,7 @@ def main() -> None:
     try:
         engine = AetherEngine()
         print(
-            f"{CYAN}✦ Admin API Listening on http://localhost:18790/health "
-            f"(Tauri Bridge Active){RESET}"
+            f"{CYAN}✦ Admin API Listening on http://localhost:18790/health (Tauri Bridge Active){RESET}"
         )
         asyncio.run(engine.run())
     except KeyboardInterrupt:
