@@ -45,14 +45,14 @@ export default function CommandBar() {
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-2 py-1.5 bg-[rgba(12,12,20,0.7)] border border-white/[0.06] rounded-full backdrop-blur-2xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]"
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-3 py-2 bg-[rgba(8,8,12,0.65)] border border-white/[0.08] rounded-full backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.1)]"
         >
             {/* Mic Button */}
             <button
                 onClick={handleMicClick}
-                className={`flex items-center justify-center w-9 h-9 rounded-full transition-all duration-150 ${isActive
-                        ? "bg-[rgba(0,243,255,0.1)] text-white"
-                        : "bg-transparent text-white/20 hover:bg-white/[0.03] hover:text-white/40"
+                className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 shadow-sm ${isActive
+                    ? "bg-[rgba(0,243,255,0.15)] text-cyan-300 shadow-[inset_0_0_12px_rgba(0,243,255,0.3)] border border-cyan-500/30"
+                    : "bg-transparent text-white/30 hover:bg-white/[0.05] hover:text-white/60 border border-transparent"
                     }`}
                 aria-label={isActive ? "Stop" : "Start"}
             >
@@ -89,16 +89,16 @@ export default function CommandBar() {
             <div className="w-px h-5 bg-white/5 mx-1" />
 
             {/* Realm Indicator Dots */}
-            <div className="flex items-center gap-2 px-2">
+            <div className="flex items-center gap-2.5 px-3">
                 {REALM_ORDER.map((realm) => (
                     <button
                         key={realm}
                         onClick={() => navigateTo(realm)}
                         title={REALM_LABELS[realm]}
                         aria-label={`Switch to ${REALM_LABELS[realm]} realm`}
-                        className={`w-[6px] h-[6px] rounded-full transition-all duration-300 ${currentRealm === realm
-                                ? "bg-cyan-400 shadow-[0_0_8px_rgba(0,243,255,0.5)] scale-125"
-                                : "bg-white/10 hover:bg-white/20"
+                        className={`w-2 h-2 rounded-full transition-all duration-500 hover:scale-150 ${currentRealm === realm
+                            ? "bg-cyan-400 shadow-[0_0_12px_rgba(0,243,255,0.8)] scale-125"
+                            : "bg-white/10 hover:bg-white/30"
                             }`}
                     />
                 ))}
@@ -107,12 +107,12 @@ export default function CommandBar() {
             {/* Connection Heartbeat */}
             <div
                 className={`w-[6px] h-[6px] rounded-full ml-2 transition-all duration-300 ${status === "error"
-                        ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)] animate-pulse"
-                        : status === "connecting"
-                            ? "bg-amber-400 animate-pulse"
-                            : isActive
-                                ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
-                                : "bg-white/10"
+                    ? "bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)] animate-pulse"
+                    : status === "connecting"
+                        ? "bg-amber-400 animate-pulse"
+                        : isActive
+                            ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]"
+                            : "bg-white/10"
                     }`}
             />
         </motion.div>

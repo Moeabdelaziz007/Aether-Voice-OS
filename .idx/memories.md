@@ -240,3 +240,7 @@ AetherOS is now highly modular and ready for expert-level scale. **[REORG COMPLE
   2. **Thread-Safe SRE Watchdog:** Intercepted Python `logging` emissions running in `asyncio.create_task` with a safe `loop.call_soon_threadsafe()` context. This eradicates crashes caused by logs firing from disparate synchronous system threads.
   3. **Gateway Disconnect Spikes Mitigated:** Migrated the broadcasting protocol in `gateway.py` from linear `await session.ws.send` iteration bounded by a global lock, to concurrent out-of-lock `asyncio.gather`. This guarantees no single stalled TCP websocket link will ever lock up the AI audio engine telemetry tick rate.
 - **Status:** 10x Proactive Mission Complete. Next action is to continue feature development.
+
+### Era 4: System Hardening & Test Isolation (Phase 11.1)
+- **E2E Singularity Resilience:** Rewrote the `FirebaseConnector` initialization in `test_e2e_singularity.py` to use a pure Python `MockFirebaseConnector`. This decouples the core A2A Handover pipeline testing from external GCP Cloud Firestore credentials, ensuring CI/CD reliability without false negatives.
+- **Gateway Handshake Fix:** Fixed a critical cryptographic bug in the Ephemeral Ed25519 Gateway Handshake tests where the client was signing the `UTF-8` hex-string representation instead of the raw `bytes`. This guarantees accurate E2E protocol compliance for all `AetherOrb` WebSocket connections.

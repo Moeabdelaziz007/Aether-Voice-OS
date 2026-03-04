@@ -107,12 +107,6 @@ class AetherGateway:
         self._shutdown_event = asyncio.Event()
         self._session_restart_event = asyncio.Event()
 
-        # Bridge frontend events from GlobalBus to WebSocket clients
-        if self._bus:
-            asyncio.create_task(
-                self._bus.subscribe("frontend_events", self._handle_frontend_event)
-            )
-
         # Audio queues are now owned by the gateway
         self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
             maxsize=self._audio_config.mic_queue_max
@@ -326,6 +320,12 @@ class AetherGateway:
 
         # Connect to Global Bus
         await self._bus.connect()
+
+        # Bridge frontend events from GlobalBus to WebSocket clients
+        if self._bus:
+            asyncio.create_task(
+                self._bus.subscribe("frontend_events", self._handle_frontend_event)
+            )
 
         # Initialize State Manager (Subscriptions)
         await self._state_manager.initialize()

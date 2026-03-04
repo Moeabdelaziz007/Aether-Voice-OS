@@ -68,6 +68,9 @@ export default function AetherOrb({ size = 240 }: Props) {
             timeRef.current += 0.016; // ~60fps
             const t = timeRef.current;
 
+            // Set global composite to screen for electric neon blending
+            ctx.globalCompositeOperation = "screen";
+
             // Read transient values directly to avoid React re-render loops
             const currentMicLevel = useAetherStore.getState().micLevel;
             const currentSpeakerLevel = useAetherStore.getState().speakerLevel;
@@ -170,20 +173,23 @@ export default function AetherOrb({ size = 240 }: Props) {
 
             // ── Thinking swirl particles ──
             if (engineState === "THINKING") {
-                const pCount = 12;
+                const pCount = 18; // Increased from 12 for denser neural look
                 for (let i = 0; i < pCount; i++) {
-                    const angle = (t * 2 + i * (Math.PI * 2 / pCount)) % (Math.PI * 2);
-                    const dist = orbRadius * 0.5 + Math.sin(t * 3 + i) * orbRadius * 0.2;
+                    const angle = (t * 2.5 + i * (Math.PI * 2 / pCount)) % (Math.PI * 2);
+                    const dist = orbRadius * 0.4 + Math.sin(t * 3.5 + i) * orbRadius * 0.3;
                     const px = cx + Math.cos(angle) * dist;
                     const py = cy + Math.sin(angle) * dist;
-                    const pSize = 2 + Math.sin(t * 4 + i * 0.7) * 1;
+                    const pSize = 1.5 + Math.sin(t * 5 + i * 0.9) * 2;
 
                     ctx.beginPath();
                     ctx.arc(px, py, pSize, 0, Math.PI * 2);
                     ctx.fillStyle = colors.glow;
-                    ctx.globalAlpha = 0.6 + Math.sin(t * 3 + i) * 0.3;
+                    ctx.globalAlpha = 0.7 + Math.sin(t * 4 + i) * 0.3;
+                    ctx.shadowBlur = 10;
+                    ctx.shadowColor = colors.ring;
                     ctx.fill();
                     ctx.globalAlpha = 1;
+                    ctx.shadowBlur = 0;
                 }
             }
 

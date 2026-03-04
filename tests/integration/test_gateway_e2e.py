@@ -106,7 +106,8 @@ async def test_gateway_handshake_e2e():
         # 2. Setup Client (Prober)
         signing_key = nacl.signing.SigningKey.generate()
         verify_key = signing_key.verify_key
-        client_id = base64.b64encode(verify_key.encode()).decode("utf-8")
+        # Use 64-char hex string to trigger the Ephemeral/Direct Mode in Gateway
+        client_id = verify_key.encode().hex()
 
         uri = f"ws://localhost:{gw_cfg.port}"
         async with websockets.connect(uri) as websocket:
@@ -117,13 +118,13 @@ async def test_gateway_handshake_e2e():
             challenge_token = challenge_msg["challenge"]
 
             # 4. Sign Challenge & Respond
-            challenge_bytes = challenge_token.encode()
+            challenge_bytes = bytes.fromhex(challenge_token)
             signature = signing_key.sign(challenge_bytes)
 
             client_response = {
                 "type": "connect.response",
                 "client_id": client_id,
-                "signature": base64.b64encode(signature.signature).decode("utf-8"),
+                "signature": signature.signature.hex(),
                 "capabilities": ["voice.stream"],
             }
             await websocket.send(json.dumps(client_response))
