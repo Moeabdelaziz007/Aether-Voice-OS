@@ -10,10 +10,10 @@ Validates:
 
 import asyncio
 import os
-from google.genai import types
 
 import numpy as np
 import pytest
+from google.genai import types
 
 from core.ai import handoff
 from core.audio.processing import AdaptiveVAD
@@ -32,10 +32,7 @@ async def test_parallel_tool_stress():
 
     router.register("slow_tool", "A slow tool", {"x": {"type": "integer"}}, slow_tool)
 
-    calls = [
-        types.FunctionCall(name="slow_tool", args={"x": i}) 
-        for i in range(10)
-    ]
+    calls = [types.FunctionCall(name="slow_tool", args={"x": i}) for i in range(10)]
 
     # Dispatch in parallel (simulating session._handle_tool_call logic)
     tasks = [router.dispatch(c) for c in calls]
@@ -51,11 +48,11 @@ async def test_parallel_tool_stress():
 async def test_semantic_recovery_success():
     """Phase 7.3: Verify Neural Dispatcher V3 recovers typos via semantic search."""
     router = ToolRouter()
-    
+
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         pytest.skip("GEMINI_API_KEY required for real semantic recovery test")
-        
+
     router.init_vector_store(api_key=api_key)
 
     # Register the real tool
@@ -66,8 +63,8 @@ async def test_semantic_recovery_success():
 
     # Genuine Google GenAI FunctionCall
     mock_fc = types.FunctionCall(
-        name="delegate_to_agnt", 
-        args={"target_agent_id": "test", "task_description": "test"}
+        name="delegate_to_agnt",
+        args={"target_agent_id": "test", "task_description": "test"},
     )
 
     result = await router.dispatch(mock_fc)

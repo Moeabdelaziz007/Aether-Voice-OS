@@ -14,17 +14,23 @@ on semantic outcomes rather than exact numerical equality.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
-from core.audio.processing import AdaptiveVAD, HyperVADResult, SilentAnalyzer, SilenceType, energy_vad
-
+from core.audio.processing import (
+    AdaptiveVAD,
+    HyperVADResult,
+    SilenceType,
+    SilentAnalyzer,
+    energy_vad,
+)
 
 SAMPLE_RATE = 16000
 CHUNK_DURATION_S = 0.1
 CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_DURATION_S)
 
 
-def _sine_pcm16(freq_hz: float, amp: float, n: int = CHUNK_SAMPLES, sr: int = SAMPLE_RATE) -> np.ndarray:
+def _sine_pcm16(
+    freq_hz: float, amp: float, n: int = CHUNK_SAMPLES, sr: int = SAMPLE_RATE
+) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
