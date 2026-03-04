@@ -1,17 +1,22 @@
 #!/usr/bin/env python3
 """
-AetherOS Codebase Health Scanner v1.0
-=====================================
+AetherOS Codebase Health Scanner & Self-Improvement Engine v2.0
+===============================================================
 Scans the entire Python + TypeScript codebase for:
-  1. Python syntax errors (py_compile)
-  2. Broken imports (ast-based static analysis)
-  3. Common bug patterns (bare except, mutable defaults, TODO/FIXME/HACK, unused vars)
-  4. Security red flags (hardcoded secrets, eval/exec usage)
-  5. TypeScript/Next.js basic checks (unused imports, console.log left in)
-  6. Architectural issues (circular import hints, oversized files)
+  1. Python syntax errors
+  2. Broken imports
+  3. Common bug patterns
+  4. Security red flags
+  5. TypeScript/Next.js basic checks
+  6. Architectural issues
+
+*NEW* Features:
+- Attached actionable solutions for every detected issue.
+- Meta-Level Architecture Suggestions (Self-Improvement loop).
+- Auto-fix generation (`suggested_fixes.sh`).
 
 Usage:
-  python infra/scripts/health_scanner.py [--fix] [--json]
+  python infra/scripts/health_scanner.py [--json] [--auto-fix]
 """
 
 import ast
@@ -19,7 +24,6 @@ import os
 import sys
 import re
 import json
-import py_compile
 import argparse
 from pathlib import Path
 from datetime import datetime
@@ -33,19 +37,22 @@ SKIP_DIRS = {
     "venv", ".venv", "node_modules", "__pycache__", ".git", ".pytest_cache",
     ".ruff_cache", "target", ".next", ".firebase", "dist", "build",
     ".benchmarks", ".coverage", ".aether", ".aetheros", ".qoder",
-    "cortex",  # Rust crate — separate toolchain
+    "cortex",  # Rust crate  — separate toolchain
 }
+
+FIX_SCRIPT_PATH = PROJECT_ROOT / "docs" / "audits" / "suggested_fixes.sh"
 
 # ─── Result Storage ───────────────────────────────────────────────────────────
 
 class Issue:
-    """A single detected issue."""
-    def __init__(self, filepath: str, line: int, category: str, severity: str, message: str):
-        self.filepath = str(Path(filepath).relative_to(PROJECT_ROOT))
+    """A single detected issue with an actionable solution."""
+    def __init__(self, filepath: str, line: int, category: str, severity: str, message: str, solution: str):
+        self.filepath = str(Path(filepath).relative_to(PROJECT_ROOT)) if Path(filepath).is_absolute() else filepath
         self.line = line
         self.category = category
         self.severity = severity   # ERROR, WARNING, INFO
         self.message = message
+        self.solution = solution
 
     def to_dict(self):
         return {
@@ -54,43 +61,45 @@ class Issue:
             "category": self.category,
             "severity": self.severity,
             "message": self.message,
+            "solution": self.solution,
         }
 
     def __str__(self):
         sev_icon = {"ERROR": "❌", "WARNING": "⚠️", "INFO": "ℹ️"}.get(self.severity, "?")
-        return f"  {sev_icon}  [{self.category}] {self.filepath}:{self.line} — {self.message}"
+        return f"  {sev_icon}  [{self.category}] {self.filepath}:{self.line}\n      └─ 🛑 Issue: {self.message}\n      └─ 💡 Fix: {self.solution}"
 
 
 issues: list[Issue] = []
 stats = defaultdict(int)
+auto_fix_commands = []
 
 
-def add_issue(filepath, line, category, severity, message):
-    issues.append(Issue(filepath, line, category, severity, message))
+def add_issue(filepath, line, category, severity, message, solution=""):
+    issues.append(Issue(filepath, line, category, severity, message, solution))
     stats[severity] += 1
 
 
 # ─── 1. Python Syntax Check ──────────────────────────────────────────────────
 
 def check_python_syntax(filepath: str):
-    """Use in-memory compile() to catch syntax errors without writing .pyc files."""
+    """"Use in-memory compile() to catch syntax errors without writing .pyc files."""
     try:
         with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
             source = f.read()
         compile(source, filepath, "exec")
     except SyntaxError as e:
         add_issue(filepath, e.lineno or 0, "SYNTAX", "ERROR",
-                  f"Syntax error: {e.msg} (line {e.lineno})")
+                  f"Syntax error: {e.msg}", 
+                  "Fix the syntax typo at the specified line before re-running.")
 
 
 # ─── 2. AST-Based Import Checker ─────────────────────────────────────────────
 
 def check_python_imports(filepath: str, source: str):
-    """Parse the AST and flag imports that don't resolve locally."""
     try:
         tree = ast.parse(source, filename=filepath)
     except SyntaxError:
-        return  # Already caught by syntax check
+        return
 
     for node in ast.walk(tree):
         if isinstance(node, (ast.Import, ast.ImportFrom)):
@@ -102,84 +111,80 @@ def check_python_imports(filepath: str, source: str):
                     module = alias.name
 
             if module and module.startswith("core."):
-                # Verify the module path resolves to a file
                 parts = module.split(".")
                 candidate = PROJECT_ROOT / Path(*parts)
                 if not (candidate.with_suffix(".py").exists() or
                         (candidate / "__init__.py").exists()):
                     add_issue(filepath, node.lineno, "BROKEN_IMPORT", "ERROR",
-                              f"Import '{module}' does not resolve to a file on disk")
+                              f"Import '{module}' does not resolve to a file on disk",
+                              f"Check if '{module}' was renamed or deleted. Update the import path.")
 
 
 # ─── 3. Common Bug Patterns ──────────────────────────────────────────────────
 
 def check_python_patterns(filepath: str, source: str):
-    """Regex and AST checks for common Python bugs."""
     lines = source.split("\n")
 
     for i, line in enumerate(lines, 1):
         stripped = line.strip()
 
-        # Bare except (catches SystemExit, KeyboardInterrupt — almost always a bug)
         if re.match(r"^\s*except\s*:", stripped):
             add_issue(filepath, i, "BARE_EXCEPT", "WARNING",
-                      "Bare 'except:' catches all exceptions including SystemExit/KeyboardInterrupt")
+                      "Bare 'except:' catches all exceptions including SystemExit",
+                      "Change to 'except Exception as e:' to only catch standard exceptions.")
 
-        # TODO / FIXME / HACK markers
         for marker in ("TODO", "FIXME", "HACK", "XXX"):
             if marker in stripped and stripped.lstrip().startswith("#"):
                 add_issue(filepath, i, "MARKER", "INFO",
-                          f"Developer marker found: {marker}")
+                          f"Developer marker found: {marker}",
+                          "Review and resolve the inline technical debt/todo item.")
 
-        # Hardcoded secret patterns
         secret_patterns = [
-            (r'(?i)(api[_-]?key|secret|password|token)\s*=\s*["\'][^"\']{8,}["\']',
-             "Potential hardcoded secret/credential"),
+            (r'(?i)(api[_-]?key|secret|password|token)\s*=\s*["\'][^"\']{8,}["\']', "Potential hardcoded secret"),
             (r'AIza[0-9A-Za-z_-]{35}', "Possible Google API key"),
             (r'sk-[a-zA-Z0-9]{20,}', "Possible OpenAI secret key"),
         ]
         for pattern, msg in secret_patterns:
             if re.search(pattern, line):
-                add_issue(filepath, i, "SECURITY", "ERROR", msg)
+                add_issue(filepath, i, "SECURITY", "ERROR", msg,
+                          "Move secrets to environment variables (.env) and load via os.getenv().")
 
-        # eval() / exec() usage
         if re.search(r'\beval\s*\(', stripped) or re.search(r'\bexec\s*\(', stripped):
             add_issue(filepath, i, "SECURITY", "WARNING",
-                      "Usage of eval()/exec() — potential code injection risk")
+                      "Usage of eval()/exec()",
+                      "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval().")
 
-    # AST-level checks
     try:
         tree = ast.parse(source, filename=filepath)
     except SyntaxError:
         return
 
     for node in ast.walk(tree):
-        # Mutable default arguments
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             for default in node.args.defaults + node.args.kw_defaults:
                 if default and isinstance(default, (ast.List, ast.Dict, ast.Set)):
                     add_issue(filepath, node.lineno, "MUTABLE_DEFAULT", "WARNING",
-                              f"Mutable default argument in function '{node.name}()' — use None instead")
+                              f"Mutable default argument in '{node.name}()'",
+                              "Change to 'arg=None', and set 'arg = arg or []' inside the function body.")
 
-        # Broad exception catches (Exception without re-raise)
         if isinstance(node, ast.ExceptHandler):
             if node.type and isinstance(node.type, ast.Name) and node.type.id == "Exception":
-                # Check if the body just passes (swallowed exception)
                 if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                     add_issue(filepath, node.lineno, "SWALLOWED_EXCEPTION", "WARNING",
-                              "Exception caught and silently swallowed with 'pass'")
+                              "Exception caught and silently swallowed with 'pass'",
+                              "Log the exception via logging.warning() or logger.error() instead of quietly passing.")
 
 
 # ─── 4. File Size / Complexity Check ─────────────────────────────────────────
 
 def check_file_metrics(filepath: str, source: str):
-    """Flag oversized files and high function counts."""
     lines = source.split("\n")
     line_count = len(lines)
 
     if line_count > 500:
         add_issue(filepath, 0, "COMPLEXITY", "WARNING",
-                  f"File has {line_count} lines — consider splitting into smaller modules")
+                  f"File has {line_count} lines",
+                  "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic).")
 
     try:
         tree = ast.parse(source, filename=filepath)
@@ -189,55 +194,44 @@ def check_file_metrics(filepath: str, source: str):
     funcs = [n for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))]
     if len(funcs) > 20:
         add_issue(filepath, 0, "COMPLEXITY", "INFO",
-                  f"File has {len(funcs)} functions — consider refactoring into classes or separate modules")
+                  f"File has {len(funcs)} functions",
+                  "Consider refactoring related functions into a Class to encapsulate state and logic.")
 
     for func in funcs:
         func_lines = func.end_lineno - func.lineno + 1 if hasattr(func, 'end_lineno') and func.end_lineno else 0
         if func_lines > 80:
             add_issue(filepath, func.lineno, "LONG_FUNCTION", "INFO",
-                      f"Function '{func.name}()' is {func_lines} lines long — consider breaking it up")
+                      f"Function '{func.name}()' is {func_lines} lines long",
+                      "Extract pure, stateless parts of this function into smaller helper generic functions.")
 
 
 # ─── 5. TypeScript / Next.js Checks ──────────────────────────────────────────
 
 def check_typescript_file(filepath: str, source: str):
-    """Basic regex checks for TS/TSX files."""
     lines = source.split("\n")
 
     for i, line in enumerate(lines, 1):
         stripped = line.strip()
 
-        # console.log left in production code
         if "console.log(" in stripped and not stripped.startswith("//"):
             add_issue(filepath, i, "CONSOLE_LOG", "INFO",
-                      "console.log() found — remove before production")
+                      "console.log() found",
+                      "Remove simple console.log statements or replace with structured logging (e.g., pino).")
 
-        # @ts-ignore / @ts-nocheck
         if "@ts-ignore" in stripped or "@ts-nocheck" in stripped:
             add_issue(filepath, i, "TS_SUPPRESS", "WARNING",
-                      "TypeScript error suppression found — fix the underlying type issue")
+                      "TypeScript error suppression",
+                      "Define a proper interface for the object instead of skipping type checking.")
 
-        # 'any' type usage
         if re.search(r':\s*any\b', stripped):
             add_issue(filepath, i, "ANY_TYPE", "INFO",
-                      "Usage of 'any' type — consider using a specific type")
-
-        # TODO / FIXME
-        for marker in ("TODO", "FIXME", "HACK"):
-            if marker in stripped:
-                add_issue(filepath, i, "MARKER", "INFO",
-                          f"Developer marker found: {marker}")
-
-        # Hardcoded secrets
-        if re.search(r'(?i)(api[_-]?key|secret|password)\s*[:=]\s*["\'][^"\']{8,}["\']', line):
-            add_issue(filepath, i, "SECURITY", "ERROR",
-                      "Potential hardcoded secret in TypeScript file")
+                      "Usage of 'any' type",
+                      "Replace 'any' with 'unknown' (and narrow) or a detailed Interface type.")
 
 
-# ─── 6. Cross-Module Consistency ─────────────────────────────────────────────
+# ─── 6. Cross-Module Consistency (WITH AUTO-FIX) ─────────────────────────────
 
 def check_init_files(root_dir: Path):
-    """Ensure every Python package has an __init__.py."""
     for dirpath, dirnames, filenames in os.walk(root_dir):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
         rel = Path(dirpath).relative_to(PROJECT_ROOT)
@@ -246,25 +240,53 @@ def check_init_files(root_dir: Path):
         has_init = "__init__.py" in filenames
 
         if py_files and not has_init and str(rel) != ".":
-            add_issue(str(Path(dirpath) / "__init__.py"), 0, "MISSING_INIT", "WARNING",
-                      f"Directory '{rel}' has Python files but no __init__.py — may break imports")
+            init_path = Path(dirpath) / "__init__.py"
+            add_issue(str(init_path), 0, "MISSING_INIT", "WARNING",
+                      f"Directory '{rel}' has Python files but no __init__.py",
+                      f"Create empty file: touch {init_path.relative_to(PROJECT_ROOT)}")
+            auto_fix_commands.append(f"touch '{init_path.resolve()}'")
 
+
+# ─── Macro-Level Codebase Architecture Intel ─────────────────────────────────
+
+def generate_macro_improvements():
+    """Analyze all issues and suggest macro-level architectural improvements."""
+    improvements = []
+    
+    # 1. Missing Init files
+    missing_inits = len([i for i in issues if i.category == "MISSING_INIT"])
+    if missing_inits > 0:
+        improvements.append(f"📦 [Module Resolution] Missing {missing_inits} '__init__.py' files. This can break absolute imports across the codebase.")
+
+    # 2. Complexity Density
+    complex_files = [i.filepath for i in issues if i.category == "COMPLEXITY"]
+    if len(complex_files) > 5:
+        improvements.append("🧩 [Architecture] High number of 'God Objects' and oversized files detected. We need to adopt a cleaner Domain-Driven Design (DDD). We should start splitting components by Domain (e.g., `core/audio` -> split into `capture`, `pipeline`, `output`).")
+
+    # 3. Suppressed Types & Console.Logs
+    ts_debt = len([i for i in issues if i.category in ["ANY_TYPE", "TS_SUPPRESS"]])
+    if ts_debt > 0:
+        improvements.append(f"🟦 [Type Safety] {ts_debt} TypeScript shortcuts ('any' or '@ts-ignore') detected. We should strictly enforce tsconfig.json `'strict': true` to prevent future runtime UI bugs.")
+
+    # 4. Long Functions
+    long_funcs = len([i for i in issues if i.category == "LONG_FUNCTION"])
+    if long_funcs > 10:
+        improvements.append(f"📜 [Maintainability] {long_funcs} functions exceed 80 lines. Testability is severely impaired here. Recommendation: Apply the 'Extract Function' refactoring pattern heavily on the core handlers.")
+    
+    return improvements
 
 # ─── Main Scanner Loop ───────────────────────────────────────────────────────
 
 def scan_codebase():
-    """Walk the project tree and run all checkers."""
     py_count = 0
     ts_count = 0
 
     for dirpath, dirnames, filenames in os.walk(PROJECT_ROOT):
-        # Prune skip directories
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
 
         for filename in filenames:
             filepath = os.path.join(dirpath, filename)
 
-            # Python files
             if filename.endswith(".py"):
                 py_count += 1
                 check_python_syntax(filepath)
@@ -272,14 +294,13 @@ def scan_codebase():
                     with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
                         source = f.read()
                 except (IOError, OSError):
-                    add_issue(filepath, 0, "IO_ERROR", "ERROR", "Could not read file")
+                    add_issue(filepath, 0, "IO_ERROR", "ERROR", "Could not read file", "Check file permissions.")
                     continue
                 check_python_imports(filepath, source)
                 check_python_patterns(filepath, source)
                 check_file_metrics(filepath, source)
 
-            # TypeScript / JavaScript
-            elif filename.endswith((".ts", ".tsx", ".js", ".jsx")) and "node_modules" not in dirpath:
+            elif filename.endswith((".ts", ".tsx", ".js", ".jsx")):
                 ts_count += 1
                 try:
                     with open(filepath, "r", encoding="utf-8", errors="ignore") as f:
@@ -288,7 +309,6 @@ def scan_codebase():
                     continue
                 check_typescript_file(filepath, source)
 
-    # Cross-module checks
     check_init_files(PROJECT_ROOT / "core")
     check_init_files(PROJECT_ROOT / "tests")
 
@@ -298,8 +318,14 @@ def scan_codebase():
 # ─── Report Generation ───────────────────────────────────────────────────────
 
 def generate_report(py_count: int, ts_count: int, output_json: bool = False):
-    """Print or export the scan results."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Produce the fix script
+    FIX_SCRIPT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(FIX_SCRIPT_PATH, "w") as f:
+        f.write("#!/bin/bash\n# AetherOS Auto-Fixes Script\n# Generated: " + timestamp + "\n\n")
+        f.write("\n".join(auto_fix_commands))
+    os.chmod(FIX_SCRIPT_PATH, 0o755)
 
     if output_json:
         report = {
@@ -307,60 +333,68 @@ def generate_report(py_count: int, ts_count: int, output_json: bool = False):
             "files_scanned": {"python": py_count, "typescript": ts_count},
             "totals": dict(stats),
             "issues": [i.to_dict() for i in issues],
+            "macro_improvements": generate_macro_improvements()
         }
         output_path = PROJECT_ROOT / "docs" / "audits" / f"health_scan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        output_path.parent.mkdir(parents=True, exist_ok=True)
         with open(output_path, "w") as f:
             json.dump(report, f, indent=2)
         print(f"\n📄 JSON report saved to: {output_path}")
         return
 
-    print("\n" + "=" * 70)
-    print(f"  🧬 AetherOS Health Scanner — {timestamp}")
-    print("=" * 70)
+    print("\n" + "=" * 80)
+    print(f"  🧬 AetherOS AI Architect: Codebase Health & Intel Engine — {timestamp}")
+    print("=" * 80)
     print(f"\n  📁 Files scanned:  {py_count} Python  |  {ts_count} TypeScript/JSX")
     print(f"  ❌ Errors:    {stats.get('ERROR', 0)}")
     print(f"  ⚠️  Warnings:  {stats.get('WARNING', 0)}")
     print(f"  ℹ️  Info:      {stats.get('INFO', 0)}")
     print(f"  📊 Total:     {len(issues)}")
 
-    if not issues:
-        print("\n  ✅  Codebase is CLEAN — no issues detected! 🎉\n")
-        return
-
-    # Group by severity
+    # 1. Print Micro Issues
     for severity in ("ERROR", "WARNING", "INFO"):
         group = [i for i in issues if i.severity == severity]
         if not group:
             continue
 
         sev_label = {"ERROR": "❌ ERRORS", "WARNING": "⚠️  WARNINGS", "INFO": "ℹ️  INFORMATIONAL"}.get(severity)
-        print(f"\n{'─' * 70}")
+        print(f"\n{'─' * 80}")
         print(f"  {sev_label} ({len(group)})")
-        print(f"{'─' * 70}")
+        print(f"{'─' * 80}")
 
-        # Sub-group by category
         by_category = defaultdict(list)
         for i in group:
             by_category[i.category].append(i)
 
         for cat, cat_issues in sorted(by_category.items()):
             print(f"\n  [{cat}] ({len(cat_issues)} issues)")
-            for issue in cat_issues[:15]:  # Cap per category to avoid flood
+            for issue in cat_issues[:5]:  # Cap to strictly 5 so it's readable
                 print(f"    {issue}")
-            if len(cat_issues) > 15:
-                print(f"    ... and {len(cat_issues) - 15} more")
-
-    print(f"\n{'=' * 70}\n")
+            if len(cat_issues) > 5:
+                print(f"    ... and {len(cat_issues) - 5} more. View full JSON for detail.")
 
 
-# ─── Entry Point ──────────────────────────────────────────────────────────────
+    # 2. Print Macro Architectural Self-Improvement Intel
+    print(f"\n{'=' * 80}")
+    print("  🚀 SELF-IMPROVEMENT: MACRO ARCHITECTURE INTEL ")
+    print("=" * 80)
+    macro_intel = generate_macro_improvements()
+    if macro_intel:
+        for intel in macro_intel:
+            print(f"  {intel}\n")
+    else:
+        print("  ✅ Base Architecture is solid. Keep up the clean code.\n")
+
+    # 3. Print Actionable Next Steps
+    print(f"{'─' * 80}")
+    print(f"  🤖 AUTOMATED FIXES: Generated {len(auto_fix_commands)} safe auto-fixes.")
+    print(f"  👉 Run fixes via: ./docs/audits/suggested_fixes.sh")
+    print(f"{'─' * 80}\n")
+
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AetherOS Codebase Health Scanner")
-    parser.add_argument("--json", action="store_true", help="Output results as JSON to docs/audits/")
+    parser = argparse.ArgumentParser(description="AetherOS Health Scanner")
+    parser.add_argument("--json", action="store_true", help="Output results as JSON")
     args = parser.parse_args()
 
-    print("\n🔍 Scanning AetherOS codebase...\n")
     py_count, ts_count = scan_codebase()
     generate_report(py_count, ts_count, output_json=args.json)

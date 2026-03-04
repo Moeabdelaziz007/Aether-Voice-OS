@@ -1,0 +1,742 @@
+{
+  "timestamp": "2026-03-04 03:01:50",
+  "files_scanned": {
+    "python": 134,
+    "typescript": 55
+  },
+  "totals": {
+    "INFO": 67,
+    "WARNING": 28,
+    "ERROR": 9
+  },
+  "issues": [
+    {
+      "file": "infra/scripts/benchmark.py",
+      "line": 81,
+      "category": "MARKER",
+      "severity": "INFO",
+      "message": "Developer marker found: TODO"
+    },
+    {
+      "file": "infra/scripts/benchmark.py",
+      "line": 58,
+      "category": "SWALLOWED_EXCEPTION",
+      "severity": "WARNING",
+      "message": "Exception caught and silently swallowed with 'pass'"
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 127,
+      "category": "MARKER",
+      "severity": "INFO",
+      "message": "Developer marker found: TODO"
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 127,
+      "category": "MARKER",
+      "severity": "INFO",
+      "message": "Developer marker found: FIXME"
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 127,
+      "category": "MARKER",
+      "severity": "INFO",
+      "message": "Developer marker found: HACK"
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 144,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec() \u2014 potential code injection risk"
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 147,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec() \u2014 potential code injection risk"
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 224,
+      "category": "MARKER",
+      "severity": "INFO",
+      "message": "Developer marker found: TODO"
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 224,
+      "category": "MARKER",
+      "severity": "INFO",
+      "message": "Developer marker found: FIXME"
+    },
+    {
+      "file": "infra/scripts/debug/test_key.py",
+      "line": 3,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret/credential"
+    },
+    {
+      "file": "infra/scripts/debug/test_key.py",
+      "line": 3,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Possible Google API key"
+    },
+    {
+      "file": "infra/scripts/debug/test_firebase.py",
+      "line": 3,
+      "category": "BROKEN_IMPORT",
+      "severity": "ERROR",
+      "message": "Import 'core.tools.firebase_tool' does not resolve to a file on disk"
+    },
+    {
+      "file": "core/server.py",
+      "line": 78,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret/credential"
+    },
+    {
+      "file": "core/infra/transport/gateway.py",
+      "line": 600,
+      "category": "SWALLOWED_EXCEPTION",
+      "severity": "WARNING",
+      "message": "Exception caught and silently swallowed with 'pass'"
+    },
+    {
+      "file": "core/infra/transport/gateway.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 747 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/infra/transport/gateway.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 27 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "core/infra/transport/gateway.py",
+      "line": 343,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function '_session_loop()' is 143 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/infra/transport/session_state.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 26 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "core/tools/tasks_tool.py",
+      "line": 216,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'get_tools()' is 109 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/tools/system_tool.py",
+      "line": 198,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'get_tools()' is 112 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/tools/memory_tool.py",
+      "line": 246,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'get_tools()' is 84 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/tools/router.py",
+      "line": 234,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'dispatch()' is 123 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/audio/capture.py",
+      "line": 191,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function '_callback()' is 138 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/audio/dynamic_aec.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 729 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/audio/dynamic_aec.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 23 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "core/audio/dynamic_aec.py",
+      "line": 501,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'process_frame()' is 90 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/audio/spectral.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 501 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/audio/processing.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 509 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/audio/paralinguistics.py",
+      "line": 132,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'analyze()' is 82 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/ai/handover_telemetry.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 686 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/ai/handover_telemetry.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 37 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "core/ai/session.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 842 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/ai/session.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 22 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "core/ai/session.py",
+      "line": 463,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function '_handle_tool_call()' is 86 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/ai/handover_protocol.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 1032 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/ai/handover_protocol.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 43 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "core/ai/hive.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 660 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/ai/hive.py",
+      "line": 146,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'prepare_handoff()' is 113 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/ai/hive.py",
+      "line": 285,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'complete_handoff()' is 98 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/ai/handover/manager.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 616 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "core/ai/handover/manager.py",
+      "line": 262,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'handover_with_context()' is 132 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/ai/agents/specialists/debugger.py",
+      "line": 37,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'process()' is 105 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "core/ai/agents/specialists/architect.py",
+      "line": 38,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'process()' is 98 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "tests/test_compression.py",
+      "line": 15,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret/credential"
+    },
+    {
+      "file": "tests/unit/test_evolutionary_stability.py",
+      "line": 16,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_multi_turn_evolution()' is 93 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 55,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret/credential"
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 77,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret/credential"
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 102,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret/credential"
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 503 lines \u2014 consider splitting into smaller modules"
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 42 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "tests/unit/test_hive_swarm.py",
+      "line": 20,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_hive_full_lifecycle()' is 82 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "tests/unit/test_voice_tool.py",
+      "line": 28,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret/credential"
+    },
+    {
+      "file": "tests/unit/test_voice_tool.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 21 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "tests/integration/test_neural_dispatcher.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 26 functions \u2014 consider refactoring into classes or separate modules"
+    },
+    {
+      "file": "tests/integration/test_gateway_e2e.py",
+      "line": 60,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_gateway_handshake_e2e()' is 86 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "tests/e2e/test_system_alpha_e2e.py",
+      "line": 55,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_aether_system_alpha_full_cycle()' is 111 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "tests/e2e/test_e2e_singularity.py",
+      "line": 30,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_e2e_singularity()' is 138 lines long \u2014 consider breaking it up"
+    },
+    {
+      "file": "skills/github-intel/scripts/repo_analyzer.py",
+      "line": 100,
+      "category": "BARE_EXCEPT",
+      "severity": "WARNING",
+      "message": "Bare 'except:' catches all exceptions including SystemExit/KeyboardInterrupt"
+    },
+    {
+      "file": "apps/portal/src/app/admin/page.tsx",
+      "line": 180,
+      "category": "ANY_TYPE",
+      "severity": "INFO",
+      "message": "Usage of 'any' type \u2014 consider using a specific type"
+    },
+    {
+      "file": "apps/portal/src/app/live/page.tsx",
+      "line": 85,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/components/AetherBrain.tsx",
+      "line": 212,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 39,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 40,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 41,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 42,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 65,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 66,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 67,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 68,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 94,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 95,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 96,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 97,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 120,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 121,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 122,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useEngineTelemetry.ts",
+      "line": 24,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useEngineTelemetry.ts",
+      "line": 76,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useVisionPulse.ts",
+      "line": 168,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useVisionPulse.ts",
+      "line": 207,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 102,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 212,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 234,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 292,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 316,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 429,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 440,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useAetherGateway.ts",
+      "line": 63,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useAetherGateway.ts",
+      "line": 73,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useAetherGateway.ts",
+      "line": 90,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "apps/portal/src/hooks/useAetherGateway.ts",
+      "line": 124,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found \u2014 remove before production"
+    },
+    {
+      "file": "core/demo/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/demo' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "core/infra/cloud/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/infra/cloud' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "core/utils/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/utils' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "core/ai/handover/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/ai/handover' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "core/ai/agents/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/ai/agents' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "core/ai/agents/specialists/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/ai/agents/specialists' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "core/emotion/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/emotion' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "core/analytics/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/analytics' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "tests/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'tests' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "tests/unit/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'tests/unit' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "tests/integration/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'tests/integration' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "tests/benchmarks/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'tests/benchmarks' has Python files but no __init__.py \u2014 may break imports"
+    },
+    {
+      "file": "tests/e2e/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'tests/e2e' has Python files but no __init__.py \u2014 may break imports"
+    }
+  ]
+}
