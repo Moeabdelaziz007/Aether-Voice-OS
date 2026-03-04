@@ -15,6 +15,8 @@ import CommandBar from "@/components/shared/CommandBar";
 import EdgeGlow from "@/components/shared/EdgeGlow";
 import HUDContainer from "@/components/HUD/HUDContainer";
 import PoweredByStrip from "@/components/shared/PoweredByStrip";
+import ParticleField from "@/components/shared/ParticleField";
+import SilentHintsOverlay from "@/components/shared/SilentHintsOverlay";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useAetherStore } from "@/store/useAetherStore";
 
@@ -34,6 +36,8 @@ export default function AetherPortal() {
             amber: [245, 158, 11],
             emerald: [16, 185, 129],
             rose: [244, 63, 94],
+            green: [34, 197, 94],
+            blue: [59, 130, 246],
         };
 
         const rgb = ACCENT_RGB[preferences.accentColor] || ACCENT_RGB.cyan;
@@ -57,12 +61,15 @@ export default function AetherPortal() {
 
     return (
         <LayoutGroup>
+            {/* Quantum Topology particles — ambient background layer */}
+            <ParticleField count={35} />
+
             {/* Siri-style edge glow */}
             <EdgeGlow />
 
             {/* HUD frame (corner markers + scan line) */}
             <HUDContainer>
-                <div className="relative w-full h-screen overflow-hidden">
+                <div className="relative w-full h-screen overflow-hidden aether-boot-enter">
                     {/* The Orb — always visible, morphs between realms */}
                     <AetherOrb />
 
@@ -70,6 +77,9 @@ export default function AetherPortal() {
                     <RealmController />
                 </div>
             </HUDContainer>
+
+            {/* Silent tool result hints — top-right floating cards */}
+            <SilentHintsOverlay />
 
             {/* Google tech attribution — ambient, premium */}
             <PoweredByStrip />

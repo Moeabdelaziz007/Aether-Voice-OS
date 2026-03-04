@@ -3,13 +3,38 @@
 /**
  * MemoryRealm — Conversation timeline with search.
  * Orb is at 100px left-center. Timeline flows on the right side.
+ * Wired to live transcript from Zustand store + mock fallback.
  */
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Search } from "lucide-react";
 import GlassPanel from "@/components/shared/GlassPanel";
+import { useAetherStore } from "@/store/useAetherStore";
 import { MOCK_MEMORIES, type MemoryEntry } from "@/lib/mockData";
+
+// Color map for transcript roles
+const ROLE_COLORS = {
+    user: "#00F3FF",
+    agent: "#A855F7",
+    system: "#F59E0B",
+};
+
+// Convert transcript messages to MemoryEntry format
+function transcriptToMemory(msg: { id: string; role: string; content: string; timestamp: number }, index: number): MemoryEntry {
+    const roleColor = ROLE_COLORS[msg.role as keyof typeof ROLE_COLORS] || ROLE_COLORS.system;
+    const time = new Date(msg.timestamp);
+    const timeStr = time.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: false });
+
+    return {
+        id: msg.id,
+        title: msg.role === "user" ? "You said" : "Aether responded",
+        summary: msg.content,
+        timestamp: timeStr,
+        category: msg.role === "user" ? "code" : "design",
+        dotColor: roleColor,
+    };
+}
 
 function MemoryNode({ entry, index }: { entry: MemoryEntry; index: number }) {
     return (
@@ -46,16 +71,27 @@ function MemoryNode({ entry, index }: { entry: MemoryEntry; index: number }) {
 
 export default function MemoryRealm() {
     const [searchQuery, setSearchQuery] = useState("");
+    const transcript = useAetherStore((s) => s.transcript);
+
+    // Use live transcript if available, else mock data
+    const memories: MemoryEntry[] = useMemo(() => {
+        if (transcript.length > 0) {
+            return transcript.map((msg, i) => transcriptToMemory(msg, i)).reverse();
+        }
+        return MOCK_MEMORIES;
+    }, [transcript]);
 
     const filteredMemories = useMemo(() => {
-        if (!searchQuery.trim()) return MOCK_MEMORIES;
+        if (!searchQuery.trim()) return memories;
         const q = searchQuery.toLowerCase();
-        return MOCK_MEMORIES.filter(
+        return memories.filter(
             (m) =>
                 m.title.toLowerCase().includes(q) ||
                 m.summary.toLowerCase().includes(q)
         );
-    }, [searchQuery]);
+    }, [searchQuery, memories]);
+
+    const isLive = transcript.length > 0;
 
     return (
         <div className="w-full h-full flex">
@@ -85,14 +121,21 @@ export default function MemoryRealm() {
                 </motion.div>
 
                 {/* Section Title */}
-                <motion.h2
+                <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 0.15 }}
-                    className="text-white/30 text-xs uppercase tracking-[0.2em] font-mono mb-4"
+                    className="flex items-center gap-3 mb-4"
                 >
-                    Neural Memory — {filteredMemories.length} entries
-                </motion.h2>
+                    <h2 className="text-white/30 text-xs uppercase tracking-[0.2em] font-mono">
+                        Neural Memory — {filteredMemories.length} entries
+                    </h2>
+                    {isLive && (
+                        <span className="font-mono text-[9px] tracking-widest text-emerald-400/60 bg-emerald-400/[0.06] px-2 py-0.5 rounded-full border border-emerald-400/10 animate-pulse">
+                            LIVE
+                        </span>
+                    )}
+                </motion.div>
 
                 {/* Timeline */}
                 <div className="flex-1 overflow-y-auto no-scrollbar pb-24 max-w-2xl">

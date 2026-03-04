@@ -500,6 +500,16 @@ class GeminiLiveSession:
                 )
             )
 
+            # --- Gateway Tool Result Broadcast ---
+            asyncio.create_task(
+                self._gateway.broadcast("tool_result", {
+                    "tool_name": fc.name,
+                    "result": str(result.get("result", result)) if isinstance(result, dict) else str(result),
+                    "status": "failed" if isinstance(result, dict) and "error" in result else "success",
+                    "code": result.get("x-a2a-status") if isinstance(result, dict) else None
+                })
+            )
+
             # --- Multimodal Vision Injection (if tool returns screenshot) ---
             if isinstance(result, dict) and "screenshot_path" in result:
                 import os

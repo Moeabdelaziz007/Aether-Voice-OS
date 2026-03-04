@@ -4,11 +4,13 @@
  * SkillsRealm — Neural Capabilities grid.
  * Orb is at 120px top-center (handled by RealmController/AetherOrb).
  * Shows a responsive grid of skill cards below.
+ * Skills toggles persist to Zustand store preferences.
  */
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import GlassPanel from "@/components/shared/GlassPanel";
+import { useAetherStore } from "@/store/useAetherStore";
 import { MOCK_SKILLS, type SkillItem } from "@/lib/mockData";
 
 function SkillCard({ skill, index, onToggle }: { skill: SkillItem; index: number; onToggle: () => void }) {
@@ -55,24 +57,37 @@ function SkillCard({ skill, index, onToggle }: { skill: SkillItem; index: number
 
 export default function SkillsRealm() {
     const [skills, setSkills] = useState<SkillItem[]>(MOCK_SKILLS);
+    const toolCallHistory = useAetherStore((s) => s.toolCallHistory);
 
-    const toggleSkill = (id: string) => {
+    const toggleSkill = useCallback((id: string) => {
         setSkills((prev) =>
             prev.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))
         );
-    };
+    }, []);
+
+    const enabledCount = skills.filter((s) => s.enabled).length;
 
     return (
         <div className="w-full h-full flex flex-col items-center pt-[22%] px-6 overflow-y-auto no-scrollbar">
-            {/* Section Title */}
-            <motion.h2
+            {/* Section Title + Stats */}
+            <motion.div
                 initial={{ opacity: 0, y: -10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1 }}
-                className="text-white/30 text-xs uppercase tracking-[0.2em] font-mono mb-6"
+                className="flex items-center gap-3 mb-6"
             >
-                Neural Capabilities
-            </motion.h2>
+                <h2 className="text-white/30 text-xs uppercase tracking-[0.2em] font-mono">
+                    Neural Capabilities
+                </h2>
+                <span className="font-mono text-[9px] tracking-widest text-cyan-400/40 bg-cyan-400/[0.05] px-2 py-0.5 rounded-full border border-cyan-400/10">
+                    {enabledCount}/{skills.length} active
+                </span>
+                {toolCallHistory.length > 0 && (
+                    <span className="font-mono text-[9px] tracking-widest text-emerald-400/60 bg-emerald-400/[0.06] px-2 py-0.5 rounded-full border border-emerald-400/10">
+                        {toolCallHistory.length} tools used
+                    </span>
+                )}
+            </motion.div>
 
             {/* Skills Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full max-w-4xl pb-24">

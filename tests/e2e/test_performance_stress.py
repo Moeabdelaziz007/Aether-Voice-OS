@@ -74,6 +74,10 @@ async def test_handshake_latency():
         hive=HiveCoordinator(registry=registry, router=ToolRouter())
     )
     
+    # Mock GlobalBus to avoid Redis timeout
+    from unittest.mock import AsyncMock
+    gateway._bus.connect = AsyncMock(return_value=True)
+    
     gw_task = asyncio.create_task(gateway.run())
     await asyncio.sleep(0.5)
     

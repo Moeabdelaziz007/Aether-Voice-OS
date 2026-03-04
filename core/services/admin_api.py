@@ -13,7 +13,14 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 logger = logging.getLogger(__name__)
 
 # Global state updated asynchronously by the main loop
-SHARED_STATE = {"sessions": [], "synapse": None, "system_status": "online"}
+SHARED_STATE = {
+    "sessions": [],
+    "synapse": None,
+    "system_status": "online",
+    "tools": [],
+    "hive": {},
+    "telemetry": {},
+}
 
 
 class AdminAPIHandler(BaseHTTPRequestHandler):
@@ -42,6 +49,22 @@ class AdminAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(
                 json.dumps({"status": SHARED_STATE["system_status"]}).encode()
             )
+        elif self.path == "/api/tools":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(json.dumps(SHARED_STATE["tools"], default=str).encode())
+        elif self.path == "/api/hive":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(json.dumps(SHARED_STATE["hive"], default=str).encode())
+        elif self.path == "/api/telemetry":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(json.dumps(SHARED_STATE["telemetry"], default=str).encode())
+        elif self.path == "/health":
+            self.send_response(200)
+            self.end_headers()
+            self.wfile.write(b'{"status": "pass"}')
         else:
             self.send_response(404)
             self.end_headers()

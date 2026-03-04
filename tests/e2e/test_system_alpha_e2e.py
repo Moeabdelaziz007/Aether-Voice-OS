@@ -93,6 +93,10 @@ async def test_aether_system_alpha_full_cycle():
     )
     
     # Start Backend
+    # Mock GlobalBus to avoid Redis timeout
+    from unittest.mock import AsyncMock
+    gateway._bus.connect = AsyncMock(return_value=True)
+    
     print("[PROBE] Starting Gateway Server...")
     gw_task = asyncio.create_task(gateway.run())
     await asyncio.sleep(1.0) # Ensure server is up

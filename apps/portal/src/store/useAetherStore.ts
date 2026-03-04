@@ -9,7 +9,7 @@ export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "li
 export type EngineState = "IDLE" | "LISTENING" | "THINKING" | "SPEAKING" | "INTERRUPTING";
 
 // ─── Customization Types ───────────────────────────────────
-export type AccentColor = 'cyan' | 'purple' | 'amber' | 'emerald' | 'rose';
+export type AccentColor = 'cyan' | 'purple' | 'amber' | 'emerald' | 'rose' | 'green' | 'blue';
 export type WaveStyle = 'helix' | 'classic' | 'minimal';
 export type TranscriptMode = 'whisper' | 'persistent' | 'hidden';
 export type AIMood = 'neutral' | 'helpful' | 'focused' | 'curious' | 'concerned';
@@ -62,6 +62,9 @@ export interface AetherPersona {
     mood: AIMood;
     feeling: string;          // e.g. "🧠 Deep thinking..."
     expertise: string;
+    voiceTone: string;        // e.g. "Calm", "Energetic"
+    experienceLevel: string;  // e.g. "Senior", "Principal"
+    greeting: string;         // e.g. "Hey! How can I help?"
     activeSkills: SkillFocus[];
 }
 
@@ -97,6 +100,8 @@ export const ACCENT_COLORS: Record<AccentColor, { primary: string; glow: string;
     amber: { primary: '#f59e0b', glow: 'rgba(245, 158, 11, 0.4)', rgb: '245, 158, 11' },
     emerald: { primary: '#10b981', glow: 'rgba(16, 185, 129, 0.4)', rgb: '16, 185, 129' },
     rose: { primary: '#f43f5e', glow: 'rgba(244, 63, 94, 0.4)', rgb: '244, 63, 94' },
+    green: { primary: '#22c55e', glow: 'rgba(34, 197, 94, 0.4)', rgb: '34, 197, 94' },
+    blue: { primary: '#3b82f6', glow: 'rgba(59, 130, 246, 0.4)', rgb: '59, 130, 246' },
 };
 
 export const VOICE_TONE_PROMPTS: Record<VoiceTone, string> = {
@@ -141,6 +146,9 @@ const DEFAULT_PERSONA: AetherPersona = {
     mood: 'neutral',
     feeling: '',
     expertise: 'General',
+    voiceTone: 'Calm',
+    experienceLevel: 'Senior',
+    greeting: 'Hey! How can I help you today?',
     activeSkills: ['coding', 'debugging'],
 };
 

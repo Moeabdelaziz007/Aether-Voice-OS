@@ -3,12 +3,12 @@
 /**
  * NeuralRealm — Diagnostics HUD.
  * Orb at 80px top-center, 4 telemetry panels in 2x2 grid below.
+ * Wired to live Zustand store telemetry data.
  */
 
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import GlassPanel from "@/components/shared/GlassPanel";
-import { MOCK_TELEMETRY } from "@/lib/mockData";
 import { useAetherStore } from "@/store/useAetherStore";
 
 function SparkLine() {
@@ -103,23 +103,51 @@ function TelemetryCard({ title, index, children }: TelemetryCardProps) {
     );
 }
 
-export default function NeuralRealm() {
-    const latencyMs = useAetherStore((s) => s.latencyMs);
-    const tel = MOCK_TELEMETRY;
+// Map valence score to emotion display
+function getEmotionState(valence: number, frustration: number): { label: string; icon: string } {
+    if (frustration > 0.6) return { label: "Frustrated", icon: "😤" };
+    if (valence > 0.7) return { label: "Positive", icon: "😊" };
+    if (valence > 0.4) return { label: "Focused", icon: "🎯" };
+    if (valence > 0.2) return { label: "Neutral", icon: "😐" };
+    return { label: "Concerned", icon: "🤔" };
+}
 
-    const displayLatency = latencyMs > 0 ? latencyMs : tel.latencyMs;
+export default function NeuralRealm() {
+    // ── Live store bindings ──
+    const latencyMs = useAetherStore((s) => s.latencyMs);
+    const neuralEvents = useAetherStore((s) => s.neuralEvents);
+    const valence = useAetherStore((s) => s.valence);
+    const frustration = useAetherStore((s) => s.frustrationScore);
+    const transcript = useAetherStore((s) => s.transcript);
+    const activeSoul = useAetherStore((s) => s.activeSoul);
+    const toolCallHistory = useAetherStore((s) => s.toolCallHistory);
+
+    // Derived values
+    const emotion = useMemo(() => getEmotionState(valence, frustration), [valence, frustration]);
+    const estimatedTokens = useMemo(() => transcript.reduce((acc, m) => acc + (m.content?.length || 0) * 0.75, 0), [transcript]);
+    const displayLatency = latencyMs > 0 ? latencyMs : 0;
 
     return (
         <div className="w-full h-full flex flex-col items-center pt-[18%] px-6">
-            {/* Section Title */}
-            <motion.h2
+            {/* Section Title + Model Badge */}
+            <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.1 }}
-                className="text-white/30 text-xs uppercase tracking-[0.2em] font-mono mb-6"
+                className="flex items-center gap-3 mb-6"
             >
-                Neural Diagnostics
-            </motion.h2>
+                <h2 className="text-white/30 text-xs uppercase tracking-[0.2em] font-mono">
+                    Neural Diagnostics
+                </h2>
+                <span className="font-mono text-[9px] tracking-widest text-cyan-400/40 bg-cyan-400/[0.05] px-2 py-0.5 rounded-full border border-cyan-400/10">
+                    Gemini 2.0 Flash
+                </span>
+                {activeSoul && (
+                    <span className="font-mono text-[9px] tracking-widest text-emerald-400/60 bg-emerald-400/[0.06] px-2 py-0.5 rounded-full border border-emerald-400/10">
+                        {activeSoul}
+                    </span>
+                )}
+            </motion.div>
 
             {/* 2x2 Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-2xl pb-24">
@@ -140,8 +168,13 @@ export default function NeuralRealm() {
                 <TelemetryCard title="Neural Events" index={1}>
                     <div className="flex items-baseline gap-1 mt-2">
                         <span className="text-3xl font-mono font-bold text-white/90">
-                            {tel.neuralEvents.toLocaleString()}
+                            {neuralEvents.length.toLocaleString()}
                         </span>
+                        {toolCallHistory.length > 0 && (
+                            <span className="text-white/30 text-xs font-mono ml-2">
+                                {toolCallHistory.length} tools
+                            </span>
+                        )}
                     </div>
                     <SparkLine />
                 </TelemetryCard>
@@ -150,9 +183,9 @@ export default function NeuralRealm() {
                 <TelemetryCard title="Emotion State" index={2}>
                     <div className="flex items-baseline gap-2 mt-2">
                         <span className="text-xl font-semibold text-white/90">
-                            {tel.emotionState}
+                            {emotion.label}
                         </span>
-                        <span className="text-xl">{tel.emotionIcon}</span>
+                        <span className="text-xl">{emotion.icon}</span>
                     </div>
                     <WaveformBar />
                 </TelemetryCard>
@@ -161,13 +194,13 @@ export default function NeuralRealm() {
                 <TelemetryCard title="Session Tokens" index={3}>
                     <div className="flex items-baseline gap-1 mt-2">
                         <span className="text-2xl font-mono font-bold text-white/90">
-                            {tel.sessionTokens.toLocaleString()}
+                            {Math.round(estimatedTokens).toLocaleString()}
                         </span>
                         <span className="text-white/30 text-xs font-mono">
-                            / {(tel.maxTokens / 1000).toFixed(0)}K
+                            / 1000K
                         </span>
                     </div>
-                    <ProgressBar value={tel.sessionTokens} max={tel.maxTokens} />
+                    <ProgressBar value={estimatedTokens} max={1000000} />
                 </TelemetryCard>
             </div>
 

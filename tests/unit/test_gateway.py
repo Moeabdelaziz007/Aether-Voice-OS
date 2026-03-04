@@ -48,8 +48,13 @@ async def gateway(gateway_config):
     active_soul_obj = SoulManifestStub()
     
     hive = MagicMock()
+    hive.active_soul = active_soul_obj
     hive.get_active_soul.return_value = active_soul_obj
     hive.get_pending_handover_for_target.return_value = None
+    
+    # Also fix Signature verification so it passes with dummy 0*128 signature
+    import core.utils.security as sec
+    sec.verify_signature = MagicMock(return_value=True)
     
     gw = AetherGateway(
         gateway_config,
@@ -58,6 +63,11 @@ async def gateway(gateway_config):
         tool_router,
         hive
     )
+    
+    # Mock the GlobalBus so it doesn't try to connect to a missing Redis server 
+    # and time out for 5 seconds, which would fail the server start.
+    gw._bus.connect = MagicMock(return_value=asyncio.sleep(0, result=True))
+    
     task = asyncio.create_task(gw.run())
     # Give the server a moment to start
     await asyncio.sleep(0.1)

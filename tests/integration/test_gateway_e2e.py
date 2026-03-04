@@ -81,9 +81,14 @@ async def test_gateway_handshake_e2e():
     gateway = AetherGateway(
         gateway_config=gw_cfg,
         ai_config=ai_cfg,
+        audio_config=MockAudioConfig(),
         tool_router=tool_router,
         hive=hive
     )
+    
+    # Mock GlobalBus to avoid Redis timeout
+    from unittest.mock import AsyncMock
+    gateway._bus.connect = AsyncMock(return_value=True)
     
     # Start gateway in the background
     gw_task = asyncio.create_task(gateway.run())

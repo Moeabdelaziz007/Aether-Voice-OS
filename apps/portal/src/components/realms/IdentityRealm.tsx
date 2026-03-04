@@ -3,11 +3,13 @@
 /**
  * IdentityRealm — Agent persona customization.
  * Orb stays center, PersonaPanel slides up from the bottom.
+ * Wired to Zustand store for persona/preferences persistence.
  */
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import GlassPanel from "@/components/shared/GlassPanel";
+import { useAetherStore } from "@/store/useAetherStore";
 import {
     VOICE_TONES,
     EXPERIENCE_LEVELS,
@@ -33,11 +35,10 @@ function SegmentedControl<T extends string>({
                 <button
                     key={opt}
                     onClick={() => onChange(opt)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${
-                        value === opt
-                            ? "bg-cyan-400/15 text-cyan-400 shadow-[0_0_12px_rgba(0,243,255,0.1)]"
-                            : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
-                    }`}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all duration-200 ${value === opt
+                        ? "bg-cyan-400/15 text-cyan-400 shadow-[0_0_12px_rgba(0,243,255,0.1)]"
+                        : "text-white/40 hover:text-white/60 hover:bg-white/[0.03]"
+                        }`}
                 >
                     {opt}
                 </button>
@@ -61,17 +62,15 @@ function SuperpowerCard({
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 + index * 0.06 }}
             onClick={onToggle}
-            className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left ${
-                item.enabled
-                    ? "bg-cyan-400/10 border-cyan-400/20 shadow-[0_0_15px_rgba(0,243,255,0.08)]"
-                    : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]"
-            }`}
+            className={`flex items-center gap-3 p-3 rounded-xl border transition-all duration-200 text-left ${item.enabled
+                ? "bg-cyan-400/10 border-cyan-400/20 shadow-[0_0_15px_rgba(0,243,255,0.08)]"
+                : "bg-white/[0.03] border-white/[0.06] hover:bg-white/[0.05]"
+                }`}
         >
             <span className="text-xl select-none">{item.icon}</span>
             <span
-                className={`text-xs font-medium ${
-                    item.enabled ? "text-white/90" : "text-white/40"
-                }`}
+                className={`text-xs font-medium ${item.enabled ? "text-white/90" : "text-white/40"
+                    }`}
             >
                 {item.name}
             </span>
@@ -80,17 +79,21 @@ function SuperpowerCard({
 }
 
 export default function IdentityRealm() {
-    const [agentName, setAgentName] = useState("Aether");
-    const [voiceTone, setVoiceTone] = useState<VoiceToneOption>("Calm");
-    const [experienceLevel, setExperienceLevel] = useState<ExperienceLevelOption>("Senior");
-    const [selectedColor, setSelectedColor] = useState("cyan");
+    // ── Live store bindings ──
+    const persona = useAetherStore((s) => s.persona);
+    const preferences = useAetherStore((s) => s.preferences);
+    const setPersona = useAetherStore((s) => s.setPersona);
+    const setPreferences = useAetherStore((s) => s.setPreferences);
+    const activeSoul = useAetherStore((s) => s.activeSoul);
+
+    // Superpowers are local UI state (not backend data)
     const [superpowers, setSuperpowers] = useState<SuperpowerItem[]>(MOCK_SUPERPOWERS);
 
-    const toggleSuperpower = (id: string) => {
+    const toggleSuperpower = useCallback((id: string) => {
         setSuperpowers((prev) =>
             prev.map((sp) => (sp.id === id ? { ...sp, enabled: !sp.enabled } : sp))
         );
-    };
+    }, []);
 
     return (
         <div className="w-full h-full flex items-end justify-center">
@@ -108,44 +111,67 @@ export default function IdentityRealm() {
                         <div className="w-10 h-1 rounded-full bg-white/10" />
                     </div>
 
-                    {/* Agent Name */}
+                    {/* Agent Name — synced with store */}
                     <div>
                         <label className="block text-white/30 text-xs uppercase tracking-[0.15em] font-mono mb-3">
                             Agent Name
                         </label>
                         <input
                             type="text"
-                            value={agentName}
-                            onChange={(e) => setAgentName(e.target.value)}
+                            value={persona.name}
+                            onChange={(e) => setPersona({ name: e.target.value })}
+                            placeholder="Enter agent name"
                             className="w-full bg-white/[0.03] border border-white/[0.06] rounded-xl px-4 py-3 text-2xl font-bold text-white/90 outline-none focus:border-cyan-400/30 transition-colors duration-200"
                         />
                     </div>
 
-                    {/* Voice Tone */}
+                    {/* Voice Info — Gemini attribution + active soul */}
+                    <div className="flex items-center gap-4">
+                        <div className="flex-1">
+                            <label className="block text-white/30 text-xs uppercase tracking-[0.15em] font-mono mb-2">
+                                Voice Engine
+                            </label>
+                            <span className="text-white/60 text-sm font-mono">
+                                Puck · <span className="text-cyan-400/60">Gemini Live API</span>
+                            </span>
+                        </div>
+                        {activeSoul && (
+                            <div>
+                                <label className="block text-white/30 text-xs uppercase tracking-[0.15em] font-mono mb-2">
+                                    Active Soul
+                                </label>
+                                <span className="text-emerald-400/80 text-sm font-mono">
+                                    {activeSoul}
+                                </span>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Voice Tone — synced with store */}
                     <div>
                         <label className="block text-white/30 text-xs uppercase tracking-[0.15em] font-mono mb-3">
                             Voice Tone
                         </label>
                         <SegmentedControl
                             options={VOICE_TONES}
-                            value={voiceTone}
-                            onChange={setVoiceTone}
+                            value={persona.voiceTone as VoiceToneOption}
+                            onChange={(val) => setPersona({ voiceTone: val })}
                         />
                     </div>
 
-                    {/* Experience Level */}
+                    {/* Experience Level — synced with store */}
                     <div>
                         <label className="block text-white/30 text-xs uppercase tracking-[0.15em] font-mono mb-3">
                             Experience Level
                         </label>
                         <SegmentedControl
                             options={EXPERIENCE_LEVELS}
-                            value={experienceLevel}
-                            onChange={setExperienceLevel}
+                            value={persona.experienceLevel as ExperienceLevelOption}
+                            onChange={(val) => setPersona({ experienceLevel: val })}
                         />
                     </div>
 
-                    {/* Accent Color */}
+                    {/* Accent Color — synced with store */}
                     <div>
                         <label className="block text-white/30 text-xs uppercase tracking-[0.15em] font-mono mb-3">
                             Accent Color
@@ -154,16 +180,15 @@ export default function IdentityRealm() {
                             {ACCENT_COLOR_SWATCHES.map((swatch) => (
                                 <button
                                     key={swatch.id}
-                                    onClick={() => setSelectedColor(swatch.id)}
-                                    className={`w-8 h-8 rounded-full transition-all duration-200 ${
-                                        selectedColor === swatch.id
-                                            ? "ring-2 ring-white/80 ring-offset-2 ring-offset-[#020206] scale-110"
-                                            : "hover:scale-110"
-                                    }`}
+                                    onClick={() => setPreferences({ accentColor: swatch.id })}
+                                    className={`w-8 h-8 rounded-full transition-all duration-200 ${preferences.accentColor === swatch.id
+                                        ? "ring-2 ring-white/80 ring-offset-2 ring-offset-[#020206] scale-110"
+                                        : "hover:scale-110"
+                                        }`}
                                     style={{
                                         backgroundColor: swatch.color,
                                         boxShadow:
-                                            selectedColor === swatch.id
+                                            preferences.accentColor === swatch.id
                                                 ? `0 0 16px ${swatch.color}60`
                                                 : "none",
                                     }}

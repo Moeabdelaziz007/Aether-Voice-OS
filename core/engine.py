@@ -88,6 +88,9 @@ class AetherEngine:
             "task": task,
             "status": "active",
         }))
+        asyncio.create_task(self._gateway.broadcast("soul_handoff", {
+            "soul": to_agent
+        }))
 
     def _register_tools(self) -> None:
         # Tool registration remains centralized here or moved to a tool registry later
