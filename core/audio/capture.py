@@ -19,8 +19,8 @@ import pyaudio
 from core.audio.dynamic_aec import DynamicAEC
 from core.audio.cortex import AECBridge
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer
-from core.audio.state import audio_state
+from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad, HyperVADResult
+from core.audio.state import audio_state, HysteresisGate
 from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
 
@@ -152,8 +152,6 @@ class AudioCapture:
         self._on_affective_data = on_affective_data
         self._state_lock = threading.Lock()
 
-        from core.audio.state import HysteresisGate
-
         self._hysteresis = HysteresisGate()
         # Dynamic AEC replaces LeakageDetector with adaptive echo cancellation
         self._dynamic_aec = DynamicAEC(
@@ -271,8 +269,6 @@ class AudioCapture:
         # Update VAD logic
         if should_mute and self._smooth_muter._current_gain < 0.1:
             # Force VAD to false and energy to 0 to prevent barge-in triggers
-            from core.audio.processing import HyperVADResult
-
             vad = HyperVADResult(
                 is_soft=False,
                 is_hard=False,
@@ -282,8 +278,6 @@ class AudioCapture:
             # Reconstruct in_data with zeros if fully muted
             in_data = b"\x00" * len(in_data)
         else:
-            from core.audio.processing import energy_vad
-
             # HyperVAD Logic: Dual-Threshold (mu + sigma) + Multi-Feature
             vad = energy_vad(processed_chunk, adaptive_engine=self._vad)
             in_data = processed_chunk.tobytes()
