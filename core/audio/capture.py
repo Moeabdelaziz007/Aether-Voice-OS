@@ -28,54 +28,51 @@ logger = logging.getLogger(__name__)
 
 
 class SmoothMuter:
-    """Applies graceful, ramped gain modifications to avoid pops/clicks."""
+    """Applies graceful, ramped gain modifications to avoid pops/clicks.
+
+    Design goals:
+    - No discontinuities at chunk boundaries (avoid clicks/pops)
+    - Deterministic ramps that land exactly on the target gain
+    - Minimal per-callback allocation / branching
+    """
 
     def __init__(self, ramp_samples: int = 256) -> None:
         """Initializes the SmoothMuter.
 
         Args:
-            ramp_samples (int): The number of samples over which to apply the
-                gain ramp, controlling the speed of the fade in/out.
+            ramp_samples: Number of samples over which to apply a full 0→1 or 1→0 ramp.
         """
-        self._ramp_samples = ramp_samples
+        self._ramp_samples = max(1, int(ramp_samples))
         self._current_gain = 1.0
         self._target_gain = 1.0
 
     def process(self, pcm_chunk: np.ndarray) -> np.ndarray:
         """Apply gain ramp smoothly over the chunk.
 
-        This method calculates and applies a linear gain ramp to the incoming
-        audio chunk to smoothly transition between volume levels, preventing
-        audible clicks or pops.
-
-        Args:
-            pcm_chunk: A numpy array of int16 PCM audio data.
-
-        Returns:
-            A numpy array of int16 PCM audio data with the gain applied.
+        Returns a new int16 array (never returns the original buffer) to avoid
+        unexpected aliasing.
         """
-        if self._current_gain == self._target_gain:
-            if self._current_gain == 1.0:
-                return pcm_chunk.copy()
-            elif self._current_gain == 0.0:
-                return np.zeros_like(pcm_chunk)
-            return (pcm_chunk * self._current_gain).astype(np.int16)
-
         chunk_len = len(pcm_chunk)
         if chunk_len == 0:
             return pcm_chunk
 
-        step = 1.0 / self._ramp_samples
-        if self._current_gain > self._target_gain:
-            step = -step
+        # Fast paths
+        if self._current_gain == self._target_gain:
+            if self._current_gain == 1.0:
+                return pcm_chunk.copy()
+            if self._current_gain == 0.0:
+                return np.zeros_like(pcm_chunk)
+            return (pcm_chunk.astype(np.float32) * self._current_gain).astype(np.int16)
 
-        # Generate a gain array for the chunk
-        gains = np.full(chunk_len, self._current_gain, dtype=np.float32)
+        start = float(self._current_gain)
+        target = float(self._target_gain)
 
-        # Max steps remaining to reach target
-        steps_needed = int(abs(self._target_gain - self._current_gain) / abs(step))
-        ramp_len = min(chunk_len, steps_needed)
+        # How many samples remain to reach the target, based on a linear ramp
+        # of length `self._ramp_samples` for a full-scale delta of 1.0.
+        delta = target - start
+        remaining = int(np.ceil(abs(delta) * self._ramp_samples))
 
+<<<<<<< HEAD
         if ramp_len > 0:
             ramp = np.linspace(
                 self._current_gain + step,         # Start one step ahead
@@ -99,8 +96,35 @@ class SmoothMuter:
         # Optional: Keep a very tiny snap just for IEEE float math drift
         if abs(self._current_gain - self._target_gain) < 1e-4:
             self._current_gain = self._target_gain
+=======
+        if remaining <= 0:
+            self._current_gain = target
+            gains = np.full(chunk_len, target, dtype=np.float32)
+        else:
+            ramp_len = min(chunk_len, remaining)
+>>>>>>> origin/main
 
-        return (pcm_chunk * gains).astype(np.int16)
+            # Use endpoint=True so the last sample of the ramp hits the exact
+            # intermediate value (or the target if ramp completes in this chunk).
+            ramp = np.linspace(start, start + delta * (ramp_len / remaining), ramp_len, dtype=np.float32)
+
+            gains = np.empty(chunk_len, dtype=np.float32)
+            gains[:ramp_len] = ramp
+
+            if ramp_len < chunk_len:
+                # Ramp completed inside this chunk → hold exactly at target.
+                if ramp_len == remaining:
+                    gains[ramp_len:] = target
+                    self._current_gain = target
+                else:
+                    hold = float(gains[ramp_len - 1])
+                    gains[ramp_len:] = hold
+                    self._current_gain = hold
+            else:
+                # Ramp continues in next chunk.
+                self._current_gain = float(gains[-1])
+
+        return (pcm_chunk.astype(np.float32) * gains).astype(np.int16)
 
     def mute(self) -> None:
         """Initiates a smooth fade-out to silence."""
@@ -180,17 +204,35 @@ class AudioCapture:
         self._far_end_buffer = np.array([], dtype=np.int16)
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
-        """Thread-safe injection into the asyncio event loop."""
+        """Thread-safe injection into the asyncio event loop.
+
+        On overflow we drop the oldest message to keep latency bounded.
+        """
         try:
             self._async_queue.put_nowait(msg)
         except asyncio.QueueFull:
+            # Telemetry: count capture queue drops.
+            try:
+                audio_state.capture_queue_drops += 1
+            except Exception:
+                # audio_state may be a mock in tests or older state object
+                pass
+
             try:
                 self._async_queue.get_nowait()
                 if hasattr(audio_state, 'capture_queue_drops'):
                     audio_state.capture_queue_drops += 1
             except asyncio.QueueEmpty:
                 pass
-            self._async_queue.put_nowait(msg)
+
+            try:
+                self._async_queue.put_nowait(msg)
+            except asyncio.QueueFull:
+                # If we still can't enqueue, drop this message as well.
+                try:
+                    audio_state.capture_queue_drops += 1
+                except Exception:
+                    pass
 
     def _callback(
         self, in_data: bytes, frame_count: int, time_info: dict, status: int
@@ -293,11 +335,22 @@ class AudioCapture:
         audio_state.is_soft = vad.is_soft
         audio_state.is_hard = vad.is_hard
 
+<<<<<<< HEAD
         if len(processed_chunk) > 1:
             s1 = processed_chunk[:-1].astype(np.int32)
             s2 = processed_chunk[1:].astype(np.int32)
             signs = s1 * s2
             audio_state.last_zcr = float(np.count_nonzero(signs < 0)) / len(processed_chunk)
+=======
+        # Low-allocation ZCR (zero-crossing rate) calculation.
+        # Count sign changes without building diff/sign/where intermediate arrays.
+        if len(processed_chunk) > 1:
+            prev = processed_chunk[:-1]
+            curr = processed_chunk[1:]
+            # Crossing when sign differs or either is zero.
+            crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
+            audio_state.last_zcr = float(np.count_nonzero(crossings) / len(processed_chunk))
+>>>>>>> origin/main
         else:
             audio_state.last_zcr = 0.0
 

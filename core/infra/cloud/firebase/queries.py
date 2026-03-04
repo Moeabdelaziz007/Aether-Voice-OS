@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from datetime import datetime
 from typing import List
@@ -53,16 +54,17 @@ class Queries:
                 .limit(limit)
             )
 
-            # Note: The firestore python SDK async support might need aio module.
-            # We use standard sync to simulate here or if using firebase-admin
-            # async. Since standard firebase-admin is synchronous, we wrap or mock.
-            docs = query.stream()
+            # Since standard firebase-admin is synchronous, we use asyncio.to_thread
+            # to avoid blocking the main event loop during I/O and parsing.
+            def _fetch_and_parse():
+                # For small limits, get() is more efficient than stream()
+                docs = query.get()
+                return [
+                    SessionMetadata(**{**doc.to_dict(), "session_id": doc.id})
+                    for doc in docs
+                ]
 
-            results = []
-            for doc in docs:
-                data = doc.to_dict()
-                # Parse to Pydantic
-                results.append(SessionMetadata(**data))
+            results = await asyncio.to_thread(_fetch_and_parse)
 
             _recent_sessions_cache[cache_key] = (results, now)
             return results

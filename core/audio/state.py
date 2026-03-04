@@ -33,7 +33,13 @@ class HysteresisGate:
 
 
 class AudioState:
-    """Thread-safe singleton to track audio I/O state."""
+    """Thread-safe singleton to track audio I/O state.
+
+    Concurrency model:
+    - _lock protects shared AEC and state fields during composite updates.
+    - _playing_lock isolates playback transition flags to avoid races with the
+      playback callback thread.
+    """
 
     _instance = None
     _lock = threading.Lock()
@@ -49,6 +55,8 @@ class AudioState:
                 cls._instance.is_capturing = False
                 cls._instance.last_rms = 0.0
                 cls._instance.last_zcr = 0.0
+                # Telemetry counters (hot-path safe ints; best-effort updates)
+                cls._instance.capture_queue_drops = 0
                 cls._instance.is_soft = False
                 cls._instance.is_hard = False
                 cls._instance.silence_type = "void"

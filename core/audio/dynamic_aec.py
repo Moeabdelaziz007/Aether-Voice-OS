@@ -23,29 +23,66 @@ logger = logging.getLogger(__name__)
 
 
 class BoundedBuffer:
-    """A thread-safe bounded buffer for audio samples to prevent memory leaks."""
+    """A thread-safe preallocated ring buffer for audio samples.
+
+    Improvement #1 (Qodo): Replaces np.concatenate-per-frame with a
+    fixed-size circular buffer, eliminating O(n) reallocation in the
+    hot callback path and reducing GC pressure / glitch risk.
+    """
 
     def __init__(self, max_samples: int):
         self.max_samples = max_samples
-        self.buffer = np.array([], dtype=np.float64)
+        self._buf = np.zeros(max_samples, dtype=np.float64)
+        self._write = 0   # write pointer
+        self._count = 0   # valid samples stored
         self._lock = threading.Lock()
 
     def append(self, data: np.ndarray):
+        """Append samples; oldest samples are silently dropped when full."""
         with self._lock:
-            self.buffer = np.concatenate([self.buffer, data])
-            if len(self.buffer) > self.max_samples:
-                self.buffer = self.buffer[-self.max_samples :]
+            n = len(data)
+            if n == 0:
+                return
+            if n >= self.max_samples:
+                # Larger than buffer — keep only the last max_samples
+                data = data[-self.max_samples:]
+                n = self.max_samples
+            # Write with wrap-around
+            end = self._write + n
+            if end <= self.max_samples:
+                self._buf[self._write:end] = data
+            else:
+                first = self.max_samples - self._write
+                self._buf[self._write:] = data[:first]
+                self._buf[:end - self.max_samples] = data[first:]
+            self._write = end % self.max_samples
+            self._count = min(self._count + n, self.max_samples)
 
     def pop_left(self, n: int) -> np.ndarray:
+        """Pop n oldest samples; returns empty array if not enough data."""
         with self._lock:
-            if len(self.buffer) < n:
-                return np.array([])
-            extracted = self.buffer[:n]
-            self.buffer = self.buffer[n:]
+            if self._count < n:
+                return np.array([], dtype=np.float64)
+            read_start = (self._write - self._count) % self.max_samples
+            end = read_start + n
+            if end <= self.max_samples:
+                extracted = self._buf[read_start:end].copy()
+            else:
+                first = self.max_samples - read_start
+                extracted = np.concatenate([
+                    self._buf[read_start:],
+                    self._buf[:n - first]
+                ])
+            self._count -= n
             return extracted
 
+    def clear(self):
+        with self._lock:
+            self._write = 0
+            self._count = 0
+
     def __len__(self):
-        return len(self.buffer)
+        return self._count
 
 
 @dataclass
@@ -656,33 +693,44 @@ class DynamicAEC:
     def is_user_speaking(self, mic_audio_chunk: np.ndarray) -> bool:
         """Determine if microphone audio is user speech or echo.
 
-        This is the replacement for LeakageDetector.is_user_speaking().
-        Uses AEC state to make decision.
+        Improvement #3 (Qodo): During AEC warm-up (unconverged), instead
+        of blindly returning True (which leaks early echo), we use a fast
+        far-end / mic energy coherence heuristic to distinguish echo from
+        real speech even before the adaptive filter has converged.
 
         Args:
             mic_audio_chunk: Microphone audio chunk
 
         Returns:
-            True if user is likely speaking, False if echo
+            True if user is likely speaking, False if likely echo
         """
-        # If AEC is not converged, be conservative and assume user is speaking
-        if not self.state.converged:
-            return True
-
-        # During double-talk, user is speaking
+        # During double-talk, user is definitely speaking
         if self.state.double_talk_detected:
             return True
 
-        # Check ERLE - high ERLE means good echo cancellation
-        # If ERLE is low, audio might be user speech (not echo)
-        if self.state.erle_db < 6.0:  # Less than 6dB suppression
+        # Post-convergence: use ERLE as primary indicator
+        if self.state.converged:
+            # High ERLE → echo well-cancelled → NOT user speech
+            if self.state.erle_db >= 6.0:
+                return False
             return True
 
-        # Check if far-end is playing (if not, it's definitely user speech)
-        # This requires external state - for now, use ERLE and double-talk
+        # === Warm-up heuristic (Improvement #3) ===
+        # During unconverged state, use energy coherence:
+        # If far-end is active and mic energy is similar in magnitude
+        # and double_talk not flagged → likely echo, not user speech.
+        mic_energy = float(np.mean(mic_audio_chunk.astype(np.float64) ** 2))
+        far_energy = self.double_talk_detector.far_end_energy
 
-        # If we get here, it's likely echo
-        return False
+        if far_energy > 1e-6:
+            # High far-end energy + mic energy in the same ballpark → echo
+            energy_ratio = mic_energy / (far_energy + 1e-10)
+            if 0.05 < energy_ratio < 5.0:
+                # Coherent → assume echo during warm-up
+                return False
+
+        # Low far-end or very different energies → unknown, assume user
+        return True
 
     def get_state(self) -> AECState:
         """Get current AEC state."""
@@ -696,8 +744,8 @@ class DynamicAEC:
         self.spectral_analyzer.reset()
         self.far_end_ring_buffer.clear()
         self.accumulated_far_end = BoundedBuffer(max_samples=self.sample_rate * 5)
-        self.near_end_accumulator.clear()
-        self.far_end_accumulator.clear()
+        self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
+        self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
         self.accumulated_samples = 0
         self.state = AECState()
         self.erle_history.clear()
