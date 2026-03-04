@@ -45,18 +45,19 @@ export default function CommandBar() {
             initial={{ y: 40, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-3 py-2 bg-[rgba(8,8,12,0.65)] border border-white/[0.08] rounded-full backdrop-blur-3xl shadow-[0_8px_32px_rgba(0,0,0,0.8),inset_0_1px_1px_rgba(255,255,255,0.1)]"
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1 px-3 py-2 bg-[rgba(10,10,18,0.75)] border border-white/[0.08] rounded-full backdrop-blur-[40px] saturate-[180%] shadow-[0_24px_48px_rgba(0,0,0,0.6),inset_0_1px_1px_rgba(255,255,255,0.1),0_0_0_1px_rgba(255,255,255,0.02)]"
         >
             {/* Mic Button */}
             <button
                 onClick={handleMicClick}
-                className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 shadow-sm ${isActive
-                    ? "bg-[rgba(0,243,255,0.15)] text-cyan-300 shadow-[inset_0_0_12px_rgba(0,243,255,0.3)] border border-cyan-500/30"
+                className={`group relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 ${isActive
+                    ? "bg-[rgba(0,243,255,0.15)] text-cyan-300 shadow-[0_0_20px_rgba(0,243,255,0.2),inset_0_0_12px_rgba(0,243,255,0.3)] border border-cyan-500/30"
                     : "bg-transparent text-white/30 hover:bg-white/[0.05] hover:text-white/60 border border-transparent"
                     }`}
                 aria-label={isActive ? "Stop" : "Start"}
             >
-                {isActive ? <Mic size={16} /> : <MicOff size={16} />}
+                <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 bg-white/5 blur-md transition-opacity" />
+                {isActive ? <Mic size={16} className="relative z-10" /> : <MicOff size={16} className="relative z-10" />}
             </button>
 
             {/* State Label */}

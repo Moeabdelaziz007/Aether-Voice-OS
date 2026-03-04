@@ -95,24 +95,19 @@ body:has(.orb-container) {
   background: transparent !important;
 }
 
-/* ── Atmospheric Background — Multi-layer Gemini-style gradients + Hex Grid ── */
+/* ── Atmospheric Background — Multi-layer Gemini-style gradients + Hex Grid + Cinematic Grain ── */
 body {
   background:
-    /* Layer 1: Hexagonal Grid Surface */
+    /* Layer 1: Cinematic Grain Texture */
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E"),
+    /* Layer 2: Hexagonal Grid Surface */
     radial-gradient(circle at 50% 50%, rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.05) 0%, transparent 80%),
-    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60L4.02 45V15z' fill-opacity='0.02' fill='%23ffffff' fill-rule='evenodd'/%3E%3C/svg%3E"),
-    /* Layer 2: Persona-driven center glow */
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60L4.02 45V15z' fill-opacity='0.015' fill='%23ffffff' fill-rule='evenodd'/%3E%3C/svg%3E"),
+    /* Layer 3: Persona-driven center glow */
     radial-gradient(ellipse 60% 50% at 50% 55%,
-      rgba(var(--accent-r), var(--accent-g), var(--accent-b), calc(var(--glow-intensity) * 0.15)) 0%,
+      rgba(var(--accent-r), var(--accent-g), var(--accent-b), calc(var(--glow-intensity) * 0.12)) 0%,
       transparent 70%),
-    /* Layer 3: Subtle top-left atmospheric haze */
-    radial-gradient(circle at 15% 20%,
-      rgba(100, 60, 180, 0.04) 0%,
-      transparent 50%),
-    /* Layer 4: Subtle bottom-right warm haze */
-    radial-gradient(circle at 85% 80%,
-      rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.02) 0%,
-      transparent 40%),
+    /* Layer 4: Deep Void Contrast */
     var(--void);
   background-attachment: fixed;
   transition: background var(--t-glacial);
@@ -211,6 +206,24 @@ body {
 
 .brand-mark:hover {
   color: var(--text-40);
+  text-shadow: 0 0 8px rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.3);
+  animation: tech-flicker 0.2s ease-in-out infinite;
+}
+
+@keyframes tech-flicker {
+  0% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateX(1px);
+  }
+
+  100% {
+    opacity: 0.9;
+    transform: translateX(-0.5px);
+  }
 }
 
 /* Mode Indicators — Tiny breathing dots */

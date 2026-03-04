@@ -54,10 +54,20 @@ export default function HUDContainer({ children }: { children: React.ReactNode }
                             bg-[length:100%_4px,3px_100%]" />
 
             {/* Vignette Overlay for Depth */}
-            <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.7)_100%)] pointer-events-none" />
+            <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.8)_100%)] pointer-events-none" />
+
+            {/* Tactical Grid/Readouts (Top Right) */}
+            <div className="absolute top-10 right-32 font-mono text-[8px] tracking-[0.2em] text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.2)] pointer-events-none text-right hidden lg:block">
+                <div>SYSTEM_OS: V3.0-CORE</div>
+                <div>LOCAL_COORDS: {Math.floor(Math.random() * 100)}:{Math.floor(Math.random() * 100)}</div>
+                <div>NEURAL_LINK: ACTIVE</div>
+            </div>
+
+            {/* Global Flicker Layer */}
+            <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.02] bg-white mix-blend-overlay animate-flicker" />
 
             {/* Content Area (Actual UI) */}
-            <div className="relative z-10 w-full h-full pointer-events-auto">
+            <div className="relative z-20 w-full h-full pointer-events-auto">
                 {children}
             </div>
 

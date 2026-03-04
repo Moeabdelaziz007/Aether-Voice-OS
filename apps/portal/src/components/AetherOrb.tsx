@@ -171,21 +171,44 @@ export default function AetherOrb({ size = 240 }: Props) {
                 }
             }
 
-            // ── Thinking swirl particles ──
+            // ── Atmospheric Mist (Aura) ──
+            if (energy > 0.01) {
+                const mistCount = 12;
+                for (let i = 0; i < mistCount; i++) {
+                    const angle = (t * 0.5 + i * (Math.PI * 2 / mistCount));
+                    const pulse = Math.sin(t * 1.5 + i) * 10;
+                    const mx = cx + Math.cos(angle) * (orbRadius * 1.2 + pulse);
+                    const my = cy + Math.sin(angle) * (orbRadius * 1.2 + pulse);
+
+                    const mistGrad = ctx.createRadialGradient(mx, my, 0, mx, my, 30 * energy);
+                    mistGrad.addColorStop(0, colors.glow + "15");
+                    mistGrad.addColorStop(1, "transparent");
+
+                    ctx.beginPath();
+                    ctx.arc(mx, my, 30 * energy, 0, Math.PI * 2);
+                    ctx.fillStyle = mistGrad;
+                    ctx.fill();
+                }
+            }
+
+            // ── Thinking swirl particles (Orbital Physics V3) ──
             if (engineState === "THINKING") {
-                const pCount = 18; // Increased from 12 for denser neural look
+                const pCount = 28; // Higher density
                 for (let i = 0; i < pCount; i++) {
-                    const angle = (t * 2.5 + i * (Math.PI * 2 / pCount)) % (Math.PI * 2);
-                    const dist = orbRadius * 0.4 + Math.sin(t * 3.5 + i) * orbRadius * 0.3;
-                    const px = cx + Math.cos(angle) * dist;
-                    const py = cy + Math.sin(angle) * dist;
-                    const pSize = 1.5 + Math.sin(t * 5 + i * 0.9) * 2;
+                    const speedMultiplier = 1 + (i % 3) * 0.5;
+                    const orbitRadius = orbRadius * (0.4 + (i % 5) * 0.1);
+                    const angle = (t * 2.5 * speedMultiplier + i * (Math.PI * 2 / pCount)) % (Math.PI * 2);
+
+                    // Add slight wobble (elliptical orbit)
+                    const px = cx + Math.cos(angle) * orbitRadius;
+                    const py = cy + Math.sin(angle) * orbitRadius * 0.9;
+                    const pSize = 1.0 + Math.sin(t * 5 + i) * 1.5;
 
                     ctx.beginPath();
                     ctx.arc(px, py, pSize, 0, Math.PI * 2);
                     ctx.fillStyle = colors.glow;
-                    ctx.globalAlpha = 0.7 + Math.sin(t * 4 + i) * 0.3;
-                    ctx.shadowBlur = 10;
+                    ctx.globalAlpha = 0.6 + Math.sin(t * 4 + i) * 0.4;
+                    ctx.shadowBlur = 12;
                     ctx.shadowColor = colors.ring;
                     ctx.fill();
                     ctx.globalAlpha = 1;
