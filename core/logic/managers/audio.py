@@ -34,6 +34,7 @@ class AudioManager:
             paralinguistic_analyzer=self._paralinguistics,
             on_affective_data=on_affective_data,
         )
+        self._capture._on_audio_telemetry = self._gateway.broadcast
 
         self._playback = AudioPlayback(
             self._config.audio,

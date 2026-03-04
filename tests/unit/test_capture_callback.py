@@ -39,6 +39,7 @@ patcher = patch.dict(
 )
 patcher.start()
 
+import sys; from unittest.mock import Mock; sys.modules['pyaudio'] = Mock()
 from core.audio.capture import AudioCapture, SmoothMuter  # noqa: E402
 from core.infra.config import AudioConfig  # noqa: E402
 
@@ -136,7 +137,6 @@ def test_smooth_muter_no_large_boundary_discontinuity_click_proxy():
     jump = int(y2[0]) - int(y1[-1])
     assert abs(jump) < 8000  # generous bound; should not be a full-scale step
 
->>>>>>> origin/main
 
 @pytest.fixture
 def capture_instance():
