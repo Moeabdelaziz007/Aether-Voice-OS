@@ -2,7 +2,6 @@ import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
-
 # We use a scoped approach to mock missing dependencies to avoid global side effects
 # that could interfere with other tests in a real environment.
 def setup_mocks():
@@ -25,14 +24,11 @@ def setup_mocks():
         if module_name not in sys.modules:
             sys.modules[module_name] = MagicMock()
 
-
 # Initialize mocks for this module
 setup_mocks()
 
 import pytest  # noqa: E402
-
 from core.logic.managers.infra import InfraManager  # noqa: E402
-
 
 @pytest.fixture
 def mock_gateway():
@@ -40,10 +36,9 @@ def mock_gateway():
     gateway._bus = MagicMock()
     return gateway
 
-
 @pytest.fixture
 def infra_manager(mock_gateway):
-    # We still want to patch these in the test to ensure they are the ones we control
+    # We patch these in the test to ensure they are the ones we control
     with (
         patch("core.logic.managers.infra.FirebaseConnector"),
         patch("core.logic.managers.infra.SREWatchdog"),
@@ -51,10 +46,13 @@ def infra_manager(mock_gateway):
         manager = InfraManager(mock_gateway)
         return manager
 
-
 # Note: Using asyncio.run(infra_manager.initialize()) instead of @pytest.mark.asyncio
-# because pytest-asyncio is not available in the current environment.
+# because pytest-asyncio might not be available in the current environment or to avoid loop issues.
 
+def test_infra_manager_start_watchdog(infra_manager):
+    """Test that start_watchdog delegates correctly to the internal SREWatchdog instance."""
+    infra_manager.start_watchdog()
+    infra_manager._watchdog.start.assert_called_once()
 
 def test_infra_manager_initialize_success(infra_manager):
     infra_manager._firebase.initialize = AsyncMock(return_value=True)
@@ -76,11 +74,6 @@ def test_infra_manager_initialize_failure(infra_manager):
     assert result is False
     infra_manager._firebase.initialize.assert_called_once()
     infra_manager._firebase.start_session.assert_not_called()
-
-
-def test_infra_manager_start_watchdog(infra_manager):
-    infra_manager.start_watchdog()
-    infra_manager._watchdog.start.assert_called_once()
 
 
 def test_infra_manager_stop(infra_manager):
