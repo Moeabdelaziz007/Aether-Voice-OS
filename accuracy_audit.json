@@ -1,0 +1,64 @@
+{
+    "timestamp": 1772606954.9636095,
+    "healing_accuracy": [
+        {
+            "case": "Syntax Error",
+            "success": false,
+            "captured_context": false
+        },
+        {
+            "case": "Import Error",
+            "success": false,
+            "captured_context": false
+        },
+        {
+            "case": "Key Error",
+            "success": false,
+            "captured_context": false
+        }
+    ],
+    "handover_integrity": {
+        "hops": 10,
+        "success": true,
+        "bits_preserved": "100%"
+    },
+    "zero_shot_recovery": {
+        "mttr_seconds": 0.17717194557189941,
+        "success": false
+    },
+    "dispatch_ambiguity": {
+        "success": true,
+        "cases": [
+            {
+                "prompt": "Deploy the thing to the cloud",
+                "should_clarify": true,
+                "did_clarify": true,
+                "passed": true
+            },
+            {
+                "prompt": "Delete the stuff",
+                "should_clarify": true,
+                "did_clarify": true,
+                "passed": true
+            },
+            {
+                "prompt": "Remove it",
+                "should_clarify": true,
+                "did_clarify": true,
+                "passed": true
+            },
+            {
+                "prompt": "Deploy the backend service",
+                "should_clarify": false,
+                "did_clarify": false,
+                "passed": true
+            },
+            {
+                "prompt": "Delete user 123",
+                "should_clarify": false,
+                "did_clarify": false,
+                "passed": true
+            }
+        ]
+    }
+}
