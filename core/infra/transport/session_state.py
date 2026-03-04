@@ -401,7 +401,7 @@ class SessionStateManager:
             return
 
         # Check for stuck states
-        time_in_state = (datetime.now() - self._last_health_check).total_seconds()
+        (datetime.now() - self._last_health_check).total_seconds()
 
         if self._state == SessionState.ERROR:
             if self._consecutive_errors >= self._max_consecutive_errors:

@@ -23,9 +23,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
-from unittest.mock import MagicMock
 from enum import Enum
 from typing import Callable, Optional
+from unittest.mock import MagicMock
 
 from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture

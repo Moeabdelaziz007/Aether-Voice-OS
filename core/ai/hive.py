@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from core.services.registry import AetherRegistry
     from core.tools.router import ToolRouter
 
+from core.ai.compression import NeuralSummarizer
 from core.ai.handover_protocol import (
     HandoverContext,
     HandoverNegotiation,
@@ -30,7 +31,6 @@ from core.ai.handover_protocol import (
     ValidationCheckpoint,
     get_handover_protocol,
 )
-from core.ai.compression import NeuralSummarizer
 from core.ai.handover_telemetry import (
     FailureCategory,
     HandoverOutcome,
@@ -546,7 +546,7 @@ class HiveCoordinator:
             partial_output=partial_output,
         )
 
-        context = self._active_handovers.get(handover_id)
+        self._active_handovers.get(handover_id)
         return checkpoint
 
     def rollback_handover(self, handover_id: str) -> bool:

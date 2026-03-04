@@ -3,20 +3,19 @@ Aether Voice OS — Engine (Orchestrator).
 """
 
 from __future__ import annotations
+
 import asyncio
 import logging
 import signal
-import sys
 from typing import Any, Optional
 
 from core.infra.config import AetherConfig, load_config
 from core.infra.transport.gateway import AetherGateway
-from core.infra.cloud.firebase import FirebaseConnector # Note: might need update depending on move result
-from core.services.admin_api import AdminAPIServer, SHARED_STATE
-from core.tools.router import ToolRouter
+from core.logic.managers.agents import AgentManager
 from core.logic.managers.audio import AudioManager
 from core.logic.managers.infra import InfraManager
-from core.logic.managers.agents import AgentManager
+from core.services.admin_api import AdminAPIServer
+from core.tools.router import ToolRouter
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +61,7 @@ class AetherEngine:
 
     def _setup_vector_store(self) -> None:
         from pathlib import Path
+
         from core.tools.vector_store import LocalVectorStore
         root_dir = Path(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"
@@ -94,7 +94,17 @@ class AetherEngine:
 
     def _register_tools(self) -> None:
         # Tool registration remains centralized here or moved to a tool registry later
-        from core.tools import system_tool, tasks_tool, memory_tool, voice_tool, vision_tool, hive_tool, rag_tool, discovery_tool, context_scraper
+        from core.tools import (
+            context_scraper,
+            discovery_tool,
+            hive_tool,
+            memory_tool,
+            rag_tool,
+            system_tool,
+            tasks_tool,
+            vision_tool,
+            voice_tool,
+        )
         
         # Inject Firebase into tools
         tasks_tool.set_firebase_connector(self._infra._firebase)

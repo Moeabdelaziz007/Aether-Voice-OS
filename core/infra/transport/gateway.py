@@ -27,21 +27,21 @@ from google.genai import types
 from websockets.asyncio.server import Server, ServerConnection
 
 from core.ai.session import GeminiLiveSession
+from core.infra.config import AIConfig, GatewayConfig
+from core.infra.telemetry import get_tracer
+from core.infra.transport.bus import GlobalBus
 from core.infra.transport.messages import (
     AckMessage,
     ChallengeMessage,
     ErrorMessage,
     MessageType,
 )
-from core.infra.transport.bus import GlobalBus
 from core.infra.transport.session_state import (
     SessionMetadata,
     SessionState,
     SessionStateManager,
 )
-from core.infra.config import AIConfig, GatewayConfig
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
-from core.infra.telemetry import get_tracer
 
 logger = logging.getLogger(__name__)
 

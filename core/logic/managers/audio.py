@@ -1,10 +1,11 @@
-import logging
 import asyncio
-from typing import Optional, Any, Callable
+import logging
+from typing import Any, Callable
+
 from core.audio.capture import AudioCapture
+from core.audio.paralinguistics import ParalinguisticAnalyzer
 from core.audio.playback import AudioPlayback
 from core.audio.processing import AdaptiveVAD
-from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.infra.config import AetherConfig
 
 logger = logging.getLogger(__name__)

@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, Optional, Set
 
 try:
     import redis.asyncio as redis

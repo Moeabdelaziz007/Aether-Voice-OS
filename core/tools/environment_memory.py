@@ -6,10 +6,9 @@ It uses the LocalVectorStore to index frame descriptions (from vision pulses).
 """
 
 import logging
-import os
-from pathlib import Path
-from typing import Optional, List, Dict, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
 from core.tools.vector_store import LocalVectorStore
 

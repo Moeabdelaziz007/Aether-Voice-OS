@@ -1,11 +1,13 @@
+import argparse
 import asyncio
-import time
 import json
 import logging
-import psutil
 import os
-import argparse
+import time
 from datetime import datetime
+
+import psutil
+
 from core.engine import AetherEngine
 from core.infra.config import load_config
 from core.infra.transport.bus import GlobalBus
@@ -105,7 +107,7 @@ class StabilityTester:
         # Save results
         with open("stability_report.json", "w") as f:
             json.dump(self.results, f, indent=4)
-        print(f"📊 Stability Report saved to stability_report.json", flush=True)
+        print("📊 Stability Report saved to stability_report.json", flush=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

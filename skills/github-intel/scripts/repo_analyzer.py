@@ -1,9 +1,9 @@
-import os
-import sys
 import argparse
+import os
 import subprocess
 from collections import Counter
 from datetime import datetime
+
 
 def get_tree(path, depth=2, current_depth=0):
     if current_depth > depth:

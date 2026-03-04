@@ -23,8 +23,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
-    from core.tools.router import ToolRouter
     from core.infra.transport.gateway import AetherGateway
+    from core.tools.router import ToolRouter
 
 from google import genai
 from google.genai import types
@@ -32,10 +32,10 @@ from google.genai import types
 from core.ai.handover_protocol import HandoverContext, HandoverStatus
 from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
-from core.utils.errors import AIConnectionError, AISessionExpiredError
 from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
+from core.utils.errors import AIConnectionError, AISessionExpiredError
 
 logger = logging.getLogger(__name__)
 

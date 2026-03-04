@@ -1,8 +1,8 @@
-import os
-import sys
 import argparse
+import os
 import subprocess
 from datetime import datetime
+
 
 def is_text_file(file_path):
     """Check if a file is text-based based on common extensions."""

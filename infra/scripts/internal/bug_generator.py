@@ -1,6 +1,7 @@
 import os
 import textwrap
 
+
 class BugGenerator:
     def __init__(self, target_dir: str = "/tmp/aether_bugs"):
         self.target_dir = target_dir

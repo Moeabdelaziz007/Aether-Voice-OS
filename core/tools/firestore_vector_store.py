@@ -8,11 +8,12 @@ Uses Gemini for embedding generation and Firestore for persistent storage.
 from __future__ import annotations
 
 import logging
-from typing import Optional, List, Dict, Any
+from typing import Any, Dict, List, Optional
 
 import numpy as np
-from google import genai
 from firebase_admin import firestore
+from google import genai
+
 from core.infra.cloud.firebase.interface import FirebaseConnector
 
 logger = logging.getLogger(__name__)

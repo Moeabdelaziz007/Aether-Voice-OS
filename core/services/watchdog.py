@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 from core.infra.transport.bus import GlobalBus
 

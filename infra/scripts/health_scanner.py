@@ -19,15 +19,14 @@ Usage:
   python infra/scripts/health_scanner.py [--json] [--auto-fix]
 """
 
-import ast
-import os
-import sys
-import re
-import json
 import argparse
-from pathlib import Path
-from datetime import datetime
+import ast
+import json
+import os
+import re
 from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
 
 # ─── Configuration ────────────────────────────────────────────────────────────
 
@@ -387,7 +386,7 @@ def generate_report(py_count: int, ts_count: int, output_json: bool = False):
     # 3. Print Actionable Next Steps
     print(f"{'─' * 80}")
     print(f"  🤖 AUTOMATED FIXES: Generated {len(auto_fix_commands)} safe auto-fixes.")
-    print(f"  👉 Run fixes via: ./docs/audits/suggested_fixes.sh")
+    print("  👉 Run fixes via: ./docs/audits/suggested_fixes.sh")
     print(f"{'─' * 80}\n")
 
 

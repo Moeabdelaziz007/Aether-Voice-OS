@@ -6,21 +6,20 @@ Capture -> Processing -> Gemini Inference -> Gateway -> Playback.
 """
 
 import asyncio
-import time
 import json
-import numpy as np
 import logging
-from pathlib import Path
 import sys
-import os
+import time
 from pathlib import Path
+
+import numpy as np
 
 # Fix PYTHONPATH
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.infra.config import load_config
 from core.engine import AetherEngine
+from core.infra.config import load_config
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
@@ -113,7 +112,7 @@ class AetherBenchmarker:
         
         with open("performance_audit.json", "w") as f:
             json.dump(report, f, indent=4)
-        print(f"\n✅ Audit saved to performance_audit.json")
+        print("\n✅ Audit saved to performance_audit.json")
 
 if __name__ == "__main__":
     bench = AetherBenchmarker()

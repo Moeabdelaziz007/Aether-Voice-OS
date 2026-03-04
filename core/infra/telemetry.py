@@ -1,13 +1,12 @@
-import os
 import logging
-from typing import Optional, Dict, Any
+import os
+from typing import Optional
 
 from opentelemetry import trace as trace_api
+from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk import trace as trace_sdk
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.trace import Status, StatusCode
 
 logger = logging.getLogger(__name__)
 

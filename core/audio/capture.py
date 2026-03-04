@@ -16,11 +16,16 @@ from typing import Any, Callable, Optional
 import numpy as np
 import pyaudio
 
-from core.audio.dynamic_aec import DynamicAEC
 from core.audio.cortex import AECBridge
+from core.audio.dynamic_aec import DynamicAEC
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad, HyperVADResult
-from core.audio.state import audio_state, HysteresisGate
+from core.audio.processing import (
+    AdaptiveVAD,
+    HyperVADResult,
+    SilentAnalyzer,
+    energy_vad,
+)
+from core.audio.state import HysteresisGate, audio_state
 from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
 
