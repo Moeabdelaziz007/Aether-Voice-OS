@@ -12,7 +12,10 @@
  */
 
 import { useEffect, useRef, useMemo, useCallback, useState } from "react";
-import AetherLine from "@/components/AetherLine";
+import AetherCore from "@/components/AetherCore";
+import TelemetryFeed from "@/components/TelemetryFeed";
+import HUDContainer from "@/components/HUD/HUDContainer";
+import SystemAnalytics from "@/components/HUD/SystemAnalytics";
 import { useAudioPipeline } from "@/hooks/useAudioPipeline";
 import { useGeminiLive } from "@/hooks/useGeminiLive";
 import {
@@ -159,98 +162,111 @@ export default function AetherPortal() {
             {/* Siri-style Edge Glow */}
             <div className="edge-glow" />
 
-            <div ref={portalRef} className="portal">
-                {/* ── TOP BAR: Brand + Mode Dots ── */}
-                <div className="top-bar">
-                    <span
-                        className="brand-mark"
-                        onClick={toggleSettings}
-                        role="button"
-                        tabIndex={0}
-                        aria-label="Open settings"
-                    >
-                        AETHER
-                    </span>
-                    <div className="mode-indicators">
-                        <div
-                            className={`mode-dot ${isActive ? "active" : ""}`}
-                            data-mode="voice"
-                            title="Voice"
-                        />
-                        <div
-                            className={`mode-dot ${visionActive ? "active" : ""}`}
-                            data-mode="vision"
-                            title="Vision"
-                        />
-                        <div
-                            className={`mode-dot ${preferences.superpowers.codeSearch ? "active" : ""}`}
-                            data-mode="code"
-                            title="Code"
-                        />
-                    </div>
-                </div>
+            <HUDContainer>
+                {/* Left Panel: AI Diagnostics */}
+                <SystemAnalytics />
 
-                {/* ── HERO ZONE: Whispers + Orb ── */}
-                <div className="hero-zone">
-                    {/* User's last words — ghost text above */}
-                    {lastUser && (
-                        <div className="user-whisper" key={lastUser.id}>
-                            &ldquo;{lastUser.content}&rdquo;
+                <div ref={portalRef} className="portal">
+                    {/* Left Panel: AI Diagnostics */}
+                    <SystemAnalytics />
+
+                    {/* Right Panel: Data Stream */}
+                    <div className="absolute right-0 top-0 bottom-0 w-80 pointer-events-none">
+                        <TelemetryFeed />
+                    </div>
+
+                    {/* ── TOP BAR: Brand + Mode Dots ── */}
+                    <div className="top-bar">
+                        <span
+                            className="brand-mark"
+                            onClick={toggleSettings}
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Open settings"
+                        >
+                            AETHER
+                        </span>
+                        <div className="mode-indicators">
+                            <div
+                                className={`mode-dot ${isActive ? "active" : ""}`}
+                                data-mode="voice"
+                                title="Voice"
+                            />
+                            <div
+                                className={`mode-dot ${visionActive ? "active" : ""}`}
+                                data-mode="vision"
+                                title="Vision"
+                            />
+                            <div
+                                className={`mode-dot ${preferences.superpowers.codeSearch ? "active" : ""}`}
+                                data-mode="code"
+                                title="Code"
+                            />
                         </div>
-                    )}
-
-                    {/* The Orb — AetherLine visualizer */}
-                    <div className="orb-container" onClick={handleStart} style={{ cursor: isActive ? 'default' : 'pointer' }}>
-                        <div className="orb-aura" />
-                        <AetherLine />
                     </div>
 
-                    {/* State label below the orb */}
-                    <div className={`state-label ${isActive ? "active" : ""}`}>
-                        {stateLabel}
-                    </div>
+                    {/* ── HERO ZONE: Whispers + Orb ── */}
+                    <div className="hero-zone">
+                        {/* User's last words — ghost text above */}
+                        {lastUser && (
+                            <div className="user-whisper" key={lastUser.id}>
+                                &ldquo;{lastUser.content}&rdquo;
+                            </div>
+                        )}
 
-                    {/* Agent's response — elegant text below */}
-                    {lastAgent && (
-                        <div className="agent-whisper" key={lastAgent.id}>
-                            {lastAgent.content}
+                        {/* The Orb — 3D WebGL presence */}
+                        <div className="orb-container" onClick={handleStart} style={{ cursor: isActive ? 'default' : 'pointer' }}>
+                            <div className="orb-aura" />
+                            <AetherCore />
                         </div>
-                    )}
+
+                        {/* State label below the orb */}
+                        <div className={`state-label ${isActive ? "active" : ""}`}>
+                            {stateLabel}
+                        </div>
+
+                        {/* Agent's response — elegant text below */}
+                        {lastAgent && (
+                            <div className="agent-whisper" key={lastAgent.id}>
+                                {lastAgent.content}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* ── COMMAND BAR: Floating pill with power icons ── */}
+                    <div className="command-bar">
+                        {(Object.keys(SUPERPOWER_META) as (keyof Superpowers)[]).map((key) => {
+                            const meta = SUPERPOWER_META[key];
+                            const isOn = preferences.superpowers[key];
+                            return (
+                                <button
+                                    key={key}
+                                    className={`power-btn ${isOn ? "active" : ""}`}
+                                    onClick={() => toggleSuperpower(key)}
+                                    title={meta.label}
+                                    aria-label={`${meta.label}: ${isOn ? "on" : "off"}`}
+                                >
+                                    {meta.icon}
+                                </button>
+                            );
+                        })}
+
+                        <div className="bar-divider" />
+
+                        {/* Settings gear */}
+                        <button
+                            className="power-btn"
+                            onClick={toggleSettings}
+                            title="Settings"
+                            aria-label="Open settings"
+                        >
+                            ⚙️
+                        </button>
+
+                        <div className={heartbeatClass} />
+                    </div>
                 </div>
-
-                {/* ── COMMAND BAR: Floating pill with power icons ── */}
-                <div className="command-bar">
-                    {(Object.keys(SUPERPOWER_META) as (keyof Superpowers)[]).map((key) => {
-                        const meta = SUPERPOWER_META[key];
-                        const isOn = preferences.superpowers[key];
-                        return (
-                            <button
-                                key={key}
-                                className={`power-btn ${isOn ? "active" : ""}`}
-                                onClick={() => toggleSuperpower(key)}
-                                title={meta.label}
-                                aria-label={`${meta.label}: ${isOn ? "on" : "off"}`}
-                            >
-                                {meta.icon}
-                            </button>
-                        );
-                    })}
-
-                    <div className="bar-divider" />
-
-                    {/* Settings gear */}
-                    <button
-                        className="power-btn"
-                        onClick={toggleSettings}
-                        title="Settings"
-                        aria-label="Open settings"
-                    >
-                        ⚙️
-                    </button>
-
-                    <div className={heartbeatClass} />
-                </div>
-            </div>
+            </HUDContainer>
 
             {/* ── SETTINGS OVERLAY ── */}
             {settingsOpen && <SettingsPanel />}

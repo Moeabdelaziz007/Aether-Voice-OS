@@ -95,22 +95,26 @@ body:has(.orb-container) {
   background: transparent !important;
 }
 
-/* ── Atmospheric Background — Multi-layer Gemini-style gradients ── */
+/* ── Atmospheric Background — Multi-layer Gemini-style gradients + Hex Grid ── */
 body {
   background:
-    /* Layer 1: Persona-driven center glow */
+    /* Layer 1: Hexagonal Grid Surface */
+    radial-gradient(circle at 50% 50%, rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.05) 0%, transparent 80%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l25.98 15v30L30 60L4.02 45V15z' fill-opacity='0.02' fill='%23ffffff' fill-rule='evenodd'/%3E%3C/svg%3E"),
+    /* Layer 2: Persona-driven center glow */
     radial-gradient(ellipse 60% 50% at 50% 55%,
       rgba(var(--accent-r), var(--accent-g), var(--accent-b), calc(var(--glow-intensity) * 0.15)) 0%,
       transparent 70%),
-    /* Layer 2: Subtle top-left atmospheric haze */
+    /* Layer 3: Subtle top-left atmospheric haze */
     radial-gradient(circle at 15% 20%,
       rgba(100, 60, 180, 0.04) 0%,
       transparent 50%),
-    /* Layer 3: Subtle bottom-right warm haze */
+    /* Layer 4: Subtle bottom-right warm haze */
     radial-gradient(circle at 85% 80%,
       rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.02) 0%,
       transparent 40%),
     var(--void);
+  background-attachment: fixed;
   transition: background var(--t-glacial);
 }
 

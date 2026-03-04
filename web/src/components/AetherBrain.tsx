@@ -21,6 +21,7 @@ import { useGeminiLive, type GeminiToolCall } from "@/hooks/useGeminiLive";
 import { useAudioPipeline } from "@/hooks/useAudioPipeline";
 import { useVisionPulse } from "@/hooks/useVisionPulse";
 import { useAetherStore } from "@/store/useAetherStore";
+import { useTelemetry } from "@/hooks/useTelemetry";
 
 // Client-side VAD threshold — below this, audio is silence
 const VAD_RMS_THRESHOLD = 0.008;
@@ -36,6 +37,7 @@ export default function AetherBrain() {
     const pipeline = useAudioPipeline();
     const gemini = useGeminiLive();
     const vision = useVisionPulse();
+    const { addLog } = useTelemetry();
 
     // Silence tracking for client-side VAD
     const silenceStartRef = useRef(0);
@@ -55,14 +57,17 @@ export default function AetherBrain() {
                 store.setConnectionMode("gemini");
                 store.setSessionStartTime(Date.now());
                 store.addSystemLog("[Brain] Gemini Live session booting...");
+                addLog("Gemini Multimodal session booting", "info", "CORE");
 
                 // Auto-start vision capture after connection
                 try {
                     await vision.startCapture();
                     store.setVisionActive(true);
                     store.addSystemLog("[Brain] 👁 Vision Pulse activated");
+                    addLog("Vision Pulse initialized (1 FPS)", "success", "VISION");
                 } catch {
                     store.addSystemLog("[Brain] Vision capture skipped (no permission)");
+                    addLog("Vision capture denied/error", "error", "VISION");
                 }
             };
             boot().catch((err) => {
@@ -157,6 +162,7 @@ export default function AetherBrain() {
             pipeline.stopPlayback();
             store.setEngineState("INTERRUPTING");
             store.addSystemLog("[Brain] ⚡ Barge-in — playback stopped");
+            addLog("User interrupted. Flushing queue.", "action", "AUDIO");
         };
         return () => {
             gemini.onInterrupt.current = null;
@@ -208,6 +214,7 @@ export default function AetherBrain() {
                         gemini.sendVisionFrame(vision.latestFrame);
                     }
                     store.addSystemLog("[Brain] 😤 Emotion spike → priority vision injected");
+                    addLog("Emotion spike detected. Vision priority High.", "action", "BIO");
                 }
                 wasQuietRef.current = false;
             } else {
@@ -243,6 +250,7 @@ export default function AetherBrain() {
                     timestamp: Date.now(),
                 });
                 store.addSystemLog(`[Brain] 🔧 Silent ${name}: ${args.text || args.title}`);
+                addLog(`Tool Executed: ${name}`, "success", "CLAW");
             }
 
             // Send tool response back to Gemini
