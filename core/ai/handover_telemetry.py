@@ -15,6 +15,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, Field
+from opentelemetry.trace.status import Status, StatusCode
 
 from core.infra.telemetry import get_tracer
 
@@ -330,7 +331,7 @@ class HandoverTelemetry:
         self._active_recordings[handover_id] = record
 
         # OTLP Instrument
-        span = tracer.start_as_current_span(
+        span = tracer.start_span(
             f"handover:{source_agent}->{target_agent}",
             attributes={
                 "handover.id": handover_id,
