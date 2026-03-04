@@ -27,7 +27,7 @@ class AetherEngine:
         self._config = config or load_config()
         self._setup_logging()
         
-        print("  Engine: Initializing Managers...", flush=True)
+        print("  Engine: Loading config...", flush=True); print("CONFIG:", self._config.model_dump()); print("  Engine: Initializing Managers...", flush=True)
         self._router = ToolRouter()
         self._setup_vector_store()
         

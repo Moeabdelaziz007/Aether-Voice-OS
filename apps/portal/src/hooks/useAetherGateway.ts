@@ -44,7 +44,9 @@ function toHex(data: Uint8Array): string {
     return Array.from(data).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
-export function useAetherGateway(url = "ws://localhost:18789"): AetherGatewayReturn {
+const DEFAULT_URL = process.env.NEXT_PUBLIC_AETHER_GATEWAY_URL || "ws://localhost:18789";
+
+export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
     const [status, setStatus] = useState<GatewayStatus>("disconnected");
     const wsRef = useRef<WebSocket | null>(null);
     const store = useAetherStore();

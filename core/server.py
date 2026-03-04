@@ -31,7 +31,7 @@ sys.path.insert(0, str(ROOT))
 try:
     from dotenv import load_dotenv
 
-    load_dotenv(ROOT / ".env")
+    load_dotenv(ROOT.parent / ".env")
 except ImportError:
     pass  # dotenv is optional; env vars can be set externally
 
