@@ -4,7 +4,7 @@ Aether Voice OS — Cost Telemetry Verification.
 
 import logging
 import pytest
-from core.utils.telemetry import record_usage
+from core.infra.telemetry import record_usage
 
 def test_cost_recording_logic(caplog):
     """Verify that record_usage calculates and logs cost correctly."""

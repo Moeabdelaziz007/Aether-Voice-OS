@@ -771,6 +771,19 @@ h3 {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   REALM TRANSITIONS — Additional tokens for realm-based morphing
+   ══════════════════════════════════════════════════════════════════ */
+
+/* No-scrollbar utility for realm panels */
+@utility no-scrollbar {
+    &::-webkit-scrollbar {
+        display: none;
+    }
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
 /* ─── Responsive ─────────────────────────────── */
 @media (max-width: 640px) {
   .top-bar {

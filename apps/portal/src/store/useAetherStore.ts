@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+// ─── Realm Type ────────────────────────────────────────────
+export type RealmType = 'void' | 'skills' | 'memory' | 'identity' | 'neural';
+
 // ─── Core Types ────────────────────────────────────────────
 export type ConnectionStatus = "disconnected" | "connecting" | "connected" | "listening" | "speaking" | "error";
 export type EngineState = "IDLE" | "LISTENING" | "THINKING" | "SPEAKING" | "INTERRUPTING";
@@ -170,6 +173,9 @@ const DEFAULT_PREFERENCES: UserPreferences = {
 
 // ─── State Interface ───────────────────────────────────────
 interface AetherState {
+    // Realm
+    currentRealm: RealmType;
+
     // Connection
     status: ConnectionStatus;
     engineState: EngineState;
@@ -203,6 +209,9 @@ interface AetherState {
     persona: AetherPersona;
     preferences: UserPreferences;
     settingsOpen: boolean;
+
+    // Actions — Realm
+    setRealm: (realm: RealmType) => void;
 
     // Actions — Connection
     setStatus: (status: ConnectionStatus) => void;
@@ -241,6 +250,7 @@ export const useAetherStore = create<AetherState>()(
     persist(
         (set) => ({
             // Initial state
+            currentRealm: "void",
             status: "disconnected",
             engineState: "IDLE",
             connectionMode: 'gemini',
@@ -265,6 +275,9 @@ export const useAetherStore = create<AetherState>()(
             persona: DEFAULT_PERSONA,
             preferences: DEFAULT_PREFERENCES,
             settingsOpen: false,
+
+            // Realm actions
+            setRealm: (currentRealm) => set({ currentRealm }),
 
             // Connection actions
             setStatus: (status) => set({ status }),

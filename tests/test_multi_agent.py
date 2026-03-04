@@ -1,6 +1,6 @@
 import logging
 
-from core.ai.agents.orchestrator import MultiAgentOrchestrator
+from core.ai.handover.manager import MultiAgentOrchestrator
 from core.ai.agents.specialists.architect import ArchitectAgent
 from core.ai.agents.specialists.debugger import DebuggerAgent
 

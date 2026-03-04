@@ -135,6 +135,19 @@ AetherOS is now highly modular and ready for expert-level scale. **[REORG COMPLE
 - **Metrics Proved:** Achieved sub-200ms synthetic handshake latency with active software-based AEC hysteresis stability and 95% threshold semantic typo recovery for sub-agent tool dispatches.
 - **Docs:** Finalized dynamic Mermaid.js graphs mapped directly to the actual codebase logic for Devpost Judges.
 
+### Phase 18: Structural Deep-Clean & Segregation (2026-03-04)
+
+- **Objective:** Eliminate dangling root-level directories to achieve a minimalist "11/10 Zero-Friction Layout".
+- **Outcome:** Relocated `scripts` and `benchmarks` into `/infra/scripts` and `/tests/benchmarks` respectively. Moved all media to `/docs/assets`.
+- **Engine Tweak:** Fixed cascading broken internal imports after the `core/` reorganization (e.g., `FirebaseConnector`, `telemetry.py`, `orchestrator.py`).
+- **Status:** Monorepo architecture is now ultra-sleek and fully consolidated.
+
+### Phase 19: Expert E2E UI/UX Generation Protocol (2026-03-04)
+
+- **Objective:** Establish an expert-level UI/UX spec for the Kombai AI extension.
+- **Outcome:** Crafted `kombai_ui_prompt.md` covering the Living Voice Portal (Aether Orb centerpiece), the Identity Matrix, and Neural Configuration settings using Next.js 15, Tailwind, and Framer Motion.
+- **Status:** Ready for Kombai AI visual generation.
+
 ## The ClawHub Protocol: Self-Improving & Proactive Architecture [2026-03-03]
 
 **Core Cognitive Directives for AetherOS:**

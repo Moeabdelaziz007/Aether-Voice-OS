@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import unittest
+from unittest.mock import patch, MagicMock
 
-from core.tools.firebase_tool import FirebaseConnector
+from core.infra.cloud.firebase import FirebaseConnector
 
 logging.basicConfig(level=logging.INFO)
 
