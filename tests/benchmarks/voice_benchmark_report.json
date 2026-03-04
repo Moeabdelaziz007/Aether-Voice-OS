@@ -1,0 +1,106 @@
+{
+  "timestamp": "2026-03-04 06:50:14",
+  "model": "models/gemini-2.0-flash-exp",
+  "duration_s": 2.906735112000092,
+  "results": [
+    {
+      "test": "Round-Trip Latency (avg)",
+      "value": 5000.0,
+      "unit": "ms",
+      "passed": false,
+      "threshold": 500.0,
+      "details": "p95=5000ms, samples=3"
+    },
+    {
+      "test": "AI Voice Quality Score",
+      "value": 0.0,
+      "unit": "/100",
+      "passed": false,
+      "threshold": 70.0,
+      "details": "Error: 400 INVALID_ARGUMENT. {'error': {'code': 400, 'message': 'API key not valid. Please pass a valid API key.', 'status': 'INVALID_ARGUMENT', 'details': [{'@type': 'type.googleapis.com/google.rpc.ErrorInfo', 'reason': 'API_KEY_INVALID', 'domain': 'googleapis.com', 'metadata': {'service': 'generativelanguage.googleapis.com'}}, {'@type': 'type.googleapis.com/google.rpc.LocalizedMessage', 'locale': 'en-US', 'message': 'API key not valid. Please pass a valid API key.'}]}}"
+    },
+    {
+      "test": "AEC ERLE (cafe, 15.0dB)",
+      "value": 11.9165646035997,
+      "unit": "dB",
+      "passed": false,
+      "threshold": 12.0,
+      "details": "Converged frames: 30, peak=16.0dB"
+    },
+    {
+      "test": "AEC ERLE (keyboard, 15.0dB)",
+      "value": 12.192577500213853,
+      "unit": "dB",
+      "passed": true,
+      "threshold": 12.0,
+      "details": "Converged frames: 30, peak=18.9dB"
+    },
+    {
+      "test": "AEC ERLE (cafe, 10.0dB)",
+      "value": 7.014219426880441,
+      "unit": "dB",
+      "passed": false,
+      "threshold": 12.0,
+      "details": "Converged frames: 30, peak=9.9dB"
+    },
+    {
+      "test": "AEC ERLE (keyboard, 10.0dB)",
+      "value": 6.841104075265933,
+      "unit": "dB",
+      "passed": false,
+      "threshold": 12.0,
+      "details": "Converged frames: 30, peak=12.2dB"
+    },
+    {
+      "test": "AEC ERLE (cafe, 5.0dB)",
+      "value": 2.0591359681646066,
+      "unit": "dB",
+      "passed": false,
+      "threshold": 12.0,
+      "details": "Converged frames: 30, peak=5.4dB"
+    },
+    {
+      "test": "AEC ERLE (keyboard, 5.0dB)",
+      "value": 2.8340908439736783,
+      "unit": "dB",
+      "passed": false,
+      "threshold": 12.0,
+      "details": "Converged frames: 30, peak=9.5dB"
+    },
+    {
+      "test": "Cross-Talk (Double-Talk)",
+      "value": 117.11714895856822,
+      "unit": "%",
+      "passed": true,
+      "threshold": 60.0,
+      "details": "Detection accuracy: 100.0%, Retained RMS: 117.1%"
+    },
+    {
+      "test": "Emotion Detection F1-Score",
+      "value": 1.0,
+      "unit": "",
+      "passed": true,
+      "threshold": 0.75,
+      "details": "Macro-F1: 1.00\\nConfusion Matrix:\\ncalm         [20  0  0  0]\\nalert        [ 0 20  0  0]\\nfrustrated   [ 0  0 20  0]\\nflow_state   [ 0  0  0 20]\\n"
+    },
+    {
+      "test": "VAD Classification Accuracy",
+      "value": 100.0,
+      "unit": "%",
+      "passed": true,
+      "threshold": 85.0,
+      "details": "Correct: 40/40"
+    },
+    {
+      "test": "Thalamic Gate Latency",
+      "value": 0.8829012333371288,
+      "unit": "ms",
+      "passed": true,
+      "threshold": 2.0,
+      "details": "p99=3.54ms, frames=90"
+    }
+  ],
+  "suggestions": [
+    "Could not retrieve suggestions \u2014 check API key"
+  ]
+}

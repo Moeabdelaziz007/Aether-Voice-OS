@@ -160,6 +160,14 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                         }, latencyMs);
                     }
 
+                    // ── Audio Telemetry (Thalamic Gate VAD/RMS/Gain) ──
+                    else if (msg.type === "audio_telemetry") {
+                        // We use getState() to prevent React re-render loops if components subscribe directly.
+                        // However, updating Zustand will cause re-renders for direct subscribers,
+                        // so AetherOrb is updated to read it transitively.
+                        useAetherStore.getState().setAudioLevels(msg.payload.rms || 0, msg.payload.gain || 0);
+                    }
+
                     // ── Neural Event (Hive agent activity) ──
                     else if (msg.type === "neural_event") {
                         store.addNeuralEvent({

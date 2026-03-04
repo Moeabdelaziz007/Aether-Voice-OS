@@ -35,8 +35,6 @@ export default function AetherOrb({ size = 240 }: Props) {
     const timeRef = useRef(0);
 
     const engineState = useAetherStore((s) => s.engineState);
-    const micLevel = useAetherStore((s) => s.micLevel);
-    const speakerLevel = useAetherStore((s) => s.speakerLevel);
     const status = useAetherStore((s) => s.status);
     const setStatus = useAetherStore((s) => s.setStatus);
 
@@ -70,9 +68,13 @@ export default function AetherOrb({ size = 240 }: Props) {
             timeRef.current += 0.016; // ~60fps
             const t = timeRef.current;
 
+            // Read transient values directly to avoid React re-render loops
+            const currentMicLevel = useAetherStore.getState().micLevel;
+            const currentSpeakerLevel = useAetherStore.getState().speakerLevel;
+
             // Smooth interpolation (exponential smoothing)
-            smoothMic.current += (micLevel - smoothMic.current) * 0.15;
-            smoothSpeaker.current += (speakerLevel - smoothSpeaker.current) * 0.15;
+            smoothMic.current += (currentMicLevel - smoothMic.current) * 0.15;
+            smoothSpeaker.current += (currentSpeakerLevel - smoothSpeaker.current) * 0.15;
 
             const colors = STATE_COLORS[engineState] || STATE_COLORS.IDLE;
             const energy = engineState === "SPEAKING"
@@ -198,7 +200,7 @@ export default function AetherOrb({ size = 240 }: Props) {
 
         draw();
         return () => cancelAnimationFrame(animRef.current);
-    }, [size, engineState, micLevel, speakerLevel]);
+    }, [size, engineState]);
 
     return (
         <canvas

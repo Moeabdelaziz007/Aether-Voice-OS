@@ -63,7 +63,6 @@ class SREWatchdog:
         # Healing Registry: Pattern -> Action
         self._healing_registry: Dict[str, Callable] = {
             r"Redis.*connection.*failed": self._heal_bus_failure,
-            r"Audio.*capture.*error": self._heal_audio_failure,
             r"timeout.*error": self._heal_system_failure,
             r"connection.*error": self._heal_system_failure,
         }
@@ -168,12 +167,6 @@ class SREWatchdog:
             await self._bus.disconnect()
             await asyncio.sleep(2)
             await self._bus.connect()
-
-    async def _heal_audio_failure(self):
-        """Protocol: Audio device recovery."""
-        logger.info("🛠️ [HEAL] Signaling audio layer reset...")
-        # In a real system, this might restart the capture task.
-        pass
 
     async def _heal_system_failure(self):
         """Protocol: Timeout or generic connection error recovery via autonomous diagnosis."""
