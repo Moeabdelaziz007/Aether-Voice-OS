@@ -14,6 +14,7 @@ import RealmController from "@/components/realms/RealmController";
 import CommandBar from "@/components/shared/CommandBar";
 import EdgeGlow from "@/components/shared/EdgeGlow";
 import HUDContainer from "@/components/HUD/HUDContainer";
+import PoweredByStrip from "@/components/shared/PoweredByStrip";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useAetherStore } from "@/store/useAetherStore";
 
@@ -69,6 +70,9 @@ export default function AetherPortal() {
                     <RealmController />
                 </div>
             </HUDContainer>
+
+            {/* Google tech attribution — ambient, premium */}
+            <PoweredByStrip />
 
             {/* Command bar — always visible at bottom */}
             <CommandBar />

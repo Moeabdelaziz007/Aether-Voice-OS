@@ -22,7 +22,7 @@ Analyze any GitHub repository in AI-friendly format. Convert repos to markdown, 
 
 ## Quick Start
 
-PY=~/.openclaw/workspace/.venv/bin/python3
+PY=python3
 
 # Analyze a repository
 

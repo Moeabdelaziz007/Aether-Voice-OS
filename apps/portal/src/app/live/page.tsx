@@ -192,6 +192,29 @@ export default function LivePage() {
                 )}
             </div>
 
+            {/* Google Gemini attribution — visible during demo */}
+            <div
+                style={{
+                    position: "absolute",
+                    bottom: "3%",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    zIndex: 10,
+                }}
+            >
+                <p
+                    style={{
+                        fontFamily: "'JetBrains Mono', monospace",
+                        fontSize: "9px",
+                        letterSpacing: "0.2em",
+                        color: "rgba(255, 255, 255, 0.12)",
+                        margin: 0,
+                    }}
+                >
+                    Aether Voice OS · Powered by Gemini Live API
+                </p>
+            </div>
+
             {/* Breathing animation */}
             <style>{`
         @keyframes breathe {

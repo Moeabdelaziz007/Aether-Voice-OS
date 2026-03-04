@@ -171,6 +171,15 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     greeting: 'Hey! How can I help you today?',
 };
 
+// ─── Tool Call Entry ───────────────────────────────────────
+export interface ToolCallEntry {
+    id: string;
+    toolName: string;
+    status: 'running' | 'success' | 'error';
+    latencyMs?: number;
+    timestamp: number;
+}
+
 // ─── State Interface ───────────────────────────────────────
 interface AetherState {
     // Realm
@@ -205,6 +214,10 @@ interface AetherState {
     lastVisionPulse: string | null;
     zenMode: boolean;
 
+    // Multi-Agent (Hive)
+    activeSoul: string | null;
+    toolCallHistory: ToolCallEntry[];
+
     // Persona & Preferences
     persona: AetherPersona;
     preferences: UserPreferences;
@@ -235,6 +248,10 @@ interface AetherState {
     dismissHint: (id: string) => void;
     setVisionActive: (active: boolean) => void;
     clearTranscript: () => void;
+
+    // Actions — Multi-Agent (Hive)
+    setActiveSoul: (soul: string | null) => void;
+    addToolCall: (entry: Omit<ToolCallEntry, 'id' | 'timestamp'>) => void;
 
     // Actions — Persona & Preferences
     setPersona: (updates: Partial<AetherPersona>) => void;
@@ -272,6 +289,8 @@ export const useAetherStore = create<AetherState>()(
             visionActive: false,
             lastVisionPulse: null,
             zenMode: false,
+            activeSoul: null,
+            toolCallHistory: [],
             persona: DEFAULT_PERSONA,
             preferences: DEFAULT_PREFERENCES,
             settingsOpen: false,
@@ -332,6 +351,16 @@ export const useAetherStore = create<AetherState>()(
 
             setVisionActive: (visionActive) => set({ visionActive }),
             clearTranscript: () => set({ transcript: [] }),
+
+            // Multi-Agent actions
+            setActiveSoul: (activeSoul) => set({ activeSoul }),
+            addToolCall: (entry) => set((state) => ({
+                toolCallHistory: [...state.toolCallHistory, {
+                    ...entry,
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                }].slice(-50),
+            })),
 
             // Persona & Preferences actions
             setPersona: (updates) => set((state) => ({

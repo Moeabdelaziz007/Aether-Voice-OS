@@ -160,8 +160,7 @@ export default function AetherBrain() {
     // ─── 6.5 Vision Pulse → Gateway (1 FPS screen frames) ──────────
     useEffect(() => {
         if (vision.latestFrame && gateway.status === "connected") {
-            // Note: sendVisionFrame will need to be added to useAetherGateway hook
-            // gateway.sendVisionFrame(vision.latestFrame);
+            gateway.sendVisionFrame(vision.latestFrame);
         }
     }, [vision.latestFrame, gateway]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -187,7 +186,7 @@ export default function AetherBrain() {
                     // Frustration pattern detected → send priority vision frame
                     console.log("😤 Emotion spike detected — injecting priority vision");
                     if (vision.latestFrame) {
-                        // gateway.sendVisionFrame(vision.latestFrame);
+                        gateway.sendVisionFrame(vision.latestFrame);
                     }
                     store.addSystemLog("[Brain] 😤 Emotion spike → priority vision injected");
                     addLog("Emotion spike detected. Vision priority High.", "action", "BIO");
@@ -201,14 +200,16 @@ export default function AetherBrain() {
         return () => clearInterval(interval);
     }, [pipeline.state, pipeline.micLevel, pipeline.speakerLevel, store, gateway, vision]);
 
-    // ─── 8. Real latency → store (WIP: Implement in Gateway Hook) ───────────────────────────────────
+    // ─── 8. Real latency → store (from Gateway V2 tick measurement) ──
     useEffect(() => {
-        // if (gateway.latencyMs > 0) {
-        //     store.setLatencyMs(gateway.latencyMs);
-        // }
-    }, [store]);
+        if (gateway.latencyMs > 0) {
+            store.setLatencyMs(gateway.latencyMs);
+        }
+    }, [gateway.latencyMs, store]);
 
-    // ─── 9. Tool Call Dispatcher (WIP: Gateway event routing) ─────────────────
+    // ─── 9. Tool Call Dispatcher — Now handled by Gateway V2 event routing ──
+    // All tool_result and soul_handoff events are routed directly to the store
+    // by useAetherGateway V2. No additional wiring needed here.
 
     // ─── 10. Cleanup on disconnect ─────────────────────────────────
     useEffect(() => {
