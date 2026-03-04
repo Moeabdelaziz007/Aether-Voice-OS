@@ -2,6 +2,7 @@ import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
+
 # We use a scoped approach to mock missing dependencies to avoid global side effects
 # that could interfere with other tests in a real environment.
 def setup_mocks():
@@ -24,17 +25,21 @@ def setup_mocks():
         if module_name not in sys.modules:
             sys.modules[module_name] = MagicMock()
 
+
 # Initialize mocks for this module
 setup_mocks()
 
 import pytest  # noqa: E402
+
 from core.logic.managers.infra import InfraManager  # noqa: E402
+
 
 @pytest.fixture
 def mock_gateway():
     gateway = MagicMock()
     gateway._bus = MagicMock()
     return gateway
+
 
 @pytest.fixture
 def infra_manager(mock_gateway):
@@ -46,13 +51,17 @@ def infra_manager(mock_gateway):
         manager = InfraManager(mock_gateway)
         return manager
 
+
 # Note: Using asyncio.run(infra_manager.initialize()) instead of @pytest.mark.asyncio
-# because pytest-asyncio might not be available in the current environment or to avoid loop issues.
+# because pytest-asyncio might not be available in the current environment
+# or to avoid loop issues.
+
 
 def test_infra_manager_start_watchdog(infra_manager):
-    """Test that start_watchdog delegates correctly to the internal SREWatchdog instance."""
+    """Test that start_watchdog delegates correctly to the internal SREWatchdog."""
     infra_manager.start_watchdog()
     infra_manager._watchdog.start.assert_called_once()
+
 
 def test_infra_manager_initialize_success(infra_manager):
     infra_manager._firebase.initialize = AsyncMock(return_value=True)
