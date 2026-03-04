@@ -107,6 +107,12 @@ class AetherGateway:
         self._shutdown_event = asyncio.Event()
         self._session_restart_event = asyncio.Event()
 
+        # Bridge frontend events from GlobalBus to WebSocket clients
+        if self._bus:
+            asyncio.create_task(
+                self._bus.subscribe("frontend_events", self._handle_frontend_event)
+            )
+
         # Audio queues are now owned by the gateway
         self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
             maxsize=self._audio_config.mic_queue_max
@@ -507,6 +513,16 @@ class AetherGateway:
         """Callback from session for tool analytics."""
         # This could be used for logging or further processing.
         pass
+
+    async def _handle_frontend_event(self, event_data: dict) -> None:
+        """Bridge events from the GlobalBus to WebSocket clients."""
+        try:
+            event_type = event_data.get("type")
+            if event_type:
+                logger.debug("Bridging frontend event: %s", event_type)
+                await self.broadcast(event_type, event_data)
+        except Exception as e:
+            logger.error("Error bridging frontend event: %s", e)
 
     async def _handle_connection(self, ws: ServerConnection) -> None:
         """Handle a new WebSocket connection."""

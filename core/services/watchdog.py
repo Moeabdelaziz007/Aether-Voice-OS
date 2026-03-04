@@ -11,7 +11,9 @@ import re
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 
+from core.infra.cloud.firebase import FirebaseConnector
 from core.infra.transport.bus import GlobalBus
+from core.tools.healing_tool import diagnose_and_repair
 
 logger = logging.getLogger(__name__)
 
@@ -55,10 +57,15 @@ class SREWatchdog:
         self._loop_task: Optional[asyncio.Task] = None
         self._log_handler = WatchdogLogHandler(self._on_log_error)
 
+        # Internal Firebase Connector for logging
+        self._firebase = FirebaseConnector()
+
         # Healing Registry: Pattern -> Action
         self._healing_registry: Dict[str, Callable] = {
             r"Redis.*connection.*failed": self._heal_bus_failure,
             r"Audio.*capture.*error": self._heal_audio_failure,
+            r"timeout.*error": self._heal_system_failure,
+            r"connection.*error": self._heal_system_failure,
         }
 
         # Failure counts for throttling
@@ -167,3 +174,52 @@ class SREWatchdog:
         logger.info("🛠️ [HEAL] Signaling audio layer reset...")
         # In a real system, this might restart the capture task.
         pass
+
+    async def _heal_system_failure(self):
+        """Protocol: Timeout or generic connection error recovery via autonomous diagnosis."""
+        logger.info("🛠️ [HEAL] Initiating autonomous diagnosis for system failure...")
+
+        # Log diagnosing state
+        await self._firebase.log_repair_event(
+            filepath="system",
+            diagnosis="Timeout/Connection error detected. Initiating autonomous repair.",
+            status="diagnosing"
+        )
+
+        # Signal front-end about the repair state
+        if self._bus:
+            await self._bus.publish(
+                "frontend_events",
+                {"type": "repair_state", "status": "diagnosing", "message": "Initiating autonomous repair...", "log": "Timeout/Connection error detected."}
+            )
+
+        try:
+            # Trigger grounded diagnosis
+            diagnosis_result = await diagnose_and_repair()
+
+            # Log successful application/diagnosis
+            await self._firebase.log_repair_event(
+                filepath="system",
+                diagnosis=str(diagnosis_result.get("message", "Repair proposed")),
+                status="applied"
+            )
+
+            # Signal front-end about the repair state
+            if self._bus:
+                await self._bus.publish(
+                    "frontend_events",
+                    {"type": "repair_state", "status": "applied", "message": "Autonomous repair applied.", "log": str(diagnosis_result.get("message", ""))}
+                )
+
+        except Exception as e:
+            logger.error("Error during autonomous repair: %s", e)
+            await self._firebase.log_repair_event(
+                filepath="system",
+                diagnosis=f"Failed to apply repair: {e}",
+                status="failed"
+            )
+            if self._bus:
+                await self._bus.publish(
+                    "frontend_events",
+                    {"type": "repair_state", "status": "failed", "message": f"Repair failed: {e}", "log": f"Error: {e}"}
+                )
