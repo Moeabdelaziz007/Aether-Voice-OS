@@ -156,3 +156,71 @@ AetherOS is now highly modular and ready for expert-level scale. **[REORG COMPLE
 2. **Proactive Agent (Anticipation & Buffer):** Transform from a task-follower into a proactive partner. Maintain a working buffer of background refactoring tasks. Preemptively suggest architectural improvements, UI/UX expert polish, and API optimizations without waiting for explicit user prompts.
 3. **Find & Extend Skills:** Actively identify domain gaps. When tasked with complex operations (e.g., advanced Next.js routing, GCP configuration), Aether consults `.idx/Skills.md` and autonomously proposes new skill definitions to expand its 10x developer capabilities.
 4. **Unshakeable Goal Focus (Roadmap Memory):** The absolute objective is winning the **Gemini Live Agent Challenge 2026**. Every action, UI animation, and backend feature must explicitly contribute to creating an unmatched, zero-friction "Developer Co-Pilot". Aether will continuously audit the project against Devpost judging criteria.
+
+### Phase 20: Jules AI Integration & Phase 4 Planning [2026-03-04]
+
+- **Jules AI PR Campaign:** Reviewed, rated, and merged **11 PRs** from Jules AI (#2–#13). Contributions spanned:
+  - 🔒 **Security**: Removed hardcoded `GOOGLE_API_KEY`, fixed Firestore security rules.
+  - 🧪 **Testing**: Added unit tests for `InfraManager`, `A2A Handoff`, `SmoothMuter`.
+  - ⚡ **Performance**: Optimized Firebase `get_recent_sessions` with `asyncio.to_thread`, fixed `SmoothMuter` ramp discontinuities, optimized ZCR calculation.
+  - 🧹 **Code Health**: Cleaned unused imports, removed dead `_heal_gemini_timeout` method, fixed CI linting across 60+ files.
+- **Merge Conflict Resolution:** PR #8 required manual conflict resolution in `core/audio/capture.py` (SmoothMuter ramp logic, ZCR calculation) and `tests/unit/test_capture_callback.py` (fixture setup, test assertions). Successfully resolved by keeping the robust `np.linspace` ramp from main and the original ZCR sign-product method.
+- **Phase 4 Task Planning:** Deep-dived the entire codebase (`MultiAgentOrchestrator`, `FirebaseConnector`, `AetherOrb.tsx`, `useAetherGateway.ts`) to craft 3 complex architectural tasks for Jules:
+  1. Real-time Audio VAD & Dynamic Jitter Buffer (Python → WebSocket → React Orb)
+  2. ADK Handoff Visual Triggers via Firebase Realtime Streams (with 3s abort window)
+  3. Autonomous Incident Recovery & UI Error Boundaries (SREWatchdog → healing_tool → React)
+- **Status:** All PRs merged/closed. Phase 4 task document ready at `jules_complex_tasks_phase_4.md`.
+- **CRITICAL REMINDER:** Revoke the exposed API key (`AIzaSyDYi...`) in Google Cloud Console.
+
+### Phase 21: Jules AI Benchmark Maximization & Phase 4 Execution [2026-03-04]
+
+- **Jules AI PR Campaign (Round 2):** Reviewed, rated, and merged **12 additional PRs** (#15–#24, #26). Closed #16 (conflicts) and #25 (trivial/off-task).
+
+#### Benchmark Maximization (Phase 10) — PRs #15–#23
+
+- **Voice Quality Benchmark** (`tests/benchmarks/voice_quality_benchmark.py`) — PR #22 (9/10):
+  - Added `generate_cafe_noise()` and `generate_keyboard_noise()` with configurable SNR (15dB, 10dB, 5dB).
+  - Implemented `benchmark_double_talk_performance()` — validates DynamicAEC flags `double_talk_detected=True` and preserves ≥60% near-end RMS.
+  - Added `benchmark_emotion_f1_score()` using `sklearn.metrics.f1_score` across 4 classes (calm, alert, frustrated, flow_state) with 0.75 target.
+- **E2E Performance Benchmark** (`infra/scripts/benchmark.py`) — PR #21 (8/10):
+  - True Network RTT via WebSocket `ws.ping()`/`pong_waiter`.
+  - Memory profiling via `tracemalloc` (peak usage, top 10 allocations).
+  - 50-concurrent Firebase write load test for ingestion throttling measurement.
+  - Firebase `log_knowledge` optimized to `asyncio.to_thread` for non-blocking writes.
+- **ADK Accuracy Benchmark** (`infra/scripts/accuracy_benchmark.py`) — PR #23 (9/10):
+  - `run_zero_shot_recovery_bench()` — simulates WebSocket termination, measures MTTR via `healing_tool`.
+  - `run_dispatch_ambiguity_bench()` — tests MultiAgentOrchestrator with destructive+ambiguous prompt guard (5 test cases).
+  - Added ambiguity guard in `MultiAgentOrchestrator.collaborate()` — returns `clarification_request` for vague destructive commands.
+- **Infrastructure PRs** (#15, #17–#20):
+  - Dependency checker refactored to `importlib.import_module` (PR #17).
+  - Unit tests for `InfraManager`, `AgentManager`, `SessionStateManager`, `LatencyOptimizer` (PRs #18, #19).
+  - Removed dead `_heal_audio_failure` from SREWatchdog (PR #20).
+  - Fixed `handover_telemetry.py` span API (`start_span` vs `start_as_current_span`).
+
+#### Phase 4 Architectural Execution — PRs #24, #26
+
+- **Real-time Audio Telemetry Bridge** (`core/audio/capture.py` → WebSocket → React) — PR #24 (9.5/10):
+  - Engineered `AdaptiveJitterBuffer` class (target 60ms, max 200ms) for stable AEC reference signal.
+  - 15Hz throttled telemetry broadcast (`time.monotonic()`) with VAD/RMS/Gain data.
+  - `gateway.py` receives telemetry and broadcasts to WebSocket clients.
+  - `useAetherGateway.ts` handles `audio_telemetry` events via Zustand `getState()` (zero re-render).
+  - `AetherOrb.tsx` reads transient audio levels for energyPulse animation.
+  - Tests: `test_telemetry.py` (15Hz throttle), `orbRender.test.tsx` (Vitest React).
+- **Autonomous Neural Healing Pipeline** (`core/services/watchdog.py` → Frontend) — PR #26 (8.5/10):
+  - `_heal_system_failure()` with 3-step state machine: `diagnosing` → `applied` → `failed`.
+  - Each step logged to Firebase via `log_repair_event()` and published to GlobalBus `frontend_events`.
+  - `gateway.py` bridge: `_handle_frontend_event()` subscribes to `frontend_events` and broadcasts to WebSocket.
+  - `watchdog.py` healing registry extended with `timeout.*error` and `connection.*error` patterns.
+  - Tests: `test_watchdog_system_failure_flow` (full pipeline mock: Firebase + Bus assertions).
+  - **Note:** `SystemFailure.tsx` file created but empty — React UI pending.
+
+#### Merge Conflict Resolutions
+
+- PR #24: Resolved conflict in `tests/unit/test_infra_manager.py` (import formatting — kept `noqa: E402`).
+- PR #26: Resolved conflict in `core/services/watchdog.py` (kept `_heal_system_failure`, honored PR #20's removal of `_heal_audio_failure`).
+
+#### Scratch Files to Clean
+
+- `fix_ruff.py`, `fix_ruff2.py`, `plan.md` — committed by Jules in PR #24, should be deleted.
+
+- **Status:** All Phase 10 benchmarks and 2/3 Phase 4 architectural tasks complete. SystemFailure.tsx UI still pending.
