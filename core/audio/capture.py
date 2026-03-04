@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import threading
+import time
 from typing import Any, Callable, Optional
 
 import numpy as np
@@ -31,6 +32,44 @@ from core.utils.errors import AudioDeviceNotFoundError
 
 logger = logging.getLogger(__name__)
 
+
+
+class AdaptiveJitterBuffer:
+    """
+    A software jitter buffer to smooth bursty playback/far-end arrivals,
+    ensuring a stable reference signal for AEC to prevent convergence loss.
+    """
+
+    def __init__(
+        self,
+        target_latency_ms: float = 60.0,
+        max_latency_ms: float = 200.0,
+        sample_rate: int = 16000
+    ) -> None:
+        self.sample_rate = sample_rate
+        self.target_latency_samples = int(target_latency_ms * sample_rate / 1000)
+        self.max_latency_samples = int(max_latency_ms * sample_rate / 1000)
+        self.buffer = np.array([], dtype=np.int16)
+
+    def write(self, pcm_data: np.ndarray) -> None:
+        """Append new far-end audio data."""
+        self.buffer = np.concatenate([self.buffer, pcm_data])
+        # Force drain if we exceed max latency to prevent infinite lag
+        if len(self.buffer) > self.max_latency_samples:
+            self.buffer = self.buffer[-self.max_latency_samples:]
+
+    def read(self, num_samples: int) -> np.ndarray:
+        """Read contiguous block of samples, zero-padding on underrun."""
+        if len(self.buffer) >= num_samples:
+            out = self.buffer[:num_samples]
+            self.buffer = self.buffer[num_samples:]
+            return out
+        else:
+            # Underrun: provide what we have and pad with silence
+            out = np.zeros(num_samples, dtype=np.int16)
+            out[:len(self.buffer)] = self.buffer
+            self.buffer = np.array([], dtype=np.int16)
+            return out
 
 class SmoothMuter:
     """Applies graceful, ramped gain modifications to avoid pops/clicks.
@@ -77,37 +116,11 @@ class SmoothMuter:
         delta = target - start
         remaining = int(np.ceil(abs(delta) * self._ramp_samples))
 
-<<<<<<< HEAD
-        if ramp_len > 0:
-            ramp = np.linspace(
-                self._current_gain + step,         # Start one step ahead
-                self._current_gain + (step * ramp_len),
-                ramp_len,
-                dtype=np.float32,
-            )
-
-            # If we are finishing the ramp in this chunk, make SURE the last value is exactly target
-            if ramp_len == steps_needed:
-                ramp[-1] = self._target_gain
-
-            gains[:ramp_len] = ramp
-            self._current_gain = float(ramp[-1])
-
-        # Fill the rest of the chunk with whatever the current gain is
-        if ramp_len < chunk_len:
-            gains[ramp_len:] = self._target_gain
-            self._current_gain = self._target_gain
-
-        # Optional: Keep a very tiny snap just for IEEE float math drift
-        if abs(self._current_gain - self._target_gain) < 1e-4:
-            self._current_gain = self._target_gain
-=======
         if remaining <= 0:
             self._current_gain = target
             gains = np.full(chunk_len, target, dtype=np.float32)
         else:
             ramp_len = min(chunk_len, remaining)
->>>>>>> origin/main
 
             # Use endpoint=True so the last sample of the ramp hits the exact
             # intermediate value (or the target if ramp completes in this chunk).
@@ -188,6 +201,8 @@ class AudioCapture:
         self._vad = vad_engine
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
+        self._on_audio_telemetry = None
+        self._last_telemetry_time = 0.0
         self._state_lock = threading.Lock()
 
         self._hysteresis = HysteresisGate()
@@ -210,8 +225,12 @@ class AudioCapture:
         self._mute_delay_remaining = 0
         self._unmute_delay_remaining = 0
 
-        # Far-end buffer for AEC reference signal
-        self._far_end_buffer = np.array([], dtype=np.int16)
+        # Adaptive Jitter Buffer for AEC reference signal
+        self._jitter_buffer = AdaptiveJitterBuffer(
+            target_latency_ms=60.0,
+            max_latency_ms=200.0,
+            sample_rate=self._config.send_sample_rate
+        )
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
         """Thread-safe injection into the asyncio event loop.
@@ -255,13 +274,13 @@ class AudioCapture:
 
         # 1. Dynamic AEC Processing
         # Read bit-perfect far-end (AI output) reference from shared PCM buffer
-        # This replaces the placeholder ai_spectrum logic for 10x precision.
-        far_end_ref = audio_state.far_end_pcm.read_last(len(pcm_chunk))
+        # Write any new data to our jitter buffer
+        new_far_end = audio_state.far_end_pcm.read_last(len(pcm_chunk))
+        if len(new_far_end) > 0:
+            self._jitter_buffer.write(new_far_end)
 
-        # Pad with zeros if reference buffer is underrun (startup/jitter)
-        if len(far_end_ref) < len(pcm_chunk):
-            padding = np.zeros(len(pcm_chunk) - len(far_end_ref), dtype=np.int16)
-            far_end_ref = np.concatenate([far_end_ref, padding])
+        # Read exactly chunk size from jitter buffer
+        far_end_ref = self._jitter_buffer.read(len(pcm_chunk))
 
         cleaned_chunk, aec_state = self._dynamic_aec.process_frame(
             pcm_chunk, far_end_ref
@@ -345,13 +364,6 @@ class AudioCapture:
         audio_state.is_soft = vad.is_soft
         audio_state.is_hard = vad.is_hard
 
-<<<<<<< HEAD
-        if len(processed_chunk) > 1:
-            s1 = processed_chunk[:-1].astype(np.int32)
-            s2 = processed_chunk[1:].astype(np.int32)
-            signs = s1 * s2
-            audio_state.last_zcr = float(np.count_nonzero(signs < 0)) / len(processed_chunk)
-=======
         # Low-allocation ZCR (zero-crossing rate) calculation.
         # Count sign changes without building diff/sign/where intermediate arrays.
         if len(processed_chunk) > 1:
@@ -359,14 +371,9 @@ class AudioCapture:
             curr = processed_chunk[1:]
             # Crossing when sign differs or either is zero.
             crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
-<<<<<<< ours
-            audio_state.last_zcr = float(np.count_nonzero(crossings) / len(processed_chunk))
->>>>>>> origin/main
-=======
             audio_state.last_zcr = float(
                 np.count_nonzero(crossings) / len(processed_chunk)
             )
->>>>>>> theirs
         else:
             audio_state.last_zcr = 0.0
 
@@ -377,6 +384,21 @@ class AudioCapture:
             ).value
         else:
             audio_state.silence_type = "speech"
+
+        # Telemetry Broadcast: Throttle to ~15Hz
+        now = time.monotonic()
+        if now - self._last_telemetry_time >= 1.0 / 15.0:
+            self._last_telemetry_time = now
+            if getattr(self, "_on_audio_telemetry", None) and \
+               self._loop and not self._loop.is_closed():
+                payload = {
+                    "rms": vad.energy_rms,
+                    "gain": self._smooth_muter._current_gain
+                }
+                asyncio.run_coroutine_threadsafe(
+                    self._on_audio_telemetry("audio_telemetry", payload),
+                    self._loop
+                )
 
         if self._paralinguistic_analyzer and self._on_affective_data:
             if vad.is_hard or vad.energy_rms < 0.05:
