@@ -77,37 +77,15 @@ class SmoothMuter:
         delta = target - start
         remaining = int(np.ceil(abs(delta) * self._ramp_samples))
 
-<<<<<<< HEAD
-        if ramp_len > 0:
-            ramp = np.linspace(
-                self._current_gain + step,         # Start one step ahead
-                self._current_gain + (step * ramp_len),
-                ramp_len,
-                dtype=np.float32,
-            )
-
-            # If we are finishing the ramp in this chunk, make SURE the last value is exactly target
-            if ramp_len == steps_needed:
-                ramp[-1] = self._target_gain
-
-            gains[:ramp_len] = ramp
-            self._current_gain = float(ramp[-1])
-
-        # Fill the rest of the chunk with whatever the current gain is
-        if ramp_len < chunk_len:
-            gains[ramp_len:] = self._target_gain
-            self._current_gain = self._target_gain
-
         # Optional: Keep a very tiny snap just for IEEE float math drift
         if abs(self._current_gain - self._target_gain) < 1e-4:
             self._current_gain = self._target_gain
-=======
+
         if remaining <= 0:
             self._current_gain = target
             gains = np.full(chunk_len, target, dtype=np.float32)
         else:
             ramp_len = min(chunk_len, remaining)
->>>>>>> origin/main
 
             # Use endpoint=True so the last sample of the ramp hits the exact
             # intermediate value (or the target if ramp completes in this chunk).
@@ -230,7 +208,7 @@ class AudioCapture:
 
             try:
                 self._async_queue.get_nowait()
-                if hasattr(audio_state, 'capture_queue_drops'):
+                if hasattr(audio_state, "capture_queue_drops"):
                     audio_state.capture_queue_drops += 1
             except asyncio.QueueEmpty:
                 pass
@@ -345,13 +323,6 @@ class AudioCapture:
         audio_state.is_soft = vad.is_soft
         audio_state.is_hard = vad.is_hard
 
-<<<<<<< HEAD
-        if len(processed_chunk) > 1:
-            s1 = processed_chunk[:-1].astype(np.int32)
-            s2 = processed_chunk[1:].astype(np.int32)
-            signs = s1 * s2
-            audio_state.last_zcr = float(np.count_nonzero(signs < 0)) / len(processed_chunk)
-=======
         # Low-allocation ZCR (zero-crossing rate) calculation.
         # Count sign changes without building diff/sign/where intermediate arrays.
         if len(processed_chunk) > 1:
@@ -359,14 +330,9 @@ class AudioCapture:
             curr = processed_chunk[1:]
             # Crossing when sign differs or either is zero.
             crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
-<<<<<<< ours
-            audio_state.last_zcr = float(np.count_nonzero(crossings) / len(processed_chunk))
->>>>>>> origin/main
-=======
             audio_state.last_zcr = float(
                 np.count_nonzero(crossings) / len(processed_chunk)
             )
->>>>>>> theirs
         else:
             audio_state.last_zcr = 0.0
 

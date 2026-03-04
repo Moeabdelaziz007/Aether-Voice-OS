@@ -12,13 +12,14 @@ from core.tools.healing_tool import diagnose_and_repair
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AetherAccuracy")
 
+
 class AccuracyBench:
     def __init__(self):
         self.bug_gen = BugGenerator()
         self.results = {
             "timestamp": time.time(),
             "healing_accuracy": [],
-            "handover_integrity": {}
+            "handover_integrity": {},
         }
 
     async def run_healing_bench(self):
@@ -39,14 +40,14 @@ class AccuracyBench:
         for name, gen_fn, expected_keyword in test_cases:
             bug_path = gen_fn()
             print(f"  Testing: {name} in {bug_path}", flush=True)
-            
+
             # Direct tool call via internal API
             # Note: healing_tool uses subprocess to tail logs, for benchmark we mock
             # log file
             log_dir = ".aether/logs"
             os.makedirs(log_dir, exist_ok=True)
             log_path = os.path.join(log_dir, "session.log")
-            
+
             # Simulate crash log
             with open(log_path, "w") as f:
                 f.write(f"Traceback in {bug_path}:\nError: {expected_keyword}")
@@ -56,11 +57,13 @@ class AccuracyBench:
             )
 
             success = expected_keyword in diagnosis.get("terminal_output", "")
-            self.results["healing_accuracy"].append({
-                "case": name,
-                "success": success,
-                "captured_context": diagnosis.get("status") == "analysis_ready"
-            })
+            self.results["healing_accuracy"].append(
+                {
+                    "case": name,
+                    "success": success,
+                    "captured_context": diagnosis.get("status") == "analysis_ready",
+                }
+            )
             print(f"  Result: {'✅' if success else '❌'}", flush=True)
 
     async def run_handover_bench(self, hops: int = 10):
@@ -88,29 +91,30 @@ class AccuracyBench:
             current_payload = json.loads(serialized)
             current_payload["hop_count"] += 1
             if i % 2 == 0:
-                print(f"  Hop {i+1} complete...", flush=True)
+                print(f"  Hop {i + 1} complete...", flush=True)
 
         integrity_success = (
-            current_payload["seed_key"] == initial_data["seed_key"] and
-            current_payload["secret"] == initial_data["secret"] and
-            current_payload["hop_count"] == hops
+            current_payload["seed_key"] == initial_data["seed_key"]
+            and current_payload["secret"] == initial_data["secret"]
+            and current_payload["hop_count"] == hops
         )
-        
+
         self.results["handover_integrity"] = {
             "hops": hops,
             "success": integrity_success,
-            "bits_preserved": "100%" if integrity_success else "FAIL"
+            "bits_preserved": "100%" if integrity_success else "FAIL",
         }
         print(f"  Integrity: {'✅' if integrity_success else '❌'}", flush=True)
 
     async def execute(self):
         await self.run_healing_bench()
         await self.run_handover_bench()
-        
+
         with open("accuracy_audit.json", "w") as f:
             json.dump(self.results, f, indent=4)
         print("📊 Accuracy Audit saved to accuracy_audit.json", flush=True)
         self.bug_gen.cleanup()
+
 
 if __name__ == "__main__":
     bench = AccuracyBench()

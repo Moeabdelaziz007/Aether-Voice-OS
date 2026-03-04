@@ -15,6 +15,7 @@ class AudioConfig(BaseModel):
     (receive_sample_rate). chunk_size configures callback buffer size; queue
     sizes are kept small to bound latency.
     """
+
     mic_queue_max: int = 5
     send_sample_rate: int = 16000
     receive_sample_rate: int = 24000
@@ -28,6 +29,7 @@ class AudioConfig(BaseModel):
 
 class GeminiModel(str, Enum):
     """Model IDs for Gemini Live/Native Audio used by AIConfig."""
+
     FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
     LIVE_FLASH = "gemini-live-2.5-flash-preview"
 
@@ -39,6 +41,7 @@ class AIConfig(BaseSettings):
     features, proactive vision/audio, and optional thinking budget. Reads
     GOOGLE_API_KEY and related fields from a .env file by default.
     """
+
     api_key: str = Field(..., alias="GOOGLE_API_KEY")
     model: GeminiModel = GeminiModel.LIVE_FLASH
     api_version: str = "v1alpha"
@@ -74,6 +77,7 @@ class GatewayConfig(BaseModel):
     Controls bind host/port, heartbeat timing, and receive sample rate for
     gateway streams.
     """
+
     host: str = "0.0.0.0"
     port: int = 18789
     tick_interval_s: float = 15.0

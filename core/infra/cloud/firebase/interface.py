@@ -77,6 +77,7 @@ class FirebaseConnector:
                         "device": "desktop-mac",
                     }
                 )
+
             await asyncio.to_thread(_write)
             logger.info(f"Session ID: {self._session_id}")
         except Exception as e:
@@ -107,6 +108,7 @@ class FirebaseConnector:
                     .collection("messages")
                     .add(msg_data)
                 )
+
             await asyncio.to_thread(_write)
         except Exception as e:
             logger.error(f"Failed to log message: {e}")
@@ -133,6 +135,7 @@ class FirebaseConnector:
                     .collection("metrics")
                     .add(data)
                 )
+
             await asyncio.to_thread(_write)
         except Exception as e:
             # Debug level to avoid spamming logs

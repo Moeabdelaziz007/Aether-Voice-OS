@@ -19,8 +19,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.engine import AetherEngine
-from core.infra.config import load_config
+from core.engine import AetherEngine  # noqa: E402
+from core.infra.config import load_config  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
@@ -36,7 +36,8 @@ class AetherBenchmarker:
 
     async def run_benchmark(self, iterations: int = 10):
         print(
-            f"🚀 [BENCHMARK] Starting Real-World E2E Audit ({iterations} iterations)...",
+            f"🚀 [BENCHMARK] Starting Real-World E2E Audit "
+            f"({iterations} iterations)...",
             flush=True,
         )
         # Start tracemalloc to track GC pauses/leaks in zero-allocation frames
@@ -81,11 +82,16 @@ class AetherBenchmarker:
 
         print("🚀 [BENCHMARK] Engine stabilized. Proceeding.", flush=True)
 
-        print("📊 [BENCHMARK] Measuring True Network RTT via Gemini WebSocket Ping...", flush=True)
+        print(
+            "📊 [BENCHMARK] Measuring True Network RTT via Gemini WebSocket Ping...",
+            flush=True,
+        )
         # Extract active Gemini Live Session websocket
         session = self.engine._gateway.get_session()
-        if not session or not session._session or not hasattr(session._session, '_ws'):
-            print("❌ [BENCHMARK] Could not find active Gemini Live WebSocket. Aborting.")
+        if not session or not session._session or not hasattr(session._session, "_ws"):
+            print(
+                "❌ [BENCHMARK] Could not find active Gemini Live WebSocket. Aborting."
+            )
             self.engine._shutdown_event.set()
             await engine_task
             return
@@ -93,7 +99,8 @@ class AetherBenchmarker:
         ws = session._session._ws
         for i in range(iterations):
             try:
-                # Manually measure RTT around ping/pong since the future might return None
+                # Manually measure RTT around ping/pong since the future might
+                # return None
                 ping_start = time.perf_counter()
                 pong_waiter = await ws.ping()
                 await pong_waiter
@@ -130,7 +137,7 @@ class AetherBenchmarker:
                     print(f"❌ [BENCHMARK] Write failed: {res}")
                 else:
                     self.fb_latencies.append(res)
-            print(f"✅ [BENCHMARK] Load test complete. 50 writes processed.", flush=True)
+            print("✅ [BENCHMARK] Load test complete. 50 writes processed.", flush=True)
 
         self._report()
 
@@ -141,7 +148,7 @@ class AetherBenchmarker:
 
     def _compute_memory_stats(self, snap1, snap2):
         print("🧠 [BENCHMARK] Computing Memory Allocation Stats...")
-        stats = snap2.compare_to(snap1, 'lineno')
+        stats = snap2.compare_to(snap1, "lineno")
         top_allocations = []
         for stat in stats[:10]:
             top_allocations.append(str(stat))
@@ -150,7 +157,7 @@ class AetherBenchmarker:
         self.mem_stats = {
             "current_bytes": current,
             "peak_bytes": peak,
-            "top_diff": top_allocations
+            "top_diff": top_allocations,
         }
 
     def _report(self):
@@ -164,10 +171,10 @@ class AetherBenchmarker:
                 "max": float(np.max(lats)) if len(lats) > 0 else 0,
                 "count": len(lats),
             },
-            "memory_stats": self.mem_stats
+            "memory_stats": self.mem_stats,
         }
 
-        if hasattr(self, 'fb_latencies') and len(self.fb_latencies) > 0:
+        if hasattr(self, "fb_latencies") and len(self.fb_latencies) > 0:
             fb_lats = np.array(self.fb_latencies)
             report["firebase_writes_ms"] = {
                 "p50": float(np.percentile(fb_lats, 50)),
@@ -180,12 +187,12 @@ class AetherBenchmarker:
 
         print("\n" + "═" * 40)
         print("🏁 BENCHMARK RESULTS")
-        print(f"  [Network RTT]")
+        print("  [Network RTT]")
         print(f"  p50 (Median): {report['network_rtt_ms']['p50']:.2f}ms")
         print(f"  p95 (Target): {report['network_rtt_ms']['p95']:.2f}ms")
         print(f"  p99 (Peak):   {report['network_rtt_ms']['p99']:.2f}ms")
         if "firebase_writes_ms" in report:
-            print(f"\n  [Firebase Load Test (50 Concurrent Writes)]")
+            print("\n  [Firebase Load Test (50 Concurrent Writes)]")
             print(f"  p50 (Median): {report['firebase_writes_ms']['p50']:.2f}ms")
             print(f"  p95 (Target): {report['firebase_writes_ms']['p95']:.2f}ms")
             print(f"  p99 (Peak):   {report['firebase_writes_ms']['p99']:.2f}ms")
