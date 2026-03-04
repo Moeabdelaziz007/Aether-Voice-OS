@@ -1,13 +1,13 @@
 import asyncio
-import time
 import json
 import logging
 import os
-import sys
+import time
+
 from scripts.internal.bug_generator import BugGenerator
-from core.tools.healing_tool import diagnose_and_repair
-from core.ai.handover.manager import MultiAgentOrchestrator
+
 from core.ai.handover.manager import HandoverContext
+from core.tools.healing_tool import diagnose_and_repair
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AetherAccuracy")
@@ -22,12 +22,18 @@ class AccuracyBench:
         }
 
     async def run_healing_bench(self):
-        print("🔍 [ACCURACY] Testing Neural Healing (Diagnostic Accuracy)...", flush=True)
-        
+        print(
+            "🔍 [ACCURACY] Testing Neural Healing (Diagnostic Accuracy)...", flush=True
+        )
+
         test_cases = [
             ("Syntax Error", self.bug_gen.generate_syntax_error, "syntax"),
-            ("Import Error", self.bug_gen.generate_import_error, "non_existent_package"),
-            ("Key Error", self.bug_gen.generate_key_error, "KeyError")
+            (
+                "Import Error",
+                self.bug_gen.generate_import_error,
+                "non_existent_package",
+            ),
+            ("Key Error", self.bug_gen.generate_key_error, "KeyError"),
         ]
 
         for name, gen_fn, expected_keyword in test_cases:
@@ -35,7 +41,8 @@ class AccuracyBench:
             print(f"  Testing: {name} in {bug_path}", flush=True)
             
             # Direct tool call via internal API
-            # Note: healing_tool uses subprocess to tail logs, for benchmark we mock log file
+            # Note: healing_tool uses subprocess to tail logs, for benchmark we mock
+            # log file
             log_dir = ".aether/logs"
             os.makedirs(log_dir, exist_ok=True)
             log_path = os.path.join(log_dir, "session.log")
@@ -44,8 +51,10 @@ class AccuracyBench:
             with open(log_path, "w") as f:
                 f.write(f"Traceback in {bug_path}:\nError: {expected_keyword}")
 
-            diagnosis = await diagnose_and_repair(context=f"The script {bug_path} crashed.")
-            
+            diagnosis = await diagnose_and_repair(
+                context=f"The script {bug_path} crashed."
+            )
+
             success = expected_keyword in diagnosis.get("terminal_output", "")
             self.results["healing_accuracy"].append({
                 "case": name,
@@ -55,16 +64,23 @@ class AccuracyBench:
             print(f"  Result: {'✅' if success else '❌'}", flush=True)
 
     async def run_handover_bench(self, hops: int = 10):
-        print(f"🔄 [ACCURACY] Testing Sovereign Handover ({hops} Hops Integrity)...", flush=True)
-        
-        initial_data = {"seed_key": "vault_alpha_99", "secret": "moonshot_10x", "hop_count": 0}
-        context = HandoverContext(
+        print(
+            f"🔄 [ACCURACY] Testing Sovereign Handover ({hops} Hops Integrity)...",
+            flush=True,
+        )
+
+        initial_data = {
+            "seed_key": "vault_alpha_99",
+            "secret": "moonshot_10x",
+            "hop_count": 0,
+        }
+        _context = HandoverContext(
             source_agent="Architect",
             target_agent="Specialist_1",
             task="Verify Handover Integrity",
-            payload=initial_data
+            payload=initial_data,
         )
-        
+
         current_payload = initial_data
         for i in range(hops):
             # Simulate a hop (serialization cycle)
