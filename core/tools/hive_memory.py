@@ -59,19 +59,23 @@ async def write_collective_memory(
 
 
 async def read_collective_memory(key: str) -> dict[str, object]:
-    """Read a value from the Hive Collective Memory."""
+    """Read a value from the Hive Collective Memory.
+
+    Always returns a consistent envelope to simplify callers/tests.
+    On error/not_found, includes a data section with value=None.
+    """
     if not _firebase or not _firebase.is_connected:
-        return {"status": "error", "message": "Hive Memory offline"}
+        return {"status": "error", "data": {"value": None}, "message": "Hive Memory offline"}
 
     try:
         doc_ref = _firebase._db.collection("hive_memory").document(key)
         doc = doc_ref.get()
         if doc.exists:
             return {"status": "success", "data": doc.to_dict()}
-        return {"status": "not_found", "message": f"Memory slot '{key}' is empty."}
+        return {"status": "not_found", "data": {"value": None}, "message": f"Memory slot '{key}' is empty."}
     except Exception as e:
         logger.error("Hive Memory read failed: %s", e)
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "data": {"value": None}, "message": str(e)}
 
 
 def get_tools() -> list[dict[str, object]]:

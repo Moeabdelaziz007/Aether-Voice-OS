@@ -110,6 +110,43 @@ class AetherEngine:
         self._router.register_module(discovery_tool)
         self._router.register_module(context_scraper)
 
+    async def _delegate_complex_task(self, prompt: str) -> dict:
+        """Delegate a complex text task via the ADK runner and return a status envelope.
+        Tests inject `self._adk_runner` with a `.run_async(task)` async generator.
+        """
+        final_text: Optional[str] = None
+        runner = getattr(self, "_adk_runner", None)
+        if not runner or not hasattr(runner, "run_async"):
+            return {"status": "error", "message": "ADK runner not available"}
+
+        try:
+            async for event in runner.run_async(prompt):
+                if hasattr(event, "is_final_response") and event.is_final_response():
+                    final_text = getattr(event, "text", None)
+        except Exception as exc:
+            return {"status": "error", "message": str(exc)}
+
+        if final_text:
+            return {"status": "success", "response": final_text}
+        return {"status": "error", "message": "No response"}
+
+    async def _handle_complex_task(self, prompt: str) -> str:
+        """Return only the final text of a delegated complex task.
+        Tests expect exact final response text or an empty string.
+        """
+        runner = getattr(self, "_adk_runner", None)
+        if not runner or not hasattr(runner, "run_async"):
+            return ""
+
+        final_text: Optional[str] = None
+        try:
+            async for event in runner.run_async(prompt):
+                if hasattr(event, "is_final_response") and event.is_final_response():
+                    final_text = getattr(event, "text", None)
+        except Exception:
+            return ""
+        return final_text or ""
+
     async def run(self) -> None:
         print("🚀 Aether Engine: Neural Stream Active.", flush=True)
         loop = asyncio.get_running_loop()
