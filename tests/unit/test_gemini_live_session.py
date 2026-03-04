@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -43,7 +43,8 @@ class _FakeGateway:
 
 @pytest.fixture
 def cfg(monkeypatch):
-    # AIConfig is a pydantic-settings BaseSettings; instantiate directly with explicit values.
+    # AIConfig is a pydantic-settings BaseSettings;
+    # instantiate directly with explicit values.
     return AIConfig(
         api_key="k",
         api_version="v1alpha",

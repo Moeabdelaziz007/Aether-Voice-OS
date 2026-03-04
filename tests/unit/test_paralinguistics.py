@@ -13,15 +13,15 @@ externally where needed.
 from __future__ import annotations
 
 import numpy as np
-import pytest
 
 from core.audio.paralinguistics import ParalinguisticAnalyzer
-
 
 SAMPLE_RATE = 16000
 
 
-def _sine_pcm16(freq_hz: float, duration_s: float, amp: float, sr: int = SAMPLE_RATE) -> np.ndarray:
+def _sine_pcm16(
+    freq_hz: float, duration_s: float, amp: float, sr: int = SAMPLE_RATE
+) -> np.ndarray:
     n = int(duration_s * sr)
     t = np.arange(n, dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)

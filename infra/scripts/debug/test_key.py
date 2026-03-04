@@ -3,11 +3,14 @@ import os
 try:
     import requests
 except ImportError:
-    print("Error: 'requests' library not installed. Please install it with 'pip install requests'.")
+    print(
+        "Error: 'requests' library not installed. Please install it with 'pip install requests'."
+    )
     exit(1)
 
 try:
     from dotenv import load_dotenv
+
     load_dotenv()
 except ImportError:
     # If dotenv is not installed, we continue and rely on environment variables being set manually

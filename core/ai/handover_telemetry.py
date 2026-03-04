@@ -2,7 +2,7 @@
 Aether Voice OS — Handover Telemetry System
 
 Tracks success metrics, persistence, and analytics for the Deep Handover Protocol.
-Provides insights into handover performance, failure patterns, and optimization opportunities.
+Provides insights into handover performance, failure patterns, and optimization.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
+from opentelemetry.trace import Status, StatusCode
 from pydantic import BaseModel, Field
 
 from core.infra.telemetry import get_tracer
@@ -328,7 +329,7 @@ class HandoverTelemetry:
             started_at=datetime.now().isoformat(),
         )
         self._active_recordings[handover_id] = record
-        
+
         # OTLP Instrument
         span = tracer.start_as_current_span(
             f"handover:{source_agent}->{target_agent}",
@@ -336,11 +337,11 @@ class HandoverTelemetry:
                 "handover.id": handover_id,
                 "agent.source": source_agent,
                 "agent.target": target_agent,
-                "task.description": task_description
-            }
+                "task.description": task_description,
+            },
         )
         self._active_spans[handover_id] = span
-        
+
         logger.debug("Started recording handover %s", handover_id)
         return record
 
@@ -389,10 +390,17 @@ class HandoverTelemetry:
             if outcome == HandoverOutcome.SUCCESS:
                 span.set_status(Status(StatusCode.OK))
             else:
-                span.set_status(Status(StatusCode.ERROR, description=failure_reason or "Handover failed"))
+                span.set_status(
+                    Status(
+                        StatusCode.ERROR,
+                        description=failure_reason or "Handover failed",
+                    )
+                )
                 if failure_category:
-                    span.set_attribute("handover.error_category", failure_category.value)
-            
+                    span.set_attribute(
+                        "handover.error_category", failure_category.value
+                    )
+
             span.end()
 
         # Calculate total duration

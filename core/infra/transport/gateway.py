@@ -27,21 +27,21 @@ from google.genai import types
 from websockets.asyncio.server import Server, ServerConnection
 
 from core.ai.session import GeminiLiveSession
+from core.infra.config import AIConfig, GatewayConfig
+from core.infra.telemetry import get_tracer
+from core.infra.transport.bus import GlobalBus
 from core.infra.transport.messages import (
     AckMessage,
     ChallengeMessage,
     ErrorMessage,
     MessageType,
 )
-from core.infra.transport.bus import GlobalBus
 from core.infra.transport.session_state import (
     SessionMetadata,
     SessionState,
     SessionStateManager,
 )
-from core.infra.config import AIConfig, GatewayConfig
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
-from core.infra.telemetry import get_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -287,7 +287,9 @@ class AetherGateway:
                 await self._pre_warmed_session.stop()
                 self._pre_warmed_session = None
 
-            logger.info("⚡ Speculative Pre-warm: Initializing '%s' in background...", soul_name)
+            logger.info(
+                "⚡ Speculative Pre-warm: Initializing '%s' in background...", soul_name
+            )
             try:
                 target_soul = self._hive._registry.get(soul_name)
                 session = GeminiLiveSession(
@@ -315,7 +317,7 @@ class AetherGateway:
 
     async def run(self) -> None:
         """Start the WebSocket server and the main session management loop."""
-        
+
         # Connect to Global Bus
         await self._bus.connect()
 
@@ -370,8 +372,14 @@ class AetherGateway:
 
             # Create session through state manager
             async with self._pre_warm_lock:
-                if self._pre_warmed_session and self._pre_warmed_session._soul.name == soul_name:
-                    logger.info("🚀 Using pre-warmed session for %s (Latency reduction: ~800ms)", soul_name)
+                if (
+                    self._pre_warmed_session
+                    and self._pre_warmed_session._soul.name == soul_name
+                ):
+                    logger.info(
+                        "🚀 Using pre-warmed session for %s (Latency ~800ms reduction)",
+                        soul_name,
+                    )
                     session = self._pre_warmed_session
                     self._pre_warmed_session = None
                 else:
@@ -390,7 +398,8 @@ class AetherGateway:
                         gateway=self,
                     )
 
-            # Inject pending handover context if available (if not already injected during pre-warming)
+            # Inject pending handover context if available
+            # (if not already injected during pre-warming)
             pending_handover = self._hive.get_pending_handover_for_target(soul_name)
             if pending_handover and not session._injected_handover_context:
                 logger.info(
@@ -408,18 +417,23 @@ class AetherGateway:
                         # Safety: 10s watchdog for new expert arrival
                         await asyncio.wait_for(session.connect(), timeout=10.0)
                     except (asyncio.TimeoutError, Exception) as e:
-                        logger.error("✦ Critical: Expert '%s' failed to stabilize. Rolling back...", soul_name)
-                        
+                        logger.error(
+                            "✦ Critical: Expert '%s' failed to stabilize.",
+                            soul_name,
+                        )
+
                         # Recover last handover ID from hive for context restoration
-                        # We use the private access here as Gateway and Hive are tightly coupled in the core engine
-                        fail_handover_id = getattr(self._hive, "_last_handover_id", None)
+                        # We use private access here as Gateway and Hive are coupled
+                        fail_handover_id = getattr(
+                            self._hive, "_last_handover_id", None
+                        )
                         if fail_handover_id:
                             self._hive.rollback_handover(fail_handover_id)
 
                         await self._state_manager.transition_to(
                             SessionState.ERROR, f"Expert handshake timeout: {str(e)}"
                         )
-                        # Trigger restart which will now pick up the rolled-back 'last_successful_soul'
+                        # Trigger restart which will pick up the rolled-back soul
                         self._session_restart_event.set()
                         continue
 

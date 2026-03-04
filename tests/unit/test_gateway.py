@@ -1,24 +1,28 @@
 import asyncio
 import json
+from unittest.mock import MagicMock
 
 import pytest
 import websockets
 
-from unittest.mock import MagicMock
+from core.infra.config import AIConfig, AudioConfig, GatewayConfig
 from core.infra.transport.gateway import AetherGateway
 from core.infra.transport.messages import MessageType
-from core.infra.config import GatewayConfig, AIConfig, AudioConfig
 
 
 class SoulManifestStub:
     def __init__(self, name="AetherArchitect", voice_id="Puck"):
         from dataclasses import dataclass
+
         @dataclass
         class Manifest:
             name: str
             voice_id: str
             expertise: dict = None
-        self.manifest = Manifest(name=name, voice_id=voice_id, expertise={"sysadmin": 1.0})
+
+        self.manifest = Manifest(
+            name=name, voice_id=voice_id, expertise={"sysadmin": 1.0}
+        )
         self.persona = "Stub persona"
         self.name = name
 
@@ -38,36 +42,31 @@ def gateway_config():
 async def gateway(gateway_config):
     ai_config = AIConfig(GOOGLE_API_KEY="test", _env_file=None)
     audio_config = AudioConfig()
-    
+
     # Tool Router with concrete count
     tool_router = MagicMock()
     tool_router.count = 0
     tool_router.names = []
-    
+
     # Soul with concrete attributes instead of MagicMocks
     active_soul_obj = SoulManifestStub()
-    
+
     hive = MagicMock()
     hive.active_soul = active_soul_obj
     hive.get_active_soul.return_value = active_soul_obj
     hive.get_pending_handover_for_target.return_value = None
-    
+
     # Also fix Signature verification so it passes with dummy 0*128 signature
     import core.utils.security as sec
+
     sec.verify_signature = MagicMock(return_value=True)
-    
-    gw = AetherGateway(
-        gateway_config,
-        ai_config,
-        audio_config,
-        tool_router,
-        hive
-    )
-    
-    # Mock the GlobalBus so it doesn't try to connect to a missing Redis server 
+
+    gw = AetherGateway(gateway_config, ai_config, audio_config, tool_router, hive)
+
+    # Mock the GlobalBus so it doesn't try to connect to a missing Redis server
     # and time out for 5 seconds, which would fail the server start.
     gw._bus.connect = MagicMock(return_value=asyncio.sleep(0, result=True))
-    
+
     task = asyncio.create_task(gw.run())
     # Give the server a moment to start
     await asyncio.sleep(0.1)

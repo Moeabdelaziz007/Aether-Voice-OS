@@ -11,8 +11,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from core.tools.voice_tool import VoiceState, VoiceTool
 from core.infra.config import AetherConfig, AIConfig, AudioConfig, GatewayConfig
+from core.tools.voice_tool import VoiceState, VoiceTool
 
 # ── Fixtures ────────────────────────────────────────────────
 
@@ -192,18 +192,12 @@ class TestEngineRegistration:
         from core.engine import AetherEngine
 
         engine = AetherEngine(config=mock_config)
-        tool1 = VoiceTool()
+        VoiceTool()
         engine._router.register(
-            name="voice",
-            description="test",
-            parameters={},
-            handler=MagicMock()
+            name="voice", description="test", parameters={}, handler=MagicMock()
         )
         engine._router.register(
-            name="search",
-            description="test",
-            parameters={},
-            handler=MagicMock()
+            name="search", description="test", parameters={}, handler=MagicMock()
         )
         assert engine._router.count >= 2
 

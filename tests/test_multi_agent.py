@@ -1,8 +1,8 @@
 import logging
 
-from core.ai.handover.manager import MultiAgentOrchestrator
 from core.ai.agents.specialists.architect import ArchitectAgent
 from core.ai.agents.specialists.debugger import DebuggerAgent
+from core.ai.handover.manager import MultiAgentOrchestrator
 
 logging.basicConfig(level=logging.INFO)
 

@@ -8,7 +8,8 @@ These tests are synthetic-signal based and aim to validate:
 - NLMS effective step-size (mu) adaptation vs power
 
 Notes:
-- DynamicAEC updates ERLE/double-talk on *block* boundaries (block_size = filter_length).
+- DynamicAEC updates ERLE/double-talk on *block* boundaries
+  (block_size = filter_length).
   Therefore we run long enough sequences to ensure multiple blocks are processed.
 """
 
@@ -19,24 +20,27 @@ import pytest
 
 from core.audio.dynamic_aec import DynamicAEC, FrequencyDomainNLMS
 
-
 SAMPLE_RATE = 16000
 FRAME_SIZE = 256
 ECHO_DELAY_MS = 50
 
 
-def _sine_pcm16(freq_hz: float, duration_s: float, amp: float, sr: int = SAMPLE_RATE) -> np.ndarray:
+def _sine_pcm16(
+    freq_hz: float, duration_s: float, amp: float, sr: int = SAMPLE_RATE
+) -> np.ndarray:
     t = np.arange(int(duration_s * sr), dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
 
 
-def _delayed_attenuated_echo(x: np.ndarray, delay_samples: int, gain: float) -> np.ndarray:
+def _delayed_attenuated_echo(
+    x: np.ndarray, delay_samples: int, gain: float
+) -> np.ndarray:
     y = np.zeros_like(x)
     if delay_samples < len(x):
-        y[delay_samples:] = (x[: len(x) - delay_samples].astype(np.float64) * gain).astype(
-            np.int16
-        )
+        y[delay_samples:] = (
+            x[: len(x) - delay_samples].astype(np.float64) * gain
+        ).astype(np.int16)
     return y
 
 
@@ -70,7 +74,11 @@ def test_erle_exceeds_12db_with_synthetic_echo(aec: DynamicAEC):
 
     rng = np.random.default_rng(0)
     noise = (rng.standard_normal(len(far)) * 0.01 * 32767.0).astype(np.int16)
-    near = (echo.astype(np.int32) + noise.astype(np.int32)).clip(-32768, 32767).astype(np.int16)
+    near = (
+        (echo.astype(np.int32) + noise.astype(np.int32))
+        .clip(-32768, 32767)
+        .astype(np.int16)
+    )
 
     states = _run_aec(aec, near=near, far=far)
     assert states, "No frames processed"
@@ -120,7 +128,9 @@ def test_double_talk_detection_triggers_during_overlap(aec: DynamicAEC):
 
     detected = any(
         st.double_talk_detected
-        for st in states[overlap_start_frame: max(overlap_start_frame + 1, overlap_end_frame)]
+        for st in states[
+            overlap_start_frame : max(overlap_start_frame + 1, overlap_end_frame)
+        ]
     )
     assert detected, "Double-talk was not detected during user-overlap"
 
@@ -159,7 +169,8 @@ def test_single_sample_frames_do_not_crash():
 
 
 def test_nlms_effective_step_size_mu_decreases_with_higher_input_power():
-    # The implementation's step_size is constant; effective mu is step_size/(power_estimate+reg).
+    # The implementation's step_size is constant;
+    # effective mu is step_size/(power_estimate+reg).
     nlms = FrequencyDomainNLMS(filter_length=512, step_size=0.5, regularization=1e-4)
 
     rng = np.random.default_rng(0)
@@ -173,4 +184,6 @@ def test_nlms_effective_step_size_mu_decreases_with_higher_input_power():
     nlms.process(far_high, near)
     mu_high = nlms.step_size / (nlms.power_estimate + nlms.regularization)
 
-    assert float(np.mean(mu_high)) < float(np.mean(mu_low)), "mu did not decrease with power"
+    assert float(np.mean(mu_high)) < float(np.mean(mu_low)), (
+        "mu did not decrease with power"
+    )

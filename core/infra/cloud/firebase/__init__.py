@@ -1,1 +1,1 @@
-from .interface import FirebaseConnector
+from .interface import FirebaseConnector as FirebaseConnector

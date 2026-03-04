@@ -69,7 +69,6 @@ except ImportError:
         elif os.path.exists(debug_path):
             potential_paths.append(debug_path)
 
-
         for path in potential_paths:
             if os.path.exists(path):
                 spec = importlib.util.spec_from_file_location("aether_cortex", path)

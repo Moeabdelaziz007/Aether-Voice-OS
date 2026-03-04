@@ -1,12 +1,12 @@
 import logging
 
 from core.ai.agents.bridge import ADKGeminiBridge
-from core.ai.handover.manager import MultiAgentOrchestrator
 from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
     ProactiveInterventionEngine,
 )
 from core.ai.agents.voice_agent import VoiceAgent
+from core.ai.handover.manager import MultiAgentOrchestrator
 from core.analytics.latency import LatencyOptimizer
 
 logger = logging.getLogger(__name__)

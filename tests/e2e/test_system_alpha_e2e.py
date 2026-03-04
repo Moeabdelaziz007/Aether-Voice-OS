@@ -6,23 +6,25 @@ Hardened E2E test with strict timeouts and granular logging to debug protocol ha
 
 import asyncio
 import json
-import base64
 import os
+from pathlib import Path
+
+import nacl.encoding
+import nacl.signing
 import pytest
 import websockets
-import nacl.signing
-import nacl.encoding
-from pathlib import Path
+
+from core.ai.hive import HiveCoordinator
 
 # Aether Core Imports
 from core.infra.transport.gateway import AetherGateway
-from core.ai.hive import HiveCoordinator
-from core.tools.router import ToolRouter
 from core.services.registry import AetherRegistry
+from core.tools.router import ToolRouter
+
 
 # Configuration for Test Environment
 class E2EGatewayConfig:
-    def __init__(self, port=18995): # Different port to avoid conflict
+    def __init__(self, port=18995):  # Different port to avoid conflict
         self.port = port
         self.host = "127.0.0.1"
         self.tick_interval_s = 1.0
@@ -30,13 +32,16 @@ class E2EGatewayConfig:
         self.handshake_timeout_s = 3.0
         self.receive_sample_rate = 16000
 
+
 class E2EAudioConfig:
     def __init__(self):
         self.mic_queue_max = 5
 
+
 class E2EModel:
     def __init__(self, value):
         self.value = value
+
 
 class E2EAIConfig:
     def __init__(self):
@@ -51,37 +56,42 @@ class E2EAIConfig:
         self.proactive_audio = False
         self.debug = True
 
+
 @pytest.mark.asyncio
 async def test_aether_system_alpha_full_cycle():
     print("\n[PROBE] Starting Diagnostic E2E Cycle...")
-    
+
     # 1. SETUP REGISTRY & KEYS
     signing_key = nacl.signing.SigningKey.generate()
     public_key_hex = signing_key.verify_key.encode().hex().lower()
     client_id = public_key_hex
-    
+
     registry_path = Path("/tmp/aether_diagnostic_registry")
     if registry_path.exists():
         import shutil
+
         shutil.rmtree(registry_path)
     registry_path.mkdir(parents=True)
-    
+
     # Create Soul Manifest
     arch_path = registry_path / client_id
     arch_path.mkdir()
     with open(arch_path / "manifest.json", "w") as f:
-        json.dump({
-            "name": client_id,
-            "version": "1.0.0",
-            "persona": "Diagnostic Soul",
-            "public_key": public_key_hex,
-            "expertise": {"diagnostics": 1.0}
-        }, f)
+        json.dump(
+            {
+                "name": client_id,
+                "version": "1.0.0",
+                "persona": "Diagnostic Soul",
+                "public_key": public_key_hex,
+                "expertise": {"diagnostics": 1.0},
+            },
+            f,
+        )
 
     registry = AetherRegistry(packages_dir=str(registry_path))
     registry.scan()
     print(f"[PROBE] Registry initialized with {registry.count} souls.")
-    
+
     hive = HiveCoordinator(registry=registry, router=ToolRouter())
     gw_cfg = E2EGatewayConfig()
     gateway = AetherGateway(
@@ -89,67 +99,72 @@ async def test_aether_system_alpha_full_cycle():
         audio_config=E2EAudioConfig(),
         ai_config=E2EAIConfig(),
         tool_router=ToolRouter(),
-        hive=hive
+        hive=hive,
     )
-    
+
     # Start Backend
     # Mock GlobalBus to avoid Redis timeout
     from unittest.mock import AsyncMock
+
     gateway._bus.connect = AsyncMock(return_value=True)
-    
+
     print("[PROBE] Starting Gateway Server...")
     gw_task = asyncio.create_task(gateway.run())
-    await asyncio.sleep(1.0) # Ensure server is up
-    
+    await asyncio.sleep(1.0)  # Ensure server is up
+
     try:
         uri = f"ws://{gw_cfg.host}:{gw_cfg.port}"
         print(f"[PROBE] Connecting to {uri}...")
-        
-        async with asyncio.timeout(10.0): # Global test timeout
+
+        async with asyncio.timeout(10.0):  # Global test timeout
             async with websockets.connect(uri) as ws:
                 print("[PROBE] WebSocket Connected. Awaiting Challenge...")
-                
+
                 # Receive Challenge
                 raw_challenge = await asyncio.wait_for(ws.recv(), timeout=3.0)
                 challenge_msg = json.loads(raw_challenge)
                 print(f"[PROBE] Received Challenge: {challenge_msg['type']}")
                 assert challenge_msg["type"] == "connect.challenge"
-                
+
                 # Sign Challenge
-                # CRITICAL: gateway verifies against raw bytes, so we sign the bytes from the hex token
+                # CRITICAL: gateway verifies against raw bytes, so we sign
+                # the bytes from the hex token
                 token_hex = challenge_msg["challenge"]
                 token_bytes = bytes.fromhex(token_hex)
                 sig_obj = signing_key.sign(token_bytes)
                 sig_hex = sig_obj.signature.hex()
-                
+
                 # Send Response
                 resp = {
                     "type": "connect.response",
                     "client_id": client_id,
                     "signature": sig_hex,
-                    "capabilities": ["voice.stream"]
+                    "capabilities": ["voice.stream"],
                 }
                 print("[PROBE] Sending Handshake Response...")
                 await ws.send(json.dumps(resp))
-                
+
                 # Receive ACK or Error
                 print("[PROBE] Awaiting ACK/Result...")
                 raw_ack = await asyncio.wait_for(ws.recv(), timeout=5.0)
                 ack_msg = json.loads(raw_ack)
                 print(f"[PROBE] Result Received: {ack_msg['type']}")
-                
+
                 if ack_msg["type"] == "error":
-                    print(f"[PROBE] Protocol Error (Expected if AI Auth fails): {ack_msg.get('message')}")
-                    return # Passthrough success for protocol validation
-                
+                    print(
+                        "[PROBE] Protocol Error (Expected if AI Auth fails): "
+                        f"{ack_msg.get('message')}"
+                    )
+                    return  # Passthrough success for protocol validation
+
                 assert ack_msg["type"] == "connect.ack"
                 print(f"[PROBE] Session Established: {ack_msg['session_id']}")
-                
+
                 # Send Dummy Audio (3200 bytes = 100ms pcm16)
                 print("[PROBE] Sending Small Audio Burst...")
-                await ws.send(bytes([0]*3200))
+                await ws.send(bytes([0] * 3200))
                 print("[PROBE] Audio Sent. Verifying Hive status...")
-                
+
                 assert hive.active_soul is not None
                 print(f"[PROBE] Active Soul: {hive.active_soul.manifest.name}")
 
@@ -167,6 +182,7 @@ async def test_aether_system_alpha_full_cycle():
         except asyncio.CancelledError:
             pass
         print("[PROBE] Diagnostic Cycle Complete.")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-s", "-vv"])

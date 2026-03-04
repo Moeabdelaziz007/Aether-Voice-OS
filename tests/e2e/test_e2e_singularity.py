@@ -11,7 +11,7 @@ lifecycle of the Aether Live Agent, proving cohesion between:
 
 import asyncio
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
@@ -44,13 +44,17 @@ async def test_e2e_singularity():
 
     # Initialize Real Firebase for Collective Memory
     from core.infra.cloud.firebase.interface import FirebaseConnector
+
     fb_connector = FirebaseConnector()
     connected = await fb_connector.initialize()
     if not connected:
-        print("[WARNING] Real Firebase connector could not initialize. Ensure credentials are set.")
-    
+        print(
+            "[WARNING] Real Firebase connector could not initialize. "
+            "Ensure credentials are set."
+        )
+
     await fb_connector.start_session()
-    
+
     hive_memory.set_firebase_connector(fb_connector)
 
     # Register core modules into router
@@ -78,9 +82,9 @@ async def test_e2e_singularity():
     vad_res = energy_vad(speech_signal, adaptive_engine=vad)
     assert vad_res.is_hard, f"Failed to detect speech. RMS: {vad_res.energy_rms}"
 
-    assert (
-        hive.active_soul.manifest.name == "ArchitectExpert"
-    ), "Default must be Architect."
+    assert hive.active_soul.manifest.name == "ArchitectExpert", (
+        "Default must be Architect."
+    )
     print(f"[E2E] Speech detected. Active Soul: {hive.active_soul.manifest.name}")
 
     # Simulate Gemini executing parallel write_memory calls
@@ -103,10 +107,10 @@ async def test_e2e_singularity():
 
     assert results[0].get("x-a2a-status") == 200, f"Write failed: {results[0]}"
     assert results[1].get("x-a2a-status") == 200
-    
+
     # Wait briefly for cloud sync
     await asyncio.sleep(1.0)
-    
+
     print("[E2E] Parallel Memory Write OK.")
 
     # ==========================================
@@ -114,7 +118,9 @@ async def test_e2e_singularity():
     # ==========================================
     # System evaluates a new user intent "Can you write the code now?"
     print("[E2E] Evaluating intent shift to Coding...")
-    target_expert = await hive.evaluate_intent("Write the python code for the system plan.")
+    target_expert = await hive.evaluate_intent(
+        "Write the python code for the system plan."
+    )
     assert target_expert == "CodingExpert"
 
     # Architect calls handoff tool
@@ -127,9 +133,9 @@ async def test_e2e_singularity():
 
     handoff_result = await router.dispatch(mock_fc_handoff)
 
-    assert (
-        handoff_result["result"].get("status") == "handoff_initiated"
-    ), f"Handoff failed: {handoff_result}"
+    assert handoff_result["result"].get("status") == "handoff_initiated", (
+        f"Handoff failed: {handoff_result}"
+    )
     assert restart_event.is_set(), "Session restart signal must be fired."
     print("[E2E] Autonomous Handoff OK.")
 

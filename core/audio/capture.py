@@ -16,11 +16,16 @@ from typing import Any, Callable, Optional
 import numpy as np
 import pyaudio
 
-from core.audio.dynamic_aec import DynamicAEC
 from core.audio.cortex import AECBridge
+from core.audio.dynamic_aec import DynamicAEC
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad, HyperVADResult
-from core.audio.state import audio_state, HysteresisGate
+from core.audio.processing import (
+    AdaptiveVAD,
+    HyperVADResult,
+    SilentAnalyzer,
+    energy_vad,
+)
+from core.audio.state import HysteresisGate, audio_state
 from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
 
@@ -80,7 +85,12 @@ class SmoothMuter:
 
             # Use endpoint=True so the last sample of the ramp hits the exact
             # intermediate value (or the target if ramp completes in this chunk).
-            ramp = np.linspace(start, start + delta * (ramp_len / remaining), ramp_len, dtype=np.float32)
+            ramp = np.linspace(
+                start,
+                start + delta * (ramp_len / remaining),
+                ramp_len,
+                dtype=np.float32,
+            )
 
             gains = np.empty(chunk_len, dtype=np.float32)
             gains[:ramp_len] = ramp
@@ -314,7 +324,9 @@ class AudioCapture:
             curr = processed_chunk[1:]
             # Crossing when sign differs or either is zero.
             crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
-            audio_state.last_zcr = float(np.count_nonzero(crossings) / len(processed_chunk))
+            audio_state.last_zcr = float(
+                np.count_nonzero(crossings) / len(processed_chunk)
+            )
         else:
             audio_state.last_zcr = 0.0
 

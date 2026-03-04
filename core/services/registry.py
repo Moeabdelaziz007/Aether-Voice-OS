@@ -128,6 +128,7 @@ class AetherRegistry:
         new_pkg = self.load_package(path)
         if self._on_change:
             import asyncio
+
             # Notify callback (e.g. engine) to update tool registration
             pkg_name = (
                 new_pkg.manifest.name

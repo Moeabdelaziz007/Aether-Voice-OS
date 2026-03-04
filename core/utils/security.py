@@ -15,7 +15,9 @@ import nacl.signing
 logger = logging.getLogger(__name__)
 
 
-def verify_signature(public_key: str | bytes, signature: str | bytes, message: str | bytes) -> bool:
+def verify_signature(
+    public_key: str | bytes, signature: str | bytes, message: str | bytes
+) -> bool:
     """
     Verify an Ed25519 signature using PyNaCl.
 
@@ -30,10 +32,20 @@ def verify_signature(public_key: str | bytes, signature: str | bytes, message: s
     try:
         # Convert hex inputs to bytes if needed
         import nacl.encoding
-        
-        pk_bytes = public_key if isinstance(public_key, bytes) else bytes.fromhex(public_key)
-        sig_bytes = signature if isinstance(signature, bytes) else bytes.fromhex(signature)
-        msg_bytes = message if isinstance(message, bytes) else message.encode() if isinstance(message, str) else message
+
+        pk_bytes = (
+            public_key if isinstance(public_key, bytes) else bytes.fromhex(public_key)
+        )
+        sig_bytes = (
+            signature if isinstance(signature, bytes) else bytes.fromhex(signature)
+        )
+        msg_bytes = (
+            message
+            if isinstance(message, bytes)
+            else message.encode()
+            if isinstance(message, str)
+            else message
+        )
 
         verify_key = nacl.signing.VerifyKey(pk_bytes)
         verify_key.verify(msg_bytes, sig_bytes)
