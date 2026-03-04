@@ -60,7 +60,9 @@ class AdminAPIHandler(BaseHTTPRequestHandler):
         elif self.path == "/api/telemetry":
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(json.dumps(SHARED_STATE["telemetry"], default=str).encode())
+            self.wfile.write(
+                json.dumps(SHARED_STATE["telemetry"], default=str).encode()
+            )
         elif self.path == "/health":
             self.send_response(200)
             self.end_headers()
@@ -82,6 +84,7 @@ class AdminAPIHandler(BaseHTTPRequestHandler):
 class ReusableHTTPServer(HTTPServer):
     allow_reuse_address = True
 
+
 class AdminAPIServer:
     def __init__(self, port: int = 18790):
         self.port = port
@@ -93,7 +96,9 @@ class AdminAPIServer:
             self.server = ReusableHTTPServer(("127.0.0.1", self.port), AdminAPIHandler)
         except OSError as e:
             if e.errno == 48:
-                logger.warning(f"Port {self.port} occupied. Falling back to dynamic allocation.")
+                logger.warning(
+                    f"Port {self.port} occupied. Falling back to dynamic allocation."
+                )
                 self.server = ReusableHTTPServer(("127.0.0.1", 0), AdminAPIHandler)
                 self.port = self.server.server_address[1]
             else:

@@ -23,9 +23,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
-from unittest.mock import MagicMock
 from enum import Enum
 from typing import Callable, Optional
+from unittest.mock import MagicMock
 
 from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
@@ -130,7 +130,7 @@ class VoiceTool:
         # Components
         self._capture = AudioCapture(self._config.audio, self._audio_in)
         self._playback = AudioPlayback(self._config.audio, self._audio_out)
-        
+
         # In standalone mode, we use a mock gateway for broadcasting
         # To avoid strictly requiring a full AetherGateway instance
         mock_gateway = MagicMock()

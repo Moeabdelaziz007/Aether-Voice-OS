@@ -10,10 +10,11 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, Optional, Set
 
 try:
     import redis.asyncio as redis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -66,7 +67,11 @@ class GlobalBus:
             # Ping to verify with safety timeout
             await asyncio.wait_for(self._client.ping(), timeout=5.0)
             self._running = True
-            logger.info("✦ A2A [BUS] Connected to Global State Bus (Redis: %s:%d)", self._host, self._port)
+            logger.info(
+                "✦ A2A [BUS] Connected to Global State Bus (Redis: %s:%d)",
+                self._host,
+                self._port,
+            )
             return True
         except Exception as e:
             logger.error("A2A [BUS] Connection failed: %s", e)
@@ -92,7 +97,7 @@ class GlobalBus:
         """Publish a message to a specific channel."""
         if not self._client:
             return 0
-        
+
         full_channel = f"{self._prefix}pubsub:{channel}"
         payload = json.dumps(message)
         try:
@@ -108,13 +113,13 @@ class GlobalBus:
             return
 
         full_channel = f"{self._prefix}pubsub:{channel}"
-        
+
         if full_channel not in self._subscriptions:
             self._subscriptions[full_channel] = set()
             if self._pubsub is None:
                 self._pubsub = self._client.pubsub()
             await self._pubsub.subscribe(full_channel)
-            
+
             # Start listener if not running
             if not self._listen_task or self._listen_task.done():
                 self._listen_task = asyncio.create_task(self._listen_loop())
@@ -129,11 +134,13 @@ class GlobalBus:
 
         while self._running:
             try:
-                message = await self._pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
+                message = await self._pubsub.get_message(
+                    ignore_subscribe_messages=True, timeout=1.0
+                )
                 if message and message["type"] == "message":
                     channel = message["channel"]
                     data = json.loads(message["data"])
-                    
+
                     callbacks = self._subscriptions.get(channel, set())
                     for cb in callbacks:
                         try:
@@ -142,7 +149,9 @@ class GlobalBus:
                             else:
                                 cb(data)
                         except Exception as e:
-                            logger.error("A2A [BUS] Callback error on %s: %s", channel, e)
+                            logger.error(
+                                "A2A [BUS] Callback error on %s: %s", channel, e
+                            )
             except asyncio.CancelledError:
                 break
             except Exception as e:
@@ -153,7 +162,7 @@ class GlobalBus:
         """Store state in global storage."""
         if not self._client:
             return False
-        
+
         full_key = f"{self._prefix}state:{key}"
         try:
             payload = json.dumps(value)
@@ -167,7 +176,7 @@ class GlobalBus:
         """Retrieve state from global storage."""
         if not self._client:
             return None
-        
+
         full_key = f"{self._prefix}state:{key}"
         try:
             data = await self._client.get(full_key)
@@ -180,7 +189,7 @@ class GlobalBus:
         """Delete state from global storage."""
         if not self._client:
             return False
-        
+
         full_key = f"{self._prefix}state:{key}"
         try:
             await self._client.delete(full_key)

@@ -27,21 +27,21 @@ from google.genai import types
 from websockets.asyncio.server import Server, ServerConnection
 
 from core.ai.session import GeminiLiveSession
+from core.infra.config import AIConfig, GatewayConfig
+from core.infra.telemetry import get_tracer
+from core.infra.transport.bus import GlobalBus
 from core.infra.transport.messages import (
     AckMessage,
     ChallengeMessage,
     ErrorMessage,
     MessageType,
 )
-from core.infra.transport.bus import GlobalBus
 from core.infra.transport.session_state import (
     SessionMetadata,
     SessionState,
     SessionStateManager,
 )
-from core.infra.config import AIConfig, GatewayConfig
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
-from core.infra.telemetry import get_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -287,7 +287,9 @@ class AetherGateway:
                 await self._pre_warmed_session.stop()
                 self._pre_warmed_session = None
 
-            logger.info("⚡ Speculative Pre-warm: Initializing '%s' in background...", soul_name)
+            logger.info(
+                "⚡ Speculative Pre-warm: Initializing '%s' in background...", soul_name
+            )
             try:
                 target_soul = self._hive._registry.get(soul_name)
                 session = GeminiLiveSession(
@@ -315,7 +317,7 @@ class AetherGateway:
 
     async def run(self) -> None:
         """Start the WebSocket server and the main session management loop."""
-        
+
         # Connect to Global Bus
         await self._bus.connect()
 
@@ -370,8 +372,14 @@ class AetherGateway:
 
             # Create session through state manager
             async with self._pre_warm_lock:
-                if self._pre_warmed_session and self._pre_warmed_session._soul.name == soul_name:
-                    logger.info("🚀 Using pre-warmed session for %s (Latency reduction: ~800ms)", soul_name)
+                if (
+                    self._pre_warmed_session
+                    and self._pre_warmed_session._soul.name == soul_name
+                ):
+                    logger.info(
+                        "🚀 Using pre-warmed session for %s (Latency reduction: ~800ms)",
+                        soul_name,
+                    )
                     session = self._pre_warmed_session
                     self._pre_warmed_session = None
                 else:
@@ -408,11 +416,16 @@ class AetherGateway:
                         # Safety: 10s watchdog for new expert arrival
                         await asyncio.wait_for(session.connect(), timeout=10.0)
                     except (asyncio.TimeoutError, Exception) as e:
-                        logger.error("✦ Critical: Expert '%s' failed to stabilize. Rolling back...", soul_name)
-                        
+                        logger.error(
+                            "✦ Critical: Expert '%s' failed to stabilize. Rolling back...",
+                            soul_name,
+                        )
+
                         # Recover last handover ID from hive for context restoration
                         # We use the private access here as Gateway and Hive are tightly coupled in the core engine
-                        fail_handover_id = getattr(self._hive, "_last_handover_id", None)
+                        fail_handover_id = getattr(
+                            self._hive, "_last_handover_id", None
+                        )
                         if fail_handover_id:
                             self._hive.rollback_handover(fail_handover_id)
 

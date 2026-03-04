@@ -9,7 +9,7 @@ import asyncio
 import logging
 import re
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 from core.infra.transport.bus import GlobalBus
 
@@ -36,7 +36,7 @@ class WatchdogLogHandler(logging.Handler):
 class SREWatchdog:
     """
     Autonomous SRE Watchdog for AetherOS.
-    
+
     Monitors system vitals and logs, publishes alerts to the Global Bus,
     and executes healing protocols.
     """
@@ -53,7 +53,7 @@ class SREWatchdog:
         self._is_running = False
         self._loop_task: Optional[asyncio.Task] = None
         self._log_handler = WatchdogLogHandler(self._on_log_error)
-        
+
         # Healing Registry: Pattern -> Action
         self._healing_registry: Dict[str, Callable] = {
             r"Gemini.*timeout": self._heal_gemini_timeout,
@@ -95,11 +95,14 @@ class SREWatchdog:
     async def _check_vitals(self):
         """Simulate vitals check and publish to bus."""
         if self._bus and self._bus.is_connected:
-            await self._bus.publish("system_health", {
-                "node_id": self._node_id,
-                "status": "HEALTHY",
-                "timestamp": datetime.now().isoformat(),
-            })
+            await self._bus.publish(
+                "system_health",
+                {
+                    "node_id": self._node_id,
+                    "status": "HEALTHY",
+                    "timestamp": datetime.now().isoformat(),
+                },
+            )
 
     def _on_log_error(self, record: logging.LogRecord):
         """Called whenever an ERROR or higher is logged."""
@@ -117,19 +120,24 @@ class SREWatchdog:
                 last_time = self._last_alert_time.get(pattern, 0)
                 if now - last_time < 5.0:  # 5s cooldown per pattern
                     return
-                
+
                 self._last_alert_time[pattern] = now
-                logger.warning("🚨 SRE Watchdog detected critical pattern: '%s'", pattern)
-                
+                logger.warning(
+                    "🚨 SRE Watchdog detected critical pattern: '%s'", pattern
+                )
+
                 # Signal global health alert
                 if self._bus:
-                    await self._bus.publish("health_alerts", {
-                        "node_id": self._node_id,
-                        "severity": "CRITICAL",
-                        "pattern": pattern,
-                        "message": message[:200], # Truncate message
-                        "timestamp": datetime.now().isoformat(),
-                    })
+                    await self._bus.publish(
+                        "health_alerts",
+                        {
+                            "node_id": self._node_id,
+                            "severity": "CRITICAL",
+                            "pattern": pattern,
+                            "message": message[:200],  # Truncate message
+                            "timestamp": datetime.now().isoformat(),
+                        },
+                    )
 
                 # Trigger autonomous healing
                 try:
@@ -139,7 +147,9 @@ class SREWatchdog:
                         await result
                     logger.info("✅ Watchdog: Healing action complete for %s", pattern)
                 except Exception as e:
-                    logger.error("Failed to execute healing action for %s: %s", pattern, e)
+                    logger.error(
+                        "Failed to execute healing action for %s: %s", pattern, e
+                    )
                 return
 
     # --- Healing Protocols ---
@@ -150,7 +160,9 @@ class SREWatchdog:
             logger.info("🛠️ [HEAL] Triggering proactive session reset...")
             # We assume AetherGateway has a trigger_reconnection or similar
             if hasattr(self._gateway, "restart"):
-                await self._gateway.restart(reason="Proactive SRE Recovery (Gemini Timeout)")
+                await self._gateway.restart(
+                    reason="Proactive SRE Recovery (Gemini Timeout)"
+                )
 
     async def _heal_bus_failure(self):
         """Protocol: Redis/Bus connection recovery."""

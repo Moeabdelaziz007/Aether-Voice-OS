@@ -15,11 +15,12 @@ import numpy as np
 
 from core.audio.spectral import SpectralAnalyzer, erle, gcc_phat
 
-
 SAMPLE_RATE = 16000
 
 
-def _sine(freq_hz: float, n: int, amp: float = 0.8, sr: int = SAMPLE_RATE) -> np.ndarray:
+def _sine(
+    freq_hz: float, n: int, amp: float = 0.8, sr: int = SAMPLE_RATE
+) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     return amp * np.sin(2.0 * np.pi * freq_hz * t)
 

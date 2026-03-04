@@ -104,7 +104,7 @@ async def index_codebase() -> None:
                     metadata={"file": str(rel_path), "chunk": i},
                 )
                 total_chunks += 1
-                await asyncio.sleep(0.5) # Avoid 429s
+                await asyncio.sleep(0.5)  # Avoid 429s
 
             logger.info(
                 "[%d/%d] Processed: %s (Chunks: %d)",

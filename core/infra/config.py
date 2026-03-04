@@ -47,7 +47,9 @@ class AIConfig(BaseSettings):
     )
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"),
+        env_file=os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
+        ),
         extra="ignore",
         env_file_encoding="utf-8",
     )
@@ -82,8 +84,10 @@ class AetherConfig(BaseSettings):
     packages_dir: str = "packages"
 
     model_config = SettingsConfigDict(
-        env_file=os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"),
-        env_nested_delimiter="__", 
+        env_file=os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
+        ),
+        env_nested_delimiter="__",
         extra="ignore",
     )
 

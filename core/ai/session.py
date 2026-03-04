@@ -23,8 +23,8 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
-    from core.tools.router import ToolRouter
     from core.infra.transport.gateway import AetherGateway
+    from core.tools.router import ToolRouter
 
 from google import genai
 from google.genai import types
@@ -32,10 +32,10 @@ from google.genai import types
 from core.ai.handover_protocol import HandoverContext, HandoverStatus
 from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
-from core.utils.errors import AIConnectionError, AISessionExpiredError
 from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
+from core.utils.errors import AIConnectionError, AISessionExpiredError
 
 logger = logging.getLogger(__name__)
 
@@ -428,13 +428,20 @@ class GeminiLiveSession:
                                         # signal of downstream playback pressure.
                                         self._output_queue_drops += 1
                                         try:
-                                            metrics = getattr(self._gateway, "metrics", None)
+                                            metrics = getattr(
+                                                self._gateway, "metrics", None
+                                            )
                                             if not isinstance(metrics, dict):
                                                 metrics = {}
-                                                setattr(self._gateway, "metrics", metrics)
-                                            metrics["gemini_output_queue_drops"] = metrics.get(
-                                                "gemini_output_queue_drops", 0
-                                            ) + 1
+                                                setattr(
+                                                    self._gateway, "metrics", metrics
+                                                )
+                                            metrics["gemini_output_queue_drops"] = (
+                                                metrics.get(
+                                                    "gemini_output_queue_drops", 0
+                                                )
+                                                + 1
+                                            )
                                         except Exception:
                                             pass
 
@@ -521,12 +528,21 @@ class GeminiLiveSession:
 
             # --- Gateway Tool Result Broadcast ---
             asyncio.create_task(
-                self._gateway.broadcast("tool_result", {
-                    "tool_name": fc.name,
-                    "result": str(result.get("result", result)) if isinstance(result, dict) else str(result),
-                    "status": "failed" if isinstance(result, dict) and "error" in result else "success",
-                    "code": result.get("x-a2a-status") if isinstance(result, dict) else None
-                })
+                self._gateway.broadcast(
+                    "tool_result",
+                    {
+                        "tool_name": fc.name,
+                        "result": str(result.get("result", result))
+                        if isinstance(result, dict)
+                        else str(result),
+                        "status": "failed"
+                        if isinstance(result, dict) and "error" in result
+                        else "success",
+                        "code": result.get("x-a2a-status")
+                        if isinstance(result, dict)
+                        else None,
+                    },
+                )
             )
 
             # --- Multimodal Vision Injection (if tool returns screenshot) ---
