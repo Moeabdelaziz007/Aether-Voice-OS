@@ -42,8 +42,8 @@ try:
 except ImportError:
     pass
 
-from google import genai
-from google.genai import types
+from google import genai  # noqa: E402
+from google.genai import types  # noqa: E402
 
 logger = logging.getLogger("voice_benchmark")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(name)s] %(message)s")
@@ -151,6 +151,67 @@ def generate_speech_like_signal(
     return signal.astype(np.int16).tobytes()
 
 
+def generate_cafe_noise(
+    duration_s: float = 5.0, sample_rate: int = 16000
+) -> np.ndarray:
+    """Generate simulated cafe chatter noise (overlapping sine waves)."""
+    t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
+    noise = np.zeros_like(t)
+    # Add multiple overlapping voices (sine waves) with varying envelopes
+    num_voices = 10
+    for _ in range(num_voices):
+        freq = np.random.uniform(200, 4000)
+        # Random amplitude envelope
+        envelope = np.abs(
+            np.sin(
+                2 * np.pi * np.random.uniform(0.5, 2.0) * t
+                + np.random.uniform(0, 2 * np.pi)
+            )
+        )
+        voice = np.sin(2 * np.pi * freq * t) * envelope
+        noise += voice
+
+    # Normalize to max amplitude 1.0 roughly, before scaling
+    if np.max(np.abs(noise)) > 0:
+        noise = noise / np.max(np.abs(noise))
+    return noise
+
+
+def generate_keyboard_noise(
+    duration_s: float = 5.0, sample_rate: int = 16000
+) -> np.ndarray:
+    """Generate simulated keyboard clacking noise (impulse bursts)."""
+    t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
+    noise = np.zeros_like(t)
+
+    # 3 to 6 keystrokes per second
+    num_clicks = int(duration_s * np.random.uniform(3, 6))
+
+    for _ in range(num_clicks):
+        # Click position in time
+        click_t = np.random.uniform(0, duration_s)
+        click_idx = int(click_t * sample_rate)
+
+        # Click duration 2-5ms
+        click_dur_s = np.random.uniform(0.002, 0.005)
+        click_len = int(click_dur_s * sample_rate)
+
+        if click_idx + click_len < len(t):
+            # Center frequency 2-4kHz
+            freq = np.random.uniform(2000, 4000)
+            click_t_arr = t[click_idx : click_idx + click_len] - t[click_idx]
+
+            # Exponential decay envelope
+            envelope = np.exp(-click_t_arr * (1.0 / click_dur_s * 2))
+            click_signal = np.sin(2 * np.pi * freq * click_t_arr) * envelope
+
+            noise[click_idx : click_idx + click_len] += click_signal
+
+    if np.max(np.abs(noise)) > 0:
+        noise = noise / np.max(np.abs(noise))
+    return noise
+
+
 def compute_snr(signal: np.ndarray, noise: np.ndarray) -> float:
     """Compute Signal-to-Noise Ratio in dB."""
     signal_power = np.mean(signal.astype(np.float64) ** 2) + 1e-10
@@ -173,7 +234,11 @@ async def benchmark_round_trip_latency(
         try:
             config = types.LiveConnectConfig(
                 response_modalities=["AUDIO"],
-                system_instruction="You are a voice latency benchmarking agent. Respond with exactly one word: 'acknowledged'. Be as fast as possible.",
+                system_instruction=(
+                    "You are a voice latency benchmarking agent. "
+                    "Respond with exactly one word: 'acknowledged'. "
+                    "Be as fast as possible."
+                ),
                 speech_config=types.SpeechConfig(
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(
@@ -226,7 +291,7 @@ async def benchmark_voice_quality_analysis(
     logger.info("📊 [2/5] Requesting Voice Quality Analysis from Gemini...")
     client = genai.Client(api_key=api_key)
 
-    prompt = """You are a senior audio engineer specializing in real-time voice AI systems.
+    prompt = """You are a senior audio engineer specializing in voice AI systems.
 
 Analyze the following voice pipeline architecture and provide:
 1. A quality score from 0-100 based on the architecture's potential
@@ -237,8 +302,8 @@ Pipeline Architecture:
 - AEC: Custom DynamicAEC using frequency-domain NLMS with double-talk detection
 - Secondary AEC: Rust-accelerated AECBridge (when available)
 - VAD: Dual-threshold HyperVAD (soft/hard detection with adaptive baseline)
-- Paralinguistic Analysis: Real-time emotion detection from acoustic features (pitch, energy, ZCR, spectral centroid)
-- Thalamic Gate: Software-defined echo cancellation with hysteresis gating and smooth muting (256-sample ramp)
+- Paralinguistics: Real-time emotion detection via pitch, energy, ZCR, centroid
+- Thalamic Gate: Software-defined echo cancellation with hysteresis gating
 - AI Model: Gemini 2.5 Flash Native Audio (bidirectional WebSocket)
 - Output: Direct PCM playback via PyAudio
 - Latency target: < 200ms end-to-end
@@ -299,12 +364,113 @@ Respond in this exact JSON format:
         ), ["Could not retrieve suggestions — check API key"]
 
 
-def benchmark_aec_effectiveness() -> BenchmarkResult:
+def benchmark_double_talk_performance() -> BenchmarkResult:
+    """
+    Simulate Cross-Talk (Double-Talk) where AI and user speak simultaneously.
+    Target: DynamicAEC flags double_talk_detected = True, and near-end signal
+    retains at least 60% of original RMS energy.
+    """
+    logger.info("📊 Benchmarking Double-Talk (Cross-Talk) Performance...")
+
+    from core.audio.dynamic_aec import DynamicAEC
+
+    sample_rate = 16000
+    frame_size = 1600  # 100ms
+    duration_s = 5.0
+    total_frames = int(duration_s * sample_rate / frame_size)
+
+    aec = DynamicAEC(
+        sample_rate=sample_rate,
+        frame_size=frame_size,
+        filter_length_ms=100.0,
+        step_size=0.5,
+    )
+
+    # 1. AI Far-End Signal (lower frequency, longer duration)
+    t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
+    far_end = (np.sin(2 * np.pi * 300 * t) * 10000).astype(np.int16)
+
+    # 2. User Near-End Signal (higher frequency speech-like signal)
+    # Give it some delay so AEC has a moment to start
+    user_start_s = 1.0
+    user_start_idx = int(user_start_s * sample_rate)
+
+    near_end_speech = (np.sin(2 * np.pi * 500 * t) * 12000).astype(np.int16)
+    near_end_speech[:user_start_idx] = 0  # Silent at first
+
+    # 3. Simulate Mic Signal (Near-end speech + Far-end echo)
+    echo_gain = 0.3
+    delay_samples = 160  # 10ms echo delay
+
+    echo_signal = np.zeros_like(far_end, dtype=np.float64)
+    echo_signal[delay_samples:] = far_end[:-delay_samples] * echo_gain
+
+    mic_full = echo_signal.astype(np.int16) + near_end_speech
+
+    detected_double_talk_frames = 0
+    total_double_talk_frames = 0
+
+    cleaned_full = np.zeros_like(mic_full)
+
+    for i in range(total_frames):
+        start = i * frame_size
+        end = start + frame_size
+        mic_frame = mic_full[start:end]
+        far_frame = far_end[start:end]
+
+        cleaned, state = aec.process_frame(mic_frame, far_frame)
+        cleaned_full[start:end] = cleaned
+
+        # Only check double talk during the region where user is actually speaking
+        if (i * frame_size) >= user_start_idx:
+            total_double_talk_frames += 1
+            if state.double_talk_detected:
+                detected_double_talk_frames += 1
+
+    # Check that near-end speech wasn't excessively muted during double talk
+    user_segment_original = near_end_speech[user_start_idx:]
+    user_segment_cleaned = cleaned_full[user_start_idx:]
+
+    original_rms = (
+        np.sqrt(np.mean(user_segment_original.astype(np.float64) ** 2)) + 1e-10
+    )
+    cleaned_rms = np.sqrt(np.mean(user_segment_cleaned.astype(np.float64) ** 2)) + 1e-10
+
+    rms_retained_pct = (cleaned_rms / original_rms) * 100
+    double_talk_accuracy = (
+        (detected_double_talk_frames / total_double_talk_frames) * 100
+        if total_double_talk_frames > 0
+        else 0
+    )
+
+    passed = (double_talk_accuracy > 80.0) and (rms_retained_pct >= 60.0)
+
+    return BenchmarkResult(
+        test_name="Cross-Talk (Double-Talk)",
+        metric="energy_retained_%",
+        value=rms_retained_pct,
+        unit="%",
+        passed=passed,
+        threshold=60.0,
+        details=(
+            f"Detection accuracy: {double_talk_accuracy:.1f}%, "
+            f"Retained RMS: {rms_retained_pct:.1f}%"
+        ),
+    )
+
+
+def benchmark_aec_effectiveness(
+    snr_db: float = 15.0, noise_type: str = "cafe"
+) -> BenchmarkResult:
     """
     Measure AEC Echo Return Loss Enhancement (ERLE) using synthetic signals.
     Target: > 12dB ERLE.
+    Includes background noise injection based on SNR.
     """
-    logger.info("📊 [3/5] Benchmarking AEC Effectiveness (ERLE)...")
+    logger.info(
+        f"📊 Benchmarking AEC Effectiveness (ERLE) - "
+        f"{noise_type.title()} Noise at {snr_db}dB SNR..."
+    )
 
     from core.audio.dynamic_aec import DynamicAEC
 
@@ -328,13 +494,28 @@ def benchmark_aec_effectiveness() -> BenchmarkResult:
     # Simulate echo path: attenuated + delayed far-end + mic noise
     echo_gain = 0.3
     delay_samples = 160  # 10ms echo delay
-    noise = (np.random.randn(len(t)) * 200).astype(np.int16)
 
-    mic_full = np.zeros_like(far_end_full)
-    mic_full[delay_samples:] = (far_end_full[:-delay_samples] * echo_gain).astype(
-        np.int16
-    )
-    mic_full += noise
+    # Generate background noise
+    if noise_type == "cafe":
+        raw_noise = generate_cafe_noise(duration_s, sample_rate)
+    else:
+        raw_noise = generate_keyboard_noise(duration_s, sample_rate)
+
+    # Scale background noise based on desired SNR against far-end echo
+    echo_signal = np.zeros_like(far_end_full, dtype=np.float64)
+    echo_signal[delay_samples:] = far_end_full[:-delay_samples] * echo_gain
+
+    echo_power = np.mean(echo_signal**2) + 1e-10
+    raw_noise_power = np.mean(raw_noise**2) + 1e-10
+
+    # SNR = 10 * log10(echo_power / noise_power)
+    # noise_power = echo_power / (10 ** (SNR / 10))
+    target_noise_power = echo_power / (10 ** (snr_db / 10))
+    noise_scale = np.sqrt(target_noise_power / raw_noise_power)
+
+    scaled_noise = (raw_noise * noise_scale).astype(np.int16)
+
+    mic_full = echo_signal.astype(np.int16) + scaled_noise
 
     erle_values = []
     for i in range(total_frames):
@@ -351,13 +532,137 @@ def benchmark_aec_effectiveness() -> BenchmarkResult:
     avg_erle = np.mean(converged_erle) if converged_erle else 0.0
 
     return BenchmarkResult(
-        test_name="AEC ERLE (Echo Suppression)",
+        test_name=f"AEC ERLE ({noise_type}, {snr_db}dB)",
         metric="erle_db",
         value=avg_erle,
         unit="dB",
         passed=avg_erle >= 12.0,
         threshold=12,
-        details=f"Converged frames: {len(converged_erle)}, peak={max(erle_values):.1f}dB",
+        details=(
+            f"Converged frames: {len(converged_erle)}, peak={max(erle_values):.1f}dB"
+        ),
+    )
+
+
+def benchmark_emotion_f1_score() -> BenchmarkResult:
+    """
+    Measure Emotion Detection accuracy across different pitch baselines.
+    Classes: 'calm', 'alert', 'frustrated', 'flow_state'
+    Target: Macro-averaged F1 >= 0.75
+    """
+    logger.info("📊 Benchmarking Emotion Detection F1-Score...")
+
+    from sklearn.metrics import confusion_matrix, f1_score
+
+    from core.audio.paralinguistics import ParalinguisticAnalyzer
+
+    sample_rate = 16000
+    analyzer = ParalinguisticAnalyzer(sample_rate=sample_rate)
+
+    classes = ["calm", "alert", "frustrated", "flow_state"]
+    num_samples_per_class = 20
+    chunk_duration = 0.5  # 500ms chunks
+    chunk_size = int(sample_rate * chunk_duration)
+
+    y_true = []
+    y_pred = []
+
+    for cls in classes:
+        for _ in range(num_samples_per_class):
+            t = np.linspace(0, chunk_duration, chunk_size, endpoint=False)
+
+            # Reset analyzer history slightly for independent samples
+            # (In reality it's a rolling window, but here we feed chunks)
+            analyzer = ParalinguisticAnalyzer(sample_rate=sample_rate)
+
+            if cls == "calm":
+                # Monotone, low pitch variance (<10Hz), low RMS
+                base_freq = 120.0
+                freq = base_freq + np.random.uniform(-2, 2)
+                signal = (np.sin(2 * np.pi * freq * t) * 3000).astype(np.int16)
+
+            elif cls == "alert":
+                # Mid pitch (~180Hz), moderate energy
+                base_freq = 180.0
+                freq = base_freq + np.random.uniform(-5, 5)
+                signal = (np.sin(2 * np.pi * freq * t) * 8000).astype(np.int16)
+
+            elif cls == "frustrated":
+                # High pitch variance (>30Hz), high ZCR, elevated RMS
+                base_freq = 250.0
+                # Generate high pitch variance by changing freq over time
+                t_frames = np.linspace(0, chunk_duration, chunk_size)
+                # Modulate freq with a sine wave to create variance in pitch over time
+                # make it slower to ensure F0 estimation catches the changes
+                freq_mod = np.sin(2 * np.pi * 3 * t_frames) * 100
+                # Create a signal with varying frequency (chirp-like or vibrato)
+                # Need phase integral for frequency modulation
+                phase = 2 * np.pi * np.cumsum(base_freq + freq_mod) / sample_rate
+                signal = (np.sin(phase) * 16000).astype(np.int16)
+                # Add noise for higher ZCR
+                signal += (np.random.randn(len(t)) * 5000).astype(np.int16)
+
+            elif cls == "flow_state":
+                # Stable pitch, very low variance, consistent RMS (zen mode)
+                # simulate typing (zen_mode requires typing cadence + low speech)
+                base_freq = 100.0
+                signal = (np.sin(2 * np.pi * base_freq * t) * 1500).astype(np.int16)
+                # add some typing spikes
+                for _ in range(4):  # 4 clicks in 0.5s = 8 Hz transience
+                    idx = np.random.randint(0, chunk_size - 100)
+                    signal[idx : idx + 50] += (np.random.randn(50) * 8000).astype(
+                        np.int16
+                    )
+
+            rms = np.sqrt(np.mean((signal.astype(np.float32) / 32768.0) ** 2)) + 1e-10
+
+            # To simulate a continuous 2-second stream of this emotion and allow
+            # rms_variance (variance of pitch over history) to build up,
+            # we break the 500ms chunk into smaller sub-chunks.
+            features = None
+            sub_chunk_size = int(sample_rate * 0.1)  # 100ms
+
+            # Feed 10 chunks to simulate 1 second of this emotion
+            for _ in range(2):
+                for i in range(0, chunk_size, sub_chunk_size):
+                    sub_signal = signal[i : i + sub_chunk_size]
+                    if len(sub_signal) > 0:
+                        features = analyzer.analyze(sub_signal, float(rms))
+
+            # Simple decision tree to classify based on features
+            predicted_class = "calm"
+
+            if features.zen_mode:
+                predicted_class = "flow_state"
+            elif features.rms_variance > 50 and features.pitch_estimate > 180:
+                predicted_class = "frustrated"
+            elif features.pitch_estimate > 140:
+                predicted_class = "alert"
+            else:
+                predicted_class = "calm"
+
+            y_true.append(cls)
+            y_pred.append(predicted_class)
+
+    # Compute F1-score
+    macro_f1 = float(f1_score(y_true, y_pred, average="macro"))
+
+    # Generate confusion matrix string for details
+    cm = confusion_matrix(y_true, y_pred, labels=classes)
+    cm_str = "\\nConfusion Matrix:\\n"
+    for row, cls in zip(cm, classes):
+        cm_str += f"{cls.ljust(12)} {row}\\n"
+
+    passed = macro_f1 >= 0.75
+
+    return BenchmarkResult(
+        test_name="Emotion Detection F1-Score",
+        metric="macro_f1",
+        value=macro_f1,
+        unit="",
+        passed=passed,
+        threshold=0.75,
+        details=f"Macro-F1: {macro_f1:.2f}{cm_str}",
     )
 
 
@@ -505,15 +810,47 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         logger.error(f"Quality analysis failed: {e}")
         report.suggestions = [f"Error: {e}"]
 
-    # 3. AEC ERLE
+    # 3. AEC ERLE with noise injection
+    for snr in [15.0, 10.0, 5.0]:
+        for noise in ["cafe", "keyboard"]:
+            try:
+                result = benchmark_aec_effectiveness(snr_db=snr, noise_type=noise)
+                report.add(result)
+            except Exception as e:
+                logger.error(f"AEC benchmark failed ({noise} {snr}dB): {e}")
+                report.add(
+                    BenchmarkResult(
+                        f"AEC ERLE ({noise}, {snr}dB)",
+                        "erle_db",
+                        0,
+                        "dB",
+                        False,
+                        12,
+                        str(e),
+                    )
+                )
+
+    # 4. Cross-Talk (Double-Talk) Simulation
     try:
-        result = benchmark_aec_effectiveness()
+        result = benchmark_double_talk_performance()
         report.add(result)
     except Exception as e:
-        logger.error(f"AEC benchmark failed: {e}")
-        report.add(BenchmarkResult("AEC ERLE", "erle_db", 0, "dB", False, 12, str(e)))
+        logger.error(f"Double-Talk benchmark failed: {e}")
+        report.add(
+            BenchmarkResult("Cross-Talk", "retained_%", 0, "%", False, 60.0, str(e))
+        )
 
-    # 4. VAD Accuracy
+    # 5. Emotion Detection F1-Score
+    try:
+        result = benchmark_emotion_f1_score()
+        report.add(result)
+    except Exception as e:
+        logger.error(f"Emotion F1-Score benchmark failed: {e}")
+        report.add(
+            BenchmarkResult("Emotion Detection", "macro_f1", 0, "", False, 0.75, str(e))
+        )
+
+    # 6. VAD Accuracy
     try:
         result = benchmark_vad_accuracy()
         report.add(result)
@@ -523,7 +860,7 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
             BenchmarkResult("VAD Accuracy", "accuracy_%", 0, "%", False, 85, str(e))
         )
 
-    # 5. Thalamic Gate Latency
+    # 7. Thalamic Gate Latency
     try:
         result = benchmark_thalamic_gate_latency()
         report.add(result)
@@ -547,15 +884,15 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         "results": [
             {
                 "test": r.test_name,
-                "value": r.value,
+                "value": float(r.value),
                 "unit": r.unit,
-                "passed": r.passed,
-                "threshold": r.threshold,
-                "details": r.details,
+                "passed": bool(r.passed),
+                "threshold": float(r.threshold),
+                "details": str(r.details),
             }
             for r in report.results
         ],
-        "suggestions": report.suggestions,
+        "suggestions": [str(s) for s in report.suggestions],
     }
     with open(report_path, "w") as f:
         json.dump(report_data, f, indent=2)
