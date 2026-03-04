@@ -326,6 +326,9 @@ class AudioCapture:
             curr = processed_chunk[1:]
             # Crossing when sign differs or either is zero.
             crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
+<<<<<<< ours
+            audio_state.last_zcr = float(np.count_nonzero(crossings) / len(processed_chunk))
+=======
             audio_state.last_zcr = float(
                 np.count_nonzero(crossings) / len(processed_chunk)
             )

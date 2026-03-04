@@ -1,6 +1,7 @@
-import sys
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
+
 
 # We use a scoped approach to mock missing dependencies to avoid global side effects
 # that could interfere with other tests in a real environment.
@@ -28,7 +29,9 @@ def setup_mocks():
 setup_mocks()
 
 import pytest
+
 from core.logic.managers.infra import InfraManager
+
 
 @pytest.fixture
 def mock_gateway():

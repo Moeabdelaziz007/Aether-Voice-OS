@@ -136,7 +136,6 @@ def test_smooth_muter_no_large_boundary_discontinuity_click_proxy():
     jump = int(y2[0]) - int(y1[-1])
     assert abs(jump) < 8000  # generous bound; should not be a full-scale step
 
->>>>>>> origin/main
 
 @pytest.fixture
 def capture_instance():
