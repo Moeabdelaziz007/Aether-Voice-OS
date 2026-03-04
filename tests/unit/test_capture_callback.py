@@ -165,6 +165,9 @@ def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(capture_
 
     capture_instance._push_to_async_queue({"data": b"x", "mime_type": "audio/pcm"})
 
+    # The test mocks the module but core.audio.capture gets a reference to the Mock object.
+    # The actual variable modified will be the mock instance's attribute.
+    # Check the exact mock patched:
     assert mock_audio_state.capture_queue_drops >= 1
     assert q.get_nowait.call_count == 1
     assert q.put_nowait.call_count == 2

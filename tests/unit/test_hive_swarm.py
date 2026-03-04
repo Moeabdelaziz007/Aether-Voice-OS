@@ -38,19 +38,19 @@ async def test_hive_full_lifecycle():
 
     # 3. Test Expertise Matching
     # Query for coding task
-    coding_expert_name = hive.evaluate_intent("Could you write a python script for me?")
+    coding_expert_name = await hive.evaluate_intent("Could you write a python script for me?")
     assert coding_expert_name == "CodingExpert"
 
     # Query for architecture task
     # Should be None because we are already in ArchitectExpert (the default)
-    arch_expert_name = hive.evaluate_intent(
+    arch_expert_name = await hive.evaluate_intent(
         "What is the best architecture for this swarm?"
     )
     assert arch_expert_name is None
 
     # Query for coding task
     # Should be CodingExpert because it differs from ArchitectExpert
-    coding_expert_suggested = hive.evaluate_intent("Write a python script.")
+    coding_expert_suggested = await hive.evaluate_intent("Write a python script.")
     assert coding_expert_suggested == "CodingExpert"
 
     # 4. Test Handoff Execution

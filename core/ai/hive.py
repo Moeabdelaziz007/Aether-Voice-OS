@@ -635,14 +635,12 @@ class HiveCoordinator:
         Check if a better expert exists for the user's query.
         Returns the name of the better expert if found.
         """
+        # Ensure active_soul is loaded via the property before comparing
+        current_soul = self.active_soul
         best_expert = await self._registry.find_expert(query)
-        if (
-            best_expert
-            and self._active_soul
-            and best_expert.manifest.name != self._active_soul.manifest.name
-        ):
-            # Only suggest if the expertise score is significantly high
-            return best_expert.manifest.name
+        if best_expert:
+            if not current_soul or best_expert.manifest.name != current_soul.manifest.name:
+                return best_expert.manifest.name
         return None
 
     async def _apply_compression(self, context: HandoverContext) -> None:

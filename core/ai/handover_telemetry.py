@@ -384,16 +384,19 @@ class HandoverTelemetry:
 
         # Finalize OTLP Span
         span = self._active_spans.pop(handover_id, None)
-        if span:
-            span.set_attribute("handover.outcome", outcome.value)
-            if outcome == HandoverOutcome.SUCCESS:
-                span.set_status(Status(StatusCode.OK))
-            else:
-                span.set_status(Status(StatusCode.ERROR, description=failure_reason or "Handover failed"))
-                if failure_category:
-                    span.set_attribute("handover.error_category", failure_category.value)
-            
-            span.end()
+        if span and hasattr(span, "set_attribute"):
+            try:
+                span.set_attribute("handover.outcome", outcome.value)
+                if outcome == HandoverOutcome.SUCCESS:
+                    span.set_status(Status(StatusCode.OK))
+                else:
+                    span.set_status(Status(StatusCode.ERROR, description=failure_reason or "Handover failed"))
+                    if failure_category:
+                        span.set_attribute("handover.error_category", failure_category.value)
+
+                span.end()
+            except Exception as e:
+                logger.debug("Failed to update span attributes: %s", e)
 
         # Calculate total duration
         if record.started_at and record.completed_at:

@@ -130,6 +130,8 @@ def load_config() -> AetherConfig:
             # 3. Last resort fallback
             raise OSError(f"Critical configuration missing or restricted: {e}")
     except Exception as e:
+        if "GOOGLE_API_KEY" not in os.environ and not os.path.exists(".env"):
+            raise ValueError("GOOGLE_API_KEY is required and no .env file found.") from e
         # Re-try without env file if it's a validation error or something else
         try:
             return AetherConfig(_env_file=None)

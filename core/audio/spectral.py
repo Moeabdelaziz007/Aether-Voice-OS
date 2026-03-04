@@ -416,34 +416,43 @@ def gcc_phat(
     # FFT parameters
     n_fft = 2 ** int(np.ceil(np.log2(2 * n - 1)))
 
-    # Compute FFT
-    X = fft(x, n_fft)
-    Y = fft(y, n_fft)
+    # To compute cross-correlation appropriately via FFT for delay estimation:
+    # Use zero-padding to avoid circular correlation effects.
+    # We want a power of 2 that is at least 2*n
+    n_fft = 2 ** int(np.ceil(np.log2(2 * n)))
 
-    # Cross-power spectrum
+    # Apply a window (e.g. Hann) to avoid edge effects which can ruin GCC-PHAT on pure sines
+    window = np.hanning(n)
+    X = fft(x * window, n_fft)
+    Y = fft(y * window, n_fft)
+
+    # Cross-power spectrum (x is reference, y is delayed target)
     R = X * np.conj(Y)
 
-    # PHAT weighting (whitening)
+    # PHAT weighting
     R_magnitude = np.abs(R)
     eps = 1e-10
     R_phat = R / (R_magnitude + eps)
 
-    # Inverse FFT to get cross-correlation
-    cc = ifft(R_phat)
-    cc = np.real(cc)
+    cc = np.real(ifft(R_phat))
 
-    # Keep only valid delay range
+    # Shift so that 0-delay is in the middle
+    cc_shifted = np.fft.fftshift(cc)
+
     max_shift = max_delay if max_delay is not None else n // 2
     max_shift = min(max_shift, n_fft // 2)
 
-    # Find peak in cross-correlation
-    zero_idx = 0  # FFT output is 0 to n_fft-1
-    search_start = max(0, zero_idx - max_shift)
-    search_end = min(n_fft, zero_idx + max_shift + 1)
+    zero_idx = n_fft // 2
+    search_start = zero_idx - max_shift
+    search_end = zero_idx + max_shift + 1
 
-    search_region = cc[search_start:search_end]
+    search_region = cc_shifted[search_start:search_end]
     peak_idx = np.argmax(np.abs(search_region))
-    delay = peak_idx - (zero_idx - search_start)
+
+    # If y is a delayed version of x, the peak in cross-correlation (computed as ifft(X * conj(Y)))
+    # is located at the negative index (because X * conj(Y) corresponds to cross-correlating x with y).
+    # To return a positive delay when y is delayed compared to x, we reverse the sign.
+    delay = -(peak_idx - max_shift)
 
     # Calculate confidence (peak prominence)
     peak_value = np.abs(search_region[peak_idx])

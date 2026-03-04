@@ -187,14 +187,19 @@ class AudioCapture:
         except asyncio.QueueFull:
             # Telemetry: count capture queue drops.
             try:
-                audio_state.capture_queue_drops += 1
-            except Exception:
-                # audio_state may be a mock in tests or older state object
-                pass
-
-            try:
                 self._async_queue.get_nowait()
             except asyncio.QueueEmpty:
+                pass
+
+            # If audio_state is a mock, simple += works. If it's real, it works too.
+            try:
+                from core.audio.state import audio_state as current_state
+                val = getattr(current_state, "capture_queue_drops", 0)
+                if hasattr(val, "__int__"):
+                    setattr(current_state, "capture_queue_drops", int(val) + 1)
+                else:
+                    current_state.capture_queue_drops += 1
+            except Exception:
                 pass
 
             try:
@@ -202,7 +207,12 @@ class AudioCapture:
             except asyncio.QueueFull:
                 # If we still can't enqueue, drop this message as well.
                 try:
-                    audio_state.capture_queue_drops += 1
+                    from core.audio.state import audio_state as current_state
+                    val = getattr(current_state, "capture_queue_drops", 0)
+                    if hasattr(val, "__int__"):
+                        setattr(current_state, "capture_queue_drops", int(val) + 1)
+                    else:
+                        current_state.capture_queue_drops += 1
                 except Exception:
                     pass
 

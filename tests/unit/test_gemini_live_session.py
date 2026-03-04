@@ -44,6 +44,8 @@ class _FakeGateway:
 @pytest.fixture
 def cfg(monkeypatch):
     # AIConfig is a pydantic-settings BaseSettings; instantiate directly with explicit values.
+    import os
+    monkeypatch.setenv("GOOGLE_API_KEY", "k")
     return AIConfig(
         api_key="k",
         api_version="v1alpha",
@@ -54,6 +56,7 @@ def cfg(monkeypatch):
         proactive_audio=False,
         thinking_budget=None,
         enable_proactive_vision=False,
+        _env_file=None,
     )
 
 

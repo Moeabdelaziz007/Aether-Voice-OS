@@ -56,7 +56,7 @@ class GeminiLiveSession:
         config: AIConfig,
         audio_in_queue: asyncio.Queue[dict[str, object]],
         audio_out_queue: asyncio.Queue[bytes],
-        gateway: "AetherGateway",
+        gateway: Optional["AetherGateway"] = None,
         on_interrupt: Optional[callable] = None,
         on_tool_call: Optional[callable] = None,
         tool_router: Optional["ToolRouter"] = None,
@@ -243,7 +243,7 @@ class GeminiLiveSession:
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
-                break
+                raise
 
             try:
                 await session.send_realtime_input(audio=msg)
@@ -254,6 +254,8 @@ class GeminiLiveSession:
                         frame_count,
                         self._in_queue.qsize(),
                     )
+            except asyncio.CancelledError:
+                raise
             except Exception as exc:
                 logger.error("Send error: %s", exc)
                 if "closed" in str(exc).lower():
@@ -305,15 +307,16 @@ class GeminiLiveSession:
                             ]
                         )
                         # Broadcast vision pulse to UI for explicit feedback
-                        asyncio.create_task(
-                            self._gateway.broadcast(
-                                "vision_pulse",
-                                {
-                                    "status": "active",
-                                    "timestamp": datetime.now().isoformat(),
-                                },
+                        if self._gateway:
+                            asyncio.create_task(
+                                self._gateway.broadcast(
+                                    "vision_pulse",
+                                    {
+                                        "status": "active",
+                                        "timestamp": datetime.now().isoformat(),
+                                    },
+                                )
                             )
-                        )
                         last_proactive_pulse = now
 
                 # ── Pulse 2: Camera Capture (Hard Interrupt Grounding) ──
@@ -405,11 +408,12 @@ class GeminiLiveSession:
                             if part.text:
                                 try:
                                     # Broadcast transcript segment directly to UI
-                                    asyncio.create_task(
-                                        self._gateway.broadcast(
-                                            "transcript", {"text": part.text}
+                                    if self._gateway:
+                                        asyncio.create_task(
+                                            self._gateway.broadcast(
+                                                "transcript", {"text": part.text}
+                                            )
                                         )
-                                    )
                                 except Exception as e:
                                     logger.debug(
                                         "Failed to broadcast transcript: %s", e
@@ -443,11 +447,12 @@ class GeminiLiveSession:
                                         pass
                                 self._out_queue.put_nowait(part.inline_data.data)
                                 # UI Broadcast: Speaking state
-                                asyncio.create_task(
-                                    self._gateway.broadcast(
-                                        "engine_state", {"state": "SPEAKING"}
+                                if self._gateway:
+                                    asyncio.create_task(
+                                        self._gateway.broadcast(
+                                            "engine_state", {"state": "SPEAKING"}
+                                        )
                                     )
-                                )
 
                     # ── Handle barge-in / interruption ────────────────
                     if response.server_content and response.server_content.interrupted:
@@ -494,9 +499,10 @@ class GeminiLiveSession:
 
         # 1. Create dispatch tasks
         # UI Broadcast: Thinking state
-        asyncio.create_task(
-            self._gateway.broadcast("engine_state", {"state": "THINKING"})
-        )
+        if self._gateway:
+            asyncio.create_task(
+                self._gateway.broadcast("engine_state", {"state": "THINKING"})
+            )
 
         tasks = []
         for fc in calls:
@@ -520,14 +526,15 @@ class GeminiLiveSession:
             )
 
             # --- Gateway Tool Result Broadcast ---
-            asyncio.create_task(
-                self._gateway.broadcast("tool_result", {
-                    "tool_name": fc.name,
-                    "result": str(result.get("result", result)) if isinstance(result, dict) else str(result),
-                    "status": "failed" if isinstance(result, dict) and "error" in result else "success",
-                    "code": result.get("x-a2a-status") if isinstance(result, dict) else None
-                })
-            )
+            if self._gateway:
+                asyncio.create_task(
+                    self._gateway.broadcast("tool_result", {
+                        "tool_name": fc.name,
+                        "result": str(result.get("result", result)) if isinstance(result, dict) else str(result),
+                        "status": "failed" if isinstance(result, dict) and "error" in result else "success",
+                        "code": result.get("x-a2a-status") if isinstance(result, dict) else None
+                    })
+                )
 
             # --- Multimodal Vision Injection (if tool returns screenshot) ---
             if isinstance(result, dict) and "screenshot_path" in result:

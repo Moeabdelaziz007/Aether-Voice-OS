@@ -128,6 +128,7 @@ class AetherRegistry:
         new_pkg = self.load_package(path)
         if self._on_change:
             import asyncio
+            import inspect
             # Notify callback (e.g. engine) to update tool registration
             pkg_name = (
                 new_pkg.manifest.name
@@ -136,10 +137,13 @@ class AetherRegistry:
             )
             try:
                 loop = asyncio.get_running_loop()
-                loop.create_task(self._on_change(pkg_name, new_pkg))
+                if inspect.iscoroutinefunction(self._on_change):
+                    loop.create_task(self._on_change(pkg_name, new_pkg))
+                else:
+                    loop.call_soon_threadsafe(self._on_change, pkg_name, new_pkg)
             except RuntimeError:
                 # Fallback for sync contexts if needed
-                pass
+                self._on_change(pkg_name, new_pkg)
 
     def get(self, name: str) -> AthPackage:
         """Get a package by name."""

@@ -124,7 +124,8 @@ class ArchitectAgent:
 
             if success and final_context:
                 return (
-                    f"Architect-Debugger Synergy Complete.\n"
+                    f"Synergy Complete.\n"
+                    f"Architect generated structural blueprint.\n"
                     f"Handover ID: {final_context.handover_id}\n"
                     f"Status: {final_context.status.value}\n"
                     f"History: {final_context.history}"

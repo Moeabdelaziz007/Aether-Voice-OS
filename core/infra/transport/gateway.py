@@ -601,10 +601,28 @@ class AetherGateway:
             pass
 
         # 2. Ephemeral/Direct Mode: If client_id is a 64-char hex string,
-        # treat as pubkey
+        # treat as pubkey. Also support base64 encoded 32-byte public keys.
         is_hex = all(c in "0123456789abcdef" for c in client_id.lower())
         if len(client_id) == 64 and is_hex:
             return verify_signature(client_id, signature, challenge)
+
+        try:
+            import base64
+            # Attempt to b64decode client_id
+            decoded_client_id = base64.b64decode(client_id, validate=True)
+            # NaCl keys are 32 bytes long
+            if len(decoded_client_id) == 32:
+                # the signature passed from test is base64 encoded bytes
+                try:
+                    decoded_sig = base64.b64decode(signature, validate=True)
+                    if verify_signature(decoded_client_id, decoded_sig, challenge):
+                        return True
+                except Exception:
+                    # fallback to string passing
+                    if verify_signature(decoded_client_id, signature, challenge):
+                        return True
+        except Exception:
+            pass
 
         # 3. Global Auth Fallback (Development)
         global_key = os.environ.get("AETHER_GLOBAL_PUBLIC_KEY")

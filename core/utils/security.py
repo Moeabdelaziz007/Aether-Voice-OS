@@ -39,7 +39,7 @@ def verify_signature(public_key: str | bytes, signature: str | bytes, message: s
         verify_key.verify(msg_bytes, sig_bytes)
         return True
     except (nacl.exceptions.BadSignatureError, Exception) as exc:
-        logger.warning("Signature verification failed: %s", exc)
+        logger.warning(f"Signature verification error: {exc}")
         return False
 
 
