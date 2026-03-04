@@ -18,7 +18,7 @@ class LatencyOptimizer:
 
     def get_metrics(self) -> dict:
         if not self._latencies:
-            return {"p50": 0, "p95": 0, "p99": 0, "avg": 0}
+            return {"p50": 0, "p95": 0, "p99": 0, "avg": 0, "count": 0}
 
         sorted_lats = sorted(self._latencies)
         count = len(sorted_lats)
