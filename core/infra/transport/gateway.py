@@ -718,33 +718,58 @@ class AetherGateway:
         """Broadcast a message to all connected clients."""
         data = json.dumps({"type": msg_type, "payload": payload})
 
+        async with self._lock:
+            active_sessions = list(self._clients.values())
+            
+        if not active_sessions:
+            return
+
+        async def _send(session):
+            try:
+                await session.ws.send(data)
+                return None
+            except websockets.exceptions.ConnectionClosed:
+                return session.client_id
+            except Exception as e:
+                logger.debug("Broadcast error to %s: %s", session.client_id, e)
+                return session.client_id
+
         try:
             async with asyncio.timeout(2.0):
-                async with self._lock:
-                    dead: list[str] = []
-                    for cid, session in self._clients.items():
-                        try:
-                            await session.ws.send(data)
-                        except websockets.exceptions.ConnectionClosed:
-                            dead.append(cid)
-                    for cid in dead:
-                        self._clients.pop(cid, None)
+                results = await asyncio.gather(*[_send(s) for s in active_sessions])
+                dead = [r for r in results if r is not None]
+                if dead:
+                    async with self._lock:
+                        for cid in dead:
+                            self._clients.pop(cid, None)
         except TimeoutError:
-            logger.warning("Gateway broadcast lock timeout — skipped")
+            logger.warning("Gateway broadcast timeout — skipped")
         except Exception as e:
             logger.error(f"Broadcast failed: {e}")
 
     async def broadcast_binary(self, data: bytes) -> None:
         """Broadcast raw binary data to all connected clients."""
         async with self._lock:
-            dead: list[str] = []
-            for cid, session in self._clients.items():
-                try:
-                    await session.ws.send(data)
-                except websockets.exceptions.ConnectionClosed:
-                    dead.append(cid)
-            for cid in dead:
-                self._clients.pop(cid, None)
+            active_sessions = list(self._clients.values())
+            
+        if not active_sessions:
+            return
+
+        async def _send(session):
+            try:
+                await session.ws.send(data)
+                return None
+            except websockets.exceptions.ConnectionClosed:
+                return session.client_id
+            except Exception:
+                return session.client_id
+
+        results = await asyncio.gather(*[_send(s) for s in active_sessions])
+        dead = [r for r in results if r is not None]
+        if dead:
+            async with self._lock:
+                for cid in dead:
+                    self._clients.pop(cid, None)
 
     async def _send_error(
         self,

@@ -73,10 +73,16 @@ class SREWatchdog:
 
     def start(self):
         """Hook into system logging and start the watchdog loop."""
+        # Capture the active event loop for thread-safe cross-thread calls
+        try:
+            self._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = asyncio.get_event_loop()
+            
         # Use deep hook to catch logs from all modules
         logging.getLogger().addHandler(self._log_handler)
         self._is_running = True
-        self._loop_task = asyncio.create_task(self._watchdog_loop())
+        self._loop_task = self._loop.create_task(self._watchdog_loop())
         logger.info("✦ SRE Watchdog [Autonomy] initialized on Node: %s", self._node_id)
 
     def stop(self):
@@ -113,8 +119,11 @@ class SREWatchdog:
     def _on_log_error(self, record: logging.LogRecord):
         """Called whenever an ERROR or higher is logged."""
         message = record.getMessage()
-        # Non-blocking processing
-        asyncio.create_task(self._process_failure(message))
+        # Non-blocking, cross-thread safe processing
+        if getattr(self, "_loop", None) and not self._loop.is_closed():
+            self._loop.call_soon_threadsafe(
+                lambda: asyncio.create_task(self._process_failure(message))
+            )
 
     async def _process_failure(self, message: str):
         """Analyze failure and trigger healing if a pattern matches."""

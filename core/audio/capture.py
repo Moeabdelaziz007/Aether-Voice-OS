@@ -49,27 +49,58 @@ class AdaptiveJitterBuffer:
         self.sample_rate = sample_rate
         self.target_latency_samples = int(target_latency_ms * sample_rate / 1000)
         self.max_latency_samples = int(max_latency_ms * sample_rate / 1000)
-        self.buffer = np.array([], dtype=np.int16)
+        self.buffer = np.zeros(self.max_latency_samples, dtype=np.int16)
+        self.write_idx = 0
+        self.read_idx = 0
+        self.size = 0
 
     def write(self, pcm_data: np.ndarray) -> None:
         """Append new far-end audio data."""
-        self.buffer = np.concatenate([self.buffer, pcm_data])
-        # Force drain if we exceed max latency to prevent infinite lag
-        if len(self.buffer) > self.max_latency_samples:
-            self.buffer = self.buffer[-self.max_latency_samples:]
+        data_len = len(pcm_data)
+        if data_len == 0:
+            return
+
+        if data_len >= self.max_latency_samples:
+            pcm_data = pcm_data[-self.max_latency_samples:]
+            data_len = self.max_latency_samples
+        
+        end_idx = self.write_idx + data_len
+        if end_idx <= self.max_latency_samples:
+            self.buffer[self.write_idx:end_idx] = pcm_data
+        else:
+            overflow = end_idx - self.max_latency_samples
+            first_part = data_len - overflow
+            self.buffer[self.write_idx:self.max_latency_samples] = pcm_data[:first_part]
+            self.buffer[:overflow] = pcm_data[first_part:]
+            
+        self.write_idx = end_idx % self.max_latency_samples
+        self.size = min(self.size + data_len, self.max_latency_samples)
+        
+        if self.size == self.max_latency_samples:
+            self.read_idx = self.write_idx
 
     def read(self, num_samples: int) -> np.ndarray:
         """Read contiguous block of samples, zero-padding on underrun."""
-        if len(self.buffer) >= num_samples:
-            out = self.buffer[:num_samples]
-            self.buffer = self.buffer[num_samples:]
+        out = np.zeros(num_samples, dtype=np.int16)
+        
+        if self.size == 0:
             return out
+            
+        read_len = min(num_samples, self.size)
+        end_idx = self.read_idx + read_len
+        
+        if end_idx <= self.max_latency_samples:
+            out[:read_len] = self.buffer[self.read_idx:end_idx]
         else:
-            # Underrun: provide what we have and pad with silence
-            out = np.zeros(num_samples, dtype=np.int16)
-            out[:len(self.buffer)] = self.buffer
-            self.buffer = np.array([], dtype=np.int16)
-            return out
+            overflow = end_idx - self.max_latency_samples
+            first_part = read_len - overflow
+            out[:first_part] = self.buffer[self.read_idx:self.max_latency_samples]
+            out[first_part:read_len] = self.buffer[:overflow]
+            
+        self.read_idx = end_idx % self.max_latency_samples
+        self.size -= read_len
+        
+        return out
 
 class SmoothMuter:
     """Applies graceful, ramped gain modifications to avoid pops/clicks.
