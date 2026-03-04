@@ -9,10 +9,7 @@ import asyncio
 import json
 import logging
 import sys
-<<<<<<< ours
-=======
 import time
->>>>>>> theirs
 from pathlib import Path
 
 import numpy as np

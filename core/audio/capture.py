@@ -386,14 +386,14 @@ class AudioCapture:
                 if self._loop and not self._loop.is_closed():
                     self._loop.call_soon_threadsafe(self._on_affective_data, features)
 
-        # Push to queue if hard speech detected or AI is silent (ambient feed)
-        if vad.is_hard or not should_mute:
-            msg = {
-                "data": in_data,
-                "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",
-            }
-            if self._loop and not self._loop.is_closed():
-                self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
+            # Push to queue if hard speech detected or AI is silent (ambient feed)
+            if vad.is_hard or not should_mute:
+                msg = {
+                    "data": in_data,
+                    "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",
+                }
+                if self._loop and not self._loop.is_closed():
+                    self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
 
         return (None, pyaudio.paContinue)
 
