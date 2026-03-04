@@ -73,6 +73,10 @@ class GeminiLiveSession:
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
+
+        # Telemetry counters (best-effort; exposed via gateway.metrics when possible)
+        self._output_queue_drops = 0
+
         self._frame_buffer: list[
             tuple[float, bytes]
         ] = []  # Rolling history of screenshots
@@ -419,6 +423,21 @@ class GeminiLiveSession:
                                 if self._out_queue.full():
                                     try:
                                         self._out_queue.get_nowait()
+
+                                        # Telemetry: count output queue drops. This is a useful
+                                        # signal of downstream playback pressure.
+                                        self._output_queue_drops += 1
+                                        try:
+                                            metrics = getattr(self._gateway, "metrics", None)
+                                            if not isinstance(metrics, dict):
+                                                metrics = {}
+                                                setattr(self._gateway, "metrics", metrics)
+                                            metrics["gemini_output_queue_drops"] = metrics.get(
+                                                "gemini_output_queue_drops", 0
+                                            ) + 1
+                                        except Exception:
+                                            pass
+
                                         logger.debug("Output queue overflow")
                                     except asyncio.QueueEmpty:
                                         pass
