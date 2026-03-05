@@ -207,6 +207,48 @@ class FrequencyDomainNLMS:
         self.output_buffer = np.zeros(self.block_size)
         self.power_estimate = np.ones(self.n_fft // 2 + 1) * 1e-6
 
+    def pre_train(
+        self,
+        far_end_signal: np.ndarray,
+        near_end_signal: np.ndarray,
+        iterations: int = 3,
+    ) -> float:
+        """Pre-train filter with known echo signal.
+
+        This accelerates convergence by training on a short burst
+        of far-end audio before live session starts.
+
+        Args:
+            far_end_signal: Reference signal (what will be played)
+            near_end_signal: Captured signal (contains echo)
+            iterations: Number of training passes
+
+        Returns:
+            Final ERLE in dB (higher is better)
+        """
+        if len(far_end_signal) < self.block_size * 2:
+            logger.warning("Pre-train signal too short")
+            return 0.0
+
+        total_erle = []
+        for _ in range(iterations):
+            for i in range(0, len(far_end_signal) - self.block_size, self.block_size):
+                far_block = far_end_signal[i : i + self.block_size]
+                near_block = near_end_signal[i : i + self.block_size]
+
+                error, echo_est = self.process(far_block, near_block)
+
+                # Compute ERLE for this block
+                echo_power = np.mean(near_block**2)
+                error_power = np.mean(error**2)
+                if error_power > 1e-10:
+                    block_erle = 10 * np.log10(echo_power / error_power)
+                    total_erle.append(block_erle)
+
+        avg_erle = np.mean(total_erle) if total_erle else 0.0
+        logger.info(f"AEC pre-training complete: ERLE={avg_erle:.1f}dB")
+        return avg_erle
+
 
 class DoubleTalkDetector:
     """Double-talk detection using spectral coherence and energy ratios."""

@@ -1,0 +1,20 @@
+{
+  "session_id": "dashboard_1772736980440",
+  "start_time": 1772736980.440348,
+  "end_time": 1772736981.967686,
+  "total_frames": 2,
+  "frames_dropped": 0,
+  "frames_speech": 0,
+  "frames_silence": 2,
+  "latency_p50_ms": 2.8165230000922747,
+  "latency_p95_ms": 2.8165230000922747,
+  "latency_p99_ms": 2.8165230000922747,
+  "latency_avg_ms": 1.8324694999591884,
+  "latency_max_ms": 2.8165230000922747,
+  "erle_avg_db": 0,
+  "aec_convergence_rate": 0.0,
+  "double_talk_frames": 0,
+  "vad_accuracy": 0.0,
+  "speech_ratio": 0.0,
+  "jitter_ms": 1.9681070002661727
+}
