@@ -2,8 +2,8 @@
 Service Container for Dependency Injection
 """
 
-from typing import Dict, Type, Any, Callable
 import threading
+from typing import Any, Callable, Type
 
 
 class ServiceContainer:

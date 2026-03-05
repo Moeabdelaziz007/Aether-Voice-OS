@@ -3,12 +3,10 @@
 Automatically identifies and applies performance optimizations.
 """
 
+import ast
 import logging
 from pathlib import Path
-from typing import List, Dict, Any
-import asyncio
-import ast
-import time
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

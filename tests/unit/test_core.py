@@ -317,7 +317,7 @@ class TestFirebaseConnector:
     """Test FirebaseConnector in offline mode."""
 
     def test_init_defaults(self):
-        from core.infra.cloud.firebase import FirebaseConnector
+        from core.infra.cloud.firebase.interface import FirebaseConnector
 
         fb = FirebaseConnector()
         assert fb._initialized is False
@@ -325,7 +325,7 @@ class TestFirebaseConnector:
         assert fb._session_id is None
 
     def test_is_connected_false_initially(self):
-        from core.infra.cloud.firebase import FirebaseConnector
+        from core.infra.cloud.firebase.interface import FirebaseConnector
 
         fb = FirebaseConnector()
         assert fb.is_connected is False
@@ -333,7 +333,7 @@ class TestFirebaseConnector:
     @pytest.mark.asyncio
     async def test_initialize_without_firebase_admin(self):
         """Should gracefully handle missing firebase-admin."""
-        from core.infra.cloud.firebase import FirebaseConnector
+        from core.infra.cloud.firebase.interface import FirebaseConnector
 
         fb = FirebaseConnector()
         # If firebase-admin is not installed, should return False

@@ -17,7 +17,7 @@ import logging
 import os
 from datetime import datetime
 
-from core.infra.cloud.firebase import FirebaseConnector
+from core.infra.cloud.firebase.interface import FirebaseConnector
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("L2_Synapse")

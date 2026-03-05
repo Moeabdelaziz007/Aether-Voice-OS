@@ -9,16 +9,11 @@ import logging
 import signal
 from typing import Any, Optional
 
-from core.infra.service_container import Container
-from core.ai.scheduler import CognitiveScheduler
 from core.infra.config import AetherConfig, load_config
 from core.infra.event_bus import EventBus
+from core.infra.service_container import Container
 from core.infra.transport.gateway import AetherGateway
 from core.logic.managers.agents import AgentManager
-from core.logic.managers.audio import AudioManager
-from core.logic.managers.infra import InfraManager
-from core.logic.managers.pulse import PulseManager
-from core.services.admin_api import AdminAPIServer
 from core.tools.router import ToolRouter
 
 logger = logging.getLogger(__name__)
@@ -96,7 +91,6 @@ class AetherEngine:
 
     def _setup_vector_store(self) -> None:
         """Initialize and load the global vector store."""
-        from core.tools.vector_store import LocalVectorStore
 
         root_dir = self._container.get('path')(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"

@@ -3,11 +3,11 @@
 Performs security scanning and automated fixes.
 """
 
-import logging
-from pathlib import Path
-from typing import List, Dict, Any
 import asyncio
 import json
+import logging
+from pathlib import Path
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 

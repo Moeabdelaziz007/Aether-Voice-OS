@@ -6,8 +6,7 @@ Automatically converts direct dependencies to dependency injection pattern.
 import ast
 import logging
 from pathlib import Path
-from typing import List, Dict, Any, Set
-import asyncio
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
