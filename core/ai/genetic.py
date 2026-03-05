@@ -10,11 +10,45 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import Optional
+import random
+from dataclasses import asdict, dataclass
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 from core.infra.cloud.firebase import FirebaseConnector
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class AgentDNA:
+    """
+    Encodes the behavior and resource allocation for an Expert Soul.
+    """
+    # Behavioral Traits
+    verbosity: float = 0.5           # 0 (concise) to 1 (verbose)
+    empathy: float = 0.5             # 0 (robotic) to 1 (warm)
+    proactivity: float = 0.5         # 0 (reactive) to 1 (proactive tools)
+    
+    # Resource Allocation
+    latency_budget_ms: int = 500      # Target response time
+    audio_fidelity: float = 0.8       # 0.5 to 1.0 (sample rate/codec quality)
+    
+    # Tool Selection Biases
+    rag_preference: float = 0.7       # Bias towards semantic search
+    vision_preference: float = 0.5    # Bias towards screenshots
+    code_index_preference: float = 0.8 # Bias towards local index
+    
+    # Context Management
+    context_window_size: int = 20     # Number of recent turns to weight
+    long_term_memory_weight: float = 0.3
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> AgentDNA:
+        return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 GENETIC_SYSTEM_PROMPT = """
 You are the Aether Evolutionary Engine. Your task is to optimize the
@@ -54,77 +88,72 @@ class GeneticOptimizer:
         self._api_key = api_key
 
     async def evolve(
-        self, current_instructions: str, session_id: Optional[str] = None
-    ) -> Optional[dict]:
+        self, 
+        expert_id: str,
+        current_dna: AgentDNA,
+        session_id: Optional[str] = None
+    ) -> AgentDNA:
         """
-        Perform a mutation step based on the last session's performance.
+        Perform a mutation or crossover step based on the last session's performance.
         """
         if not self._firebase.is_connected:
             logger.warning("Genetic Optimizer: Firebase offline. Evolution suspended.")
-            return None
+            return current_dna
 
         # 1. Fetch Fitness Data
         sid = session_id or self._firebase._session_id
         if not sid:
-            return None
+            return current_dna
 
         report = await self._firebase.get_session_affective_summary(sid)
         if report.get("status") != "success" or "summary" not in report:
             logger.info("Evolution skipped: No telemetry found for session %s", sid)
-            return None
+            return current_dna
 
         metrics = report["summary"]
+        fitness = metrics.get("avg_engagement", 0.5)
 
-        # Threshold: Only evolve if we have enough interactions
-        if metrics.get("interaction_count", 0) < 3:
-            logger.info(
-                "Evolution skipped: Insufficient interaction count (%d)",
-                metrics.get("interaction_count"),
-            )
-            return None
+        # 2. Heuristic-Based Mutation (First Gen GA)
+        # In a full GA, we'd have a population. Here we use 'Stochastic Hill Climbing'
+        # which is a simplified (1+1) Evolutionary Strategy.
+        
+        new_dna_dict = current_dna.to_dict()
+        mutation_rate = 0.1 * (1.1 - fitness) # Higher mutation if fitness is low
+        
+        for key, value in new_dna_dict.items():
+            if isinstance(value, float):
+                # Apply Gaussian Mutation
+                change = random.gauss(0, mutation_rate)
+                new_dna_dict[key] = max(0.0, min(1.0, value + change))
+            elif isinstance(value, int) and key != "latency_budget_ms":
+                # Integer Shift
+                change = random.choice([-1, 0, 1])
+                new_dna_dict[key] = max(1, value + change)
+        
+        mutated_dna = AgentDNA.from_dict(new_dna_dict)
 
-        # 2. Invoke Gemini for Mutation
-        try:
-            import google.generativeai as genai
+        # 3. Log mutation to Firestore
+        await self._firebase.log_event(
+            "dna_mutation",
+            {
+                "expert_id": expert_id,
+                "session_id": sid,
+                "prev_fitness": fitness,
+                "dna_delta": self._calculate_delta(current_dna, mutated_dna),
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            },
+        )
 
-            genai.configure(api_key=self._api_key)
-            model = genai.GenerativeModel(
-                "gemini-2.5-flash"
-            )  # Standard flash for mutation
+        return mutated_dna
 
-            prompt = GENETIC_SYSTEM_PROMPT.format(
-                avg_engagement=metrics["avg_engagement"],
-                trend=metrics["trend"],
-                avg_pitch=metrics["avg_pitch"],
-                current_instructions=current_instructions,
-            )
-
-            response = await model.generate_content_async(prompt)
-            # Basic JSON extraction
-            text = response.text
-            if "```json" in text:
-                text = text.split("```json")[1].split("```")[0].strip()
-
-            mutation = json.loads(text)
-            logger.info(
-                "Soul Mutated: %s (Engagement: %.2f)",
-                mutation.get("rationale"),
-                metrics["avg_engagement"],
-            )
-
-            # 3. Log mutation to Firestore
-            await self._firebase.log_event(
-                "soul_mutation",
-                {
-                    "session_id": sid,
-                    "prev_engagement": metrics["avg_engagement"],
-                    "rationale": mutation.get("rationale"),
-                    "version_delta": mutation.get("version_delta"),
-                },
-            )
-
-            return mutation
-
-        except Exception as exc:
-            logger.error("Genetic mutation failed: %s", exc)
-            return None
+    def _calculate_delta(self, dna1: AgentDNA, dna2: AgentDNA) -> float:
+        """Calculates L2 norm of the difference between float traits."""
+        d1 = dna1.to_dict()
+        d2 = dna2.to_dict()
+        diff_sq = 0.0
+        count = 0
+        for k in d1:
+            if isinstance(d1[k], float):
+                diff_sq += (d1[k] - d2[k]) ** 2
+                count += 1
+        return (diff_sq / count) ** 0.5 if count > 0 else 0.0

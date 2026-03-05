@@ -39,6 +39,8 @@ from core.ai.handover_telemetry import (
     record_handover_start,
 )
 
+from core.ai.genetic import AgentDNA, GeneticOptimizer
+
 logger = logging.getLogger(__name__)
 
 
@@ -61,7 +63,8 @@ class HiveCoordinator:
         default_soul_name: str = "ArchitectExpert",
         on_handover: Optional[Callable] = None,
         enable_deep_handover: bool = True,
-        ai_config: Optional[AIConfig] = None,
+        ai_config: Optional[Any] = None,
+        api_key: Optional[str] = None,
     ) -> None:
         self._registry = registry
         self._router = router
@@ -91,6 +94,14 @@ class HiveCoordinator:
         )
         self._last_handover_id: Optional[str] = None
 
+        # Genetic DNA Repository
+        self._dna_pool: Dict[str, AgentDNA] = {}
+        self._genetic_optimizer = (
+            GeneticOptimizer(registry.firebase, api_key)
+            if registry.firebase and api_key
+            else None
+        )
+
     @property
     def active_soul(self) -> AthPackage:
         if not self._active_soul:
@@ -104,6 +115,24 @@ class HiveCoordinator:
                 else:
                     logger.error("No souls found in registry!")
         return self._active_soul
+
+    def get_dna(self, soul_name: str) -> AgentDNA:
+        """Retrieve the current DNA for a soul, or the default if none exists."""
+        if soul_name not in self._dna_pool:
+            self._dna_pool[soul_name] = AgentDNA()
+        return self._dna_pool[soul_name]
+
+    async def evolve_soul(self, soul_name: str, session_id: Optional[str] = None) -> None:
+        """Trigger an evolutionary step for a specific soul."""
+        if not self._genetic_optimizer:
+            return
+
+        current_dna = self.get_dna(soul_name)
+        new_dna = await self._genetic_optimizer.evolve(
+            expert_id=soul_name, current_dna=current_dna, session_id=session_id
+        )
+        self._dna_pool[soul_name] = new_dna
+        logger.info("A2A [HIVE] Soul '%s' DNA evolved.", soul_name)
 
     def request_handoff(self, target_name: str, task_context: str) -> bool:
         """

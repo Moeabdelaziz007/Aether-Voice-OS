@@ -11,22 +11,19 @@ from typing import Any, Dict, Optional
 
 from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
 from core.ai.handover_protocol import DebuggerOutput, IntentConfidence
+from core.ai.agents.voice_agent import VoiceAgent
+from core.ai.genetic import AgentDNA
 
 logger = logging.getLogger(__name__)
 
 
-class DebuggerAgent:
+class DebuggerAgent(VoiceAgent):
     """
     Specializes in reviewing code structures, tracebacks, and semantic bugs.
-
-    Uses the Deep Handover Protocol to:
-    - Verify architectural blueprints from Architect
-    - Provide detailed verification results
-    - Propose fixes and identify risks
-    - Support bidirectional feedback loops
     """
 
-    def __init__(self):
+    def __init__(self, dna: Optional[AgentDNA] = None):
+        super().__init__(dna)
         self.orchestrator: Optional[MultiAgentOrchestrator] = None
         self._output: Optional[DebuggerOutput] = None
 

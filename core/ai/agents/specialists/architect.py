@@ -11,23 +11,20 @@ from typing import Optional
 
 from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
 from core.ai.handover_protocol import ArchitectOutput, IntentConfidence
+from core.ai.agents.voice_agent import VoiceAgent
+from core.ai.genetic import AgentDNA
 
 logger = logging.getLogger(__name__)
 
 
-class ArchitectAgent:
+class ArchitectAgent(VoiceAgent):
     """
     Specializes in high-level system design.
     Breaks down user requests into actionable structural steps.
-
-    Uses the Deep Handover Protocol to:
-    - Create comprehensive architectural blueprints
-    - Pass design decisions with rationale
-    - Communicate risk assessments to Debugger
-    - Support bidirectional negotiation
     """
 
-    def __init__(self):
+    def __init__(self, dna: Optional[AgentDNA] = None):
+        super().__init__(dna)
         self.orchestrator: Optional[MultiAgentOrchestrator] = None
         self._output: Optional[ArchitectOutput] = None
 
