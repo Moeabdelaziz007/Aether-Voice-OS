@@ -1,0 +1,210 @@
+{
+    "benchmark": "long_session_stability",
+    "duration_simulated_events": 50000,
+    "initial_memory_mb": 19.32,
+    "final_memory_mb": 36.72,
+    "memory_growth_mb": 17.4,
+    "history": [
+        {
+            "iteration": 0,
+            "memory_mb": 22.47
+        },
+        {
+            "iteration": 1,
+            "memory_mb": 21.98
+        },
+        {
+            "iteration": 2,
+            "memory_mb": 21.96
+        },
+        {
+            "iteration": 3,
+            "memory_mb": 21.46
+        },
+        {
+            "iteration": 4,
+            "memory_mb": 46.77
+        },
+        {
+            "iteration": 5,
+            "memory_mb": 44.5
+        },
+        {
+            "iteration": 6,
+            "memory_mb": 37.39
+        },
+        {
+            "iteration": 7,
+            "memory_mb": 29.99
+        },
+        {
+            "iteration": 8,
+            "memory_mb": 21.52
+        },
+        {
+            "iteration": 9,
+            "memory_mb": 21.54
+        },
+        {
+            "iteration": 10,
+            "memory_mb": 15.8
+        },
+        {
+            "iteration": 11,
+            "memory_mb": 7.39
+        },
+        {
+            "iteration": 12,
+            "memory_mb": 7.32
+        },
+        {
+            "iteration": 13,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 14,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 15,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 16,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 17,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 18,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 19,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 20,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 21,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 22,
+            "memory_mb": 7.21
+        },
+        {
+            "iteration": 23,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 24,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 25,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 26,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 27,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 28,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 29,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 30,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 31,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 32,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 33,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 34,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 35,
+            "memory_mb": 7.3
+        },
+        {
+            "iteration": 36,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 37,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 38,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 39,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 40,
+            "memory_mb": 7.29
+        },
+        {
+            "iteration": 41,
+            "memory_mb": 54.29
+        },
+        {
+            "iteration": 42,
+            "memory_mb": 52.02
+        },
+        {
+            "iteration": 43,
+            "memory_mb": 50.58
+        },
+        {
+            "iteration": 44,
+            "memory_mb": 50.58
+        },
+        {
+            "iteration": 45,
+            "memory_mb": 47.47
+        },
+        {
+            "iteration": 46,
+            "memory_mb": 45.75
+        },
+        {
+            "iteration": 47,
+            "memory_mb": 40.55
+        },
+        {
+            "iteration": 48,
+            "memory_mb": 38.84
+        },
+        {
+            "iteration": 49,
+            "memory_mb": 36.72
+        }
+    ],
+    "status": "success"
+}

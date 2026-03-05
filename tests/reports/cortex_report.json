@@ -1,0 +1,7 @@
+{
+    "benchmark": "cortex_neural_lead_time",
+    "total_fragments": 7,
+    "pre_warmed": true,
+    "pre_warm_elapsed_ms": 61.97,
+    "status": "success"
+}

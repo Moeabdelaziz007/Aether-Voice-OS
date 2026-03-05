@@ -55,6 +55,11 @@ class AcousticTraitEvent(SystemEvent):
     trait_value: float
     confidence: float = 1.0
 
+class VisionPulseEvent(SystemEvent):
+    """Tier 3: Proactive Vision Pulse (Screenshot context)"""
+    image_payload: Optional[bytes] = None
+    metadata: Dict[str, Any] = {}
+
 # ==========================================
 # 🌌 RULE 3: Neural Event Bus Engine
 # Agnostic to audio or agents. 
