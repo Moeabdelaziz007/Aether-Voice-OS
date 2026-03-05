@@ -1,18 +1,17 @@
 """
 📦 DependencyManagementAgent
-Manages project dependencies, checks for outdated packages, security vulnerabilities,
-and suggests updates for Aether Voice OS.
+Manages project dependencies, checks for outdated packages
+and security vulnerabilities. Suggests updates for Aether Voice OS.
 """
 
 import asyncio
 import json
 import logging
 import re
-import subprocess
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -105,7 +104,9 @@ class DependencyManagementAgent:
             
             # Compile results
             results["outdated_packages"] = self.report.outdated_count
-            results["security_vulnerabilities"] = len(self.report.vulnerabilities)
+            results["security_vulnerabilities"] = (
+                len(self.report.vulnerabilities)
+            )
             results["updates_available"] = [
                 f"{d.name}: {d.current_version} → {d.latest_version}"
                 for d in self.report.dependencies
@@ -208,7 +209,8 @@ class DependencyManagementAgent:
             # Simple regex parsing for dependencies section
             in_deps = False
             for line in content.split('\n'):
-                if '[project.dependencies]' in line or '[tool.poetry.dependencies]' in line:
+                if ('[project.dependencies]' in line or 
+                    '[tool.poetry.dependencies]' in line):
                     in_deps = True
                     continue
                 elif line.startswith('[') and in_deps:
@@ -220,11 +222,13 @@ class DependencyManagementAgent:
                     parts = line.split('=', 1)
                     if len(parts) == 2:
                         name = parts[0].strip().strip('"')
-                        version_str = parts[1].strip().strip('"').strip('{').strip('}')
+                        version_str = (parts[1].strip().strip('"')
+                                      .strip('{').strip('}'))
                         
                         # Extract version number
                         version_match = re.search(r'[0-9]+\.[0-9]+', version_str)
-                        version = version_match.group(0) if version_match else "unknown"
+                        version = (version_match.group(0) 
+                                  if version_match else "unknown")
                         
                         if name and name != 'python':
                             dependencies.append(DependencyInfo(
@@ -288,11 +292,13 @@ class DependencyManagementAgent:
                     if dep_type in content:
                         for name, version in content[dep_type].items():
                             # Clean version string
-                            clean_version = re.sub(r'^[\^~>=<]', '', str(version))
+                            clean_version = re.sub(r'^[\^~>=<]', '', 
+                                                  str(version))
                             dependencies.append(DependencyInfo(
                                 name=name,
                                 current_version=clean_version,
-                                is_dev_dependency=(dep_type == "devDependencies"),
+                                is_dev_dependency=(dep_type == 
+                                                  "devDependencies"),
                                 source="npm"
                             ))
                 
@@ -361,7 +367,8 @@ class DependencyManagementAgent:
                 
                 in_deps = False
                 for line in content.split('\n'):
-                    if '[dependencies]' in line or '[dev-dependencies]' in line:
+                    if ('[dependencies]' in line or 
+                        '[dev-dependencies]' in line):
                         in_deps = True
                         continue
                     elif line.startswith('[') and in_deps:
@@ -372,11 +379,13 @@ class DependencyManagementAgent:
                         parts = line.split('=', 1)
                         if len(parts) == 2:
                             name = parts[0].strip()
-                            version_str = parts[1].strip().strip('"')
+                            version_str = (parts[1].strip()
+                                          .strip('"'))
                             
                             # Extract version
                             version_match = re.search(r'[0-9]+\.[0-9]+', version_str)
-                            version = version_match.group(0) if version_match else "unknown"
+                            version = (version_match.group(0) 
+                                      if version_match else "unknown")
                             
                             if name and not name.startswith('#'):
                                 dependencies.append(DependencyInfo(

@@ -151,8 +151,8 @@ def generate_echo_signal(
     """Generate echo of original signal."""
     delay_samples = int(delay_ms * sample_rate / 1000)
     echo = np.zeros(len(original) + delay_samples, dtype=np.float64)
-    echo[delay_samples : delay_samples + len(original)] = original * attenuation
-    return echo[: len(original)].astype(np.int16)
+    echo[delay_samples: delay_samples + len(original)] = original * attenuation
+    return echo[:len(original)].astype(np.int16)
 
 
 def mix_signals(
@@ -220,7 +220,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(speech) - frame_size, frame_size):
-            frame = speech[i : i + frame_size]
+            frame = speech[i: i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -244,7 +244,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(noisy_speech) - frame_size, frame_size):
-            frame = noisy_speech[i : i + frame_size]
+            frame = noisy_speech[i: i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -256,7 +256,6 @@ class TestVAD:
 
     def test_vad_latency(self, vad):
         """Test VAD processing latency."""
-        frame_size = 320
         frame = generate_speech_signal(0.02, 16000)  # 20ms frame
 
         # Warmup
@@ -272,11 +271,11 @@ class TestVAD:
             latencies.append(latency_ms)
 
         avg_latency = np.mean(latencies)
-        p99_latency = np.percentile(latencies, 99)
+        p99_lat = np.percentile(latencies, 99)
 
         # VAD should be very fast (<1ms)
         assert avg_latency < 1.0, f"Average latency {avg_latency:.2f}ms exceeds 1ms"
-        assert p99_latency < 2.0, f"P99 latency {p99_latency:.2f}ms exceeds 2ms"
+        assert p99_lat < 2.0, f"P99 latency {p99_lat:.2f}ms exceeds 2ms"
 
 
 # ═══════════════════════════════════════════════════════════
@@ -469,7 +468,7 @@ class TestEchoGuard:
         time.sleep(0.2)
 
         # Should recognize as user
-        is_user = echo_guard.is_user_speaking(user_speech.tobytes())
+        _ = echo_guard.is_user_speaking(user_speech.tobytes())
         # Note: This may be flaky due to timing
 
     def test_echo_guard_latency(self, echo_guard):

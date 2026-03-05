@@ -1,6 +1,6 @@
 #!/bin/bash
-# 🌌 AetherOS — Deployment Oracle (V1.0)
-# Deploys the full-stack AetherOS environment in containerized mode.
+# 🌌 AetherOS — Deployment Oracle (V2.0)
+# Deploys the full-stack AetherOS environment with Firebase hosting support
 
 set -e
 
@@ -8,8 +8,50 @@ set -e
 CYAN='\033[96m'
 BOLD='\033[1m'
 RESET='\033[0m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
 
-echo -e "${CYAN}${BOLD}⟡ AETHER DEPLOYMENT SIGNAL ⟡${RESET}"
+# Function to print section headers
+print_header() {
+    echo -e "\n${CYAN}${BOLD}⟡ $1 ⟡${RESET}\n"
+}
+
+print_header "AETHER DEPLOYMENT ORACLE"
+
+# Parse command line arguments
+DEPLOY_FIREBASE=false
+DEPLOY_LOCAL=false
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --firebase|-f)
+            DEPLOY_FIREBASE=true
+            shift
+            ;;
+        --local|-l)
+            DEPLOY_LOCAL=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: $0 [OPTIONS]"
+            echo "Options:"
+            echo "  --firebase, -f    Deploy to Firebase Hosting"
+            echo "  --local, -l       Deploy local containerized version"
+            echo "  --help, -h        Show this help message"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            exit 1
+            ;;
+    esac
+done
+
+# If no options specified, deploy both
+if [ "$DEPLOY_FIREBASE" = false ] && [ "$DEPLOY_LOCAL" = false ]; then
+    DEPLOY_FIREBASE=true
+    DEPLOY_LOCAL=true
+fi
 
 # 1. Check for API Key
 if [ -z "$GOOGLE_API_KEY" ]; then
@@ -22,15 +64,45 @@ if [ -z "$GOOGLE_API_KEY" ]; then
     fi
 fi
 
-# 2. Build and Launch
-echo "🚀 Initializing Containers..."
-docker compose build
+# 2. Firebase Deployment (if requested)
+if [ "$DEPLOY_FIREBASE" = true ]; then
+    print_header "FIREBASE DEPLOYMENT"
+    
+    if [ -f "scripts/firebase-deploy.sh" ]; then
+        echo "🚀 Running Firebase deployment validator..."
+        bash scripts/firebase-deploy.sh
+        echo -e "${GREEN}✅ Firebase deployment completed successfully!${RESET}"
+    else
+        echo -e "${YELLOW}⚠️  Firebase deployment script not found. Skipping Firebase deployment.${RESET}"
+    fi
+fi
 
-echo "✨ Igniting AetherOS Stack..."
-docker compose up -d
+# 3. Local Container Deployment (if requested)
+if [ "$DEPLOY_LOCAL" = true ]; then
+    print_header "LOCAL CONTAINER DEPLOYMENT"
+    
+    echo "🚀 Initializing Containers..."
+    docker compose build
+    
+    echo "✨ Igniting AetherOS Stack..."
+    docker compose up -d
+    
+    echo -e "\n${GREEN}✦ AetherOS Local Stack is now live!${RESET}"
+    echo "  - Portal (HUD): http://localhost:3000"
+    echo "  - Kernel (Gateway): ws://localhost:18789"
+    echo "  - Admin API: http://localhost:18790"
+fi
 
-echo -e "\n${CYAN}✦ AetherOS is now live!${RESET}"
-echo "  - Portal (HUD): http://localhost:3000"
-echo "  - Kernel (Gateway): ws://localhost:18789"
-echo "  - Admin API: http://localhost:18790"
+# 4. Final Summary
+print_header "DEPLOYMENT SUMMARY"
+
+if [ "$DEPLOY_FIREBASE" = true ]; then
+    PROJECT_ID=$(jq -r '.projects.default' .firebaserc 2>/dev/null || echo "unknown")
+    echo -e "${GREEN}🌐 Firebase Hosting:${RESET} https://$PROJECT_ID.web.app"
+fi
+
+if [ "$DEPLOY_LOCAL" = true ]; then
+    echo -e "${GREEN}🏠 Local Development:${RESET} http://localhost:3000"
+fi
+
 echo -e "\n${BOLD}Speak anytime — The Aether is listening.${RESET}"

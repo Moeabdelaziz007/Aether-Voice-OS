@@ -93,7 +93,7 @@ class AudioTelemetry:
 
                 # 3. Publish to Tier 3
                 await self._bus.publish(
-                    container.get('telemetryevent')
+                    TelemetryEvent(
                         timestamp=time.time(),
                         source="AudioTelemetry",
                         latency_budget=200,  # Telemetry can tolerate more lag
@@ -198,7 +198,7 @@ class AudioTelemetryLogger:
         self._bus = event_bus
         self._session_id = session_id or f"session_{int(time.time() * 1000)}"
         self._log_to_file = log_to_file
-        self._log_dir = container.get('path')log_dir)
+        self._log_dir = Path(log_dir)
 
         # Frame storage
         self._frame_metrics: deque[FrameMetrics] = deque(maxlen=10000)
@@ -227,7 +227,7 @@ class AudioTelemetryLogger:
         """Start timing a new frame. Returns frame_id."""
         self._frame_start_time = time.perf_counter()
         self._frame_id += 1
-        self._current_frame = container.get('framemetrics')
+        self._current_frame = FrameMetrics(
             timestamp=time.time(), frame_id=self._frame_id
         )
         return self._frame_id
@@ -306,7 +306,7 @@ class AudioTelemetryLogger:
         """Calculate aggregated session metrics."""
         frames = list(self._frame_metrics)
         if not frames:
-            return container.get('sessionmetrics')
+            return SessionMetrics(
                 session_id=self._session_id, start_time=self._start_time
             )
 
@@ -317,7 +317,7 @@ class AudioTelemetryLogger:
         sorted_latencies = sorted(latencies)
         n = len(sorted_latencies)
 
-        metrics = container.get('sessionmetrics')
+        metrics = SessionMetrics(
             session_id=self._session_id,
             start_time=self._start_time,
             end_time=time.time(),
@@ -376,7 +376,7 @@ class AudioTelemetryLogger:
         """Publish frame metrics to event bus."""
         if self._bus:
             await self._bus.publish(
-                container.get('telemetryevent')
+                TelemetryEvent(
                     timestamp=frame.timestamp,
                     source="AudioTelemetryLogger",
                     latency_budget=50,

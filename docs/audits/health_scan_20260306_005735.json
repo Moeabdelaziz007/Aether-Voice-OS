@@ -1,0 +1,1324 @@
+{
+  "timestamp": "2026-03-06 00:57:35",
+  "files_scanned": {
+    "python": 208,
+    "typescript": 84
+  },
+  "totals": {
+    "WARNING": 32,
+    "INFO": 65,
+    "ERROR": 66
+  },
+  "issues": [
+    {
+      "file": "infra/scripts/benchmark.py",
+      "line": 69,
+      "category": "SWALLOWED_EXCEPTION",
+      "severity": "WARNING",
+      "message": "Exception caught and silently swallowed with 'pass'",
+      "solution": "Log the exception via logging.warning() or logger.error() instead of quietly passing."
+    },
+    {
+      "file": "infra/scripts/benchmark.py",
+      "line": 37,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'run_benchmark()' is 104 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 219,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 220,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 560 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 167,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'check_python_patterns()' is 89 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "infra/scripts/health_scanner.py",
+      "line": 465,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'generate_report()' is 86 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "infra/scripts/debug/test_firebase.py",
+      "line": 3,
+      "category": "BROKEN_IMPORT",
+      "severity": "ERROR",
+      "message": "Import 'core.tools.firebase_tool' does not resolve to a file on disk",
+      "solution": "Check if 'core.tools.firebase_tool' was renamed or deleted. Update the import path."
+    },
+    {
+      "file": "tools/dashboard_generator.py",
+      "line": 4,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'generate_dashboard()' is 159 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "core/server.py",
+      "line": 132,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/server.py",
+      "line": 79,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret",
+      "solution": "Move secrets to environment variables (.env) and load via os.getenv()."
+    },
+    {
+      "file": "core/engine.py",
+      "line": 36,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/state_manager.py",
+      "line": 101,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/config.py",
+      "line": 11,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/service_container.py",
+      "line": 41,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/telemetry.py",
+      "line": 42,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/event_bus.py",
+      "line": 27,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/lifecycle.py",
+      "line": 19,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/health_check.py",
+      "line": 68,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/transport/gateway.py",
+      "line": 96,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/transport/gateway.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 829 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/infra/transport/session_state.py",
+      "line": 451,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/transport/messages.py",
+      "line": 42,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/cloud/firebase/schemas.py",
+      "line": 9,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/infra/cloud/firebase/queries.py",
+      "line": 63,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: closing parenthesis ')' does not match opening parenthesis '[' on line 62",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/rag_tool.py",
+      "line": 43,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/tasks_tool.py",
+      "line": 216,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'get_tools()' is 109 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "core/tools/firestore_vector_store.py",
+      "line": 28,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/system_tool.py",
+      "line": 198,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'get_tools()' is 112 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "core/tools/memory_tool.py",
+      "line": 246,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'get_tools()' is 84 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "core/tools/voice_tool.py",
+      "line": 131,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/environment_memory.py",
+      "line": 18,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/code_indexer.py",
+      "line": 22,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/router.py",
+      "line": 137,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/context_scraper.py",
+      "line": 17,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/tools/camera_tool.py",
+      "line": 50,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/memory/short_term.py",
+      "line": 15,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/memory/long_term.py",
+      "line": 14,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/identity/package.py",
+      "line": 23,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/logic/managers/pulse.py",
+      "line": 12,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/logic/managers/agents.py",
+      "line": 26,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/logic/managers/infra.py",
+      "line": 15,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/logic/managers/audio.py",
+      "line": 35,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/audio/playback.py",
+      "line": 109,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/audio/state_manager.py",
+      "line": 80,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/audio/telemetry.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 22 functions",
+      "solution": "Consider refactoring related functions into a Class to encapsulate state and logic."
+    },
+    {
+      "file": "core/audio/capture.py",
+      "line": 234,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/audio/capture.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 581 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/audio/dynamic_aec.py",
+      "line": 276,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/audio/dynamic_aec.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 861 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/audio/processing.py",
+      "line": 427,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/audio/processing.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 508 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/audio/state.py",
+      "line": 73,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/audio/paralinguistics.py",
+      "line": 137,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/adk_agents.py",
+      "line": 19,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/l2_synapse.py",
+      "line": 33,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/handover_telemetry.py",
+      "line": 97,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/handover_telemetry.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 694 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/ai/handover.py",
+      "line": 17,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/session.py",
+      "line": 170,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/session.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 921 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/ai/handover_protocol.py",
+      "line": 29,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/handover_protocol.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 1032 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/ai/hive.py",
+      "line": 89,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/hive.py",
+      "line": 728,
+      "category": "MARKER",
+      "severity": "INFO",
+      "message": "Developer marker found: TODO",
+      "solution": "Review and resolve the inline technical debt/todo item."
+    },
+    {
+      "file": "core/ai/hive.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 729 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/ai/scheduler.py",
+      "line": 27,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/thalamic.py",
+      "line": 20,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/handover/manager.py",
+      "line": 51,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/handover/manager.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 631 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "core/ai/agents/registry.py",
+      "line": 13,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/agents/proactive.py",
+      "line": 20,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/agents/voice_agent.py",
+      "line": 18,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/agents/integrated.py",
+      "line": 27,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/agents/specialists/debugger.py",
+      "line": 51,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/ai/agents/specialists/architect.py",
+      "line": 52,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unexpected indent",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/api/gemini_proxy.py",
+      "line": 15,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/services/watchdog.py",
+      "line": 21,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/services/registry.py",
+      "line": 24,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/services/admin_api.py",
+      "line": 84,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/emotion/calibrator.py",
+      "line": 18,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "core/session/restarter.py",
+      "line": 73,
+      "category": "SYNTAX",
+      "severity": "ERROR",
+      "message": "Syntax error: unmatched ')'",
+      "solution": "Fix the syntax typo at the specified line before re-running."
+    },
+    {
+      "file": "tests/demo_complete_testing.py",
+      "line": 30,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'run_comprehensive_test()' is 146 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/test_compression.py",
+      "line": 17,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret",
+      "solution": "Move secrets to environment variables (.env) and load via os.getenv()."
+    },
+    {
+      "file": "tests/dynamic_config_controller.py",
+      "line": 47,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function '__init__()' is 129 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/gemini_live_interactive_benchmark.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 789 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "tests/gemini_live_interactive_benchmark.py",
+      "line": 184,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'render()' is 107 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/gemini_live_interactive_benchmark.py",
+      "line": 495,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function '_monitor_audio_processing()' is 127 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/unit/test_evolutionary_stability.py",
+      "line": 16,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_multi_turn_evolution()' is 93 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 55,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret",
+      "solution": "Move secrets to environment variables (.env) and load via os.getenv()."
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 77,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret",
+      "solution": "Move secrets to environment variables (.env) and load via os.getenv()."
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 102,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret",
+      "solution": "Move secrets to environment variables (.env) and load via os.getenv()."
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 503 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "tests/unit/test_core.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 42 functions",
+      "solution": "Consider refactoring related functions into a Class to encapsulate state and logic."
+    },
+    {
+      "file": "tests/unit/test_voice_processing_comprehensive.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 913 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "tests/unit/test_voice_processing_comprehensive.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 35 functions",
+      "solution": "Consider refactoring related functions into a Class to encapsulate state and logic."
+    },
+    {
+      "file": "tests/unit/test_voice_processing_comprehensive.py",
+      "line": 704,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'run_comprehensive_tests()' is 142 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/unit/test_hive_swarm.py",
+      "line": 20,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_hive_full_lifecycle()' is 81 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/unit/test_agent_manager.py",
+      "line": 62,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret",
+      "solution": "Move secrets to environment variables (.env) and load via os.getenv()."
+    },
+    {
+      "file": "tests/unit/test_voice_tool.py",
+      "line": 28,
+      "category": "SECURITY",
+      "severity": "ERROR",
+      "message": "Potential hardcoded secret",
+      "solution": "Move secrets to environment variables (.env) and load via os.getenv()."
+    },
+    {
+      "file": "tests/unit/test_voice_tool.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 21 functions",
+      "solution": "Consider refactoring related functions into a Class to encapsulate state and logic."
+    },
+    {
+      "file": "tests/integration/test_neural_dispatcher.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "INFO",
+      "message": "File has 26 functions",
+      "solution": "Consider refactoring related functions into a Class to encapsulate state and logic."
+    },
+    {
+      "file": "tests/integration/test_gateway_e2e.py",
+      "line": 66,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_gateway_handshake_e2e()' is 97 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/benchmarks/voice_quality_benchmark.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 906 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "tests/benchmarks/voice_quality_benchmark.py",
+      "line": 284,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'benchmark_voice_quality_analysis()' is 81 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/benchmarks/voice_quality_benchmark.py",
+      "line": 367,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'benchmark_double_talk_performance()' is 93 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/benchmarks/voice_quality_benchmark.py",
+      "line": 462,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'benchmark_aec_effectiveness()' is 83 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/benchmarks/voice_quality_benchmark.py",
+      "line": 547,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'benchmark_emotion_f1_score()' is 120 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/benchmarks/voice_quality_benchmark.py",
+      "line": 774,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'run_all_benchmarks()' is 128 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/e2e/test_system_alpha_e2e.py",
+      "line": 61,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_aether_system_alpha_full_cycle()' is 122 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/e2e/test_performance_stress.py",
+      "line": 51,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_handshake_latency()' is 84 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/e2e/test_e2e_singularity.py",
+      "line": 30,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_e2e_singularity()' is 187 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "tests/stress/test_event_bus_load.py",
+      "line": 11,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function 'test_event_bus_10k_eps_stress()' is 94 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "agents/dependency_management_agent.py",
+      "line": 0,
+      "category": "COMPLEXITY",
+      "severity": "WARNING",
+      "message": "File has 751 lines",
+      "solution": "Split this file into smaller sub-modules (e.g., separate Models from Handlers/Business Logic)."
+    },
+    {
+      "file": "agents/dependency_management_agent.py",
+      "line": 351,
+      "category": "LONG_FUNCTION",
+      "severity": "INFO",
+      "message": "Function '_check_rust_dependencies()' is 84 lines long",
+      "solution": "Extract pure, stateless parts of this function into smaller helper generic functions."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 169,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 170,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 171,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 172,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 174,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 175,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 176,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "agents/security_agent.py",
+      "line": 177,
+      "category": "SECURITY",
+      "severity": "WARNING",
+      "message": "Usage of eval()/exec()",
+      "solution": "Avoid eval(). If parsing JSON, use json.loads(). If parsing literals, use ast.literal_eval()."
+    },
+    {
+      "file": "skills/github-intel/scripts/repo_analyzer.py",
+      "line": 129,
+      "category": "BARE_EXCEPT",
+      "severity": "WARNING",
+      "message": "Bare 'except:' catches all exceptions including SystemExit",
+      "solution": "Change to 'except Exception as e:' to only catch standard exceptions."
+    },
+    {
+      "file": "apps/portal/out/_next/static/chunks/edcf7cbb1b2d956d.js",
+      "line": 1,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/out/_next/static/chunks/251905a4e21a2d53.js",
+      "line": 1,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/out/_next/static/chunks/f91d6c428dabe79c.js",
+      "line": 1,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/app/admin/page.tsx",
+      "line": 180,
+      "category": "ANY_TYPE",
+      "severity": "INFO",
+      "message": "Usage of 'any' type",
+      "solution": "Replace 'any' with 'unknown' (and narrow) or a detailed Interface type."
+    },
+    {
+      "file": "apps/portal/src/app/live/page.tsx",
+      "line": 85,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/components/AetherBrain.tsx",
+      "line": 187,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 39,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 40,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 41,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 42,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 65,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 66,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 67,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 68,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 94,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 95,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 96,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 97,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 120,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 121,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/__tests__/benchmark.test.ts",
+      "line": 122,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useVisionPulse.ts",
+      "line": 168,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useVisionPulse.ts",
+      "line": 207,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 102,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 212,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 234,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 292,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 316,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 429,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useGeminiLive.ts",
+      "line": 440,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/usePerformanceMode.ts",
+      "line": 164,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useAetherGateway.ts",
+      "line": 93,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useAetherGateway.ts",
+      "line": 115,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "apps/portal/src/hooks/useAetherGateway.ts",
+      "line": 257,
+      "category": "CONSOLE_LOG",
+      "severity": "INFO",
+      "message": "console.log() found",
+      "solution": "Remove simple console.log statements or replace with structured logging (e.g., pino)."
+    },
+    {
+      "file": "core/memory/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/memory' has Python files but no __init__.py",
+      "solution": "Create empty file: touch core/memory/__init__.py"
+    },
+    {
+      "file": "core/api/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/api' has Python files but no __init__.py",
+      "solution": "Create empty file: touch core/api/__init__.py"
+    },
+    {
+      "file": "core/session/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'core/session' has Python files but no __init__.py",
+      "solution": "Create empty file: touch core/session/__init__.py"
+    },
+    {
+      "file": "tests/simulation/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'tests/simulation' has Python files but no __init__.py",
+      "solution": "Create empty file: touch tests/simulation/__init__.py"
+    },
+    {
+      "file": "tests/stress/__init__.py",
+      "line": 0,
+      "category": "MISSING_INIT",
+      "severity": "WARNING",
+      "message": "Directory 'tests/stress' has Python files but no __init__.py",
+      "solution": "Create empty file: touch tests/stress/__init__.py"
+    }
+  ],
+  "macro_improvements": [
+    "\ud83d\udce6 [Module Resolution] Missing 5 '__init__.py' files. This can break absolute imports across the codebase.",
+    "\ud83e\udde9 [Architecture] High number of 'God Objects' and oversized files detected. We need to adopt a cleaner Domain-Driven Design (DDD). We should start splitting components by Domain (e.g., `core/audio` -> split into `capture`, `pipeline`, `output`).",
+    "\ud83d\udfe6 [Type Safety] 1 TypeScript shortcuts ('any' or '@ts-ignore') detected. We should strictly enforce tsconfig.json `'strict': true` to prevent future runtime UI bugs.",
+    "\ud83d\udcdc [Maintainability] 25 functions exceed 80 lines. Testability is severely impaired here. Recommendation: Apply the 'Extract Function' refactoring pattern heavily on the core handlers."
+  ]
+}
