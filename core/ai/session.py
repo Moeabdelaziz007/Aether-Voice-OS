@@ -36,6 +36,7 @@ from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
 from core.utils.errors import AIConnectionError, AISessionExpiredError
+from core.infra.service_container import container
 
 logger = logging.getLogger(__name__)
 
@@ -166,7 +167,7 @@ class GeminiLiveSession:
                 self._config.api_version,
             )
         except Exception as exc:
-            raise container.get('aiconnectionerror')
+            raise AIConnectionError(
                 f"Failed to create Gemini client: {exc}",
                 cause=exc,
             ) from exc
@@ -180,7 +181,7 @@ class GeminiLiveSession:
         both are cancelled (structured concurrency).
         """
         if not self._client:
-            raise container.get('aiconnectionerror')"Call connect() before run()")
+            raise AIConnectionError("Call connect() before run()")
 
         config = self._build_session_config()
         self._running = True
@@ -195,11 +196,8 @@ class GeminiLiveSession:
 
                 # Wire in Thalamic Gate V2
                 try:
-                    from core.ai.thalamic import ThalamicGate
-                    from core.demo.fallback import DemoFallback
-
-                    self._thalamic_gate = container.get('thalamicgate')session)
-                    self._demo_fallback = container.get('demofallback')self)
+                    self._thalamic_gate = container.get('thalamicgate')
+                    self._demo_fallback = container.get('demofallback')
                     await self._thalamic_gate.start()
                 except Exception as e:
                     logger.error("Failed to wire Thalamic Gate: %s", e)
@@ -223,7 +221,7 @@ class GeminiLiveSession:
                     logger.info("Session cancelled (shutdown)")
                 else:
                     logger.error("Session error: %s", exc, exc_info=True)
-                    raise container.get('aisessionexpirederror')
+                    raise AISessionExpiredError(
                         f"Gemini session terminated: {exc}",
                         cause=exc,
                     ) from exc
