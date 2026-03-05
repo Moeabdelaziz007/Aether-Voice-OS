@@ -22,12 +22,10 @@ class AgentManager:
         self._router = router
         self._event_bus = event_bus
 
-        self._registry = container.get('aetherregistry')
-            self._config.packages_dir, on_change=self._on_package_change
-        )
+        self._registry = container.get('aetherregistry', self._config.packages_dir, on_change=self._on_package_change)
         self._registry.initialize_vector_store(self._config.ai.api_key)
 
-        self._hive = container.get('hivecoordinator')
+        self._hive = container.get('hivecoordinator',
             registry=self._registry,
             router=self._router,
             default_soul_name="ArchitectExpert",

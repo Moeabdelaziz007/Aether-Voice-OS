@@ -65,16 +65,19 @@ async def create_task(
     }
 
     db = _get_db()
-    if db:
-        try:
-            doc_ref = db.collection("tasks").document(task_id)
-            await doc_ref.set(task_data)
-            logger.info("Task created in Firestore: %s — %s", task_id, title)
-        except Exception as exc:
-            logger.error("Failed to write task: %s", exc)
-            return {"status": "error", "message": f"Failed to save: {exc}"}
-    else:
-        logger.warning("Firestore unavailable — task stored locally only")
+    if not db:
+        return {
+            "status": "error", 
+            "message": "Synapse Link Offline: Cannot save task to cloud. Local caching is disabled for security."
+        }
+
+    try:
+        doc_ref = db.collection("tasks").document(task_id)
+        await doc_ref.set(task_data)
+        logger.info("Task created in Firestore: %s — %s", task_id, title)
+    except Exception as exc:
+        logger.error("Failed to write task: %s", exc)
+        return {"status": "error", "message": f"Cloud Write Failure: {exc}"}
 
     return {
         "status": "created",
@@ -197,14 +200,19 @@ async def add_note(content: str, tag: str = "general", **kwargs) -> dict:
     }
 
     db = _get_db()
-    if db:
-        try:
-            doc_ref = db.collection("notes").document(note_id)
-            await doc_ref.set(note_data)
-            logger.info("Note saved: %s", note_id)
-        except Exception as exc:
-            logger.error("Failed to save note: %s", exc)
-            return {"status": "error", "message": str(exc)}
+    if not db:
+        return {
+            "status": "error",
+            "message": "Synapse Link Offline: Cannot save note to cloud."
+        }
+        
+    try:
+        doc_ref = db.collection("notes").document(note_id)
+        await doc_ref.set(note_data)
+        logger.info("Note saved: %s", note_id)
+    except Exception as exc:
+        logger.error("Failed to save note: %s", exc)
+        return {"status": "error", "message": f"Cloud Write Failure: {exc}"}
 
     return {
         "status": "saved",

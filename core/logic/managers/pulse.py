@@ -9,7 +9,7 @@ from core.tools.vision_tool import take_screenshot
 logger = logging.getLogger("AetherOS.Pulse")
 
 
-class container.get('visionpulseevent')SystemEvent):
+class VisionPulseEvent(SystemEvent):
     """Tier 3: Proactive Vision Data."""
 
     b64_data: str

@@ -55,11 +55,9 @@ async def save_memory(
     """
     db = _get_db()
     if not db:
-        logger.warning("Memory tool: Firebase not connected — using local fallback")
         return {
-            "status": "saved_locally",
-            "key": key,
-            "message": f"Remembered '{key}' (local only — will not persist).",
+            "status": "error",
+            "message": "Neural Persistence Offline: Cannot commit memory to cloud lattice."
         }
 
     valid_priorities = ["low", "medium", "high"]
