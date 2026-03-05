@@ -18,9 +18,11 @@ logger = logging.getLogger(__name__)
 class AudioManager:
     """Manages audio lifecycle: capture, playback, and analysis."""
 
-    def __init__(self, config: AetherConfig, gateway: Any, on_affective_data: Callable):
+    def __init__(self, config: AetherConfig, gateway: Any, on_affective_data: Callable, event_bus: Optional[Any] = None):
         self._config = config
         self._gateway = gateway
+        self._event_bus = event_bus
+        self._on_affective_data_callback = on_affective_data
 
         self._paralinguistics = ParalinguisticAnalyzer(
             sample_rate=self._config.audio.send_sample_rate
@@ -36,7 +38,7 @@ class AudioManager:
             self._gateway.audio_in_queue,
             vad_engine=self._vad,
             paralinguistic_analyzer=self._paralinguistics,
-            on_affective_data=on_affective_data,
+            on_affective_data=self._on_affective_data_bridge,
         )
         self._capture._on_audio_telemetry = self._gateway.broadcast
 
@@ -64,4 +66,32 @@ class AudioManager:
     def flash_interrupt(self):
         """High-priority alias for barge-in events."""
         logger.info("⚡ FLASH INTERRUPT: Clearing audio pipelines.")
+        logger.info("⚡ FLASH INTERRUPT: Clearing audio pipelines.")
         self.interrupt()
+
+    def _on_affective_data_bridge(self, features: Any) -> None:
+        """Internal bridge to trigger the shared callback and the EventBus."""
+        # 1. Trigger the legacy engine callback (for Firestore/Gateway logging)
+        if self._on_affective_data_callback:
+            self._on_affective_data_callback(features)
+
+        # 2. Publish to the Neural Event Bus for Tier 2/3 reaction
+        if self._event_bus:
+            from core.infra.event_bus import AcousticTraitEvent
+            import time
+
+            traits = {
+                "valence": features.engagement_score,
+                "arousal": features.rms_variance / 500.0,
+                "energy": features.rms_variance / 1000.0,
+            }
+
+            for name, val in traits.items():
+                event = AcousticTraitEvent(
+                    timestamp=time.time(),
+                    source="AudioManager",
+                    latency_budget=100, # Sub-100ms requirement
+                    trait_name=name,
+                    trait_value=val
+                )
+                asyncio.create_task(self._event_bus.publish(event))

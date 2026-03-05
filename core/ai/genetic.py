@@ -83,9 +83,10 @@ class GeneticOptimizer:
     Orchestrates the evolution of the Agent's soul.
     """
 
-    def __init__(self, firebase: FirebaseConnector, api_key: str):
+    def __init__(self, firebase: FirebaseConnector, api_key: str, ema_alpha: float = 0.3):
         self._firebase = firebase
         self._api_key = api_key
+        self._ema_alpha = ema_alpha  # Exponential Moving Average smoothing factor
 
     async def evolve(
         self, 
@@ -161,14 +162,18 @@ class GeneticOptimizer:
         # Adaptive Logic:
         # 1. Stress/Arousal -> Decrease Verbosity, increase Empathy
         if trait_name == "arousal" and trait_value > 0.7:
-            new_dna_dict["verbosity"] = max(0.2, new_dna_dict["verbosity"] - 0.1)
-            new_dna_dict["empathy"] = min(1.0, new_dna_dict["empathy"] + 0.1)
-            logger.info("🔥 Hot-Mutation: High Arousal detected. Context switching to 'Calm Operator'.")
+            target_verbosity = max(0.2, new_dna_dict["verbosity"] - 0.2)
+            target_empathy = min(1.0, new_dna_dict["empathy"] + 0.2)
+            # Apply EMA smoothing: trait = (1-alpha)*current + alpha*target
+            new_dna_dict["verbosity"] = (1.0 - self._ema_alpha) * new_dna_dict["verbosity"] + (self._ema_alpha * target_verbosity)
+            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict["empathy"] + (self._ema_alpha * target_empathy)
+            logger.info("🔥 Hot-Mutation (EMA): High Arousal detected. Context switching to 'Calm Operator'.")
 
         # 2. Valence (Positive/Negative) -> Adjust Empathy
         if trait_name == "valence" and trait_value < 0.4:
-            new_dna_dict["empathy"] = min(1.0, new_dna_dict["empathy"] + 0.15)
-            logger.info("🔥 Hot-Mutation: Negative Valence detected. Boosting Empathy.")
+            target_empathy = min(1.0, new_dna_dict["empathy"] + 0.3)
+            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict["empathy"] + (self._ema_alpha * target_empathy)
+            logger.info("🔥 Hot-Mutation (EMA): Negative Valence detected. Boosting Empathy.")
 
         # 3. Energy -> Adjust Proactivity
         if trait_name == "energy" and trait_value > 0.8:

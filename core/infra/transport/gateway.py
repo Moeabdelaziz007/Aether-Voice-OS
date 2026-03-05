@@ -302,6 +302,7 @@ class AetherGateway:
                     tool_router=self._tool_router,
                     soul_manifest=target_soul.manifest,
                     gateway=self,
+                    scheduler=getattr(self, "_scheduler", None)
                 )
 
                 # Inject handover context if available

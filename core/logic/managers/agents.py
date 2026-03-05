@@ -11,9 +11,10 @@ logger = logging.getLogger(__name__)
 class AgentManager:
     """Manages AI agents, registry, and handovers."""
 
-    def __init__(self, config: AetherConfig, router: Any, on_handover: Callable):
+    def __init__(self, config: AetherConfig, router: Any, on_handover: Callable, event_bus: Optional[Any] = None):
         self._config = config
         self._router = router
+        self._event_bus = event_bus
 
         self._registry = AetherRegistry(
             self._config.packages_dir, on_change=self._on_package_change
@@ -26,6 +27,8 @@ class AgentManager:
             default_soul_name="ArchitectExpert",
             on_handover=on_handover,
             ai_config=self._config.ai,
+            event_bus=self._event_bus,
+            api_key=self._config.ai.api_key,
         )
 
     def scan_registry(self):

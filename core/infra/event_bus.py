@@ -71,9 +71,9 @@ class EventBus:
         # Subscribers routing table: EventType -> List of Async Callbacks
         self._subscribers: Dict[Type[SystemEvent], List[Callable[[SystemEvent], Awaitable[None]]]] = {}
         
-        # Dispatcher state
+        # Dispatcher state (Multi-Lane)
         self._running = False
-        self._dispatcher_task: Optional[asyncio.Task] = None
+        self._tasks: List[asyncio.Task] = []
 
     def subscribe(self, event_type: Type[SystemEvent], callback: Callable[[SystemEvent], Awaitable[None]]):
         """Register an async callback for a specific event type."""
@@ -86,11 +86,9 @@ class EventBus:
         """Publish an event to its respective tier queue."""
         if isinstance(event, AudioFrameEvent):
             await self.audio_queue.put(event)
-        elif isinstance(event, ControlEvent):
+        elif isinstance(event, (ControlEvent, AcousticTraitEvent)):
             await self.control_queue.put(event)
-        elif isinstance(event, AcousticTraitEvent):
-            await self.control_queue.put(event)  # Route to Tier 2 (Control)
-        elif isinstance(event, TelemetryEvent):
+        elif isinstance(event, (TelemetryEvent, VisionPulseEvent)):
             await self.telemetry_queue.put(event)
         else:
             logger.warning(f"[EventBus] Unknown event tier for {type(event)}. Routing to Telemetry.")
@@ -102,72 +100,41 @@ class EventBus:
             return
         
         self._running = True
-        self._dispatcher_task = asyncio.create_task(self._dispatch_loop())
-        logger.info("[EventBus] 🌌 Neural Event Bus initialized.")
+        self._tasks = [
+            asyncio.create_task(self._tier_worker("Audio", self.audio_queue, drop_if_expired=True)),
+            asyncio.create_task(self._tier_worker("Control", self.control_queue, drop_if_expired=True)),
+            asyncio.create_task(self._tier_worker("Telemetry", self.telemetry_queue, drop_if_expired=False))
+        ]
+        logger.info("[EventBus] 🌌 Multi-Lane Neural Event Bus initialized.")
 
     async def stop(self):
         """Gracefully shutdown the bus and flush queues."""
         self._running = False
-        if self._dispatcher_task:
-            self._dispatcher_task.cancel()
-            try:
-                await self._dispatcher_task
-            except asyncio.CancelledError:
-                pass
+        for task in self._tasks:
+            task.cancel()
+        
+        if self._tasks:
+            await asyncio.gather(*self._tasks, return_exceptions=True)
+            self._tasks = []
         logger.info("[EventBus] Event Bus offline.")
 
-    async def _dispatch_loop(self):
-        """
-        The Core Scheduler Loop.
-        Implements proportional fair scheduling to prevent starvation,
-        while strictly dropping expired events based on latency_budget.
-        """
+    async def _tier_worker(self, name: str, queue: asyncio.Queue, drop_if_expired: bool):
+        """Dedicated worker for a specific event lane."""
+        logger.debug(f"[EventBus] {name} Lane Worker started.")
         while self._running:
-            processed = False
-
-            # 1. Process up to 10 Audio Frames (Tier 1)
-            for _ in range(10):
-                if not self.audio_queue.empty():
-                    event = self.audio_queue.get_nowait()
-                    if not event.is_expired():
-                        await self._route_event(event)
-                    else:
-                        logger.warning(f"[EventBus] 🔴 Dropped expired AudioFrame from {event.source}")
-                    self.audio_queue.task_done()
-                    processed = True
+            try:
+                event = await queue.get()
+                
+                if drop_if_expired and event.is_expired():
+                    logger.warning(f"[EventBus] 🔴 {name} Lane: Dropped expired event from {event.source}")
                 else:
-                    break
+                    await self._route_event(event)
 
-            # 2. Process up to 5 Control Events (Tier 2)
-            for _ in range(5):
-                if not self.control_queue.empty():
-                    event = self.control_queue.get_nowait()
-                    if not event.is_expired():
-                        await self._route_event(event)
-                    else:
-                        logger.warning(f"[EventBus] 🟡 Dropped expired ControlEvent: {event.command}")
-                    self.control_queue.task_done()
-                    processed = True
-                else:
-                    break
-            
-            # 3. Process up to 20 Telemetry Events (Tier 3)
-            for _ in range(20):
-                if not self.telemetry_queue.empty():
-                    event = self.telemetry_queue.get_nowait()
-                    if not event.is_expired():
-                        await self._route_event(event)
-                    # Note: Expired telemetry is silently dropped to reduce log noise
-                    self.telemetry_queue.task_done()
-                    processed = True
-                else:
-                    break
-
-            # Yield control to the ASGI/uvloop event loop
-            if not processed:
-                await asyncio.sleep(0.001) # Rest if idle
-            else:
-                await asyncio.sleep(0)     # Breathe between bursts
+                queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"[EventBus] {name} Lane Error: {e}")
 
     async def _route_event(self, event: SystemEvent):
         """Broadcast the event to all matched subscribers concurrently."""

@@ -62,12 +62,13 @@ class HiveCoordinator:
         router: ToolRouter,
         default_soul_name: str = "ArchitectExpert",
         on_handover: Optional[Callable] = None,
-        enable_deep_handover: bool = True,
-        ai_config: Optional[Any] = None,
+        event_bus: Optional[Any] = None,
         api_key: Optional[str] = None,
     ) -> None:
         self._registry = registry
         self._router = router
+        self._event_bus = event_bus
+        self._scheduler: Optional[Any] = None # Will be injected by Engine
         self._active_soul: Optional[AthPackage] = None
         self._default_soul_name = default_soul_name
         self._on_handover = on_handover
@@ -101,6 +102,11 @@ class HiveCoordinator:
             if registry.firebase and api_key
             else None
         )
+
+        # Reactive Kernel -> Affective Soul bridge
+        if self._event_bus:
+            from core.infra.event_bus import AcousticTraitEvent
+            self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
 
     @property
     def active_soul(self) -> AthPackage:
@@ -690,3 +696,27 @@ class HiveCoordinator:
                 )
         except Exception as e:
             logger.error("Failed to apply compression: %s", e)
+
+    async def _on_acoustic_trait(self, event: Any) -> None:
+        """
+        Handle real-time paralinguistic events and trigger Hot-DNA-Mutation.
+        """
+        if not self._genetic_optimizer or not self._active_soul:
+            return
+
+        soul_name = self._active_soul.manifest.name
+        current_dna = self.get_dna(soul_name)
+        
+        # 1. Trigger micro-mutation
+        new_dna = await self._genetic_optimizer.mutate_mid_session(
+            current_dna=current_dna,
+            trait_name=event.trait_name,
+            trait_value=event.trait_value
+        )
+        
+        # 2. Update local pool
+        if new_dna != current_dna:
+            self._dna_pool[soul_name] = new_dna
+            logger.info("⚡ Aether Hive: Hot-Mutated DNA for '%s' due to %s pulse.", soul_name, event.trait_name)
+            
+            # TODO: Inject updated DNA traits into the active session context/prompt

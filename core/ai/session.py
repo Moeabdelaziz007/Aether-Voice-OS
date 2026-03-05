@@ -61,6 +61,7 @@ class GeminiLiveSession:
         on_tool_call: Optional[callable] = None,
         tool_router: Optional["ToolRouter"] = None,
         soul_manifest: Optional["SoulManifest"] = None,
+        scheduler: Optional[Any] = None,
     ) -> None:
         self._config = config
         self._soul = soul_manifest
@@ -70,6 +71,9 @@ class GeminiLiveSession:
         self._on_interrupt = on_interrupt
         self._on_tool_call = on_tool_call
         self._tool_router = tool_router
+        self._scheduler = scheduler
+        if self._scheduler:
+            self._scheduler.set_echo_callback(self._inject_echo)
         self._client: Optional[genai.Client] = None
         self._session = None
         self._running = False
@@ -507,6 +511,8 @@ class GeminiLiveSession:
 
         tasks = []
         for fc in calls:
+            if self._scheduler:
+                self._scheduler.on_tool_start(fc.name)
             tasks.append(self._tool_router.dispatch(fc))
 
         # 2. Parallel Execution
@@ -581,6 +587,9 @@ class GeminiLiveSession:
                     "timestamp": result.get("handoff_time"),
                 }
                 logger.info("A2A [STATE] Tracking handoff: %s", handoff_id)
+            
+            if self._scheduler:
+                self._scheduler.on_tool_end(fc.name)
 
         # 4. Final step: Send all responses back in a single turn
         try:
@@ -655,6 +664,10 @@ class GeminiLiveSession:
         # Add base system instruction
         if self._config.system_instruction:
             instruction_parts.append(self._config.system_instruction)
+
+        # 4. Neural Proactive Grounding (Cortex)
+        if self._scheduler:
+            instruction_parts.append(self._scheduler.get_grounding_context())
 
         # Join with clear separators
         return "\n\n---\n\n".join(instruction_parts)
@@ -776,6 +789,22 @@ class GeminiLiveSession:
                 self._injected_handover_context.handover_id,
             )
             self._injected_handover_context = None
+
+    async def _inject_echo(self, echo: str) -> None:
+        """Inject a 'thought echo' into the live stream to trigger vocalization."""
+        if not self._session or not self._running:
+            return
+
+        logger.info("🔮 A2A [ECHO] Injecting thought: %s", echo)
+        try:
+            # We wrap the echo in a directive to ensure Gemini vocalizes it as a thought
+            await self._session.send_realtime_input(
+                parts=[
+                    types.Part.from_text(text=f"[thought: {echo}]")
+                ]
+            )
+        except Exception as e:
+            logger.error("Echo injection failed: %s", e)
 
     def get_handover_acknowledgment(self, handover_id: str) -> Optional[str]:
         """

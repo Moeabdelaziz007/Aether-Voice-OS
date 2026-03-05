@@ -11,9 +11,12 @@ from typing import Any, Optional
 
 from core.infra.config import AetherConfig, load_config
 from core.infra.transport.gateway import AetherGateway
+from core.infra.event_bus import EventBus
 from core.logic.managers.agents import AgentManager
 from core.logic.managers.audio import AudioManager
 from core.logic.managers.infra import InfraManager
+from core.logic.managers.pulse import PulseManager
+from core.ai.scheduler import CognitiveScheduler
 from core.services.admin_api import AdminAPIServer
 from core.tools.router import ToolRouter
 
@@ -33,8 +36,11 @@ class AetherEngine:
         self._router = ToolRouter()
         self._setup_vector_store()
 
+        print("  Engine: Initializing EventBus...", flush=True)
+        self._event_bus = EventBus()
+
         print("  Engine: Initializing AgentManager...", flush=True)
-        self._agents = AgentManager(self._config, self._router, self._on_agent_handover)
+        self._agents = AgentManager(self._config, self._router, self._on_agent_handover, event_bus=self._event_bus)
 
         print("  Engine: Initializing Gateway...", flush=True)
         self._gateway = AetherGateway(
@@ -46,11 +52,21 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = AudioManager(self._config, self._gateway, self._on_affective_data)
+        self._audio = AudioManager(self._config, self._gateway, self._on_affective_data, event_bus=self._event_bus)
         print("  Engine: Initializing InfraManager...", flush=True)
         self._infra = InfraManager(self._gateway)
         print("  Engine: Initializing AdminAPI...", flush=True)
         self._admin_api = AdminAPIServer(port=18790)
+
+        print("  Engine: Initializing PulseManager...", flush=True)
+        self._pulse = PulseManager(self._event_bus)
+
+        print("  Engine: Initializing CognitiveScheduler...", flush=True)
+        self._cortex = CognitiveScheduler(self._event_bus, self._router)
+        
+        # Inject Scheduler into Hive for proactive prompt injection
+        self._agents._hive._scheduler = self._cortex
+        
         print("  Engine: State Ready.", flush=True)
 
         self._shutdown_event = asyncio.Event()
@@ -194,6 +210,8 @@ class AetherEngine:
             print("  Engine: Spawning Core Tasks...", flush=True)
 
             async with asyncio.TaskGroup() as tg:
+                tg.create_task(self._event_bus.start(), name="event-bus")
+                tg.create_task(self._pulse.start(), name="pulse-heartbeat")
                 tg.create_task(self._gateway.run(), name="gateway")
                 self._audio.run_tasks(tg)
                 tg.create_task(self._admin_sync_loop(), name="admin-sync")
