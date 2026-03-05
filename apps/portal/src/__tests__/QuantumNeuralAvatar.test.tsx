@@ -20,11 +20,21 @@ import { useAetherStore } from '../store/useAetherStore';
 // Mock Three.js and React Three Fiber
 vi.mock('@react-three/fiber', () => ({
     Canvas: ({ children }: { children: React.ReactNode }) => <div data-testid="canvas">{children}</div>,
-    useFrame: vi.fn((callback) => callback({ clock: { elapsedTime: 0 } })),
+    useFrame: vi.fn((callback) => callback({ clock: { elapsedTime: 0 }, camera: { position: { x: 0, y: 0, z: 10 } } })),
     useThree: vi.fn(() => ({
         camera: { position: { x: 0, y: 0, z: 10 } },
         clock: { elapsedTime: 0 },
+        size: { width: 800, height: 600 },
+        viewport: { width: 800, height: 600 },
     })),
+}));
+
+// Mock React Three Drei
+vi.mock('@react-three/drei', () => ({
+    Float: ({ children }: { children: React.ReactNode }) => children,
+    MeshDistortMaterial: vi.fn(),
+    Sphere: vi.fn(),
+    Trail: vi.fn(),
 }));
 
 vi.mock('@react-three/drei', () => ({
@@ -34,36 +44,90 @@ vi.mock('@react-three/drei', () => ({
     Trail: vi.fn(),
 }));
 
-vi.mock('three', () => ({
-    Vector3: vi.fn().mockImplementation((x = 0, y = 0, z = 0) => ({
-        x, y, z,
-        clone: function() { return this; },
-        add: function() { return this; },
-        addVectors: function() { return { x: 0, y: 0, z: 0 }; },
-        multiplyScalar: function() { return this; },
-        distanceTo: function() { return 1; },
-    })),
-    Color: vi.fn().mockImplementation((color) => ({ r: 0, g: 1, b: 0 })),
-    Clock: vi.fn().mockImplementation(() => ({ elapsedTime: 0 })),
-    BufferGeometry: vi.fn(),
-    Float32BufferAttribute: vi.fn(),
-    AdditiveBlending: 1,
-    DoubleSide: 1,
-    SphereGeometry: vi.fn(),
-    RingGeometry: vi.fn(),
-    TorusGeometry: vi.fn(),
-    IcosahedronGeometry: vi.fn(),
-    QuadraticBezierCurve3: vi.fn().mockImplementation(() => ({
-        getPoint: () => ({ x: 0, y: 0, z: 0 }),
-        getPoints: () => Array(20).fill({ x: 0, y: 0, z: 0 }),
-    })),
-    MeshBasicMaterial: vi.fn(),
-    MeshDistortMaterial: vi.fn(),
-    PointsMaterial: vi.fn(),
-    LineBasicMaterial: vi.fn(),
-    Line: vi.fn(),
-    Points: vi.fn(),
-}));
+vi.mock('three', () => {
+    const Vector3 = class {
+        x: number;
+        y: number;
+        z: number;
+        constructor(x = 0, y = 0, z = 0) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+        clone() { return new Vector3(this.x, this.y, this.z); }
+        add(v: any) { this.x += v.x; this.y += v.y; this.z += v.z; return this; }
+        addVectors(a: any, b: any) { this.x = a.x + b.x; this.y = a.y + b.y; this.z = a.z + b.z; return this; }
+        multiplyScalar(s: number) { this.x *= s; this.y *= s; this.z *= s; return this; }
+        distanceTo(v: any) { return Math.sqrt(Math.pow(this.x - v.x, 2) + Math.pow(this.y - v.y, 2) + Math.pow(this.z - v.z, 2)); }
+    };
+
+    const Color = class {
+        r: number; g: number; b: number;
+        constructor(color?: string | number) {
+            this.r = 0; this.g = 1; this.b = 0;
+        }
+        clone() { return new Color(); }
+        lerp(_color: any, _alpha: number): this { return this; }
+        set(r: number, g: number, b: number): this { this.r = r; this.g = g; this.b = b; return this; }
+    };
+
+    return {
+        Vector3,
+        Color,
+        Clock: vi.fn().mockImplementation(() => ({ elapsedTime: 0 })),
+        BufferGeometry: vi.fn().mockImplementation(function() {
+            this.setAttribute = vi.fn();
+            this.attributes = { position: { array: new Float32Array(0), needsUpdate: false } };
+        }),
+        Float32BufferAttribute: vi.fn(),
+        AdditiveBlending: 1,
+        DoubleSide: 2,
+        SphereGeometry: vi.fn(),
+        RingGeometry: vi.fn(),
+        TorusGeometry: vi.fn(),
+        IcosahedronGeometry: vi.fn(),
+        QuadraticBezierCurve3: vi.fn().mockImplementation(() => ({
+            getPoint: () => ({ x: 0, y: 0, z: 0 }),
+            getPoints: () => Array(20).fill({ x: 0, y: 0, z: 0 }),
+        })),
+        MeshBasicMaterial: vi.fn(),
+        MeshDistortMaterial: vi.fn(),
+        PointsMaterial: vi.fn(),
+        LineBasicMaterial: vi.fn(),
+        ShaderMaterial: vi.fn(),
+        Line: vi.fn(),
+        LineSegments: vi.fn(),
+        Mesh: vi.fn(),
+        Group: vi.fn(),
+        Points: vi.fn(),
+        
+        // Add light and geometry mocks for JSX elements
+        AmbientLight: vi.fn(),
+        PointLight: vi.fn(),
+        DirectionalLight: vi.fn(),
+        HemisphereLight: vi.fn(),
+        SpotLight: vi.fn(),
+        PlaneGeometry: vi.fn(),
+        BoxGeometry: vi.fn(),
+        CylinderGeometry: vi.fn(),
+        ConeGeometry: vi.fn(),
+        OctahedronGeometry: vi.fn(),
+        TetrahedronGeometry: vi.fn(),
+        TorusKnotGeometry: vi.fn(),
+        ExtrudeGeometry: vi.fn(),
+        LatheGeometry: vi.fn(),
+        TubeGeometry: vi.fn(),
+        ParametricGeometry: vi.fn(),
+        TextGeometry: vi.fn(),
+        ShapeGeometry: vi.fn(),
+        EdgesGeometry: vi.fn(),
+        WireframeGeometry: vi.fn(),
+        NormalBufferAttributes: vi.fn(),
+        BufferGeometryEventMap: vi.fn(),
+        Object3DEventMap: vi.fn(),
+        Material: vi.fn(),
+    };
+});
 
 // Helper function to set store state
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
