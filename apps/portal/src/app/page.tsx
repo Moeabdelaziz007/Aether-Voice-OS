@@ -1,15 +1,16 @@
 "use client";
 /**
- * AetherOS — Single-Page Voice Portal.
+ * AetherOS — Single-Page Voice Portal with Quantum Neural Interface.
  *
  * No page routing. The entire UI morphs between 5 realms
- * triggered by voice commands. The 3D Orb never disappears —
- * it resizes and repositions via Framer Motion layoutId.
+ * triggered by voice commands. The Quantum Neural Avatar never disappears —
+ * it evolves and responds to voice patterns.
  */
 
 import { useEffect } from "react";
 import { LayoutGroup } from "framer-motion";
-import AetherOrb from "@/components/core/AetherOrb";
+import QuantumNeuralAvatar from "@/components/QuantumNeuralAvatar";
+import FluidThoughtParticles from "@/components/FluidThoughtParticles";
 import RealmController from "@/components/realms/RealmController";
 import CommandBar from "@/components/shared/CommandBar";
 import EdgeGlow from "@/components/shared/EdgeGlow";
@@ -37,11 +38,11 @@ export default function AetherPortal() {
             amber: [245, 158, 11],
             emerald: [16, 185, 129],
             rose: [244, 63, 94],
-            green: [34, 197, 94],
+            green: [57, 255, 20], // Neon green for Quantum Neural
             blue: [59, 130, 246],
         };
 
-        const rgb = ACCENT_RGB[preferences.accentColor] || ACCENT_RGB.cyan;
+        const rgb = ACCENT_RGB[preferences.accentColor] || ACCENT_RGB.green;
         root.style.setProperty("--accent-r", String(rgb[0]));
         root.style.setProperty("--accent-g", String(rgb[1]));
         root.style.setProperty("--accent-b", String(rgb[2]));
@@ -65,14 +66,23 @@ export default function AetherPortal() {
             {/* Quantum Topology particles — ambient background layer */}
             <ParticleField count={35} />
 
+            {/* Fluid Thought Particles — 3D conversation experience */}
+            <FluidThoughtParticles />
+
             {/* Siri-style edge glow */}
             <EdgeGlow />
 
             {/* HUD frame (corner markers + scan line) */}
             <HUDContainer>
                 <div className="relative w-full h-screen overflow-hidden aether-boot-enter">
-                    {/* The Orb — always visible, morphs between realms */}
-                    <AetherOrb />
+                    {/* Quantum Neural Avatar — the living AI presence */}
+                    <div className="absolute inset-0 flex items-center justify-center z-10">
+                        <QuantumNeuralAvatar 
+                            size="large" 
+                            variant="detailed" 
+                            showConnections={true}
+                        />
+                    </div>
 
                     {/* Autonomous Repair Overlay */}
                     <SystemFailure />

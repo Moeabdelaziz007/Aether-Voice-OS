@@ -58,7 +58,7 @@ class AIConfig(BaseSettings):
     """
     api_key: str = Field(..., alias="GOOGLE_API_KEY")
     model: GeminiModel = GeminiModel.LIVE_FLASH
-    api_version: str = "v1alpha"
+    api_version: str = "v1"
     enable_affective_dialog: bool = True
     proactive_audio: bool = True
     enable_search_grounding: bool = True

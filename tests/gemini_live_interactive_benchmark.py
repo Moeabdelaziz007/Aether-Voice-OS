@@ -353,6 +353,8 @@ class GeminiLiveInteractiveBenchmark:
         self.latency_measurements.clear()
         
         logger.info(f"Starting scenario: {scenario.name} - {scenario.description}")
+        logger.info("🎤 Using REAL microphone input for live testing")
+        logger.info("💡 Speak naturally to see real-time AEC/VAD metrics")
         
         # Start dashboard
         self.dashboard.stats = self.stats
@@ -425,22 +427,50 @@ class GeminiLiveInteractiveBenchmark:
             self.running = False
     
     async def _monitor_audio_processing(self, scenario: TestScenario):
-        """Monitor audio processing for metrics collection."""
-        logger.info("Audio monitoring started")
+        """Monitor audio processing for metrics collection using REAL microphone input."""
+        logger.info("Real-time audio monitoring started - Using actual microphone")
         
         while self.running:
             try:
-                # Simulate audio processing metrics
-                # In real scenario, these would come from audio pipeline callbacks
                 frame_start = time.time()
                 
-                # Process through AEC (simulated)
-                if self.aec:
-                    # Generate synthetic audio frame for AEC testing
-                    mic_audio = np.random.randn(512).astype(np.float32) * 0.1
-                    far_end_ref = np.zeros_like(mic_audio)
+                # Get REAL audio from microphone via capture queue
+                try:
+                    audio_msg = await asyncio.wait_for(
+                        self.audio_in_queue.get(), 
+                        timeout=0.1
+                    )
+                    # Debug: Log audio message structure
+                    if self.stats.frames_processed < 5:  # Only log first 5 frames
+                        logger.debug(f"Audio frame received: keys={audio_msg.keys()}, size={len(audio_msg.get('mic_pcm', b''))}")
+                except asyncio.TimeoutError:
+                    # No audio available, skip this frame
+                    if self.stats.frames_processed < 5:
+                        logger.debug("No audio frame available (timeout)")
+                    continue
+                
+                # Extract mic audio
+                if 'mic_pcm' not in audio_msg:
+                    continue
                     
-                    cleaned_audio, aec_state = self.aec.process_frame(mic_audio, far_end_ref)
+                mic_audio = audio_msg['mic_pcm']
+                
+                # Process through AEC with REAL audio
+                if self.aec and len(mic_audio) > 0:
+                    # Convert to float32 if needed
+                    if isinstance(mic_audio, bytes):
+                        mic_audio_float = np.frombuffer(mic_audio, dtype=np.float32)
+                    else:
+                        mic_audio_float = np.array(mic_audio, dtype=np.float32)
+                    
+                    # Create far-end reference (zeros when only user is speaking)
+                    far_end_ref = np.zeros_like(mic_audio_float)
+                    
+                    # Process through AEC
+                    cleaned_audio, aec_state = self.aec.process_frame(
+                        mic_audio_float, 
+                        far_end_ref
+                    )
                     
                     # Update AEC metrics
                     self.stats.aec_erle_values.append(aec_state.erle_db)
@@ -448,29 +478,51 @@ class GeminiLiveInteractiveBenchmark:
                         self.stats.aec_convergence_count += 1
                     if aec_state.double_talk_detected:
                         self.stats.double_talk_frames += 1
+                else:
+                    # Dummy values if no AEC
+                    aec_state = type('obj', (object,), {
+                        'erle_db': 0.0,
+                        'converged': False,
+                        'double_talk_detected': False
+                    })()
                 
-                # Process through VAD (simulated)
-                if self.vad:
-                    # Generate synthetic audio for VAD testing
-                    test_audio = np.random.randn(512).astype(np.float32) * 0.1
-                    vad_result = self.vad.detect_speech(test_audio)
-                    if vad_result.is_hard:
+                # Process through VAD with REAL audio
+                if self.vad and len(mic_audio) > 0:
+                    # Calculate RMS from real audio
+                    if isinstance(mic_audio, bytes):
+                        mic_audio_int16 = np.frombuffer(mic_audio, dtype=np.int16)
+                    else:
+                        mic_audio_int16 = np.array(mic_audio, dtype=np.int16)
+                    
+                    current_rms = float(np.sqrt(np.mean(mic_audio_int16.astype(np.float32)**2)))
+                    
+                    # Use AdaptiveVAD's update method
+                    soft_threshold, hard_threshold = self.vad.update(current_rms)
+                    
+                    # Speech detection based on RMS threshold
+                    vad_detected = current_rms > soft_threshold
+                    if vad_detected:
                         self.stats.vad_speech_frames += 1
                     else:
                         self.stats.vad_silence_frames += 1
+                else:
+                    vad_detected = False
                 
-                # Simulate latency measurement
+                # Measure actual processing latency
                 processing_time = (time.time() - frame_start) * 1000
-                simulated_latency = np.random.uniform(50, 150) + processing_time
-                self.latency_measurements.append(simulated_latency)
                 
-                # Record frame metrics
+                # For real-time latency, measure time from capture to processing
+                capture_timestamp = audio_msg.get('timestamp', time.time())
+                total_latency = (time.time() - capture_timestamp) * 1000
+                self.latency_measurements.append(total_latency)
+                
+                # Record comprehensive frame metrics
                 frame_metrics = FrameMetrics(
                     timestamp=time.time(),
-                    latency_ms=simulated_latency,
+                    latency_ms=total_latency,
                     aec_erle_db=aec_state.erle_db if self.aec else 0.0,
                     aec_converged=aec_state.converged if self.aec else False,
-                    vad_speech_detected=vad_result.is_hard if self.vad else False,
+                    vad_speech_detected=vad_detected if self.vad else False,
                     double_talk_detected=aec_state.double_talk_detected if self.aec else False,
                     frame_drop=False,
                     processing_time_ms=processing_time
@@ -479,20 +531,19 @@ class GeminiLiveInteractiveBenchmark:
                 self.telemetry_data.append(frame_metrics)
                 self.stats.frames_processed += 1
                 
-                # Update statistics periodically
+                # Update statistics every 10 frames
                 if self.stats.frames_processed % 10 == 0:
                     self._update_statistics()
-                
-                # Control loop rate
-                await asyncio.sleep(0.032)  # ~31.25ms per frame (32 frames/sec)
                 
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(f"Monitoring error: {e}")
-                await asyncio.sleep(0.1)
+                logger.error(f"Real-time monitoring error: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
+                await asyncio.sleep(0.05)
         
-        logger.info("Audio monitoring stopped")
+        logger.info("Real-time audio monitoring stopped")
     
     def _update_statistics(self):
         """Update computed statistics from collected data."""

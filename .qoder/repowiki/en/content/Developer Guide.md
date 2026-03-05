@@ -1,0 +1,530 @@
+# Developer Guide
+
+<cite>
+**Referenced Files in This Document**
+- [README.md](file://README.md)
+- [best_practices.md](file://best_practices.md)
+- [docs/architecture.md](file://docs/architecture.md)
+- [docs/sdk_guide.md](file://docs/sdk_guide.md)
+- [docs/ath_package_spec.md](file://docs/ath_package_spec.md)
+- [.github/workflows/aether_pipeline.yml](file://.github/workflows/aether_pipeline.yml)
+- [Dockerfile](file://Dockerfile)
+- [docker-compose.yml](file://docker-compose.yml)
+- [pyproject.toml](file://pyproject.toml)
+- [requirements.txt](file://requirements.txt)
+- [core/server.py](file://core/server.py)
+- [core/engine.py](file://core/engine.py)
+- [core/audio/capture.py](file://core/audio/capture.py)
+- [core/audio/state.py](file://core/audio/state.py)
+- [core/tools/router.py](file://core/tools/router.py)
+- [core/infra/config.py](file://core/infra/config.py)
+- [core/services/admin_api.py](file://core/services/admin_api.py)
+- [core/identity/package.py](file://core/identity/package.py)
+- [apps/portal/package.json](file://apps/portal/package.json)
+</cite>
+
+## Table of Contents
+1. [Introduction](#introduction)
+2. [Project Structure](#project-structure)
+3. [Core Components](#core-components)
+4. [Architecture Overview](#architecture-overview)
+5. [Detailed Component Analysis](#detailed-component-analysis)
+6. [Dependency Analysis](#dependency-analysis)
+7. [Performance Considerations](#performance-considerations)
+8. [Troubleshooting Guide](#troubleshooting-guide)
+9. [Development Workflow](#development-workflow)
+10. [SDK Guide](#sdk-guide)
+11. [Aether Pack (.ath) Specification](#aether-pack-ath-specification)
+12. [Coding Standards and Contribution Guidelines](#coding-standards-and-contribution-guidelines)
+13. [Testing Requirements](#testing-requirements)
+14. [Deployment and Operations](#deployment-and-operations)
+15. [Conclusion](#conclusion)
+
+## Introduction
+Aether Voice OS is a real-time, voice-first AI operating system designed to minimize friction in human-AI interaction. It integrates a custom-built Thalamic Gate audio pipeline, Gemini Live native audio, and a modular tool ecosystem to deliver sub-200ms latency, empathetic affective computing, and proactive assistance. This guide covers development environment setup, architecture, SDK extension, .ath packaging, coding standards, testing, and operational practices.
+
+## Project Structure
+The repository follows a monorepo layout:
+- core/: Python backend orchestrating audio, AI, transport, tools, and infrastructure
+- apps/portal/: Next.js frontend and Tauri desktop shell
+- brain/: Agent personas, skills, and knowledge hubs
+- cortex/: Rust DSP acceleration (mirrored by Python fallbacks)
+- docs/: Official specifications and guides
+- tests/: Pytest suites for unit, integration, and end-to-end scenarios
+- infra/: CI/CD, scripts, and operational helpers
+- skills/: Example skills and integrations
+
+```mermaid
+graph TB
+subgraph "Core Runtime"
+CORE["core/engine.py"]
+CFG["core/infra/config.py"]
+AUDIO["core/audio/capture.py"]
+STATE["core/audio/state.py"]
+ROUTER["core/tools/router.py"]
+ADMIN["core/services/admin_api.py"]
+end
+subgraph "Frontend"
+PORTAL["apps/portal/"]
+end
+subgraph "DSP Acceleration"
+CORTEX["cortex/"]
+end
+subgraph "Docs & Specs"
+DOCS["docs/"]
+end
+CORE --> AUDIO
+CORE --> ROUTER
+CORE --> ADMIN
+CORE --> CFG
+AUDIO --> STATE
+PORTAL --> ADMIN
+DOCS --> ROUTER
+CORTEX --> AUDIO
+```
+
+**Diagram sources**
+- [core/engine.py](file://core/engine.py#L26-L71)
+- [core/infra/config.py](file://core/infra/config.py#L85-L111)
+- [core/audio/capture.py](file://core/audio/capture.py#L193-L270)
+- [core/audio/state.py](file://core/audio/state.py#L36-L75)
+- [core/tools/router.py](file://core/tools/router.py#L120-L140)
+- [core/services/admin_api.py](file://core/services/admin_api.py#L88-L117)
+- [apps/portal/package.json](file://apps/portal/package.json#L1-L53)
+
+**Section sources**
+- [README.md](file://README.md#L132-L160)
+- [best_practices.md](file://best_practices.md#L6-L33)
+
+## Core Components
+- AetherEngine: Orchestrates managers, audio, gateway, admin API, and cognitive scheduling.
+- AudioCapture: Real-time microphone capture with Thalamic Gate AEC, VAD, and affective telemetry.
+- ToolRouter: Neural dispatcher for Gemini function calls with biometric middleware and performance profiling.
+- AdminAPIServer: Local dashboard REST API for telemetry and system state.
+- Config loader: Pydantic settings for audio, AI, and gateway parameters.
+- .ath Package Loader: Validates manifests, computes checksums, and loads agent identities.
+
+**Section sources**
+- [core/engine.py](file://core/engine.py#L26-L71)
+- [core/audio/capture.py](file://core/audio/capture.py#L193-L270)
+- [core/tools/router.py](file://core/tools/router.py#L120-L140)
+- [core/services/admin_api.py](file://core/services/admin_api.py#L88-L117)
+- [core/infra/config.py](file://core/infra/config.py#L85-L111)
+- [core/identity/package.py](file://core/identity/package.py#L72-L139)
+
+## Architecture Overview
+Aether OS employs a unified neural pipeline with four layers:
+- Perceptual Layer: Mic capture, windowing, and DSP acceleration
+- Cognitive Layer: Gemini Live native audio session with multimodal context
+- Executive Layer: ToolRouter dispatch and async execution
+- Persistence Layer: Firebase connector, gateway, and broadcast system
+
+```mermaid
+sequenceDiagram
+participant U as "User"
+participant CAP as "AudioCapture"
+participant DSP as "Rust Cortex"
+participant ENG as "AetherEngine"
+participant GEM as "Gemini Live API"
+participant TR as "ToolRouter"
+participant FB as "Firebase"
+U->>CAP : Speech
+CAP->>DSP : Raw PCM
+DSP-->>ENG : VAD decision
+ENG->>GEM : Send realtime input
+GEM-->>ENG : Audio chunks + tool calls
+ENG->>TR : Dispatch tool call
+TR->>FB : Read/Write context
+TR-->>ENG : Result
+ENG-->>GEM : Tool response
+GEM-->>ENG : Final synthesis
+ENG-->>U : Playback
+```
+
+**Diagram sources**
+- [docs/architecture.md](file://docs/architecture.md#L39-L60)
+- [core/audio/capture.py](file://core/audio/capture.py#L305-L487)
+- [core/engine.py](file://core/engine.py#L189-L225)
+- [core/tools/router.py](file://core/tools/router.py#L234-L356)
+
+**Section sources**
+- [docs/architecture.md](file://docs/architecture.md#L1-L67)
+
+## Detailed Component Analysis
+
+### Audio Capture and Thalamic Gate
+The capture pipeline implements:
+- Direct callback injection into asyncio queues to eliminate thread-hop latency
+- Dynamic AEC with jitter buffering and Rust-accelerated bridge
+- Hysteresis gating and smooth muting to prevent audio artifacts
+- VAD, ZCR, and affective telemetry broadcasting
+
+```mermaid
+flowchart TD
+Start(["Callback Entry"]) --> Read["Read Mic PCM"]
+Read --> Jitter["Write Far-End to Jitter Buffer"]
+Jitter --> AEC["Dynamic AEC + Optional Rust Bridge"]
+AEC --> State["Update AEC State"]
+State --> Gate["Compute Hysteresis Gate"]
+Gate --> Mute["Smooth Muter Apply"]
+Mute --> VAD["HyperVAD Energy + ZCR"]
+VAD --> Classify["Silence Classification"]
+Classify --> Queue{"Hard Speech or Not Muted?"}
+Queue --> |Yes| Enqueue["Push to Async Queue"]
+Queue --> |No| Drop["Skip"]
+Enqueue --> End(["Return"])
+Drop --> End
+```
+
+**Diagram sources**
+- [core/audio/capture.py](file://core/audio/capture.py#L305-L487)
+- [core/audio/state.py](file://core/audio/state.py#L13-L34)
+
+**Section sources**
+- [core/audio/capture.py](file://core/audio/capture.py#L193-L553)
+- [core/audio/state.py](file://core/audio/state.py#L36-L129)
+
+### Tool Router and Biometric Middleware
+The ToolRouter:
+- Registers tools with function declarations and handlers
+- Supports async/sync handlers and semantic recovery via vector store
+- Enforces biometric middleware for sensitive tools
+- Profiles execution latency and wraps results with A2A metadata
+
+```mermaid
+classDiagram
+class ToolRegistration {
++string name
++string description
++dict parameters
++callable handler
++string latency_tier
++bool idempotent
++bool requires_biometric
+}
+class BiometricMiddleware {
++verify(tool_name, context) bool
+}
+class ToolExecutionProfiler {
++record(tool_name, duration) void
++get_stats(tool_name) dict
+}
+class ToolRouter {
++register(name, description, parameters, handler, ...) void
++register_module(module) void
++get_declarations() list
++dispatch(function_call) dict
++get_performance_report() dict
+}
+ToolRouter --> ToolRegistration : "manages"
+ToolRouter --> BiometricMiddleware : "uses"
+ToolRouter --> ToolExecutionProfiler : "uses"
+```
+
+**Diagram sources**
+- [core/tools/router.py](file://core/tools/router.py#L33-L85)
+- [core/tools/router.py](file://core/tools/router.py#L120-L140)
+- [core/tools/router.py](file://core/tools/router.py#L234-L356)
+
+**Section sources**
+- [core/tools/router.py](file://core/tools/router.py#L120-L360)
+
+### Configuration and Environment
+Configuration is validated via Pydantic settings with support for:
+- Audio capture/playback parameters
+- AI model selection and system instructions
+- Gateway binding and heartbeat parameters
+- Firebase credentials via base64-encoded environment variable
+
+```mermaid
+classDiagram
+class AetherConfig {
++AudioConfig audio
++AIConfig ai
++GatewayConfig gateway
++string? firebase_creds_base64
++string log_level
++string packages_dir
+}
+class AudioConfig {
++int mic_queue_max
++int send_sample_rate
++int receive_sample_rate
++int channels
++int chunk_size
++int format_width
++float vad_window_sec
++int? input_device_index
++int? output_device_index
+}
+class AIConfig {
++string api_key
++GeminiModel model
++string api_version
++bool enable_affective_dialog
++bool proactive_audio
++bool enable_search_grounding
++bool enable_proactive_vision
++int? thinking_budget
++string system_instruction
+}
+class GatewayConfig {
++string host
++int port
++float tick_interval_s
++int max_missed_ticks
++float handshake_timeout_s
++int receive_sample_rate
+}
+AetherConfig --> AudioConfig
+AetherConfig --> AIConfig
+AetherConfig --> GatewayConfig
+```
+
+**Diagram sources**
+- [core/infra/config.py](file://core/infra/config.py#L11-L27)
+- [core/infra/config.py](file://core/infra/config.py#L35-L61)
+- [core/infra/config.py](file://core/infra/config.py#L71-L83)
+- [core/infra/config.py](file://core/infra/config.py#L85-L111)
+
+**Section sources**
+- [core/infra/config.py](file://core/infra/config.py#L113-L158)
+
+### Admin API Server
+The AdminAPIServer exposes a lightweight REST interface for the dashboard:
+- Endpoints for sessions, synapse, status, tools, hive, and telemetry
+- CORS-enabled GET endpoints with JSON responses
+- Falls back to dynamic port allocation if the configured port is busy
+
+```mermaid
+sequenceDiagram
+participant D as "Dashboard"
+participant API as "AdminAPIServer"
+participant SH as "Shared State"
+D->>API : GET /api/status
+API->>SH : Read system_status
+API-->>D : 200 JSON
+D->>API : GET /api/telemetry
+API->>SH : Read telemetry
+API-->>D : 200 JSON
+```
+
+**Diagram sources**
+- [core/services/admin_api.py](file://core/services/admin_api.py#L26-L82)
+- [core/services/admin_api.py](file://core/services/admin_api.py#L88-L117)
+
+**Section sources**
+- [core/services/admin_api.py](file://core/services/admin_api.py#L1-L117)
+
+### .ath Package Loader
+The .ath package loader validates manifests, enforces capability constraints, and verifies integrity via SHA256 checksums.
+
+```mermaid
+flowchart TD
+Load["Load manifest.json"] --> Validate["Pydantic Validation"]
+Validate --> Checksum{"Checksum Present?"}
+Checksum --> |Yes| Compute["Compute SHA256 of Files"]
+Compute --> Compare{"Matches?"}
+Compare --> |No| Error["Raise PackageCorruptError"]
+Compare --> |Yes| Done["Package Ready"]
+Checksum --> |No| Done
+```
+
+**Diagram sources**
+- [core/identity/package.py](file://core/identity/package.py#L86-L139)
+
+**Section sources**
+- [core/identity/package.py](file://core/identity/package.py#L72-L166)
+
+## Dependency Analysis
+Key runtime dependencies include:
+- google-genai, pyaudio, numpy, pydantic, websockets, cryptography, watchdog
+- firebase-admin, redis, opentelemetry
+- playwright, curl_cffi, scikit-learn for tooling and orchestration
+
+```mermaid
+graph LR
+PY["Python Backend"] --> GENAI["google-genai"]
+PY --> PA["pyaudio"]
+PY --> NP["numpy"]
+PY --> PD["pydantic"]
+PY --> WS["websockets"]
+PY --> CR["cryptography"]
+PY --> WD["watchdog"]
+PY --> FA["firebase-admin"]
+PY --> RC["redis"]
+PY --> OT["opentelemetry-*"]
+PY --> PW["playwright"]
+PY --> CF["curl_cffi"]
+PY --> SL["scikit-learn"]
+```
+
+**Diagram sources**
+- [requirements.txt](file://requirements.txt#L1-L52)
+
+**Section sources**
+- [requirements.txt](file://requirements.txt#L1-L52)
+
+## Performance Considerations
+- Real-time constraints: Callbacks must be non-blocking, low-allocation, and predictably fast
+- Bounded queues and overflow policies to maintain latency bounds
+- Structured concurrency with asyncio TaskGroups and signal-driven shutdown
+- Rust acceleration for DSP where available, with graceful Python fallbacks
+- Deterministic telemetry counters and throttled broadcasts to avoid hot-path overhead
+
+**Section sources**
+- [best_practices.md](file://best_practices.md#L50-L116)
+- [docs/architecture.md](file://docs/architecture.md#L62-L67)
+
+## Troubleshooting Guide
+Common issues and remedies:
+- Missing API key: Ensure GOOGLE_API_KEY is set; the server checks early and exits with guidance
+- Missing dependencies: The server validates pyaudio, google-genai, and pydantic-settings before launching
+- No microphone on Linux: Set AETHER_AUDIO_INPUT_DEVICE to the correct index
+- Firebase unavailable: The system degrades gracefully; configure GOOGLE_APPLICATION_CREDENTIALS if persistent memory is required
+- High CPU usage: Verify PyAudio C extensions, reduce frontend visualizer FPS, and confirm Rust acceleration is enabled
+
+**Section sources**
+- [core/server.py](file://core/server.py#L62-L120)
+- [README.md](file://README.md#L244-L249)
+
+## Development Workflow
+Local development:
+- Backend: Create a virtual environment, install requirements, set GOOGLE_API_KEY, and run the server entrypoint
+- Frontend: From apps/portal, install dependencies and run the dev server; Tauri CLI is available for desktop builds
+- Docker: Use docker-compose to spin up kernel and portal containers; health checks expose the gateway port
+
+CI/CD pipeline:
+- Rust check for cortex
+- Linting with Ruff (style and formatting)
+- Multi-version Python tests with coverage thresholds
+- Frontend lint and test
+- Security scans (Bandit, Safety) and Docker image build verification
+
+```mermaid
+sequenceDiagram
+participant Dev as "Developer"
+participant Core as "core/server.py"
+participant Eng as "AetherEngine"
+participant Aud as "AudioCapture"
+participant UI as "Portal"
+Dev->>Core : Launch server
+Core->>Eng : Initialize managers
+Eng->>Aud : Start audio
+Eng->>UI : Expose Admin API
+Dev->>UI : Open dashboard
+Dev->>Core : Ctrl+C
+Core->>Eng : Shutdown
+```
+
+**Diagram sources**
+- [core/server.py](file://core/server.py#L105-L149)
+- [core/engine.py](file://core/engine.py#L189-L240)
+
+**Section sources**
+- [README.md](file://README.md#L184-L210)
+- [.github/workflows/aether_pipeline.yml](file://.github/workflows/aether_pipeline.yml#L1-L160)
+- [docker-compose.yml](file://docker-compose.yml#L1-L37)
+
+## SDK Guide
+Build custom tools using the Neural Dispatcher pattern:
+- Define a tool module with get_tools() returning declarations and handlers
+- Handlers must be async; return structured dictionaries with a status field
+- Register tools in the engine’s tool router
+- Dry-run tools via ToolRouter dispatch without a live session
+
+```mermaid
+sequenceDiagram
+participant Dev as "Developer"
+participant TR as "ToolRouter"
+participant FC as "FunctionCall"
+participant H as "Handler"
+Dev->>TR : register_module(your_tool_module)
+TR-->>Dev : Registered
+Dev->>TR : dispatch(FunctionCall)
+TR->>H : Invoke handler(**args)
+H-->>TR : Result dict
+TR-->>Dev : Wrapped result with A2A metadata
+```
+
+**Diagram sources**
+- [docs/sdk_guide.md](file://docs/sdk_guide.md#L47-L73)
+- [core/tools/router.py](file://core/tools/router.py#L183-L200)
+- [core/tools/router.py](file://core/tools/router.py#L234-L356)
+
+**Section sources**
+- [docs/sdk_guide.md](file://docs/sdk_guide.md#L1-L81)
+- [core/tools/router.py](file://core/tools/router.py#L120-L360)
+
+## Aether Pack (.ath) Specification
+The .ath package encapsulates agent identity, capabilities, and autonomous behaviors:
+- Directory structure with manifest.json, Soul.md, Skills.md, heartbeat.md, optional assets
+- manifest.json fields include name, version, persona, voice_id, language, capabilities, expertise, and optional public_key/checksum
+- Integrity verification via deterministic SHA256 hashing of all files excluding manifest.json
+- Capability matrix defines risk levels for audio, tool execution, memory, and UI permissions
+
+```mermaid
+erDiagram
+ATH_PACKAGE {
+string name PK
+string version
+string persona
+string voice_id
+string language
+string[] capabilities
+map expertise
+string? public_key
+string? checksum
+}
+FILE_ENTRY {
+path path PK
+string hash
+}
+ATH_PACKAGE ||--o{ FILE_ENTRY : "contains"
+```
+
+**Diagram sources**
+- [docs/ath_package_spec.md](file://docs/ath_package_spec.md#L10-L23)
+- [docs/ath_package_spec.md](file://docs/ath_package_spec.md#L26-L43)
+- [core/identity/package.py](file://core/identity/package.py#L86-L139)
+
+**Section sources**
+- [docs/ath_package_spec.md](file://docs/ath_package_spec.md#L1-L100)
+- [core/identity/package.py](file://core/identity/package.py#L72-L166)
+
+## Coding Standards and Contribution Guidelines
+- Code style: Ruff linting and formatting; isort for imports; black-compatible formatting
+- Type hints: Use explicit return types and NumPy dtypes
+- Async/threading: Avoid blocking in callbacks; use loop.call_soon_threadsafe; prefer bounded queues
+- Naming: snake_case for modules, PascalCase for classes, snake_case for functions, UPPER_SNAKE_CASE for constants
+- Documentation: Module docstrings for runtime constraints; short comments for DSP logic
+- Error handling: Domain-specific exceptions; best-effort telemetry counters in hot paths
+- Common patterns: Hot-path vs cold-path separation; fallback strategy; queue overflow policy
+
+**Section sources**
+- [best_practices.md](file://best_practices.md#L50-L116)
+- [pyproject.toml](file://pyproject.toml#L6-L21)
+
+## Testing Requirements
+- Framework: pytest with pytest-asyncio
+- Test layout: unit/, integration/, e2e/; prefer synthetic signals for DSP tests
+- Mocking: External I/O and SDKs; deterministic randomness via numpy random generators
+- Coverage: Target >80% on audio pipeline modules
+- CI: Multi-version Python tests with coverage thresholds; linting; security scans; Docker build verification
+
+**Section sources**
+- [best_practices.md](file://best_practices.md#L34-L49)
+- [.github/workflows/aether_pipeline.yml](file://.github/workflows/aether_pipeline.yml#L61-L101)
+
+## Deployment and Operations
+- Docker: Multi-stage build with Rust DSP acceleration; health checks on gateway port; non-root user
+- docker-compose: Orchestrates kernel and portal; environment variables for keys and ports
+- Frontend: Next.js with PWA and Tauri; scripts for dev, build, lint, and tests
+
+**Section sources**
+- [Dockerfile](file://Dockerfile#L1-L76)
+- [docker-compose.yml](file://docker-compose.yml#L1-L37)
+- [apps/portal/package.json](file://apps/portal/package.json#L5-L15)
+
+## Conclusion
+Aether Voice OS provides a robust foundation for voice-first AI systems with real-time audio processing, multimodal AI orchestration, and extensible tooling. By following the development workflow, adhering to coding standards, and leveraging the SDK and .ath packaging, contributors can build reliable, performant integrations that meet the project’s latency and empathy goals.
