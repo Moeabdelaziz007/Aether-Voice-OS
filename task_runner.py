@@ -10,6 +10,8 @@ Agents:
 - DIInjectorAgent: Dependency injection
 - SecurityAgent: Security scanning & fixes
 - LearningAgent: Continuous improvement
+- StructureAnalysisAgent: Architecture analysis
+- DependencyManagementAgent: Dependency management
 """
 
 import asyncio
@@ -24,6 +26,8 @@ from agents.di_injector import DIInjectorAgent
 from agents.security_agent import SecurityAgent
 from agents.learning_agent import LearningAgent
 from agents.optimization_agent import OptimizationAgent
+from agents.structure_analysis_agent import StructureAnalysisAgent
+from agents.dependency_management_agent import DependencyManagementAgent
 
 # Configure logging
 logging.basicConfig(
@@ -222,6 +226,8 @@ class TaskRunner:
             SecurityAgent(),
             LearningAgent(),
             OptimizationAgent(),
+            StructureAnalysisAgent(),
+            DependencyManagementAgent(),
         ]
         self.results = {}
         self.logger = logging.getLogger("runner")

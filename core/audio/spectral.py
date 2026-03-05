@@ -259,8 +259,8 @@ class SpectralAnalyzer:
         """
         self.sample_rate = sample_rate
         self.n_fft = n_fft
-        self.stft = container.get('stft')n_fft=n_fft)
-        self.bark = container.get('barkscale')sample_rate, n_fft)
+        self.stft = STFT(n_fft=n_fft)
+        self.bark = BarkScale(sample_rate, n_fft)
 
         # Previous spectrum for flux calculation
         self._prev_spectrum: Optional[np.ndarray] = None
@@ -324,7 +324,7 @@ class SpectralAnalyzer:
         # Store for next frame
         self._prev_magnitude = magnitude.copy()
 
-        return container.get('spectralfeatures')
+        return SpectralFeatures(
             centroid=centroid,
             flatness=flatness,
             rolloff=rolloff,
