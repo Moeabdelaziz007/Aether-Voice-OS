@@ -6,7 +6,6 @@ and proposes structural improvements for Aether Voice OS.
 
 import ast
 import logging
-import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -101,12 +100,14 @@ class StructureAnalysisAgent:
             # Compile results
             results["code_smells_found"] = len(self.report.code_smells)
             results["critical_issues"] = sum(
-                1 for smell in self.report.code_smells 
+                1 for smell in self.report.code_smells
                 if smell.severity == "critical"
             )
             results["suggestions"] = self.report.suggestions[:10]
             results["metrics"] = self.report.metrics
-            results["circular_dependencies"] = len(self.report.circular_dependencies)
+            results["circular_dependencies"] = len(
+                self.report.circular_dependencies
+            )
             results["status"] = "success"
             
             self.logger.info(
@@ -205,7 +206,10 @@ class StructureAnalysisAgent:
                 line_number=node.lineno,
                 smell_type="god_class",
                 severity="warning",
-                description=f"Class '{node.name}' has {len(methods)} methods (max: {self.max_class_methods})",
+                description=(
+                    f"Class '{node.name}' has {len(methods)} methods "
+                    f"(max: {self.max_class_methods})"
+                ),
                 suggestion="Consider breaking down the class into smaller, focused classes"
             ))
         
@@ -227,7 +231,9 @@ class StructureAnalysisAgent:
                 line_number=node.lineno,
                 smell_type="deep_inheritance",
                 severity="warning",
-                description=f"Class '{node.name}' has {len(node.bases)} base classes",
+                description=(
+                    f"Class '{node.name}' has {len(node.bases)} base classes"
+                ),
                 suggestion="Favor composition over inheritance"
             ))
     
@@ -241,7 +247,10 @@ class StructureAnalysisAgent:
                 line_number=node.lineno,
                 smell_type="long_function",
                 severity="warning",
-                description=f"Function '{node.name}' has {func_lines} lines (max: {self.max_function_lines})",
+                description=(
+                    f"Function '{node.name}' has {func_lines} lines "
+                    f"(max: {self.max_function_lines})"
+                ),
                 suggestion="Break down into smaller, focused functions"
             ))
         
@@ -253,7 +262,10 @@ class StructureAnalysisAgent:
                 line_number=node.lineno,
                 smell_type="too_many_parameters",
                 severity="warning",
-                description=f"Function '{node.name}' has {params} parameters (max: {self.max_function_params})",
+                description=(
+                    f"Function '{node.name}' has {params} parameters "
+                    f"(max: {self.max_function_params})"
+                ),
                 suggestion="Consider using a data class or configuration object"
             ))
         
@@ -265,7 +277,10 @@ class StructureAnalysisAgent:
                 line_number=node.lineno,
                 smell_type="high_complexity",
                 severity="warning",
-                description=f"Function '{node.name}' has complexity {complexity} (max: {self.max_cyclomatic_complexity})",
+                description=(
+                    f"Function '{node.name}' has complexity {complexity} "
+                    f"(max: {self.max_cyclomatic_complexity})"
+                ),
                 suggestion="Refactor to reduce branching and nesting"
             ))
     
@@ -392,7 +407,10 @@ class StructureAnalysisAgent:
                     line_number=None,
                     smell_type="high_coupling",
                     severity="warning",
-                    description=f"High efferent coupling ({scores['efferent']} dependencies)",
+                    description=(
+                        f"High efferent coupling ({scores['efferent']} "
+                        f"dependencies)"
+                    ),
                     suggestion="Consider reducing dependencies through abstraction"
                 ))
     
@@ -407,14 +425,14 @@ class StructureAnalysisAgent:
         
         if smell_counts["god_class"] > 3:
             suggestions.append(
-                "🏗️ Multiple God Classes detected. Apply Single Responsibility Principle "
-                "by extracting related methods into focused classes."
+                "🏗️ Multiple God Classes. Apply Single Responsibility "
+                "Principle by extracting methods into focused classes."
             )
         
         if smell_counts["long_function"] > 5:
             suggestions.append(
-                "📏 Many long functions found. Refactor into smaller, composable functions "
-                "with clear responsibilities."
+                "📏 Many long functions. Refactor into smaller, composable "
+                "functions with clear responsibilities."
             )
         
         if smell_counts["high_complexity"] > 5:
@@ -425,8 +443,8 @@ class StructureAnalysisAgent:
         
         if self.report.circular_dependencies:
             suggestions.append(
-                "🔄 Circular dependencies detected. Introduce dependency inversion "
-                "using abstract interfaces or a service container."
+                "🔄 Circular dependencies. Use dependency inversion with "
+                "abstract interfaces or a service container."
             )
         
         # Check directory structure
@@ -443,16 +461,16 @@ class StructureAnalysisAgent:
         ]
         if len(audio_files) > 10:
             suggestions.append(
-                "🎵 Consider creating an 'audio' package with clear sub-modules: "
+                "🎵 Create an 'audio' package with sub-modules: "
                 "input, output, processing, analysis, effects."
             )
         
         # Add general best practices
         suggestions.extend([
-            "📝 Add type hints to all public functions for better IDE support and documentation.",
-            "🧪 Ensure each module has corresponding unit tests in tests/unit/.",
-            "📊 Consider implementing OpenTelemetry metrics for performance monitoring.",
-            "🔧 Use dependency injection container for better testability and flexibility."
+            "📝 Add type hints to public functions for IDE support and docs.",
+            "🧪 Ensure each module has unit tests in tests/unit/.",
+            "📊 Implement OpenTelemetry metrics for performance monitoring.",
+            "🔧 Use dependency injection container for testability."
         ])
         
         self.report.suggestions = suggestions
@@ -461,11 +479,19 @@ class StructureAnalysisAgent:
         self.report.metrics["summary"] = {
             "total_files": self.report.total_files,
             "total_lines": self.report.total_lines,
-            "avg_lines_per_file": self.report.total_lines / max(1, self.report.total_files),
+            "avg_lines_per_file": (
+                self.report.total_lines / max(1, self.report.total_files)
+            ),
             "total_smells": len(self.report.code_smells),
-            "critical_smells": sum(1 for s in self.report.code_smells if s.severity == "critical"),
-            "warning_smells": sum(1 for s in self.report.code_smells if s.severity == "warning"),
-            "info_smells": sum(1 for s in self.report.code_smells if s.severity == "info"),
+            "critical_smells": sum(
+                1 for s in self.report.code_smells if s.severity == "critical"
+            ),
+            "warning_smells": sum(
+                1 for s in self.report.code_smells if s.severity == "warning"
+            ),
+            "info_smells": sum(
+                1 for s in self.report.code_smells if s.severity == "info"
+            ),
         }
     
     def get_report(self) -> StructureReport:

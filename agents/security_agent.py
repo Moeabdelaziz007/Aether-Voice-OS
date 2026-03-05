@@ -55,7 +55,10 @@ class SecurityAgent:
             
             found = results["vulnerabilities_found"]
             fixed = results["issues_fixed"]
-            msg = f"✅ Security scan completed: {found} issues found, {fixed} fixed"
+            msg = (
+                f"✅ Security scan completed: {found} issues found, "
+                f"{fixed} fixed"
+            )
             self.logger.info(msg)
             results["status"] = "success"
             

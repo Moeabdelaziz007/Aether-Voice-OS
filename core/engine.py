@@ -9,6 +9,7 @@ import logging
 import signal
 from typing import Any, Optional
 
+from core.infra.service_container import Container
 from core.ai.scheduler import CognitiveScheduler
 from core.infra.config import AetherConfig, load_config
 from core.infra.event_bus import EventBus
@@ -29,6 +30,9 @@ class AetherEngine:
     def __init__(self, config: Optional[AetherConfig] = None) -> None:
         self._config = config or load_config()
         self._setup_logging()
+        
+        # Initialize service container
+        self._container = Container()
 
         print("  Engine: Loading config...", flush=True)
         print("CONFIG:", self._config.model_dump())
@@ -57,22 +61,24 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = container.get('audiomanager')(
+        self._audio = self._container.get('audiomanager')(
             self._config,
             self._gateway,
             self._on_affective_data,
             event_bus=self._event_bus,
         )
         print("  Engine: Initializing InfraManager...", flush=True)
-        self._infra = container.get('inframanager')(self._gateway)
+        self._infra = self._container.get('inframanager')(self._gateway)
         print("  Engine: Initializing AdminAPI...", flush=True)
-        self._admin_api = container.get('adminapiserver')(port=18790)
+        self._admin_api = self._container.get('adminapiserver')(port=18790)
 
         print("  Engine: Initializing PulseManager...", flush=True)
-        self._pulse = container.get('pulsemanager')(self._event_bus)
+        self._pulse = self._container.get('pulsemanager')(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = container.get('cognitivescheduler')(self._event_bus, self._router)
+        self._cortex = self._container.get('cognitivescheduler')(
+            self._event_bus, self._router
+        )
 
         # Inject Scheduler into Hive for proactive prompt injection
         self._agents._hive._scheduler = self._cortex
@@ -89,13 +95,14 @@ class AetherEngine:
         )
 
     def _setup_vector_store(self) -> None:
-        from pathlib import Path
-
+        """Initialize and load the global vector store."""
         from core.tools.vector_store import LocalVectorStore
 
-        root_dir = container.get('path')__file__).resolve().parent.parent
+        root_dir = self._container.get('path')(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"
-        global_index = container.get('localvectorstore')api_key=self._config.ai.api_key)
+        global_index = self._container.get('localvectorstore')(
+            api_key=self._config.ai.api_key
+        )
         global_index.load(index_path)
         self._router._vector_store = global_index
 

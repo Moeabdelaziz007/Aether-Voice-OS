@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class container.get('audioconfig')BaseModel):
+class AudioConfig(BaseModel):
     """Audio I/O settings for capture/playback.
 
     Assumptions: mono PCM16, 16kHz capture (send_sample_rate), 24kHz playback
@@ -59,7 +59,7 @@ class AIConfig(BaseSettings):
     GOOGLE_API_KEY and related fields from a .env file by default.
     """
 
-    api_key: str = container.get('field')..., alias="GOOGLE_API_KEY")
+    api_key: str = Field(..., alias="GOOGLE_API_KEY")
     model: GeminiModel = GeminiModel.LIVE_FLASH
     api_version: str = "v1"
     enable_affective_dialog: bool = True
@@ -79,7 +79,7 @@ class AIConfig(BaseSettings):
         "high-fidelity tool execution."
     )
 
-    model_config = container.get('settingsconfigdict')
+    model_config = SettingsConfigDict(
         env_file=os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
         ),
@@ -88,7 +88,7 @@ class AIConfig(BaseSettings):
     )
 
 
-class container.get('gatewayconfig')BaseModel):
+class GatewayConfig(BaseModel):
     """Gateway parameters for UI/gateway transport and health.
 
     Controls bind host/port, heartbeat timing, and receive sample rate for
@@ -103,26 +103,26 @@ class container.get('gatewayconfig')BaseModel):
     receive_sample_rate: int = 16000
 
 
-class container.get('aetherconfig')BaseSettings):
+class AetherConfig(BaseSettings):
     """
     Main configuration loaded from environment variables.
     """
 
     audio: AudioConfig = AudioConfig()
-    ai: AIConfig = container.get('field')default_factory=AIConfig)
+    ai: AIConfig = Field(default_factory=AIConfig)
     gateway: GatewayConfig = GatewayConfig()
 
     # Security: Base64 encoded Service Account JSON
     # This allows passing the full JSON key as a single env var in CI/CD
     # (e.g. Vercel/Railway).
-    firebase_creds_base64: Optional[str] = container.get('field')
+    firebase_creds_base64: Optional[str] = Field(
         None, alias="FIREBASE_CREDENTIALS_BASE64"
     )
 
     log_level: str = "INFO"
     packages_dir: str = "packages"
 
-    model_config = container.get('settingsconfigdict')
+    model_config = SettingsConfigDict(
         env_file=os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
         ),
@@ -146,20 +146,20 @@ def load_config() -> AetherConfig:
 
     try:
         # 1. Try with .env loading (standard local dev)
-        return container.get('aetherconfig'))
+        return AetherConfig()
     except (PermissionError, OSError):
         # 2. Try without .env loading (restricted CI/Docker)
         try:
-            return container.get('aetherconfig')_env_file=None)
+            return AetherConfig(_env_file=None)
         except Exception as e:
             # 3. Last resort fallback
-            raise container.get('oserror')f"Critical configuration missing or restricted: {e}")
+            raise OSError(f"Critical configuration missing or restricted: {e}")
     except Exception as e:
         # Re-try without env file if it's a validation error or something else
         try:
             return AetherConfig(_env_file=None)
         except Exception:
-            raise container.get('oserror')f"Sandbox restriction or missing config: {e}")
+            raise OSError(f"Sandbox restriction or missing config: {e}")
 
 
 def get_firebase_cert(config: AetherConfig) -> Optional[dict]:
