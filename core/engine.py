@@ -33,14 +33,14 @@ class AetherEngine:
         print("  Engine: Loading config...", flush=True)
         print("CONFIG:", self._config.model_dump())
         print("  Engine: Initializing Managers...", flush=True)
-        self._router = container.get('toolrouter'))
+        self._router = ToolRouter())
         self._setup_vector_store()
 
         print("  Engine: Initializing EventBus...", flush=True)
-        self._event_bus = container.get('eventbus'))
+        self._event_bus = EventBus()
 
         print("  Engine: Initializing AgentManager...", flush=True)
-        self._agents = container.get('agentmanager')
+        self._agents = AgentManager(
             self._config,
             self._router,
             self._on_agent_handover,
@@ -48,7 +48,7 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing Gateway...", flush=True)
-        self._gateway = container.get('aethergateway')
+        self._gateway = AetherGateway(
             gateway_config=self._config.gateway,
             ai_config=self._config.ai,
             audio_config=self._config.audio,

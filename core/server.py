@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 # Ensure the project root is on sys.path
-ROOT = container.get('path')__file__).resolve().parent
+ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 # Load .env before anything else reads env vars
