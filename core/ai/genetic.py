@@ -146,6 +146,36 @@ class GeneticOptimizer:
 
         return mutated_dna
 
+    async def mutate_mid_session(
+        self,
+        current_dna: AgentDNA,
+        trait_name: str,
+        trait_value: float
+    ) -> AgentDNA:
+        """
+        Performs high-speed, incremental mutation based on real-time paralinguistic triggers.
+        This enables 'Hot-Mutation' for the Affective Soul.
+        """
+        new_dna_dict = current_dna.to_dict()
+        
+        # Adaptive Logic:
+        # 1. Stress/Arousal -> Decrease Verbosity, increase Empathy
+        if trait_name == "arousal" and trait_value > 0.7:
+            new_dna_dict["verbosity"] = max(0.2, new_dna_dict["verbosity"] - 0.1)
+            new_dna_dict["empathy"] = min(1.0, new_dna_dict["empathy"] + 0.1)
+            logger.info("🔥 Hot-Mutation: High Arousal detected. Context switching to 'Calm Operator'.")
+
+        # 2. Valence (Positive/Negative) -> Adjust Empathy
+        if trait_name == "valence" and trait_value < 0.4:
+            new_dna_dict["empathy"] = min(1.0, new_dna_dict["empathy"] + 0.15)
+            logger.info("🔥 Hot-Mutation: Negative Valence detected. Boosting Empathy.")
+
+        # 3. Energy -> Adjust Proactivity
+        if trait_name == "energy" and trait_value > 0.8:
+            new_dna_dict["proactivity"] = min(1.0, new_dna_dict["proactivity"] + 0.05)
+            
+        return AgentDNA.from_dict(new_dna_dict)
+
     def _calculate_delta(self, dna1: AgentDNA, dna2: AgentDNA) -> float:
         """Calculates L2 norm of the difference between float traits."""
         d1 = dna1.to_dict()

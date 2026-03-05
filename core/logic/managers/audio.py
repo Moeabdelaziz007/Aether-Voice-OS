@@ -1,6 +1,10 @@
 import asyncio
 import logging
 from typing import Any, Callable
+try:
+    import ujson as json
+except ImportError:
+    import json
 
 from core.audio.capture import AudioCapture
 from core.audio.paralinguistics import ParalinguisticAnalyzer
@@ -56,3 +60,8 @@ class AudioManager:
 
     def interrupt(self):
         self._playback.interrupt()
+
+    def flash_interrupt(self):
+        """High-priority alias for barge-in events."""
+        logger.info("⚡ FLASH INTERRUPT: Clearing audio pipelines.")
+        self.interrupt()

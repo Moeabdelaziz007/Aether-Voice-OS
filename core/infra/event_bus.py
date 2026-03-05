@@ -49,6 +49,12 @@ class TelemetryEvent(SystemEvent):
     value: float
     metadata: Dict[str, Any] = {}
 
+class AcousticTraitEvent(SystemEvent):
+    """Tier 2: Real-time Paralinguistic Data (Affective Soul)"""
+    trait_name: str  # e.g. "valence", "arousal", "pitch", "energy"
+    trait_value: float
+    confidence: float = 1.0
+
 # ==========================================
 # 🌌 RULE 3: Neural Event Bus Engine
 # Agnostic to audio or agents. 
@@ -82,6 +88,8 @@ class EventBus:
             await self.audio_queue.put(event)
         elif isinstance(event, ControlEvent):
             await self.control_queue.put(event)
+        elif isinstance(event, AcousticTraitEvent):
+            await self.control_queue.put(event)  # Route to Tier 2 (Control)
         elif isinstance(event, TelemetryEvent):
             await self.telemetry_queue.put(event)
         else:

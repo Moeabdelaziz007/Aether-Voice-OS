@@ -56,26 +56,39 @@ class AetherRegistry:
     ) -> None:
         self._dir = Path(packages_dir)
         self._packages: dict[str, AthPackage] = {}
+        self._discovered_paths: dict[str, Path] = {}  # Lazy-loading map
         self._on_change = on_change
         self._observer: Optional[Observer] = None
         self._vector_store: Optional[Any] = None
 
     def scan(self) -> int:
-        """Scan the packages directory and load all valid packages."""
+        """Scan the packages directory and discover manifests without full loading."""
         if not self._dir.exists():
             self._dir.mkdir(parents=True, exist_ok=True)
             logger.info("Created missing packages directory: %s", self._dir)
 
-        loaded = 0
+        discovered = 0
         for entry in self._dir.iterdir():
             if not entry.is_dir():
                 continue
 
-            pkg = self.load_package(entry)
-            if pkg:
-                loaded += 1
+            manifest_path = entry / "manifest.json"
+            if manifest_path.exists():
+                try:
+                    # Minimal load to get name
+                    with open(manifest_path, "r") as f:
+                        import json
+                        data = json.load(f)
+                        pkg_name = data.get("name")
+                        if pkg_name:
+                            self._discovered_paths[pkg_name] = entry
+                            discovered += 1
+                            logger.debug("[Registry] Discovered lazy package: %s", pkg_name)
+                except Exception as e:
+                    logger.warning("Failed to discover package at %s: %s", entry.name, e)
 
-        return loaded
+        logger.info("📡 Discovered %d specialists (Lazy Mode)", discovered)
+        return discovered
 
     def load_package(self, path: Path) -> Optional[AthPackage]:
         """Load a single package from path."""
@@ -143,11 +156,17 @@ class AetherRegistry:
                 pass
 
     def get(self, name: str) -> AthPackage:
-        """Get a package by name."""
-        pkg = self._packages.get(name)
-        if not pkg:
-            raise PackageNotFoundError(f"Package '{name}' not found")
-        return pkg
+        """Get a package by name, loading it lazily if necessary."""
+        if name in self._packages:
+            return self._packages[name]
+        
+        if name in self._discovered_paths:
+            logger.info("⚡ Lazy-Loading expert: %s", name)
+            pkg = self.load_package(self._discovered_paths[name])
+            if pkg:
+                return pkg
+        
+        raise PackageNotFoundError(f"Package '{name}' not found")
 
     def initialize_vector_store(self, api_key: str) -> None:
         """Initialize the local vector store for semantic expert discovery."""
