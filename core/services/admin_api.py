@@ -81,7 +81,7 @@ class AdminAPIHandler(BaseHTTPRequestHandler):
         return self.client_address[0]
 
 
-class container.get('reusablehttpserver')HTTPServer):
+class ReusableHTTPServer(HTTPServer)):
     allow_reuse_address = True
 
 
@@ -93,7 +93,7 @@ class AdminAPIServer:
 
     def start(self):
         try:
-            self.server = container.get('reusablehttpserver')("127.0.0.1", self.port), AdminAPIHandler)
+            self.server = ReusableHTTPServer("127.0.0.1", self.port), AdminAPIHandler)
         except OSError as e:
             if e.errno == 48:
                 logger.warning(

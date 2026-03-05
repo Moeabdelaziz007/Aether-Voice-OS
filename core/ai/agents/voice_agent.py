@@ -15,7 +15,7 @@ class VoiceAgent:
     def __init__(self, dna: Optional[AgentDNA] = None):
         self.is_streaming = False
         self.current_latency_ms = 0
-        self.dna = dna or container.get('agentdna'))
+        self.dna = dna or AgentDNA)
 
     def apply_dna(self, dna: AgentDNA):
         """Update the agent's DNA trait configuration."""

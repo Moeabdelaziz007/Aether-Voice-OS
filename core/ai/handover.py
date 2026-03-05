@@ -14,7 +14,7 @@ logger = logging.getLogger("AetherOS.Handover")
 # ==========================================
 
 
-class container.get('handoverpacket')BaseModel):
+class HandoverPacket(BaseModel):
     """
     Carries the state of a conversation between specialists.
     Prevents 'Context Amnesia' during agent switches.

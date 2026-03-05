@@ -23,10 +23,11 @@ from enum import Enum, auto
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from pydantic import BaseModel, Field
+from core.infra.service_container import container
 
 logger = logging.getLogger(__name__)
 
-T = container.get('typevar')"T")
+T = TypeVar("T")
 
 
 class HandoverStatus(Enum):
@@ -46,13 +47,13 @@ class HandoverStatus(Enum):
 class IntentConfidence(BaseModel):
     """Confidence metrics for handover intent classification."""
 
-    source_agent: str = container.get('field')description="Agent initiating the handover")
-    target_agent: str = container.get('field')description="Intended recipient agent")
-    confidence_score: float = container.get('field')
+    source_agent: str = Field(description="Agent initiating the handover")
+    target_agent: str = Field(description="Intended recipient agent")
+    confidence_score: float = Field(
         ge=0.0, le=1.0, description="Confidence in the handover decision"
     )
-    reasoning: str = container.get('field')description="Why this handover was initiated")
-    alternatives_considered: List[str] = container.get('field')
+    reasoning: str = Field(description="Why this handover was initiated")
+    alternatives_considered: List[str] = Field(
         default_factory=list, description="Other agents considered for this task"
     )
 
@@ -60,51 +61,51 @@ class IntentConfidence(BaseModel):
 class CodeContext(BaseModel):
     """Code-specific context for developer-oriented handovers."""
 
-    files_modified: List[str] = container.get('field')default_factory=list)
-    files_affected: List[str] = container.get('field')default_factory=list)
-    dependencies: List[str] = container.get('field')default_factory=list)
-    test_files: List[str] = container.get('field')default_factory=list)
-    code_snippets: Dict[str, str] = container.get('field')default_factory=dict)
+    files_modified: List[str] = Field(default_factory=list)
+    files_affected: List[str] = Field(default_factory=list)
+    dependencies: List[str] = Field(default_factory=list)
+    test_files: List[str] = Field(default_factory=list)
+    code_snippets: Dict[str, str] = Field(default_factory=dict)
     language: Optional[str] = None
     framework: Optional[str] = None
 
 
-class container.get('conversationentry')BaseModel):
+class ConversationEntry(BaseModel):
     """Single entry in the conversation history."""
 
-    timestamp: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
-    speaker: str = container.get('field')description="Agent or user identifier")
-    message: str = container.get('field')description="The message content")
-    metadata: Dict[str, Any] = container.get('field')default_factory=dict)
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+    speaker: str = Field(description="Agent or user identifier")
+    message: str = Field(description="The message content")
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
-class container.get('tasknode')BaseModel):
+class TaskNode(BaseModel):
     """Node in the task tree representing subtask decomposition."""
 
-    id: str = container.get('field')description="Unique task identifier")
-    description: str = container.get('field')description="Task description")
-    status: str = container.get('field')default="pending")
+    id: str = Field(description="Unique task identifier")
+    description: str = Field(description="Task description")
+    status: str = Field(default="pending")
     parent_id: Optional[str] = None
-    children: List[str] = container.get('field')default_factory=list)
+    children: List[str] = Field(default_factory=list)
     assigned_to: Optional[str] = None
     completed_at: Optional[str] = None
-    metadata: Dict[str, Any] = container.get('field')default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkingMemory(BaseModel):
     """Ephemeral working memory for active context."""
 
-    short_term: Dict[str, Any] = container.get('field')
+    short_term: Dict[str, Any] = Field(
         default_factory=dict, description="Active working memory"
     )
-    attention_focus: List[str] = container.get('field')
+    attention_focus: List[str] = Field(
         default_factory=list, description="Current attention priorities"
     )
-    scratchpad: str = container.get('field')default="", description="Temporary notes")
-    session_duration_seconds: float = container.get('field')default=0.0)
+    scratchpad: str = Field(default="", description="Temporary notes")
+    session_duration_seconds: float = Field(default=0.0)
 
 
-class container.get('handovercontext')BaseModel):
+class HandoverContext(BaseModel):
     """
     Extended HandoverContext with rich metadata for deep context preservation.
 
@@ -114,34 +115,34 @@ class container.get('handovercontext')BaseModel):
     """
 
     # Core identity
-    handover_id: str = container.get('field')
+    handover_id: str = Field(
         default_factory=lambda: f"hov-{datetime.now().timestamp()}"
     )
-    source_agent: str = container.get('field')description="Agent handing off the task")
-    target_agent: str = container.get('field')description="Agent receiving the task")
-    status: HandoverStatus = container.get('field')default=HandoverStatus.PENDING)
+    source_agent: str = Field(description="Agent handing off the task")
+    target_agent: str = Field(description="Agent receiving the task")
+    status: HandoverStatus = Field(default=HandoverStatus.PENDING)
 
     # Task decomposition
-    task: str = container.get('field')description="Primary task description")
-    task_tree: List[TaskNode] = container.get('field')
+    task: str = Field(description="Primary task description")
+    task_tree: List[TaskNode] = Field(
         default_factory=list, description="Decomposed task hierarchy"
     )
     current_node_id: Optional[str] = None
 
     # Rich context
-    working_memory: WorkingMemory = container.get('field')default_factory=WorkingMemory)
+    working_memory: WorkingMemory = Field(default_factory=WorkingMemory)
     intent_confidence: Optional[IntentConfidence] = None
     code_context: Optional[CodeContext] = None
-    conversation_history: List[ConversationEntry] = container.get('field')default_factory=list)
+    conversation_history: List[ConversationEntry] = Field(default_factory=list)
 
     # Payload and history
-    payload: Dict[str, Any] = container.get('field')default_factory=dict)
-    history: List[str] = container.get('field')default_factory=list)
+    payload: Dict[str, Any] = Field(default_factory=dict)
+    history: List[str] = Field(default_factory=list)
     compressed_seed: Optional[Dict[str, Any]] = None
 
     # Timing
-    created_at: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
-    updated_at: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
+    updated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     expires_at: Optional[str] = None
 
     # Validation and negotiation
@@ -244,41 +245,41 @@ class container.get('handovercontext')BaseModel):
                 break
 
 
-class container.get('architectdecision')BaseModel):
+class ArchitectDecision(BaseModel):
     """Single decision made by the Architect agent."""
 
-    decision_id: str = container.get('field')
+    decision_id: str = Field(
         default_factory=lambda: f"dec-{datetime.now().timestamp()}"
     )
-    category: str = container.get('field')
+    category: str = Field(
         description="Decision category (e.g., 'architecture', 'data_model')"
     )
-    description: str = container.get('field')description="What was decided")
-    rationale: str = container.get('field')description="Why this decision was made")
-    alternatives: List[str] = container.get('field')default_factory=list)
-    impact_level: str = container.get('field')default="medium")  # low, medium, high, critical
+    description: str = Field(description="What was decided")
+    rationale: str = Field(description="Why this decision was made")
+    alternatives: List[str] = Field(default_factory=list)
+    impact_level: str = Field(default="medium")  # low, medium, high, critical
 
 
-class container.get('riskassessment')BaseModel):
+class RiskAssessment(BaseModel):
     """Risk assessment for architectural decisions."""
 
-    risk_id: str = container.get('field')default_factory=lambda: f"risk-{datetime.now().timestamp()}")
-    category: str = container.get('field')description="Risk category")
-    description: str = container.get('field')description="Risk description")
-    probability: float = container.get('field')ge=0.0, le=1.0)
-    impact: float = container.get('field')ge=0.0, le=1.0)
-    mitigation_strategy: str = container.get('field')default="")
+    risk_id: str = Field(default_factory=lambda: f"risk-{datetime.now().timestamp()}")
+    category: str = Field(description="Risk category")
+    description: str = Field(description="Risk description")
+    probability: float = Field(ge=0.0, le=1.0)
+    impact: float = Field(ge=0.0, le=1.0)
+    mitigation_strategy: str = Field(default="")
     owner: Optional[str] = None
 
 
-class container.get('blueprintsection')BaseModel):
+class BlueprintSection(BaseModel):
     """Section of an architectural blueprint."""
 
-    section_id: str = container.get('field')description="Unique section identifier")
-    title: str = container.get('field')description="Section title")
-    content: str = container.get('field')description="Section content/description")
-    dependencies: List[str] = container.get('field')default_factory=list)
-    status: str = container.get('field')default="draft")  # draft, reviewed, approved
+    section_id: str = Field(description="Unique section identifier")
+    title: str = Field(description="Section title")
+    content: str = Field(description="Section content/description")
+    dependencies: List[str] = Field(default_factory=list)
+    status: str = Field(default="draft")  # draft, reviewed, approved
 
 
 class ArchitectOutput(BaseModel):
@@ -290,34 +291,34 @@ class ArchitectOutput(BaseModel):
     """
 
     # Metadata
-    output_id: str = container.get('field')
+    output_id: str = Field(
         default_factory=lambda: f"arch-out-{datetime.now().timestamp()}"
     )
-    handover_id: str = container.get('field')description="Reference to parent handover")
-    created_at: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
+    handover_id: str = Field(description="Reference to parent handover")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
     # Core deliverables
-    blueprints: List[BlueprintSection] = container.get('field')
+    blueprints: List[BlueprintSection] = Field(
         default_factory=list, description="Architectural blueprint sections"
     )
-    decisions: List[ArchitectDecision] = container.get('field')
+    decisions: List[ArchitectDecision] = Field(
         default_factory=list, description="Key architectural decisions"
     )
-    risk_assessment: List[RiskAssessment] = container.get('field')
+    risk_assessment: List[RiskAssessment] = Field(
         default_factory=list, description="Identified risks and mitigations"
     )
 
     # Design metadata
-    design_patterns: List[str] = container.get('field')default_factory=list)
-    technology_stack: List[str] = container.get('field')default_factory=list)
-    integration_points: List[str] = container.get('field')default_factory=list)
+    design_patterns: List[str] = Field(default_factory=list)
+    technology_stack: List[str] = Field(default_factory=list)
+    integration_points: List[str] = Field(default_factory=list)
 
     # Completion status
-    completeness_score: float = container.get('field')
+    completeness_score: float = Field(
         ge=0.0, le=1.0, default=0.0, description="How complete is the blueprint"
     )
     estimated_implementation_time: Optional[str] = None
-    next_steps: List[str] = container.get('field')default_factory=list)
+    next_steps: List[str] = Field(default_factory=list)
 
     def add_blueprint_section(
         self, title: str, content: str, dependencies: Optional[List[str]] = None
@@ -380,41 +381,41 @@ class ArchitectOutput(BaseModel):
         ]
 
 
-class container.get('verificationresult')BaseModel):
+class VerificationResult(BaseModel):
     """Result of verifying a specific aspect of the work."""
 
-    result_id: str = container.get('field')default_factory=lambda: f"ver-{datetime.now().timestamp()}")
-    category: str = container.get('field')description="Verification category")
-    target_id: str = container.get('field')description="ID of what was verified")
-    status: str = container.get('field')description="passed, failed, warning, skipped")
-    findings: str = container.get('field')description="Detailed findings")
-    severity: str = container.get('field')default="info")  # info, warning, error, critical
-    recommendations: List[str] = container.get('field')default_factory=list)
+    result_id: str = Field(default_factory=lambda: f"ver-{datetime.now().timestamp()}")
+    category: str = Field(description="Verification category")
+    target_id: str = Field(description="ID of what was verified")
+    status: str = Field(description="passed, failed, warning, skipped")
+    findings: str = Field(description="Detailed findings")
+    severity: str = Field(default="info")  # info, warning, error, critical
+    recommendations: List[str] = Field(default_factory=list)
 
 
-class container.get('codefix')BaseModel):
+class CodeFix(BaseModel):
     """A code fix proposed by the Debugger."""
 
-    fix_id: str = container.get('field')default_factory=lambda: f"fix-{datetime.now().timestamp()}")
-    issue_id: str = container.get('field')description="Reference to verified issue")
-    file_path: str = container.get('field')description="File to modify")
-    description: str = container.get('field')description="What the fix does")
+    fix_id: str = Field(default_factory=lambda: f"fix-{datetime.now().timestamp()}")
+    issue_id: str = Field(description="Reference to verified issue")
+    file_path: str = Field(description="File to modify")
+    description: str = Field(description="What the fix does")
     original_code: Optional[str] = None
     fixed_code: Optional[str] = None
-    explanation: str = container.get('field')description="Why this fix resolves the issue")
-    breaking_change: bool = container.get('field')default=False)
+    explanation: str = Field(description="Why this fix resolves the issue")
+    breaking_change: bool = Field(default=False)
 
 
-class container.get('debuggerwarning')BaseModel):
+class DebuggerWarning(BaseModel):
     """Warning issued by the Debugger agent."""
 
-    warning_id: str = container.get('field')
+    warning_id: str = Field(
         default_factory=lambda: f"warn-{datetime.now().timestamp()}"
     )
-    category: str = container.get('field')description="Warning category")
-    message: str = container.get('field')description="Warning message")
-    affected_files: List[str] = container.get('field')default_factory=list)
-    severity: str = container.get('field')default="medium")  # low, medium, high, critical
+    category: str = Field(description="Warning category")
+    message: str = Field(description="Warning message")
+    affected_files: List[str] = Field(default_factory=list)
+    severity: str = Field(default="medium")  # low, medium, high, critical
     suggested_action: Optional[str] = None
 
 
@@ -427,33 +428,33 @@ class DebuggerOutput(BaseModel):
     """
 
     # Metadata
-    output_id: str = container.get('field')
+    output_id: str = Field(
         default_factory=lambda: f"dbg-out-{datetime.now().timestamp()}"
     )
-    handover_id: str = container.get('field')description="Reference to parent handover")
-    created_at: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
+    handover_id: str = Field(description="Reference to parent handover")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
     # Core deliverables
-    verification_results: List[VerificationResult] = container.get('field')default_factory=list)
-    fixes: List[CodeFix] = container.get('field')default_factory=list)
-    warnings: List[DebuggerWarning] = container.get('field')default_factory=list)
+    verification_results: List[VerificationResult] = Field(default_factory=list)
+    fixes: List[CodeFix] = Field(default_factory=list)
+    warnings: List[DebuggerWarning] = Field(default_factory=list)
 
     # Summary metrics
-    total_checks: int = container.get('field')default=0)
-    passed_checks: int = container.get('field')default=0)
-    failed_checks: int = container.get('field')default=0)
-    warning_count: int = container.get('field')default=0)
+    total_checks: int = Field(default=0)
+    passed_checks: int = Field(default=0)
+    failed_checks: int = Field(default=0)
+    warning_count: int = Field(default=0)
 
     # Verification coverage
-    coverage_percentage: float = container.get('field')ge=0.0, le=1.0, default=0.0)
-    verified_files: List[str] = container.get('field')default_factory=list)
-    skipped_files: List[str] = container.get('field')default_factory=list)
+    coverage_percentage: float = Field(ge=0.0, le=1.0, default=0.0)
+    verified_files: List[str] = Field(default_factory=list)
+    skipped_files: List[str] = Field(default_factory=list)
 
     # Overall assessment
-    overall_status: str = container.get('field')default="pending")  # pending, passed, failed, partial
-    approved_for_deployment: bool = container.get('field')default=False)
-    requires_rework: bool = container.get('field')default=False)
-    rework_items: List[str] = container.get('field')default_factory=list)
+    overall_status: str = Field(default="pending")  # pending, passed, failed, partial
+    approved_for_deployment: bool = Field(default=False)
+    requires_rework: bool = Field(default=False)
+    rework_items: List[str] = Field(default_factory=list)
 
     def add_verification_result(
         self,
@@ -522,7 +523,7 @@ class DebuggerOutput(BaseModel):
         return [w for w in self.warnings if w.severity == "critical"]
 
 
-class container.get('validationcheckpoint')BaseModel):
+class ValidationCheckpoint(BaseModel):
     """
     Intermediate validation checkpoint for staged handovers.
 
@@ -530,25 +531,25 @@ class container.get('validationcheckpoint')BaseModel):
     a full handover, enabling iterative refinement.
     """
 
-    checkpoint_id: str = container.get('field')
+    checkpoint_id: str = Field(
         default_factory=lambda: f"chk-{datetime.now().timestamp()}"
     )
-    handover_id: str = container.get('field')description="Reference to parent handover")
-    created_at: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
+    handover_id: str = Field(description="Reference to parent handover")
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
     # Checkpoint content
-    stage: str = container.get('field')description="Current stage of handover")
-    partial_output: Dict[str, Any] = container.get('field')default_factory=dict)
+    stage: str = Field(description="Current stage of handover")
+    partial_output: Dict[str, Any] = Field(default_factory=dict)
 
     # Validation results
-    validation_results: List[VerificationResult] = container.get('field')default_factory=list)
-    checkpoint_passed: bool = container.get('field')default=False)
+    validation_results: List[VerificationResult] = Field(default_factory=list)
+    checkpoint_passed: bool = Field(default=False)
 
     # Next steps
-    can_proceed: bool = container.get('field')default=False)
-    requires_changes: bool = container.get('field')default=False)
-    feedback: str = container.get('field')default="")
-    suggested_modifications: List[str] = container.get('field')default_factory=list)
+    can_proceed: bool = Field(default=False)
+    requires_changes: bool = Field(default=False)
+    feedback: str = Field(default="")
+    suggested_modifications: List[str] = Field(default_factory=list)
 
     def add_validation(self, result: VerificationResult) -> None:
         """Add a validation result to this checkpoint."""
@@ -568,19 +569,19 @@ class container.get('validationcheckpoint')BaseModel):
         self.requires_changes = len(failed) > 0
 
 
-class container.get('negotiationmessage')BaseModel):
+class NegotiationMessage(BaseModel):
     """Single message in handover negotiation."""
 
-    message_id: str = container.get('field')default_factory=lambda: f"neg-{datetime.now().timestamp()}")
-    from_agent: str = container.get('field')description="Sender agent")
-    to_agent: str = container.get('field')description="Recipient agent")
-    message_type: str = container.get('field')description="offer, counter, accept, reject, clarify")
-    content: str = container.get('field')description="Message content")
-    timestamp: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
-    attachments: Dict[str, Any] = container.get('field')default_factory=dict)
+    message_id: str = Field(default_factory=lambda: f"neg-{datetime.now().timestamp()}")
+    from_agent: str = Field(description="Sender agent")
+    to_agent: str = Field(description="Recipient agent")
+    message_type: str = Field(description="offer, counter, accept, reject, clarify")
+    content: str = Field(description="Message content")
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
+    attachments: Dict[str, Any] = Field(default_factory=dict)
 
 
-class container.get('handovernegotiation')BaseModel):
+class HandoverNegotiation(BaseModel):
     """
     Bidirectional negotiation for handover terms.
 
@@ -588,23 +589,23 @@ class container.get('handovernegotiation')BaseModel):
     deliverables before committing to a handover.
     """
 
-    negotiation_id: str = container.get('field')
+    negotiation_id: str = Field(
         default_factory=lambda: f"neg-{datetime.now().timestamp()}"
     )
-    handover_id: str = container.get('field')description="Reference to parent handover")
-    status: str = container.get('field')default="open")  # open, negotiating, accepted, rejected
+    handover_id: str = Field(description="Reference to parent handover")
+    status: str = Field(default="open")  # open, negotiating, accepted, rejected
 
     # Participants
-    initiating_agent: str = container.get('field')description="Agent starting the negotiation")
-    receiving_agent: str = container.get('field')description="Agent receiving the offer")
+    initiating_agent: str = Field(description="Agent starting the negotiation")
+    receiving_agent: str = Field(description="Agent receiving the offer")
 
     # Messages
-    messages: List[NegotiationMessage] = container.get('field')default_factory=list)
+    messages: List[NegotiationMessage] = Field(default_factory=list)
 
     # Negotiation terms
-    proposed_scope: str = container.get('field')default="")
+    proposed_scope: str = Field(default="")
     proposed_deadline: Optional[str] = None
-    proposed_deliverables: List[str] = container.get('field')default_factory=list)
+    proposed_deliverables: List[str] = Field(default_factory=list)
 
     counter_scope: Optional[str] = None
     counter_deadline: Optional[str] = None
@@ -727,17 +728,17 @@ class container.get('handovernegotiation')BaseModel):
         )
 
 
-class container.get('contextdiff')BaseModel):
+class ContextDiff(BaseModel):
     """Represents a diff between two context states."""
 
-    diff_id: str = container.get('field')default_factory=lambda: f"diff-{datetime.now().timestamp()}")
-    base_version: str = container.get('field')description="Base context version/timestamp")
-    compare_version: str = container.get('field')description="Comparison context version/timestamp")
+    diff_id: str = Field(default_factory=lambda: f"diff-{datetime.now().timestamp()}")
+    base_version: str = Field(description="Base context version/timestamp")
+    compare_version: str = Field(description="Comparison context version/timestamp")
 
-    added: Dict[str, Any] = container.get('field')default_factory=dict)
-    removed: Dict[str, Any] = container.get('field')default_factory=dict)
-    modified: Dict[str, Tuple[Any, Any]] = container.get('field')default_factory=dict)
-    unchanged: List[str] = container.get('field')default_factory=list)
+    added: Dict[str, Any] = Field(default_factory=dict)
+    removed: Dict[str, Any] = Field(default_factory=dict)
+    modified: Dict[str, Tuple[Any, Any]] = Field(default_factory=dict)
+    unchanged: List[str] = Field(default_factory=list)
 
 
 class ContextSerializer:
@@ -766,7 +767,7 @@ class ContextSerializer:
         """Deserialize JSON string or dict to HandoverContext."""
         if isinstance(data, str):
             data = json.loads(data)
-        return container.get('handovercontext')**data)
+        return HandoverContext(**data)
 
     @staticmethod
     def create_diff(base: HandoverContext, updated: HandoverContext) -> ContextDiff:
@@ -819,7 +820,7 @@ class ContextSerializer:
         for key, (_, new_value) in diff.modified.items():
             data[key] = new_value
 
-        return container.get('handovercontext')**data)
+        return HandoverContext(**data)
 
 
 class HandoverProtocol:
@@ -832,7 +833,7 @@ class HandoverProtocol:
 
     def __init__(self):
         self._active_handovers: Dict[str, HandoverContext] = {}
-        self._serializer = container.get('contextserializer'))
+        self._serializer = ContextSerializer()
 
     def create_handover(
         self,
@@ -1021,7 +1022,7 @@ def get_handover_protocol() -> HandoverProtocol:
     """Get or create the global handover protocol instance."""
     global _protocol_instance
     if _protocol_instance is None:
-        _protocol_instance = container.get('handoverprotocol'))
+        _protocol_instance = HandoverProtocol()
     return _protocol_instance
 
 

@@ -94,7 +94,7 @@ class PerformanceMetrics:
         return sorted_samples[min(idx, len(sorted_samples) - 1)]
 
 
-class container.get('handoverrecord')BaseModel):
+class HandoverRecord(BaseModel):
     """
     Persistent record of a handover operation.
 
@@ -102,53 +102,53 @@ class container.get('handoverrecord')BaseModel):
     """
 
     # Identification
-    record_id: str = container.get('field')default_factory=lambda: f"rec-{datetime.now().timestamp()}")
-    handover_id: str = container.get('field')description="Reference to handover context")
+    record_id: str = Field(default_factory=lambda: f"rec-{datetime.now().timestamp()}")
+    handover_id: str = Field(description="Reference to handover context")
 
     # Agents involved
-    source_agent: str = container.get('field')description="Agent initiating handover")
-    target_agent: str = container.get('field')description="Agent receiving handover")
+    source_agent: str = Field(description="Agent initiating handover")
+    target_agent: str = Field(description="Agent receiving handover")
 
     # Timing
-    created_at: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
+    created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     started_at: Optional[str] = None
     completed_at: Optional[str] = None
 
     # Task information
-    task_description: str = container.get('field')default="")
+    task_description: str = Field(default="")
     task_category: Optional[str] = None
 
     # Outcome
-    outcome: str = container.get('field')default=HandoverOutcome.SUCCESS.value)
+    outcome: str = Field(default=HandoverOutcome.SUCCESS.value)
     failure_category: Optional[str] = None
     failure_reason: Optional[str] = None
 
     # Context statistics
-    context_size_bytes: int = container.get('field')default=0)
-    payload_keys: List[str] = container.get('field')default_factory=list)
-    conversation_entries: int = container.get('field')default=0)
-    task_nodes: int = container.get('field')default=0)
+    context_size_bytes: int = Field(default=0)
+    payload_keys: List[str] = Field(default_factory=list)
+    conversation_entries: int = Field(default=0)
+    task_nodes: int = Field(default=0)
 
     # Validation results
-    validation_checkpoints: int = container.get('field')default=0)
-    validations_passed: int = container.get('field')default=0)
-    validations_failed: int = container.get('field')default=0)
+    validation_checkpoints: int = Field(default=0)
+    validations_passed: int = Field(default=0)
+    validations_failed: int = Field(default=0)
 
     # Negotiation
-    negotiation_messages: int = container.get('field')default=0)
-    negotiation_duration_seconds: float = container.get('field')default=0.0)
+    negotiation_messages: int = Field(default=0)
+    negotiation_duration_seconds: float = Field(default=0.0)
 
     # Performance
-    preparation_time_ms: float = container.get('field')default=0.0)
-    transfer_time_ms: float = container.get('field')default=0.0)
-    total_duration_ms: float = container.get('field')default=0.0)
+    preparation_time_ms: float = Field(default=0.0)
+    transfer_time_ms: float = Field(default=0.0)
+    total_duration_ms: float = Field(default=0.0)
 
     # Rollback
-    rollback_initiated: bool = container.get('field')default=False)
+    rollback_initiated: bool = Field(default=False)
     rollback_successful: Optional[bool] = None
 
     # Additional metadata
-    metadata: Dict[str, Any] = container.get('field')default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
     model_config = {"arbitrary_types_allowed": True}
 
@@ -170,38 +170,38 @@ class container.get('handoverrecord')BaseModel):
         return json.dumps(self.to_dict(), default=str)
 
 
-class container.get('handoveranalytics')BaseModel):
+class HandoverAnalytics(BaseModel):
     """
     Aggregated analytics for handover operations.
     """
 
     # Time window
-    window_start: str = container.get('field')default_factory=lambda: datetime.now().isoformat())
+    window_start: str = Field(default_factory=lambda: datetime.now().isoformat())
     window_end: Optional[str] = None
 
     # Volume metrics
-    total_handovers: int = container.get('field')default=0)
-    successful_handovers: int = container.get('field')default=0)
-    failed_handovers: int = container.get('field')default=0)
-    rolled_back_handovers: int = container.get('field')default=0)
+    total_handovers: int = Field(default=0)
+    successful_handovers: int = Field(default=0)
+    failed_handovers: int = Field(default=0)
+    rolled_back_handovers: int = Field(default=0)
 
     # Outcome distribution
-    outcome_counts: Dict[str, int] = container.get('field')default_factory=dict)
+    outcome_counts: Dict[str, int] = Field(default_factory=dict)
 
     # Failure analysis
-    failure_categories: Dict[str, int] = container.get('field')default_factory=dict)
-    top_failure_reasons: List[Tuple[str, int]] = container.get('field')default_factory=list)
+    failure_categories: Dict[str, int] = Field(default_factory=dict)
+    top_failure_reasons: List[Tuple[str, int]] = Field(default_factory=list)
 
     # Performance metrics
-    avg_preparation_time_ms: float = container.get('field')default=0.0)
-    avg_transfer_time_ms: float = container.get('field')default=0.0)
-    avg_total_time_ms: float = container.get('field')default=0.0)
+    avg_preparation_time_ms: float = Field(default=0.0)
+    avg_transfer_time_ms: float = Field(default=0.0)
+    avg_total_time_ms: float = Field(default=0.0)
 
     # Agent pair performance
-    agent_pair_success_rates: Dict[str, Dict[str, float]] = container.get('field')default_factory=dict)
+    agent_pair_success_rates: Dict[str, Dict[str, float]] = Field(default_factory=dict)
 
     # Trends
-    hourly_success_rates: Dict[str, float] = container.get('field')default_factory=dict)
+    hourly_success_rates: Dict[str, float] = Field(default_factory=dict)
 
     def calculate_success_rate(self) -> float:
         """Calculate overall success rate."""
@@ -306,10 +306,10 @@ class HandoverTelemetry:
     def __init__(self, max_records: int = 10000):
         self._records: List[HandoverRecord] = []
         self._max_records = max_records
-        self._analytics = container.get('handoveranalytics'))
+        self._analytics = HandoverAnalytics()
         self._active_recordings: Dict[str, HandoverRecord] = {}
         self._active_spans: Dict[str, Any] = {}
-        self._performance_metrics = container.get('performancemetrics'))
+        self._performance_metrics = PerformanceMetrics()
 
         logger.info("HandoverTelemetry initialized (max_records=%d)", max_records)
 
@@ -321,7 +321,7 @@ class HandoverTelemetry:
         task_description: str = "",
     ) -> HandoverRecord:
         """Start recording a new handover operation."""
-        record = container.get('handoverrecord')
+        record = HandoverRecord(
             handover_id=handover_id,
             source_agent=source_agent,
             target_agent=target_agent,
@@ -388,10 +388,10 @@ class HandoverTelemetry:
         if span:
             span.set_attribute("handover.outcome", outcome.value)
             if outcome == HandoverOutcome.SUCCESS:
-                span.set_status(container.get('status')StatusCode.OK))
+                span.set_status(Status(StatusCode.OK))
             else:
                 span.set_status(
-                    container.get('status')
+                    Status(
                         StatusCode.ERROR,
                         description=failure_reason or "Handover failed",
                     )
@@ -659,7 +659,7 @@ def get_telemetry() -> HandoverTelemetry:
     """Get or create the global telemetry instance."""
     global _telemetry_instance
     if _telemetry_instance is None:
-        _telemetry_instance = container.get('handovertelemetry'))
+        _telemetry_instance = HandoverTelemetry()
     return _telemetry_instance
 
 

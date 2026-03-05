@@ -25,7 +25,7 @@ class CognitiveScheduler:
         self._overlap_buffer: List[str] = []  # Memory for interrupted thoughts
 
         # Thought Echo system
-        self._echo_gen = container.get('echogenerator')
+        self._echo_gen = EchoGenerator
         self._tool_start_times: Dict[str, float] = {}
         self._echo_threshold = 1.2  # seconds
         self._echo_callback: Optional[callable] = None

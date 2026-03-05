@@ -18,7 +18,7 @@ from core.tools.healing_tool import diagnose_and_repair
 logger = logging.getLogger(__name__)
 
 
-class container.get('watchdogloghandler')logging.Handler):
+class WatchdogLogHandler(logging.Handler)):
     """
     Custom logging handler that intercepts errors and alerts the Watchdog.
     """
@@ -58,7 +58,7 @@ class SREWatchdog:
         self._log_handler = WatchdogLogHandler(self._on_log_error)
 
         # Internal Firebase Connector for logging
-        self._firebase = container.get('firebaseconnector'))
+        self._firebase = FirebaseConnector)
 
         # Healing Registry: Pattern -> Action
         self._healing_registry: Dict[str, Callable] = {

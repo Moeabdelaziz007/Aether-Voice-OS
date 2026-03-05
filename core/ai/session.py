@@ -196,8 +196,8 @@ class GeminiLiveSession:
 
                 # Wire in Thalamic Gate V2
                 try:
-                    self._thalamic_gate = container.get('thalamicgate')
-                    self._demo_fallback = container.get('demofallback')
+                    self._thalamic_gate = ThalamicGate
+                    self._demo_fallback = DemoFallback
                     await self._thalamic_gate.start()
                 except Exception as e:
                     logger.error("Failed to wire Thalamic Gate: %s", e)
