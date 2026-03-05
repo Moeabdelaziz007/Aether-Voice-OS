@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from core.analytics.latency import LatencyOptimizer
 
 
@@ -39,29 +41,27 @@ def test_multiple_latencies():
     assert metrics["p99"] == 100.0
 
 
-def test_log_metrics(caplog):
-    import logging
+def test_log_metrics():
+    optimizer = LatencyOptimizer()
+    optimizer.record_latency(50.0)
 
-    with caplog.at_level(logging.INFO):
-        optimizer = LatencyOptimizer()
-        optimizer.record_latency(50.0)
+    with patch("core.analytics.latency.logger.info") as mock_info:
         optimizer.log_metrics()
 
         expected_log = (
             "Latency Metrics over 1 events: "
             "Avg=50.0ms, P50=50.0ms, P95=50.0ms, P99=50.0ms"
         )
-        assert expected_log in caplog.text
+        mock_info.assert_called_once_with(expected_log)
 
 
-def test_log_metrics_empty(caplog):
-    import logging
+def test_log_metrics_empty():
+    optimizer = LatencyOptimizer()
 
-    with caplog.at_level(logging.INFO):
-        optimizer = LatencyOptimizer()
+    with patch("core.analytics.latency.logger.info") as mock_info:
         optimizer.log_metrics()
 
         expected_log = (
             "Latency Metrics over 0 events: Avg=0.0ms, P50=0.0ms, P95=0.0ms, P99=0.0ms"
         )
-        assert expected_log in caplog.text
+        mock_info.assert_called_once_with(expected_log)
