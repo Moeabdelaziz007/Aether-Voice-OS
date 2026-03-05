@@ -43,10 +43,10 @@ jobs:
 
       - name: Verify imports
         run: |
-          python -c "from core.windowing import AudioWindow; print('✅ windowing OK')"
-          python -c "from core.registry import AetherRegistry; print('✅ registry OK')"
-          python -c "from core.gateway import AetherGateway; print('✅ gateway OK')"
-          python -c "from core.runner import AetherRunner; print('✅ runner OK')"
+          python -c "from core.infra.event_bus import EventBus; print('✅ infra OK')"
+          python -c "from core.ai.agents.registry import AgentRegistry; print('✅ agents OK')"
+          python -c "from core.infra.transport.gateway import AetherGateway; print('✅ gateway OK')"
+          python -c "from core.engine import AetherEngine; print('✅ engine OK')"
 
       - name: Verify .ath package structure
         run: |

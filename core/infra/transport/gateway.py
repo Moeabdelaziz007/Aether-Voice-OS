@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import jwt
 import logging
 import os
 import time
@@ -585,11 +586,18 @@ class AetherGateway:
         if not client_id:
             raise HandshakeError("Missing client_id in response")
 
-        signature = resp.get("signature", "")
         capabilities = resp.get("capabilities", [])
 
-        if not self._verify_signature(challenge_bytes, signature, client_id):
-            raise HandshakeError(f"Invalid signature from {client_id}")
+        token = resp.get("token")
+        if token:
+            if not self._verify_jwt(token):
+                raise HandshakeError("Invalid JWT token")
+            logger.info("Client authenticated via JWT: %s", client_id)
+        else:
+            signature = resp.get("signature", "")
+            if not self._verify_signature(challenge_bytes, signature, client_id):
+                raise HandshakeError(f"Invalid signature from {client_id}")
+            logger.info("Client authenticated via Ed25519: %s", client_id)
 
         # Create session
         session = ClientSession(client_id, ws, capabilities)
@@ -606,6 +614,24 @@ class AetherGateway:
         await ws.send(ack.model_dump_json())
 
         return client_id
+
+    def _verify_jwt(self, token: str) -> bool:
+        """
+        Verify a JWT token.
+        Uses AETHER_JWT_SECRET or GOOGLE_API_KEY as the secret.
+        """
+        secret = os.environ.get("AETHER_JWT_SECRET") or os.environ.get("GOOGLE_API_KEY")
+        if not secret:
+            logger.warning("No secret available for JWT verification")
+            return False
+
+        try:
+            # We accept HS256 for now, as it's common for internal service comms
+            jwt.decode(token, secret, algorithms=["HS256"])
+            return True
+        except jwt.PyJWTError as exc:
+            logger.warning("JWT verification failed: %s", exc)
+            return False
 
     def _verify_signature(
         self,

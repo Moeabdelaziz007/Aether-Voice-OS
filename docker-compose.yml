@@ -1,0 +1,36 @@
+# 🌌 AetherOS Orchestration Layer
+services:
+  kernel:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aether-kernel
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - PORT=18789
+    ports:
+      - "18789:18789"
+      - "18790:18790"
+    restart: unless-stopped
+    networks:
+      - aether-net
+
+  portal:
+    build:
+      context: ./apps/portal
+      dockerfile: Dockerfile
+    container_name: aether-portal
+    environment:
+      - NEXT_PUBLIC_AETHER_GATEWAY_URL=ws://kernel:18789
+      - NEXT_PUBLIC_GEMINI_KEY=${GOOGLE_API_KEY}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - kernel
+    restart: unless-stopped
+    networks:
+      - aether-net
+
+networks:
+  aether-net:
+    driver: bridge

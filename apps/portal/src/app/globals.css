@@ -316,6 +316,66 @@ body {
   }
 }
 
+/* ── Ambient Transcript Zones ── */
+.ambient-zone {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 90vw;
+  max-width: 800px;
+  display: flex;
+  flex-direction: column;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.ambient-zone--top {
+  top: 15vh;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.ambient-zone--bottom {
+  bottom: 25vh;
+  align-items: center;
+  justify-content: flex-end;
+  flex-direction: column-reverse;
+}
+
+/* Ambient Typography — Industrial Sci-Fi */
+.ambient-text {
+  font-family: var(--f-display);
+  font-weight: 300;
+  text-align: center;
+  margin: 0.5rem 0;
+  line-height: 1.4;
+  transition: all var(--t-smooth);
+}
+
+.ambient-text--agent {
+  font-size: clamp(1.1rem, 2.8vw, 1.8rem);
+  color: var(--text-70);
+  text-shadow: 0 0 30px rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.2);
+}
+
+.ambient-text--user {
+  font-size: clamp(0.9rem, 2vw, 1.2rem);
+  color: var(--text-40);
+  font-style: italic;
+  letter-spacing: 0.02em;
+}
+
+/* Whisper Mode — Ghosting Effect */
+.transcript-mode-whisper .ambient-text {
+  filter: blur(1px);
+  opacity: 0.3;
+}
+
+.transcript-mode-whisper .ambient-text:hover {
+  filter: blur(0);
+  opacity: 0.9;
+}
+
 /* ── The Orb Container (AetherLine lives here) ── */
 .orb-container {
   position: relative;

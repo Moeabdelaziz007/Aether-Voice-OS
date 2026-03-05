@@ -23,6 +23,7 @@ class SoulManifestStub:
         self.manifest = Manifest(
             name=name, voice_id=voice_id, expertise={"sysadmin": 1.0}
         )
+        self.manifest.persona = "Stub persona manifest"
         self.persona = "Stub persona"
         self.name = name
 

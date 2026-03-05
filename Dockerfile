@@ -9,7 +9,7 @@
 # ═══════════════════════════════════════════════════════════
 
 # ── Stage 1: Rust build ──────────────────────────────────
-FROM rust:bookworm as rust-builder
+FROM rust:bookworm AS rust-builder
 
 RUN apt-get update && apt-get install -y \
     clang \
@@ -23,9 +23,9 @@ COPY cortex/ ./cortex/
 RUN cd cortex && \
     cargo build --release
 
-# We'll copy the cdylib (.so or .dylib depending on cross-compilation quirks)
-RUN cp target/release/libcortex.so /build/cortex.so 2>/dev/null || \
-    cp target/release/libcortex.dylib /build/cortex.so 2>/dev/null || true
+# We'll copy the cdylib
+RUN cp cortex/target/release/libcortex.so /build/aether_cortex.so 2>/dev/null || \
+    cp cortex/target/release/libcortex.dylib /build/aether_cortex.so 2>/dev/null || true
 
 
 # ── Stage 2: Python runtime ─────────────────────────────
@@ -53,7 +53,6 @@ COPY --from=rust-builder /build/aether_cortex.so /app/core/audio/aether_cortex.s
 # Copy application code
 COPY core/ ./core/
 COPY brain/ ./brain/
-COPY main.py .
 
 # Metadata and security labels
 LABEL org.opencontainers.image.source="https://github.com/Moeabdelaziz007/Aether-Voice-OS"
@@ -72,5 +71,5 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 ENV PORT=18789
 EXPOSE 18789
 
-# Entry point
-CMD ["python3", "-m", "core.engine"]
+# Entry point: Server.py handles the engine lifecycle
+CMD ["python3", "core/server.py"]

@@ -41,6 +41,8 @@ export default function AetherOrb({ size = 240 }: Props) {
     // Smoothed values for animation (avoid jitter)
     const smoothMic = useRef(0);
     const smoothSpeaker = useRef(0);
+    const smoothPitch = useRef(0);
+    const smoothCentroid = useRef(0);
 
     const handleClick = useCallback(() => {
         if (status === "disconnected" || status === "error") {
@@ -74,10 +76,14 @@ export default function AetherOrb({ size = 240 }: Props) {
             // Read transient values directly to avoid React re-render loops
             const currentMicLevel = useAetherStore.getState().micLevel;
             const currentSpeakerLevel = useAetherStore.getState().speakerLevel;
+            const currentPitch = useAetherStore.getState().pitch;
+            const currentCentroid = useAetherStore.getState().spectralCentroid;
 
             // Smooth interpolation (exponential smoothing)
             smoothMic.current += (currentMicLevel - smoothMic.current) * 0.15;
             smoothSpeaker.current += (currentSpeakerLevel - smoothSpeaker.current) * 0.15;
+            smoothPitch.current += (currentPitch - smoothPitch.current) * 0.1;
+            smoothCentroid.current += (currentCentroid - smoothCentroid.current) * 0.1;
 
             const colors = STATE_COLORS[engineState] || STATE_COLORS.IDLE;
             const energy = engineState === "SPEAKING"
@@ -138,8 +144,9 @@ export default function AetherOrb({ size = 240 }: Props) {
             // ── Mic-energy ripples (LISTENING only) ──
             if (engineState === "LISTENING" && smoothMic.current > 0.02) {
                 const rippleCount = 4;
+                const pitchShift = (smoothPitch.current / 1000) * 0.5; // Map 0-1000Hz to subtle shift
                 for (let i = 0; i < rippleCount; i++) {
-                    const phase = (t * 2 + i * 1.5) % (Math.PI * 2);
+                    const phase = (t * (2 + pitchShift) + i * 1.5) % (Math.PI * 2);
                     const rippleRadius = orbRadius + Math.sin(phase) * 20 * smoothMic.current + i * 12;
                     const alpha = Math.max(0, 0.3 - i * 0.08) * smoothMic.current * 3;
 
@@ -180,12 +187,13 @@ export default function AetherOrb({ size = 240 }: Props) {
                     const mx = cx + Math.cos(angle) * (orbRadius * 1.2 + pulse);
                     const my = cy + Math.sin(angle) * (orbRadius * 1.2 + pulse);
 
-                    const mistGrad = ctx.createRadialGradient(mx, my, 0, mx, my, 30 * energy);
+                    const centroidBoost = (smoothCentroid.current / 5000) * 20; // Brightness boost
+                    const mistGrad = ctx.createRadialGradient(mx, my, 0, mx, my, (30 + centroidBoost) * energy);
                     mistGrad.addColorStop(0, colors.glow + "15");
                     mistGrad.addColorStop(1, "transparent");
 
                     ctx.beginPath();
-                    ctx.arc(mx, my, 30 * energy, 0, Math.PI * 2);
+                    ctx.arc(mx, my, (30 + centroidBoost) * energy, 0, Math.PI * 2);
                     ctx.fillStyle = mistGrad;
                     ctx.fill();
                 }

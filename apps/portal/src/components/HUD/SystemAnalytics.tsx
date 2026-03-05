@@ -37,6 +37,9 @@ export default function SystemAnalytics() {
     const micLevel = useAetherStore((s) => s.micLevel);
     const speakerLevel = useAetherStore((s) => s.speakerLevel);
     const engineState = useAetherStore((s) => s.engineState);
+    const latencyMs = useAetherStore((s) => s.latencyMs);
+    const pitch = useAetherStore((s) => s.pitch);
+    const spectralCentroid = useAetherStore((s) => s.spectralCentroid);
 
     return (
         <motion.div
@@ -59,14 +62,25 @@ export default function SystemAnalytics() {
 
             <MiniChart
                 label="Signal Integrity"
-                value={98 + Math.random() * 2}
+                value={Math.max(0, 100 - (latencyMs / 20))}
                 color="rgba(255,255,255,0.4)"
             />
 
+            <div className="flex flex-col gap-1 mb-6 border-l border-white/5 pl-3">
+                <div className="flex justify-between items-center text-[10px] font-mono">
+                    <span className="text-white/20 uppercase">Pitch</span>
+                    <span className="text-white/60">{Math.round(pitch)} Hz</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] font-mono">
+                    <span className="text-white/20 uppercase">Spectral</span>
+                    <span className="text-white/60">{Math.round(spectralCentroid)} Hz</span>
+                </div>
+            </div>
+
             <div className="mt-8 text-[9px] font-mono text-white/10 uppercase tracking-tighter leading-tight">
                 AetherOS Node: 0x710<br />
-                Encryption: AES-P256<br />
-                Temporal Drift: -0.02ms
+                Latency: {latencyMs.toFixed(1)}ms<br />
+                Frequency: {(pitch / 1000).toFixed(2)} kHz
             </div>
         </motion.div>
     );

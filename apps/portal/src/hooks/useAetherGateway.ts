@@ -213,16 +213,31 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                         store.addSystemLog(`[Tool] ${msg.tool_name}: ${msg.status || "done"}`);
                     }
 
+                    // ── Affected / Paralinguistics Telemetry (Alpha Kernel V2) ──
+                    else if (msg.type === "telemetry") {
+                        if (msg.metric_name === "paralinguistics") {
+                            store.setTelemetry({
+                                pitch: msg.metadata?.pitch_hz,
+                                spectralCentroid: msg.metadata?.spectral_centroid,
+                                frustration: msg.metadata?.frustration,
+                            }, latencyMs);
+                            store.setAudioLevels(msg.metadata?.volume || 0, store.speakerLevel);
+                        } else if (msg.metric_name === "noise_floor") {
+                            store.setTelemetry({ noiseFloor: msg.value }, latencyMs);
+                        }
+                    }
+
                     // ── Soul Handoff (Multi-agent switch) ──
-                    else if (msg.type === "soul_handoff") {
-                        store.setActiveSoul(msg.target_soul || msg.soul_name || "AetherCore");
+                    else if (msg.type === "soul_handoff" || msg.type === "handover") {
+                        const target = msg.target_soul || msg.target_agent_id || "AetherCore";
+                        store.setActiveSoul(target);
                         store.addNeuralEvent({
-                            fromAgent: msg.from_soul || "AetherCore",
-                            toAgent: msg.target_soul || "Unknown",
-                            task: msg.reason || "Soul handoff",
+                            fromAgent: msg.from_soul || msg.source_agent_id || "AetherCore",
+                            toAgent: target,
+                            task: msg.task_goal || msg.reason || "Context handover",
                             status: "active",
                         });
-                        store.addSystemLog(`[Hive] Soul handoff → ${msg.target_soul}`);
+                        store.addSystemLog(`[Hive] Handover → ${target}`);
                     }
                 }
                 else if (event.data instanceof ArrayBuffer) {

@@ -628,13 +628,19 @@ class GeminiLiveSession:
 
         # Add soul persona if available
         if self._soul:
-            expertise = (
-                self._soul.manifest.expertise if hasattr(self._soul, "manifest") else {}
+            # Normalize: handle both AthPackage and SoulManifest
+            manifest = (
+                self._soul.manifest if hasattr(self._soul, "manifest") else self._soul
             )
-            soul_instruction = f"{self._soul.persona}\n\nPrimary Domain: {expertise}"
+            expertise = getattr(manifest, "expertise", {})
+            persona = getattr(manifest, "persona", "An Aether Agent")
+
+            soul_instruction = f"{persona}\n\nPrimary Domain: {expertise}"
             instruction_parts.append(soul_instruction)
             self._soul_instruction_cache = soul_instruction
-            logger.info("A2A [SESSION] Applying Expert Soul: %s", self._soul.name)
+            logger.info(
+                "A2A [SESSION] Applying Expert Soul: %s", getattr(manifest, "name", "Unknown")
+            )
 
         # Add handover context if injected
         if self._injected_handover_context:

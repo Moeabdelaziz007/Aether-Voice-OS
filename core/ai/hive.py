@@ -640,8 +640,8 @@ class HiveCoordinator:
         best_expert = await self._registry.find_expert(query)
         if (
             best_expert
-            and self._active_soul
-            and best_expert.manifest.name != self._active_soul.manifest.name
+            and self.active_soul
+            and best_expert.manifest.name != self.active_soul.manifest.name
         ):
             # Only suggest if the expertise score is significantly high
             return best_expert.manifest.name

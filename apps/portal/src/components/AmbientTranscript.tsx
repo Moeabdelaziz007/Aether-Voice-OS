@@ -15,6 +15,10 @@ import { useAetherStore } from "@/store/useAetherStore";
 
 export default function AmbientTranscript() {
     const transcript = useAetherStore((s) => s.transcript);
+    const transcriptMode = useAetherStore((s) => s.preferences.transcriptMode);
+
+    // Hide entirely if mode is 'hidden'
+    if (transcriptMode === "hidden") return null;
 
     // Show only last 6 messages (3 user + 3 agent max)
     const recent = useMemo(
@@ -26,7 +30,7 @@ export default function AmbientTranscript() {
     const agentMessages = recent.filter((m) => m.role === "agent");
 
     return (
-        <>
+        <div className={`ambient-container transcript-mode-${transcriptMode}`}>
             {/* AI text: top area, fades down */}
             <div className="ambient-zone ambient-zone--top">
                 <AnimatePresence mode="popLayout">
@@ -78,6 +82,6 @@ export default function AmbientTranscript() {
                     ))}
                 </AnimatePresence>
             </div>
-        </>
+        </div>
     );
 }
