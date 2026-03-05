@@ -101,6 +101,12 @@ export interface UserPreferences {
     // Memory & Context
     rememberContext: boolean;  // Persist context cross-session
     greeting: string;          // Custom greeting message
+
+    // Audio Settings
+    volume: number;            // Master volume (0-1)
+    isMuted: boolean;          // Global mute
+    soundEffectsEnabled: boolean; // Particle/UI sounds
+    ambientSoundsEnabled: boolean; // Background neural ambience
 }
 
 // ─── Constants & Lookups ───────────────────────────────────
@@ -187,6 +193,10 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     skillFocus: ['coding', 'debugging'],
     rememberContext: true,
     greeting: 'Hey! How can I help you today?',
+    volume: 0.7,
+    isMuted: false,
+    soundEffectsEnabled: true,
+    ambientSoundsEnabled: true,
 };
 
 // ─── Tool Call Entry ───────────────────────────────────────

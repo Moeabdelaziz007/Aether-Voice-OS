@@ -13,10 +13,11 @@
  * - Liquid morphing effects
  */
 
-import React, { useRef, useMemo, useEffect } from "react";
+import React, { useRef, useMemo, useEffect, useCallback, memo, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { useAetherStore } from "@/store/useAetherStore";
+import usePerformanceMonitor from "@/hooks/usePerformanceMonitor";
 
 // ═══════════════════════════════════════════════════════════════════
 // Types & Interfaces

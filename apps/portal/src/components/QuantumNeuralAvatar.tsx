@@ -135,7 +135,7 @@ function NeuralNode({ position, intensity, audioLevel, state }: NeuralNodeProps)
 // ═══════════════════════════════════════════════════════════════════
 
 function SynapticConnection({ start, end, activity, audioLevel }: SynapticConnectionProps) {
-  const lineRef = useRef<THREE.Line>(null);
+  const lineRef = useRef<any>(null);
   const particlesRef = useRef<THREE.Points>(null);
 
   // Calculate curve points
