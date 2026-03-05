@@ -21,13 +21,14 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
+from agents.dependency_management_agent import DependencyManagementAgent
+
 # Import custom agents
 from agents.di_injector import DIInjectorAgent
-from agents.security_agent import SecurityAgent
 from agents.learning_agent import LearningAgent
 from agents.optimization_agent import OptimizationAgent
+from agents.security_agent import SecurityAgent
 from agents.structure_analysis_agent import StructureAnalysisAgent
-from agents.dependency_management_agent import DependencyManagementAgent
 
 # Configure logging
 logging.basicConfig(

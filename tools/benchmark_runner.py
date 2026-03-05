@@ -1,8 +1,8 @@
-import asyncio
-import subprocess
 import json
+import subprocess
 import time
 from pathlib import Path
+
 
 def run_benchmarks():
     """
