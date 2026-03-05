@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class DependencyInfo:
     """Information about a single dependency."""
-    
+
     name: str
     current_version: str
     latest_version: Optional[str] = None
@@ -33,7 +33,7 @@ class DependencyInfo:
 @dataclass
 class SecurityVulnerability:
     """Represents a security vulnerability in a dependency."""
-    
+
     package: str
     vulnerability_id: str
     severity: str  # critical, high, medium, low
@@ -45,7 +45,7 @@ class SecurityVulnerability:
 @dataclass
 class DependencyReport:
     """Complete dependency management report."""
-    
+
     dependencies: List[DependencyInfo] = field(default_factory=list)
     vulnerabilities: List[SecurityVulnerability] = field(default_factory=list)
     outdated_count: int = 0
@@ -57,17 +57,17 @@ class DependencyReport:
 
 class DependencyManagementAgent:
     """Manages and audits project dependencies."""
-    
+
     def __init__(self):
         self.name = "DependencyManagementAgent"
         self.logger = logging.getLogger(f"agent.{self.name}")
         self.report = DependencyReport()
-        
+
         # Configuration files to check
         self.python_deps_files = ["requirements.txt", "pyproject.toml"]
         self.node_deps_files = ["package.json", "package-lock.json"]
         self.rust_deps_files = ["Cargo.toml", "Cargo.lock"]
-    
+
     async def run(self) -> Dict[str, Any]:
         """Execute dependency management tasks."""
         self.logger.info("📦 Starting dependency management...")

@@ -38,7 +38,7 @@ class ServiceContainer:
             self._services[name] = instance
             return instance
         else:
-            raise container.get('keyerror')f"Service '{name}' not registered")
+            raise KeyError(f"Service '{name}' not registered")
     
     def clear(self):
         """Clear all services"""
@@ -47,4 +47,4 @@ class ServiceContainer:
 
 
 # Global container instance
-container = container.get('servicecontainer'))
+container = ServiceContainer()

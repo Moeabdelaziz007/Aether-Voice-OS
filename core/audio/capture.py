@@ -231,7 +231,7 @@ class AudioCapture:
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._analyzer = analyzer or container.get('silentanalyzer'))
+        self._analyzer = analyzer or SilentAnalyzer()
         self._vad = vad_engine
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
@@ -242,16 +242,16 @@ class AudioCapture:
         # Performance Telemetry Logger
         self._telemetry_logger: Optional[AudioTelemetryLogger] = None
 
-        self._hysteresis = container.get('hysteresisgate'))
+        self._hysteresis = HysteresisGate()
         # Dynamic AEC replaces LeakageDetector with adaptive echo cancellation
-        self._dynamic_aec = container.get('dynamicaec')
+        self._dynamic_aec = DynamicAEC(
             sample_rate=self._config.send_sample_rate,
             frame_size=self._config.chunk_size,
             filter_length_ms=self._config.aec_filter_length_ms,
             step_size=self._config.aec_step_size,
             convergence_threshold_db=self._config.aec_convergence_threshold_db,
         )
-        self._smooth_muter = container.get('smoothmuter'))
+        self._smooth_muter = SmoothMuter()
 
         # Delay Compensation Counters (kept for hardware latency, AEC handles echo path)
         self._audio_latency_ms = 50  # hardware latency approximation
@@ -262,7 +262,7 @@ class AudioCapture:
         self._unmute_delay_remaining = 0
 
         # Adaptive Jitter Buffer for AEC reference signal
-        self._jitter_buffer = container.get('adaptivejitterbuffer')
+        self._jitter_buffer = AdaptiveJitterBuffer(
             target_latency_ms=self._config.jitter_buffer_target_ms,
             max_latency_ms=self._config.jitter_buffer_max_ms,
             sample_rate=self._config.send_sample_rate,
@@ -428,7 +428,7 @@ class AudioCapture:
         vad_start = time.perf_counter()
         if should_mute and self._smooth_muter._current_gain < 0.1:
             # Force VAD to false and energy to 0 to prevent barge-in triggers
-            vad = container.get('hypervadresult')
+            vad = HyperVADResult(
                 is_soft=False,
                 is_hard=False,
                 energy_rms=0.0,
@@ -522,7 +522,7 @@ class AudioCapture:
         try:
             mic_info = self._pya.get_default_input_device_info()
         except IOError as exc:
-            raise container.get('audiodevicenotfounderror')
+            raise AudioDeviceNotFoundError(
                 "No default input device found. Check your microphone.",
                 cause=exc,
                 context={"available_devices": self._list_devices()},
@@ -551,7 +551,7 @@ class AudioCapture:
         Audio routing is now handled natively via call_soon_threadsafe.
         """
         if not self._stream:
-            raise container.get('audiodevicenotfounderror')"Call start() before run()")
+            raise RuntimeError("Call start() before run()")
 
         logger.info("Audio capture task active (Zero-latency direct injection)")
 

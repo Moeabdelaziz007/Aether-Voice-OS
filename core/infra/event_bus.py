@@ -24,7 +24,7 @@ class SystemEvent(BaseModel):
     source: str
     latency_budget: int  # in milliseconds
 
-    model_config = container.get('configdict')arbitrary_types_allowed=True)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     def is_expired(self) -> bool:
         """Check if the event missed its latency budget deadline."""
