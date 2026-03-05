@@ -20,7 +20,7 @@ import asyncio
 import base64
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 if TYPE_CHECKING:
     from core.infra.transport.gateway import AetherGateway
@@ -57,8 +57,8 @@ class GeminiLiveSession:
         audio_in_queue: asyncio.Queue[dict[str, object]],
         audio_out_queue: asyncio.Queue[bytes],
         gateway: "AetherGateway",
-        on_interrupt: Optional[callable] = None,
-        on_tool_call: Optional[callable] = None,
+        on_interrupt: Optional[Callable] = None,
+        on_tool_call: Optional[Callable] = None,
         tool_router: Optional["ToolRouter"] = None,
         soul_manifest: Optional["SoulManifest"] = None,
         scheduler: Optional[Any] = None,
