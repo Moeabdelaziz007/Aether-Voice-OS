@@ -14,20 +14,17 @@ import * as THREE from "three";
 import { EffectComposer, Bloom, ChromaticAberration, Vignette, Noise } from "@react-three/postprocessing";
 import { BlendFunction, KernelSize } from "postprocessing";
 import { useAetherStore, type EngineState } from "@/store/useAetherStore";
-import { shallow } from "zustand/shallow";
 
 // Import scene contents (not full components with Canvas)
 import { AvatarSceneContent } from "./QuantumNeuralAvatarScene";
 import { ParticleSceneContent } from "./FluidThoughtParticlesScene";
 
 // ═══════════════════════════════════════════════════════════════════
-// Optimized Selectors
+// Simple Selectors (optimized with React.memo on components)
 // ═══════════════════════════════════════════════════════════════════
 
-const useAudioLevels = () => useAetherStore(
-  (s) => ({ mic: s.micLevel, speaker: s.speakerLevel }),
-  shallow
-);
+const useMicLevel = () => useAetherStore((s) => s.micLevel);
+const useSpeakerLevel = () => useAetherStore((s) => s.speakerLevel);
 
 const useEngineState = () => useAetherStore((s) => s.engineState);
 const useCurrentRealm = () => useAetherStore((s) => s.currentRealm);
@@ -128,12 +125,13 @@ function UnifiedSceneContent({
   showParticles = true,
   showConnections = true,
 }: UnifiedSceneProps) {
-  const { mic, speaker } = useAudioLevels();
+  const micLevel = useMicLevel();
+  const speakerLevel = useSpeakerLevel();
   const engineState = useEngineState();
   const transcript = useTranscript();
   
   // Determine audio level based on state
-  const audioLevel = engineState === "SPEAKING" ? speaker : mic;
+  const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
   const cameraZ = SIZE_MAP[avatarConfig.size];
 
   return (

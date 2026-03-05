@@ -33,7 +33,7 @@ class AetherEngine:
         print("  Engine: Loading config...", flush=True)
         print("CONFIG:", self._config.model_dump())
         print("  Engine: Initializing Managers...", flush=True)
-        self._router = ToolRouter())
+        self._router = ToolRouter()
         self._setup_vector_store()
 
         print("  Engine: Initializing EventBus...", flush=True)
@@ -57,22 +57,22 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = container.get('audiomanager')
+        self._audio = container.get('audiomanager')(
             self._config,
             self._gateway,
             self._on_affective_data,
             event_bus=self._event_bus,
         )
         print("  Engine: Initializing InfraManager...", flush=True)
-        self._infra = container.get('inframanager')self._gateway)
+        self._infra = container.get('inframanager')(self._gateway)
         print("  Engine: Initializing AdminAPI...", flush=True)
-        self._admin_api = container.get('adminapiserver')port=18790)
+        self._admin_api = container.get('adminapiserver')(port=18790)
 
         print("  Engine: Initializing PulseManager...", flush=True)
-        self._pulse = container.get('pulsemanager')self._event_bus)
+        self._pulse = container.get('pulsemanager')(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = container.get('cognitivescheduler')self._event_bus, self._router)
+        self._cortex = container.get('cognitivescheduler')(self._event_bus, self._router)
 
         # Inject Scheduler into Hive for proactive prompt injection
         self._agents._hive._scheduler = self._cortex

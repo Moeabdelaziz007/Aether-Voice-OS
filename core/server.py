@@ -120,7 +120,10 @@ def main() -> None:
 
     # Import engine only after checks pass
     from core.engine import AetherEngine
-
+    from core.infra.service_container import Container
+    
+    container = Container()
+    
     DIM = "\033[2m"
     CYAN = "\033[96m"
     RESET = "\033[0m"
@@ -129,7 +132,7 @@ def main() -> None:
     print(f"{DIM}Press Ctrl+C to stop.{RESET}\n")
 
     try:
-        engine = container.get('aetherengine'))
+        engine = container.get('aetherengine')
         print(
             f"{CYAN}✦ Admin API Listening on http://localhost:18790/health "
             f"(Tauri Bridge Active){RESET}"

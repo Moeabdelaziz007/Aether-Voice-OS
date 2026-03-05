@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { shallow } from 'zustand/shallow';
 
 // ─── Realm Type ────────────────────────────────────────────
 export type RealmType = 'void' | 'skills' | 'memory' | 'identity' | 'neural';
@@ -297,11 +296,12 @@ interface AetherState {
 }
 
 // ─── Optimized Selectors for Performance ────────────────────
-// Use shallow comparison to prevent unnecessary re-renders
-export const useAudioLevels = () => useAetherStore(
-    (s) => ({ mic: s.micLevel, speaker: s.speakerLevel }),
-    shallow
-);
+// Simple selectors - use React.memo on components for optimization
+export const useAudioLevels = () => {
+    const mic = useAetherStore((s) => s.micLevel);
+    const speaker = useAetherStore((s) => s.speakerLevel);
+    return { mic, speaker };
+};
 
 export const useEngineStateSelector = () => useAetherStore((s) => s.engineState);
 
@@ -309,20 +309,15 @@ export const useTranscriptSelector = () => useAetherStore((s) => s.transcript);
 
 export const useCurrentRealmSelector = () => useAetherStore((s) => s.currentRealm);
 
-export const usePreferencesSelector = () => useAetherStore(
-    (s) => s.preferences,
-    shallow
-);
+export const usePreferencesSelector = () => useAetherStore((s) => s.preferences);
 
-export const useTelemetrySelector = () => useAetherStore(
-    (s) => ({
-        valence: s.valence,
-        arousal: s.arousal,
-        engagement: s.engagement,
-        frustrationScore: s.frustrationScore,
-    }),
-    shallow
-);
+export const useTelemetrySelector = () => {
+    const valence = useAetherStore((s) => s.valence);
+    const arousal = useAetherStore((s) => s.arousal);
+    const engagement = useAetherStore((s) => s.engagement);
+    const frustrationScore = useAetherStore((s) => s.frustrationScore);
+    return { valence, arousal, engagement, frustrationScore };
+};
 
 // ─── Store ─────────────────────────────────────────────────
 export const useAetherStore = create<AetherState>()(
