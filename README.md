@@ -25,11 +25,39 @@
 
 ---
 
+<p align="center">
+  <b>Architecture Snapshot</b><br/>
+  <pre>
+Mic Input
+   │
+   ▼
+EchoGuard
+(AEC + MFCC fingerprint)
+   │
+   ▼
+Thalamic Gate
+(RMS + hysteresis)
+   │
+   ▼
+Event Bus
+(audio / control / telemetry queues)
+   │
+   ▼
+Agent Router
+(cache → semantic → LLM)
+   │
+   ▼
+Gemini Live Audio
+  </pre>
+</p>
+
+---
+
 ## 🌟 The Vision | الرؤية
 
-> *"The ultimate interface is no interface at all. Aether is the pure upper air that the gods breathe — the invisible medium between intention and execution."*
+> *"Aether removes the UI layer entirely—interaction becomes a continuous audio stream."*
 >
-> *"الواجهة المثالية هي اللاواجهة. أيثر هو الهواء النقي الذي يتنفسه الآلهة — الوسيط الخفي بين النية والتنفيذ."*
+> *"أيثر يزيل طبقة واجهة المستخدم تماماً — التفاعل يصبح دفقاً صوتياً مستمراً."*
 
 **Aether Voice OS** is a distributed "AI Kernel" engineered for the [Gemini Live Agent Challenge 2026](https://geminiliveagentchallenge.devpost.com). It achieves the "JARVIS" dream through sub-200ms latency and deep paralinguistic awareness.
 
@@ -68,7 +96,7 @@
 
 ## ⚡ Breakthroughs & Real-World Impact | القفزات التقنية
 
-The crown jewel of Aether OS is the custom-built **Thalamic Gate V2**. Traditional echo cancellation adds 50-100ms lag. Aether uses Root Mean Square (RMS) energy thresholding and biological hysteresis gating to achieve *zero-latency* barge-in capability entirely in software.
+The crown jewel of Aether OS is the custom-built **Thalamic Gate V2**. Unlike traditional VAD, Thalamic Gate combines RMS energy detection with hysteresis and MFCC fingerprinting to differentiate between user speech and system audio. Aether prevents self-hearing loops using MFCC spectral fingerprints that recognize the system’s own TTS output.
 
 | Metric | Aether OS | Traditional Alternatives | Advantage |
 |--------|---------|-------------|-----------|
@@ -76,6 +104,8 @@ The crown jewel of Aether OS is the custom-built **Thalamic Gate V2**. Tradition
 | **Emotion Detection** | **92% F1 (CREMA-D benchmark)** | ~70% | ❤️ **Empathetic** |
 | **Resource Usage** | **<2% CPU / <50MB RAM** | 10-30% CPU / 500MB+ RAM | 🍃 **Ultra-Light** |
 | **Developer Productivity** | **40-60% faster debugging** | 0% | 🛠️ **Proactive** |
+
+*Benchmarks measured on Apple M2, Python 3.12, 16kHz audio stream.*
 
 ### 🧠 Thalamic Gate Algorithm & Acoustic Identity
 
