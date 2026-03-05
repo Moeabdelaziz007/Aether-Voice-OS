@@ -19,17 +19,24 @@
 - [src/store/useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated Development Environment Configuration section to address Next.js type declaration reference path fix
+- Added troubleshooting guidance for type declaration issues in development environment
+- Enhanced TypeScript configuration documentation with proper type declaration handling
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [Development Environment Configuration](#development-environment-configuration)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
 This document explains the Next.js application structure for the Aether Voice OS frontend. It covers root layout configuration, metadata settings, font loading, global CSS imports, routing for the main pages (home portal, admin dashboard, and live agent), application configuration (Next.js version, build settings, environment variables), project conventions, and practical guidance for extending the app with new pages, configuring SEO metadata, and managing global styles. It also includes performance optimization techniques and deployment considerations tailored to the Aether Voice OS frontend.
@@ -63,7 +70,7 @@ DashPage --> DashCSS
 
 **Diagram sources**
 - [src/app/layout.tsx](file://apps/portal/src/app/layout.tsx#L1-L58)
-- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L96)
+- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L106)
 - [src/app/admin/page.tsx](file://apps/portal/src/app/admin/page.tsx#L1-L201)
 - [src/app/live/page.tsx](file://apps/portal/src/app/live/page.tsx#L1-L228)
 - [src/dashboard/app/layout.tsx](file://apps/portal/src/dashboard/app/layout.tsx#L1-L35)
@@ -72,7 +79,7 @@ DashPage --> DashCSS
 
 **Section sources**
 - [src/app/layout.tsx](file://apps/portal/src/app/layout.tsx#L1-L58)
-- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L96)
+- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L106)
 - [src/app/admin/page.tsx](file://apps/portal/src/app/admin/page.tsx#L1-L201)
 - [src/app/live/page.tsx](file://apps/portal/src/app/live/page.tsx#L1-L228)
 - [src/dashboard/app/layout.tsx](file://apps/portal/src/dashboard/app/layout.tsx#L1-L35)
@@ -125,7 +132,7 @@ DashApp --> |"Dark layout + styles"| DashApp
 
 **Diagram sources**
 - [src/app/layout.tsx](file://apps/portal/src/app/layout.tsx#L1-L58)
-- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L96)
+- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L106)
 - [src/app/admin/page.tsx](file://apps/portal/src/app/admin/page.tsx#L1-L201)
 - [src/app/live/page.tsx](file://apps/portal/src/app/live/page.tsx#L1-L228)
 - [src/dashboard/app/layout.tsx](file://apps/portal/src/dashboard/app/layout.tsx#L1-L35)
@@ -176,11 +183,11 @@ Portal-->>User : Updated UI with new realm
 ```
 
 **Diagram sources**
-- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L96)
+- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L106)
 - [src/store/useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L1-L440)
 
 **Section sources**
-- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L96)
+- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L106)
 - [src/store/useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L1-L440)
 
 ### Admin Dashboard
@@ -293,6 +300,38 @@ AetherBrain --> AetherStore : "reads/writes state"
 - [src/store/useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L1-L440)
 - [src/components/AetherBrain.tsx](file://apps/portal/src/components/AetherBrain.tsx#L1-L227)
 
+## Development Environment Configuration
+
+**Updated** Fixed Next.js type declaration reference path in development environment configuration
+
+The development environment configuration includes critical type declaration handling that ensures proper TypeScript support for portal application routes. The key configuration elements include:
+
+### Next.js Type Declarations
+The application uses Next.js built-in type declarations with proper development environment handling:
+
+- **Type Reference**: `/// <reference types="next" />` and `/// <reference types="next/image-types/global" />`
+- **Development Types Path**: `import "./.next/dev/types/routes.d.ts";`
+- **TypeScript Plugin**: `"name": "next"` for Next.js specific TypeScript features
+
+### TypeScript Configuration
+The TypeScript configuration supports both development and production environments:
+
+- **Module Resolution**: `bundler` for modern module resolution
+- **Strict Mode**: Enabled for type safety
+- **Path Mapping**: `@/*` resolves to `./src/*`
+- **Include Patterns**: Includes `next-env.d.ts`, all TypeScript files, and Next.js type definitions
+
+### Development Environment Handling
+The development environment configuration addresses type declaration conflicts:
+
+- **Dev Types Directory**: `.next/dev/types` contains development-specific type definitions
+- **Route Types**: `routes.d.ts` provides type-safe route definitions for portal application routes
+- **Type Filtering**: Next.js automatically filters development types during build processes
+
+**Section sources**
+- [next-env.d.ts](file://apps/portal/next-env.d.ts#L1-L7)
+- [tsconfig.json](file://apps/portal/tsconfig.json#L1-L42)
+
 ## Dependency Analysis
 - Next.js version and related packages are pinned in the package manifest.
 - PWA plugin is configured with output export and development guard.
@@ -332,24 +371,33 @@ PostCSS["postcss.config.mjs"] --> Tailwind
 - Tailwind utilities: Prefer utility classes to minimize custom CSS and leverage JIT compilation.
 - Hydration guards: Prevent hydration mismatches in dashboard components.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
-- Missing environment variables: Ensure NODE_ENV and any runtime environment variables are set appropriately for development vs production.
-- PWA registration: Verify service worker registration and export output in production builds.
-- Hydration warnings: Confirm client directives and hydration guards in dashboard components.
-- Audio permissions: Confirm microphone access and proper error handling in the audio pipeline.
-- Gateway connectivity: Monitor gateway status and logs to diagnose connection issues.
+
+### Type Declaration Issues
+**Updated** Resolved Next.js type declaration reference path problems
+
+Common development environment issues and their solutions:
+
+- **Missing Development Types**: If encountering type errors related to development types, ensure the `.next/dev/types` directory exists and contains the `routes.d.ts` file.
+- **Type Reference Errors**: The `next-env.d.ts` file contains a reference to `./.next/dev/types/routes.d.ts`. If this file is missing, remove or fix this reference.
+- **Build Type Conflicts**: Development and production type definitions can conflict. Use the Next.js type filtering mechanism to resolve conflicts.
+- **Route Type Definitions**: Portal application routes require proper type definitions. Ensure `routes.d.ts` contains accurate type definitions for all portal routes.
+
+### Environment-Specific Issues
+- **Missing environment variables**: Ensure NODE_ENV and any runtime environment variables are set appropriately for development vs production.
+- **PWA registration**: Verify service worker registration and export output in production builds.
+- **Hydration warnings**: Confirm client directives and hydration guards in dashboard components.
+- **Audio permissions**: Confirm microphone access and proper error handling in the audio pipeline.
+- **Gateway connectivity**: Monitor gateway status and logs to diagnose connection issues.
 
 **Section sources**
+- [next-env.d.ts](file://apps/portal/next-env.d.ts#L1-L7)
 - [next.config.ts](file://apps/portal/next.config.ts#L1-L16)
 - [src/dashboard/app/page.tsx](file://apps/portal/src/dashboard/app/page.tsx#L1-L112)
 - [src/components/AetherBrain.tsx](file://apps/portal/src/components/AetherBrain.tsx#L1-L227)
 
 ## Conclusion
 The Aether Voice OS frontend leverages Next.js App Router to deliver a modular, performance-conscious voice-first experience. The root layout centralizes fonts, providers, and metadata, while distinct pages serve specialized roles. The global store and brain orchestrate complex audio, vision, and telemetry flows. With static export and PWA support, the application is optimized for rapid delivery and resilient operation.
-
-[No sources needed since this section summarizes without analyzing specific files]
 
 ## Appendices
 
@@ -360,7 +408,7 @@ The Aether Voice OS frontend leverages Next.js App Router to deliver a modular, 
 
 **Section sources**
 - [src/app/layout.tsx](file://apps/portal/src/app/layout.tsx#L1-L58)
-- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L96)
+- [src/app/page.tsx](file://apps/portal/src/app/page.tsx#L1-L106)
 
 ### Configuring SEO Metadata
 - Define metadata in the root layout or per-route layout.
