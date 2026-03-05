@@ -24,6 +24,23 @@ class AudioConfig(BaseModel):
     vad_window_sec: float = 5.0
     input_device_index: Optional[int] = None
     output_device_index: Optional[int] = None
+    
+    # Dynamic AEC parameters (adjustable during runtime)
+    aec_step_size: float = 0.5
+    aec_filter_length_ms: float = 100.0
+    aec_convergence_threshold_db: float = 15.0
+    
+    # Dynamic VAD parameters
+    vad_energy_threshold: float = 0.02
+    vad_soft_threshold_multiplier: float = 0.7
+    
+    # Jitter buffer parameters
+    jitter_buffer_target_ms: float = 60.0
+    jitter_buffer_max_ms: float = 200.0
+    
+    # Mute/unmute timing
+    mute_delay_samples: int = 800
+    unmute_delay_samples: int = 1200
 
 
 class GeminiModel(str, Enum):

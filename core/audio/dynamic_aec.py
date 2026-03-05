@@ -777,6 +777,43 @@ class DynamicAEC:
         """Get current AEC state."""
         return self.state
 
+    def update_parameters(
+        self,
+        step_size: Optional[float] = None,
+        filter_length_ms: Optional[float] = None,
+        convergence_threshold_db: Optional[float] = None,
+    ) -> None:
+        """Update AEC parameters dynamically during runtime.
+
+        Args:
+            step_size: New NLMS step size
+            filter_length_ms: New filter length in milliseconds
+            convergence_threshold_db: New ERLE convergence threshold
+        """
+        if step_size is not None:
+            self.adaptive_filter.step_size = step_size
+            logger.info(f"AEC step size updated to: {step_size}")
+            
+        if filter_length_ms is not None:
+            # Recalculate filter length
+            new_filter_length = int(filter_length_ms * self.sample_rate / 1000)
+            new_filter_length = 2 ** int(np.ceil(np.log2(max(new_filter_length, self.frame_size * 2))))
+            new_filter_length = max(new_filter_length, 512)
+            
+            # Only recreate filter if length changed significantly
+            if abs(new_filter_length - self.adaptive_filter.filter_length) > 64:
+                self.adaptive_filter = FrequencyDomainNLMS(
+                    filter_length=new_filter_length,
+                    step_size=self.adaptive_filter.step_size,
+                    regularization=1e-4,
+                    leakage=0.999,
+                )
+                logger.info(f"AEC filter length updated to: {new_filter_length} samples")
+            
+        if convergence_threshold_db is not None:
+            self.convergence_threshold_db = convergence_threshold_db
+            logger.info(f"AEC convergence threshold updated to: {convergence_threshold_db}dB")
+
     def reset(self) -> None:
         """Reset AEC system."""
         self.adaptive_filter.reset()

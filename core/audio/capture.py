@@ -245,9 +245,9 @@ class AudioCapture:
         self._dynamic_aec = DynamicAEC(
             sample_rate=self._config.send_sample_rate,
             frame_size=self._config.chunk_size,
-            filter_length_ms=100.0,
-            step_size=0.5,
-            convergence_threshold_db=15.0,
+            filter_length_ms=self._config.aec_filter_length_ms,
+            step_size=self._config.aec_step_size,
+            convergence_threshold_db=self._config.aec_convergence_threshold_db,
         )
         self._smooth_muter = SmoothMuter()
 
@@ -261,14 +261,39 @@ class AudioCapture:
 
         # Adaptive Jitter Buffer for AEC reference signal
         self._jitter_buffer = AdaptiveJitterBuffer(
-            target_latency_ms=60.0,
-            max_latency_ms=200.0,
+            target_latency_ms=self._config.jitter_buffer_target_ms,
+            max_latency_ms=self._config.jitter_buffer_max_ms,
             sample_rate=self._config.send_sample_rate
         )
 
     def set_telemetry_logger(self, logger: AudioTelemetryLogger) -> None:
         """Attach a telemetry logger for performance tracking."""
         self._telemetry_logger = logger
+
+    def update_config(self, config: AudioConfig) -> None:
+        """Update audio configuration dynamically during runtime."""
+        # Update AEC parameters
+        self._dynamic_aec.update_parameters(
+            step_size=config.aec_step_size,
+            filter_length_ms=config.aec_filter_length_ms,
+            convergence_threshold_db=config.aec_convergence_threshold_db,
+        )
+        
+        # Update jitter buffer parameters
+        # Note: Jitter buffer recreation would be needed for target/max changes
+        # For now, we'll just log the change
+        logger.info(f"Audio config updated: jitter_target={config.jitter_buffer_target_ms}ms")
+        
+        # Update mute/unmute delays
+        self._latency_samples = int(
+            self._audio_latency_ms * config.send_sample_rate // 1000
+        )
+        self._mute_delay_remaining = min(
+            self._mute_delay_remaining, config.mute_delay_samples
+        )
+        self._unmute_delay_remaining = min(
+            self._unmute_delay_remaining, config.unmute_delay_samples
+        )
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
         """Thread-safe injection into the asyncio event loop.
