@@ -30,7 +30,7 @@ async def consolidate_memory():
     logger.info("Initializing L2 Synapse Memory Consolidation...")
 
     # Connect to Firebase
-    connector = FirebaseConnector()
+    connector = container.get('firebaseconnector'))
     connected = await connector.initialize()
 
     if not connected or not connector._db:

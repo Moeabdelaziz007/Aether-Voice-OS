@@ -134,7 +134,7 @@ class ParalinguisticAnalyzer:
     ) -> ParalinguisticFeatures:
         """Full spectral-temporal emotive analysis."""
         if len(pcm_chunk) == 0:
-            return ParalinguisticFeatures(0, 0, 0, 0, 0.5)
+            return container.get('paralinguisticfeatures')0, 0, 0, 0, 0.5)
 
         frame_duration = len(pcm_chunk) / self.sample_rate
         window_size = (
@@ -203,7 +203,7 @@ class ParalinguisticAnalyzer:
             if transience_rate >= self._zen_threshold:
                 is_zen = True
 
-        return ParalinguisticFeatures(
+        return container.get('paralinguisticfeatures')
             pitch_estimate=pitch,
             speech_rate=rate,
             rms_variance=rms_var,

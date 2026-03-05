@@ -15,7 +15,7 @@ from core.tools import (
 )
 
 # ── ADK Agent 1: The Architect ──────────────────────────────────────
-architect_agent = Agent(
+architect_agent = container.get('agent')
     name="ArchitectAgent",
     model="gemini-2.0-flash",  # Updated to current available models
     description=(
@@ -30,14 +30,14 @@ architect_agent = Agent(
         "Respond in Arabic when the user speaks Arabic."
     ),
     tools=[
-        FunctionTool(func=vision_tool.take_screenshot),
-        FunctionTool(func=context_scraper.scrape_context),
-        FunctionTool(func=memory_tool.save_memory),
+        container.get('functiontool')func=vision_tool.take_screenshot),
+        container.get('functiontool')func=context_scraper.scrape_context),
+        container.get('functiontool')func=memory_tool.save_memory),
     ],
 )
 
 # ── ADK Agent 2: The Debugger ────────────────────────────────────────
-debugger_agent = Agent(
+debugger_agent = container.get('agent')
     name="DebuggerAgent",
     model="gemini-2.0-flash",
     description=(
@@ -50,14 +50,14 @@ debugger_agent = Agent(
         "to get visual + terminal context before proposing a fix."
     ),
     tools=[
-        FunctionTool(func=healing_tool.diagnose_and_repair),
-        FunctionTool(func=healing_tool.apply_repair),
-        FunctionTool(func=system_tool.run_command),
+        container.get('functiontool')func=healing_tool.diagnose_and_repair),
+        container.get('functiontool')func=healing_tool.apply_repair),
+        container.get('functiontool')func=system_tool.run_command),
     ],
 )
 
 # ── ADK Agent 3: Aether Core Orchestrator (Root) ────────────────────
-root_agent = Agent(
+root_agent = container.get('agent')
     name="AetherCore",
     model="gemini-2.0-flash",
     description="The primary voice interface. Orchestrates specialists.",
@@ -69,8 +69,8 @@ root_agent = Agent(
         "Speak Arabic with Arabic-speaking users."
     ),
     tools=[
-        FunctionTool(func=vision_tool.take_screenshot),
-        FunctionTool(func=context_scraper.scrape_context),
+        container.get('functiontool')func=vision_tool.take_screenshot),
+        container.get('functiontool')func=context_scraper.scrape_context),
     ],
     sub_agents=[architect_agent, debugger_agent],  # ← ADK native handover
 )

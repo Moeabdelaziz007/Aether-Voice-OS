@@ -12,12 +12,13 @@ from __future__ import annotations
 
 import asyncio
 import json
-import jwt
 import logging
 import os
 import time
 import uuid
 from typing import TYPE_CHECKING, Any, Optional
+
+import jwt
 
 if TYPE_CHECKING:
     from core.ai.hive import HiveCoordinator
@@ -91,13 +92,13 @@ class AetherGateway:
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
 
         # Global State Bus
-        self._bus = GlobalBus(
+        self._bus = container.get('globalbus')
             host=os.getenv("REDIS_HOST", "localhost"),
             port=int(os.getenv("REDIS_PORT", 6379)),
         )
 
         # Session State Manager (Single Source of Truth)
-        self._state_manager = SessionStateManager(
+        self._state_manager = container.get('sessionstatemanager')
             broadcast_callback=self.broadcast,
             bus=self._bus,
         )
@@ -293,7 +294,7 @@ class AetherGateway:
             )
             try:
                 target_soul = self._hive._registry.get(soul_name)
-                session = GeminiLiveSession(
+                session = container.get('geminilivesession')
                     config=self._ai_config,
                     audio_in_queue=self._audio_in,
                     audio_out_queue=self._audio_out,
@@ -302,7 +303,7 @@ class AetherGateway:
                     tool_router=self._tool_router,
                     soul_manifest=target_soul.manifest,
                     gateway=self,
-                    scheduler=getattr(self, "_scheduler", None)
+                    scheduler=getattr(self, "_scheduler", None),
                 )
 
                 # Inject handover context if available
@@ -365,7 +366,7 @@ class AetherGateway:
             soul_name = active_soul.manifest.name
 
             # Initialize session metadata
-            session_metadata = SessionMetadata(
+            session_metadata = container.get('sessionmetadata')
                 session_id=str(uuid.uuid4()),
                 soul_name=soul_name,
                 started_at=datetime.now(),
@@ -395,7 +396,7 @@ class AetherGateway:
                         await self._pre_warmed_session.stop()
                         self._pre_warmed_session = None
 
-                    session = GeminiLiveSession(
+                    session = container.get('geminilivesession')
                         config=self._ai_config,
                         audio_in_queue=self._audio_in,
                         audio_out_queue=self._audio_out,
@@ -562,7 +563,7 @@ class AetherGateway:
         """
         # Generate challenge
         challenge_bytes = os.urandom(32)
-        challenge = ChallengeMessage(challenge=challenge_bytes.hex())
+        challenge = container.get('challengemessage')challenge=challenge_bytes.hex())
 
         await ws.send(challenge.model_dump_json())
 
@@ -573,7 +574,7 @@ class AetherGateway:
                 timeout=self._gateway_config.handshake_timeout_s,
             )
         except asyncio.TimeoutError:
-            raise HandshakeTimeoutError(
+            raise container.get('handshaketimeouterror')
                 f"Client did not respond within "
                 f"{self._gateway_config.handshake_timeout_s}s"
             )
@@ -581,33 +582,33 @@ class AetherGateway:
         try:
             resp = json.loads(raw)
         except json.JSONDecodeError:
-            raise HandshakeError("Invalid handshake response format")
+            raise container.get('handshakeerror')"Invalid handshake response format")
 
         client_id = resp.get("client_id")
         if not client_id:
-            raise HandshakeError("Missing client_id in response")
+            raise container.get('handshakeerror')"Missing client_id in response")
 
         capabilities = resp.get("capabilities", [])
 
         token = resp.get("token")
         if token:
             if not self._verify_jwt(token):
-                raise HandshakeError("Invalid JWT token")
+                raise container.get('handshakeerror')"Invalid JWT token")
             logger.info("Client authenticated via JWT: %s", client_id)
         else:
             signature = resp.get("signature", "")
             if not self._verify_signature(challenge_bytes, signature, client_id):
-                raise HandshakeError(f"Invalid signature from {client_id}")
+                raise container.get('handshakeerror')f"Invalid signature from {client_id}")
             logger.info("Client authenticated via Ed25519: %s", client_id)
 
         # Create session
-        session = ClientSession(client_id, ws, capabilities)
+        session = container.get('clientsession')client_id, ws, capabilities)
 
         async with self._lock:
             self._clients[client_id] = session
 
         # Send ACK
-        ack = AckMessage(
+        ack = container.get('ackmessage')
             session_id=session.session_id,
             granted_capabilities=capabilities,
             tick_interval_s=self._gateway_config.tick_interval_s,
@@ -747,7 +748,7 @@ class AetherGateway:
 
         async with self._lock:
             active_sessions = list(self._clients.values())
-            
+
         if not active_sessions:
             return
 
@@ -778,7 +779,7 @@ class AetherGateway:
         """Broadcast raw binary data to all connected clients."""
         async with self._lock:
             active_sessions = list(self._clients.values())
-            
+
         if not active_sessions:
             return
 
@@ -806,7 +807,7 @@ class AetherGateway:
         fatal: bool = False,
     ) -> None:
         """Send an error message to a client."""
-        err = ErrorMessage(code=code, message=message, fatal=fatal)
+        err = container.get('errormessage')code=code, message=message, fatal=fatal)
         try:
             await ws.send(err.model_dump_json())
             if fatal:

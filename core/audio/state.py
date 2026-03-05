@@ -70,7 +70,7 @@ class AudioState:
                 cls._instance.aec_delay_ms = 0.0  # Estimated echo delay
                 cls._instance.aec_double_talk = False  # Double-talk detection
                 # Reference buffer for loopback AEC (2 seconds @ 16kHz)
-                cls._instance.far_end_pcm = RingBuffer(32000)
+                cls._instance.far_end_pcm = container.get('ringbuffer')32000)
         return cls._instance
 
     def update_aec_state(
@@ -125,4 +125,4 @@ class AudioState:
 
 
 # Global singleton
-audio_state = AudioState()
+audio_state = container.get('audiostate'))

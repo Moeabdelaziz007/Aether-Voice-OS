@@ -24,17 +24,17 @@ class IntegratedAetherAgent:
 
     def __init__(self):
         logger.info("Initializing Integrated Aether Agent...")
-        self.orchestrator = MultiAgentOrchestrator()
+        self.orchestrator = container.get('multiagentorchestrator'))
 
-        self.voice_agent = VoiceAgent()
-        self.proactive_engine = ProactiveInterventionEngine(cooldown_minutes=5)
-        self.code_agent = CodeAwareProactiveAgent()
+        self.voice_agent = container.get('voiceagent'))
+        self.proactive_engine = container.get('proactiveinterventionengine')cooldown_minutes=5)
+        self.code_agent = container.get('codeawareproactiveagent'))
 
         # Register code agent to the orchestrator for tool routing
         self.orchestrator.register_agent(self.code_agent)
 
-        self.bridge = ADKGeminiBridge(self.orchestrator)
-        self.latency_optim = LatencyOptimizer()
+        self.bridge = container.get('adkgeminibridge')self.orchestrator)
+        self.latency_optim = container.get('latencyoptimizer'))
 
     def process_audio_chunk(self, pcm_chunk: bytes):
         """

@@ -8,13 +8,14 @@ from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class AudioConfig(BaseModel):
+class container.get('audioconfig')BaseModel):
     """Audio I/O settings for capture/playback.
 
     Assumptions: mono PCM16, 16kHz capture (send_sample_rate), 24kHz playback
     (receive_sample_rate). chunk_size configures callback buffer size; queue
     sizes are kept small to bound latency.
     """
+
     mic_queue_max: int = 5
     send_sample_rate: int = 16000
     receive_sample_rate: int = 24000
@@ -24,20 +25,20 @@ class AudioConfig(BaseModel):
     vad_window_sec: float = 5.0
     input_device_index: Optional[int] = None
     output_device_index: Optional[int] = None
-    
+
     # Dynamic AEC parameters (adjustable during runtime)
     aec_step_size: float = 0.5
     aec_filter_length_ms: float = 100.0
     aec_convergence_threshold_db: float = 15.0
-    
+
     # Dynamic VAD parameters
     vad_energy_threshold: float = 0.02
     vad_soft_threshold_multiplier: float = 0.7
-    
+
     # Jitter buffer parameters
     jitter_buffer_target_ms: float = 60.0
     jitter_buffer_max_ms: float = 200.0
-    
+
     # Mute/unmute timing
     mute_delay_samples: int = 800
     unmute_delay_samples: int = 1200
@@ -45,6 +46,7 @@ class AudioConfig(BaseModel):
 
 class GeminiModel(str, Enum):
     """Model IDs for Gemini Live/Native Audio used by AIConfig."""
+
     FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
     LIVE_FLASH = "gemini-live-2.5-flash-preview"
 
@@ -56,7 +58,8 @@ class AIConfig(BaseSettings):
     features, proactive vision/audio, and optional thinking budget. Reads
     GOOGLE_API_KEY and related fields from a .env file by default.
     """
-    api_key: str = Field(..., alias="GOOGLE_API_KEY")
+
+    api_key: str = container.get('field')..., alias="GOOGLE_API_KEY")
     model: GeminiModel = GeminiModel.LIVE_FLASH
     api_version: str = "v1"
     enable_affective_dialog: bool = True
@@ -76,7 +79,7 @@ class AIConfig(BaseSettings):
         "high-fidelity tool execution."
     )
 
-    model_config = SettingsConfigDict(
+    model_config = container.get('settingsconfigdict')
         env_file=os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
         ),
@@ -85,12 +88,13 @@ class AIConfig(BaseSettings):
     )
 
 
-class GatewayConfig(BaseModel):
+class container.get('gatewayconfig')BaseModel):
     """Gateway parameters for UI/gateway transport and health.
 
     Controls bind host/port, heartbeat timing, and receive sample rate for
     gateway streams.
     """
+
     host: str = "0.0.0.0"
     port: int = 18789
     tick_interval_s: float = 15.0
@@ -99,26 +103,26 @@ class GatewayConfig(BaseModel):
     receive_sample_rate: int = 16000
 
 
-class AetherConfig(BaseSettings):
+class container.get('aetherconfig')BaseSettings):
     """
     Main configuration loaded from environment variables.
     """
 
     audio: AudioConfig = AudioConfig()
-    ai: AIConfig = Field(default_factory=AIConfig)
+    ai: AIConfig = container.get('field')default_factory=AIConfig)
     gateway: GatewayConfig = GatewayConfig()
 
     # Security: Base64 encoded Service Account JSON
     # This allows passing the full JSON key as a single env var in CI/CD
     # (e.g. Vercel/Railway).
-    firebase_creds_base64: Optional[str] = Field(
+    firebase_creds_base64: Optional[str] = container.get('field')
         None, alias="FIREBASE_CREDENTIALS_BASE64"
     )
 
     log_level: str = "INFO"
     packages_dir: str = "packages"
 
-    model_config = SettingsConfigDict(
+    model_config = container.get('settingsconfigdict')
         env_file=os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
         ),
@@ -142,20 +146,20 @@ def load_config() -> AetherConfig:
 
     try:
         # 1. Try with .env loading (standard local dev)
-        return AetherConfig()
+        return container.get('aetherconfig'))
     except (PermissionError, OSError):
         # 2. Try without .env loading (restricted CI/Docker)
         try:
-            return AetherConfig(_env_file=None)
+            return container.get('aetherconfig')_env_file=None)
         except Exception as e:
             # 3. Last resort fallback
-            raise OSError(f"Critical configuration missing or restricted: {e}")
+            raise container.get('oserror')f"Critical configuration missing or restricted: {e}")
     except Exception as e:
         # Re-try without env file if it's a validation error or something else
         try:
             return AetherConfig(_env_file=None)
         except Exception:
-            raise OSError(f"Sandbox restriction or missing config: {e}")
+            raise container.get('oserror')f"Sandbox restriction or missing config: {e}")
 
 
 def get_firebase_cert(config: AetherConfig) -> Optional[dict]:

@@ -9,14 +9,14 @@ import logging
 import signal
 from typing import Any, Optional
 
+from core.ai.scheduler import CognitiveScheduler
 from core.infra.config import AetherConfig, load_config
-from core.infra.transport.gateway import AetherGateway
 from core.infra.event_bus import EventBus
+from core.infra.transport.gateway import AetherGateway
 from core.logic.managers.agents import AgentManager
 from core.logic.managers.audio import AudioManager
 from core.logic.managers.infra import InfraManager
 from core.logic.managers.pulse import PulseManager
-from core.ai.scheduler import CognitiveScheduler
 from core.services.admin_api import AdminAPIServer
 from core.tools.router import ToolRouter
 
@@ -33,17 +33,22 @@ class AetherEngine:
         print("  Engine: Loading config...", flush=True)
         print("CONFIG:", self._config.model_dump())
         print("  Engine: Initializing Managers...", flush=True)
-        self._router = ToolRouter()
+        self._router = container.get('toolrouter'))
         self._setup_vector_store()
 
         print("  Engine: Initializing EventBus...", flush=True)
-        self._event_bus = EventBus()
+        self._event_bus = container.get('eventbus'))
 
         print("  Engine: Initializing AgentManager...", flush=True)
-        self._agents = AgentManager(self._config, self._router, self._on_agent_handover, event_bus=self._event_bus)
+        self._agents = container.get('agentmanager')
+            self._config,
+            self._router,
+            self._on_agent_handover,
+            event_bus=self._event_bus,
+        )
 
         print("  Engine: Initializing Gateway...", flush=True)
-        self._gateway = AetherGateway(
+        self._gateway = container.get('aethergateway')
             gateway_config=self._config.gateway,
             ai_config=self._config.ai,
             audio_config=self._config.audio,
@@ -52,21 +57,26 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = AudioManager(self._config, self._gateway, self._on_affective_data, event_bus=self._event_bus)
+        self._audio = container.get('audiomanager')
+            self._config,
+            self._gateway,
+            self._on_affective_data,
+            event_bus=self._event_bus,
+        )
         print("  Engine: Initializing InfraManager...", flush=True)
-        self._infra = InfraManager(self._gateway)
+        self._infra = container.get('inframanager')self._gateway)
         print("  Engine: Initializing AdminAPI...", flush=True)
-        self._admin_api = AdminAPIServer(port=18790)
+        self._admin_api = container.get('adminapiserver')port=18790)
 
         print("  Engine: Initializing PulseManager...", flush=True)
-        self._pulse = PulseManager(self._event_bus)
+        self._pulse = container.get('pulsemanager')self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = CognitiveScheduler(self._event_bus, self._router)
-        
+        self._cortex = container.get('cognitivescheduler')self._event_bus, self._router)
+
         # Inject Scheduler into Hive for proactive prompt injection
         self._agents._hive._scheduler = self._cortex
-        
+
         print("  Engine: State Ready.", flush=True)
 
         self._shutdown_event = asyncio.Event()
@@ -83,9 +93,9 @@ class AetherEngine:
 
         from core.tools.vector_store import LocalVectorStore
 
-        root_dir = Path(__file__).resolve().parent.parent
+        root_dir = container.get('path')__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"
-        global_index = LocalVectorStore(api_key=self._config.ai.api_key)
+        global_index = container.get('localvectorstore')api_key=self._config.ai.api_key)
         global_index.load(index_path)
         self._router._vector_store = global_index
 

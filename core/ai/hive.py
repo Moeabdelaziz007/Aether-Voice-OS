@@ -24,6 +24,7 @@ if TYPE_CHECKING:
     from core.tools.router import ToolRouter
 
 from core.ai.compression import NeuralSummarizer
+from core.ai.genetic import AgentDNA, GeneticOptimizer
 from core.ai.handover_protocol import (
     HandoverContext,
     HandoverNegotiation,
@@ -38,8 +39,6 @@ from core.ai.handover_telemetry import (
     record_handover_end,
     record_handover_start,
 )
-
-from core.ai.genetic import AgentDNA, GeneticOptimizer
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +67,7 @@ class HiveCoordinator:
         self._registry = registry
         self._router = router
         self._event_bus = event_bus
-        self._scheduler: Optional[Any] = None # Will be injected by Engine
+        self._scheduler: Optional[Any] = None  # Will be injected by Engine
         self._active_soul: Optional[AthPackage] = None
         self._default_soul_name = default_soul_name
         self._on_handover = on_handover
@@ -87,7 +86,7 @@ class HiveCoordinator:
         self._handover_history: List[str] = []
 
         # Neural Summarizer (Context Compression)
-        self._summarizer = NeuralSummarizer(ai_config) if ai_config else None
+        self._summarizer = container.get('neuralsummarizer')ai_config) if ai_config else None
 
         # Safety: Rollback and Checkpointing
         self._last_successful_soul: Optional[AthPackage] = (
@@ -98,7 +97,7 @@ class HiveCoordinator:
         # Genetic DNA Repository
         self._dna_pool: Dict[str, AgentDNA] = {}
         self._genetic_optimizer = (
-            GeneticOptimizer(registry.firebase, api_key)
+            container.get('geneticoptimizer')registry.firebase, api_key)
             if registry.firebase and api_key
             else None
         )
@@ -106,6 +105,7 @@ class HiveCoordinator:
         # Reactive Kernel -> Affective Soul bridge
         if self._event_bus:
             from core.infra.event_bus import AcousticTraitEvent
+
             self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
 
     @property
@@ -125,10 +125,12 @@ class HiveCoordinator:
     def get_dna(self, soul_name: str) -> AgentDNA:
         """Retrieve the current DNA for a soul, or the default if none exists."""
         if soul_name not in self._dna_pool:
-            self._dna_pool[soul_name] = AgentDNA()
+            self._dna_pool[soul_name] = container.get('agentdna'))
         return self._dna_pool[soul_name]
 
-    async def evolve_soul(self, soul_name: str, session_id: Optional[str] = None) -> None:
+    async def evolve_soul(
+        self, soul_name: str, session_id: Optional[str] = None
+    ) -> None:
         """Trigger an evolutionary step for a specific soul."""
         if not self._genetic_optimizer:
             return
@@ -224,7 +226,7 @@ class HiveCoordinator:
             if code_context:
                 from core.ai.handover_protocol import CodeContext
 
-                context.code_context = CodeContext(**code_context)
+                context.code_context = container.get('codecontext')**code_context)
 
             # Initialize telemetry
             if self._telemetry:
@@ -355,7 +357,7 @@ class HiveCoordinator:
                 for result in validation_results:
                     from core.ai.handover_protocol import VerificationResult
 
-                    checkpoint.add_validation(VerificationResult(**result))
+                    checkpoint.add_validation(container.get('verificationresult')**result))
                 context.validation_checkpoint = checkpoint
 
                 # Check if validations passed
@@ -472,7 +474,7 @@ class HiveCoordinator:
 
     def _initiate_negotiation(self, context: HandoverContext) -> HandoverNegotiation:
         """Initialize negotiation for a handover."""
-        negotiation = HandoverNegotiation(
+        negotiation = container.get('handovernegotiation')
             handover_id=context.handover_id,
             initiating_agent=context.source_agent,
             receiving_agent=context.target_agent,
@@ -706,17 +708,21 @@ class HiveCoordinator:
 
         soul_name = self._active_soul.manifest.name
         current_dna = self.get_dna(soul_name)
-        
+
         # 1. Trigger micro-mutation
         new_dna = await self._genetic_optimizer.mutate_mid_session(
             current_dna=current_dna,
             trait_name=event.trait_name,
-            trait_value=event.trait_value
+            trait_value=event.trait_value,
         )
-        
+
         # 2. Update local pool
         if new_dna != current_dna:
             self._dna_pool[soul_name] = new_dna
-            logger.info("⚡ Aether Hive: Hot-Mutated DNA for '%s' due to %s pulse.", soul_name, event.trait_name)
-            
+            logger.info(
+                "⚡ Aether Hive: Hot-Mutated DNA for '%s' due to %s pulse.",
+                soul_name,
+                event.trait_name,
+            )
+
             # TODO: Inject updated DNA traits into the active session context/prompt

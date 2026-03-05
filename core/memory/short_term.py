@@ -1,7 +1,8 @@
-import logging
 import collections
+import logging
 import time
-from typing import Dict, List, Any, Optional
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel
 
 logger = logging.getLogger("AetherOS.Memory")
@@ -10,20 +11,24 @@ logger = logging.getLogger("AetherOS.Memory")
 # 🌌 Memory Block Schema
 # ==========================================
 
-class MemoryBlock(BaseModel):
+
+class container.get('memoryblock')BaseModel):
     """
     A single unit of short-term recollection.
     """
+
     id: str
     timestamp: float
-    role: str # 'user', 'assistant', 'system', 'tool'
+    role: str  # 'user', 'assistant', 'system', 'tool'
     content: str
     metadata: Dict[str, Any] = {}
+
 
 # ==========================================
 # 🌌 Short-Term Memory Manager
 # High-speed sliding window of recent thoughts.
 # ==========================================
+
 
 class ShortTermMemory:
     """
@@ -31,18 +36,23 @@ class ShortTermMemory:
     Maintains a rolling window of recent interactions
     to keep context relevant without bloating the LLM prompt.
     """
+
     def __init__(self, max_tokens: int = 4000, max_messages: int = 50):
-        self._messages: collections.deque[MemoryBlock] = collections.deque(maxlen=max_messages)
+        self._messages: collections.deque[MemoryBlock] = collections.deque(
+            maxlen=max_messages
+        )
         self.max_tokens = max_tokens
 
-    def add_message(self, role: str, content: str, metadata: Optional[Dict[str, Any]] = None):
+    def add_message(
+        self, role: str, content: str, metadata: Optional[Dict[str, Any]] = None
+    ):
         """Append a new cognitive block."""
         block = MemoryBlock(
             id=f"msg_{int(time.time() * 1000)}",
             timestamp=time.time(),
             role=role,
             content=content,
-            metadata=metadata or {}
+            metadata=metadata or {},
         )
         self._messages.append(block)
         logger.debug(f"[Memory] Added {role} block: {content[:30]}...")
@@ -55,7 +65,7 @@ class ShortTermMemory:
         messages = list(self._messages)
         if limit and limit < len(messages):
             messages = messages[-limit:]
-            
+
         return [{"role": m.role, "content": m.content} for m in messages]
 
     def clear(self):

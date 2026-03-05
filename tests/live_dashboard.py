@@ -17,7 +17,7 @@ import logging
 import sys
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
@@ -25,11 +25,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 from core.audio.capture import AudioCapture
-from core.audio.playback import AudioPlayback
-from core.audio.telemetry import AudioTelemetryLogger
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.paralinguistics import ParalinguisticAnalyzer
+from core.audio.playback import AudioPlayback
+from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.state import audio_state
+from core.audio.telemetry import AudioTelemetryLogger
 from core.infra.config import load_config
 
 logging.basicConfig(level=logging.WARNING, format="")
@@ -93,7 +93,7 @@ class LiveDashboard:
         self._metrics = DashboardMetrics()
 
     async def setup(self) -> None:
-        session_id = f"dashboard_{int(time.time()*1000)}"
+        session_id = f"dashboard_{int(time.time() * 1000)}"
         self._telemetry = AudioTelemetryLogger(
             session_id=session_id, log_to_file=True, log_dir="telemetry_logs"
         )
@@ -206,14 +206,14 @@ class LiveDashboard:
             else f"{Colors.BG_YELLOW} WAITING {Colors.RESET}"
         )
         header = f"""
-{Colors.BOLD}{'═' * 70}{Colors.RESET}
+{Colors.BOLD}{"═" * 70}{Colors.RESET}
 {Colors.BOLD}  🎙️  AETHER VOICE OS — LIVE DASHBOARD  {status}{Colors.BOLD}
-{'═' * 70}{Colors.RESET}
+{"═" * 70}{Colors.RESET}
   ⏱️  Session: {m.session_time_sec:.1f}s / {self._duration:.0f}s    "
   ⏳ Remaining: {remain:.1f}s    🎬 Frames: {m.frames_total}
 """
         latency_section = f"""
-{Colors.BOLD}┌{'─' * 30} LATENCY {'─' * 30}┐{Colors.RESET}
+{Colors.BOLD}┌{"─" * 30} LATENCY {"─" * 30}┐{Colors.RESET}
 │                                                                  │
 │  Current: {self._color_latency(m.latency_current_ms):>8} ms    "
   Avg: {self._color_latency(m.latency_avg_ms):>8} ms    "
@@ -222,32 +222,32 @@ class LiveDashboard:
 │                                                                  │
 │  Graph: {Colors.CYAN}{self._sparkline(self._latency_history)}{Colors.RESET}  │
 │                                                                  │
-{Colors.BOLD}└{'─' * 68}┘{Colors.RESET}
+{Colors.BOLD}└{"─" * 68}┘{Colors.RESET}
 """
         aec_vad_section = f"""
-{Colors.BOLD}┌{'─' * 30} AEC / VAD {'─' * 29}┐{Colors.RESET}
+{Colors.BOLD}┌{"─" * 30} AEC / VAD {"─" * 29}┐{Colors.RESET}
 │                                                                  │
 │  ERLE: {self._color_erle(m.erle_db):>8} dB    "
   Convergence: {Colors.GREEN if m.aec_converged else Colors.RED}"
   {m.aec_convergence_rate * 100:.0f}%{Colors.RESET}    "
   Double-Talk: {Colors.YELLOW if m.double_talk else Colors.GREEN}"
-  {'⚡' if m.double_talk else '○'}{Colors.RESET}            │
+  {"⚡" if m.double_talk else "○"}{Colors.RESET}            │
 │                                                                  │
 │  VAD Status: {Colors.GREEN if m.vad_is_speech else Colors.DIM}"
-  {'🗣️ SPEAKING' if m.vad_is_speech else '🔇 SILENT'}{Colors.RESET}    "
+  {"🗣️ SPEAKING" if m.vad_is_speech else "🔇 SILENT"}{Colors.RESET}    "
   RMS: {m.rms_energy:.4f}        │
 │                                                                  │
-{Colors.BOLD}└{'─' * 68}┘{Colors.RESET}
+{Colors.BOLD}└{"─" * 68}┘{Colors.RESET}
 """
         system_section = f"""
-{Colors.BOLD}┌{'─' * 30} SYSTEM {'─' * 31}┐{Colors.RESET}
+{Colors.BOLD}┌{"─" * 30} SYSTEM {"─" * 31}┐{Colors.RESET}
 │                                                                  │
 │  Jitter: {self._color_jitter(m.jitter_ms):>8} ms    "
   Frames Dropped: {Colors.RED if m.frames_dropped > 0 else Colors.GREEN}"
   {m.frames_dropped}{Colors.RESET}    "
   Speech Ratio: {m.speech_ratio * 100:.1f}%          │
 │                                                                  │
-{Colors.BOLD}└{'─' * 68}┘{Colors.RESET}
+{Colors.BOLD}└{"─" * 68}┘{Colors.RESET}
 """
         print(header + latency_section + aec_vad_section + system_section)
 

@@ -5,7 +5,6 @@ Tests the actual Ed25519 handshake and WebSocket lifecycle without mocks.
 """
 
 import asyncio
-import base64
 import json
 import os
 

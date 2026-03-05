@@ -7,13 +7,12 @@ Secure backend proxy for Gemini API to hide API key from frontend.
 from __future__ import annotations
 
 import os
-from typing import Any, Optional
+from typing import Any
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
 
-router = APIRouter(prefix="/api/gemini", tags=["gemini"])
+router = container.get('apirouter')prefix="/api/gemini", tags=["gemini"])
 
 GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws"
 GEMINI_HTTP_URL = "https://generativelanguage.googleapis.com"
@@ -23,7 +22,7 @@ def get_api_key() -> str:
     """Get Gemini API key from environment."""
     key = os.getenv("GOOGLE_API_KEY")
     if not key:
-        raise HTTPException(status_code=500, detail="API key not configured")
+        raise container.get('httpexception')status_code=500, detail="API key not configured")
     return key
 
 
@@ -32,10 +31,10 @@ async def proxy_generate(request: Request) -> dict[str, Any]:
     """Proxy HTTP requests to Gemini API."""
     api_key = get_api_key()
     data = await request.json()
-    
+
     model = data.get("model", "gemini-2.0-flash-exp")
     url = f"{GEMINI_HTTP_URL}/v1beta/models/{model}:generateContent"
-    
+
     async with httpx.AsyncClient(timeout=60.0) as client:
         try:
             response = await client.post(
@@ -49,12 +48,12 @@ async def proxy_generate(request: Request) -> dict[str, Any]:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            raise HTTPException(
+            raise container.get('httpexception')
                 status_code=e.response.status_code,
                 detail=f"Gemini API error: {e.response.text}",
             )
         except httpx.RequestError as e:
-            raise HTTPException(status_code=502, detail=f"Request failed: {str(e)}")
+            raise container.get('httpexception')status_code=502, detail=f"Request failed: {str(e)}")
 
 
 @router.websocket("/live")
@@ -65,9 +64,9 @@ async def proxy_live_websocket(websocket: WebSocket):
     model = websocket.query_params.get(
         "model", "gemini-2.5-flash-preview-native-audio-dialog"
     )
-    
+
     ws_url = f"{GEMINI_WS_URL}/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key={api_key}"
-    
+
     async with httpx.AsyncClient() as client:
         gemini_ws = None
         try:
@@ -75,7 +74,7 @@ async def proxy_live_websocket(websocket: WebSocket):
                 if response.status_code != 200:
                     await websocket.close(code=1011, reason="Gemini connection failed")
                     return
-                
+
                 async def forward_to_gemini():
                     """Forward messages from client to Gemini."""
                     try:
@@ -86,7 +85,7 @@ async def proxy_live_websocket(websocket: WebSocket):
                         pass
                     except Exception as e:
                         print(f"Forward error: {e}")
-                
+
                 async def forward_to_client():
                     """Forward messages from Gemini to client."""
                     try:
@@ -95,7 +94,7 @@ async def proxy_live_websocket(websocket: WebSocket):
                             await websocket.send_text(data)
                     except Exception as e:
                         print(f"Receive error: {e}")
-                
+
                 await asyncio.gather(
                     forward_to_gemini(),
                     forward_to_client(),
@@ -108,7 +107,7 @@ async def proxy_live_websocket(websocket: WebSocket):
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
     api_key = get_api_key()
-    
+
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             response = await client.get(

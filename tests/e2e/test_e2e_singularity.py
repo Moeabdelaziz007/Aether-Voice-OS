@@ -48,18 +48,22 @@ async def test_e2e_singularity():
         def __init__(self, key, storage):
             self.key = key
             self.storage = storage
+
         def set(self, data, merge=True):
             if merge and self.key in self.storage:
                 self.storage[self.key].update(data)
             else:
                 self.storage[self.key] = data
+
         def get(self):
             class DocSnapshot:
                 def __init__(self, exists, data):
                     self.exists = exists
                     self._data = data
+
                 def to_dict(self):
                     return self._data
+
             if self.key in self.storage:
                 return DocSnapshot(True, self.storage[self.key])
             return DocSnapshot(False, None)
@@ -67,12 +71,14 @@ async def test_e2e_singularity():
     class MockCollection:
         def __init__(self, storage):
             self.storage = storage
+
         def document(self, key):
             return MockDocRef(key, self.storage)
 
     class MockDB:
         def __init__(self):
             self.storage = {}
+
         def collection(self, name):
             return MockCollection(self.storage)
 
@@ -81,8 +87,10 @@ async def test_e2e_singularity():
             self.is_connected = True
             self._session_id = "test-session-123"
             self._db = MockDB()
+
         async def initialize(self):
             return True
+
         async def start_session(self):
             pass
 

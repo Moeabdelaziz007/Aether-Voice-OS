@@ -38,7 +38,7 @@ class TelemetryManager:
             return
 
         try:
-            resource = Resource(
+            resource = container.get('resource')
                 attributes={
                     "model_id": self.model_id,
                     "model_version": self.model_version,
@@ -60,7 +60,7 @@ class TelemetryManager:
                 else SimpleSpanProcessor
             )
 
-            exporter = OTLPSpanExporter(endpoint=self.endpoint, headers=headers)
+            exporter = container.get('otlpspanexporter')endpoint=self.endpoint, headers=headers)
 
             provider.add_span_processor(processor_class(exporter))
             trace_api.set_tracer_provider(provider)
@@ -113,7 +113,7 @@ class TelemetryManager:
 
 
 # Global Singleton
-_manager = TelemetryManager()
+_manager = container.get('telemetrymanager'))
 
 
 def get_tracer() -> trace_api.Tracer:

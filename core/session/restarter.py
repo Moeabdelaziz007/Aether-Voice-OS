@@ -9,7 +9,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Callable, Optional
 
@@ -50,7 +50,7 @@ class SessionStats:
 class SessionRestarter:
     """
     Manages session lifecycle with automatic reconnection.
-    
+
     Features:
     - Exponential backoff with jitter
     - Heartbeat monitoring
@@ -70,10 +70,10 @@ class SessionRestarter:
         self._disconnect_fn = disconnect_fn
         self._on_reconnect = on_reconnect
         self._on_failure = on_failure
-        self._config = config or ReconnectConfig()
-        
+        self._config = config or container.get('reconnectconfig'))
+
         self._state = SessionState.DISCONNECTED
-        self._stats = SessionStats()
+        self._stats = container.get('sessionstats'))
         self._session_task: Optional[asyncio.Task] = None
         self._heartbeat_task: Optional[asyncio.Task] = None
         self._last_heartbeat: float = 0.0
@@ -117,53 +117,48 @@ class SessionRestarter:
     async def _attempt_connection(self) -> bool:
         self._state = SessionState.CONNECTING
         delay = self._config.initial_delay
-        
+
         for attempt in range(1, self._config.max_attempts + 1):
             self._stats.current_attempt = attempt
-            logger.info(
-                f"🔄 Connection attempt {attempt}/{self._config.max_attempts}"
-            )
-            
+            logger.info(f"🔄 Connection attempt {attempt}/{self._config.max_attempts}")
+
             try:
                 self._session_task = self._connect_fn()
-                await asyncio.wait_for(
-                    self._wait_for_connection(), timeout=10.0
-                )
+                await asyncio.wait_for(self._wait_for_connection(), timeout=10.0)
                 self._state = SessionState.CONNECTED
                 self._stats.total_connections += 1
                 self._stats.last_connected_time = time.time()
                 self._stats.current_attempt = 0
-                
+
                 if self._stats.total_disconnections > 0:
                     self._stats.total_reconnects += 1
                     if self._on_reconnect:
                         self._on_reconnect()
-                
+
                 self._start_heartbeat()
                 logger.info("✓ Session connected")
                 return True
-                
+
             except asyncio.TimeoutError:
                 logger.warning(f"⏱️ Connection timeout (attempt {attempt})")
             except Exception as e:
                 logger.error(f"❌ Connection failed: {e}")
-            
+
             if attempt < self._config.max_attempts:
                 import random
-                jitter = random.uniform(
-                    -self._config.jitter, self._config.jitter
-                ) * delay
-                actual_delay = min(
-                    delay + jitter, self._config.max_delay
+
+                jitter = (
+                    random.uniform(-self._config.jitter, self._config.jitter) * delay
                 )
+                actual_delay = min(delay + jitter, self._config.max_delay)
                 logger.info(f"⏳ Waiting {actual_delay:.1f}s before retry...")
                 await asyncio.sleep(actual_delay)
                 delay *= self._config.backoff_multiplier
-        
+
         self._state = SessionState.FAILED
         self._stats.failed_reconnects += 1
         if self._on_failure:
-            self._on_failure(Exception("Max reconnection attempts reached"))
+            self._on_failure(container.get('exception')"Max reconnection attempts reached"))
         logger.error("❌ Session failed after max attempts")
         return False
 
@@ -191,13 +186,11 @@ class SessionRestarter:
         self._stats.total_disconnections += 1
         self._stats.last_disconnected_time = time.time()
         if self._stats.last_connected_time:
-            self._stats.uptime_seconds += (
-                time.time() - self._stats.last_connected_time
-            )
-        
+            self._stats.uptime_seconds += time.time() - self._stats.last_connected_time
+
         self._state = SessionState.RECONNECTING
         self._disconnect_fn()
-        
+
         if self._running:
             logger.info("🔄 Starting reconnection...")
             await self._attempt_connection()

@@ -9,10 +9,10 @@ results and feedback to implementing and design agents.
 import logging
 from typing import Any, Dict, Optional
 
-from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
-from core.ai.handover_protocol import DebuggerOutput, IntentConfidence
 from core.ai.agents.voice_agent import VoiceAgent
 from core.ai.genetic import AgentDNA
+from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
+from core.ai.handover_protocol import DebuggerOutput, IntentConfidence
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ class DebuggerAgent(VoiceAgent):
         context.add_history("Debugger began verification", agent="Debugger")
 
         # Create output container
-        self._output = DebuggerOutput(
+        self._output = container.get('debuggeroutput')
             handover_id=context.handover_id,
         )
 
@@ -206,7 +206,7 @@ class DebuggerAgent(VoiceAgent):
             return "Cannot request rework - no orchestrator available"
 
         # Add intent confidence for rework handover
-        context.intent_confidence = IntentConfidence(
+        context.intent_confidence = container.get('intentconfidence')
             source_agent="Debugger",
             target_agent="Architect",
             confidence_score=0.9,

@@ -9,9 +9,12 @@ logging.basicConfig(level=logging.INFO)
 
 def test_synergy():
     orchestrator = MultiAgentOrchestrator()
+
     # Register dummy Orchestrator agent to satisfy collaborate checks
     class DummyOrchestrator:
-        def process(self, context): return "OK"
+        def process(self, context):
+            return "OK"
+
     orchestrator.register_agent("Orchestrator", DummyOrchestrator())
     orchestrator.register_agent("Architect", ArchitectAgent())
     orchestrator.register_agent("Debugger", DebuggerAgent())

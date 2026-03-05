@@ -34,7 +34,6 @@ from core.utils.errors import AudioDeviceNotFoundError
 logger = logging.getLogger(__name__)
 
 
-
 class AdaptiveJitterBuffer:
     """
     A software jitter buffer to smooth bursty playback/far-end arrivals,
@@ -45,7 +44,7 @@ class AdaptiveJitterBuffer:
         self,
         target_latency_ms: float = 60.0,
         max_latency_ms: float = 200.0,
-        sample_rate: int = 16000
+        sample_rate: int = 16000,
     ) -> None:
         self.sample_rate = sample_rate
         self.target_latency_samples = int(target_latency_ms * sample_rate / 1000)
@@ -62,46 +61,49 @@ class AdaptiveJitterBuffer:
             return
 
         if data_len >= self.max_latency_samples:
-            pcm_data = pcm_data[-self.max_latency_samples:]
+            pcm_data = pcm_data[-self.max_latency_samples :]
             data_len = self.max_latency_samples
-        
+
         end_idx = self.write_idx + data_len
         if end_idx <= self.max_latency_samples:
-            self.buffer[self.write_idx:end_idx] = pcm_data
+            self.buffer[self.write_idx : end_idx] = pcm_data
         else:
             overflow = end_idx - self.max_latency_samples
             first_part = data_len - overflow
-            self.buffer[self.write_idx:self.max_latency_samples] = pcm_data[:first_part]
+            self.buffer[self.write_idx : self.max_latency_samples] = pcm_data[
+                :first_part
+            ]
             self.buffer[:overflow] = pcm_data[first_part:]
-            
+
         self.write_idx = end_idx % self.max_latency_samples
         self.size = min(self.size + data_len, self.max_latency_samples)
-        
+
         if self.size == self.max_latency_samples:
             self.read_idx = self.write_idx
 
     def read(self, num_samples: int) -> np.ndarray:
         """Read contiguous block of samples, zero-padding on underrun."""
         out = np.zeros(num_samples, dtype=np.int16)
-        
+
         if self.size == 0:
             return out
-            
+
         read_len = min(num_samples, self.size)
         end_idx = self.read_idx + read_len
-        
+
         if end_idx <= self.max_latency_samples:
-            out[:read_len] = self.buffer[self.read_idx:end_idx]
+            out[:read_len] = self.buffer[self.read_idx : end_idx]
         else:
             overflow = end_idx - self.max_latency_samples
             first_part = read_len - overflow
-            out[:first_part] = self.buffer[self.read_idx:self.max_latency_samples]
+            out[:first_part] = self.buffer[self.read_idx : self.max_latency_samples]
             out[first_part:read_len] = self.buffer[:overflow]
-            
+
         self.read_idx = end_idx % self.max_latency_samples
         self.size -= read_len
-        
+
         return out
+
 
 class SmoothMuter:
     """Applies graceful, ramped gain modifications to avoid pops/clicks.
@@ -229,27 +231,27 @@ class AudioCapture:
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
         self._loop: Optional[asyncio.AbstractEventLoop] = None
-        self._analyzer = analyzer or SilentAnalyzer()
+        self._analyzer = analyzer or container.get('silentanalyzer'))
         self._vad = vad_engine
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
         self._on_audio_telemetry = None
         self._last_telemetry_time = 0.0
         self._state_lock = threading.Lock()
-        
+
         # Performance Telemetry Logger
         self._telemetry_logger: Optional[AudioTelemetryLogger] = None
 
-        self._hysteresis = HysteresisGate()
+        self._hysteresis = container.get('hysteresisgate'))
         # Dynamic AEC replaces LeakageDetector with adaptive echo cancellation
-        self._dynamic_aec = DynamicAEC(
+        self._dynamic_aec = container.get('dynamicaec')
             sample_rate=self._config.send_sample_rate,
             frame_size=self._config.chunk_size,
             filter_length_ms=self._config.aec_filter_length_ms,
             step_size=self._config.aec_step_size,
             convergence_threshold_db=self._config.aec_convergence_threshold_db,
         )
-        self._smooth_muter = SmoothMuter()
+        self._smooth_muter = container.get('smoothmuter'))
 
         # Delay Compensation Counters (kept for hardware latency, AEC handles echo path)
         self._audio_latency_ms = 50  # hardware latency approximation
@@ -260,10 +262,10 @@ class AudioCapture:
         self._unmute_delay_remaining = 0
 
         # Adaptive Jitter Buffer for AEC reference signal
-        self._jitter_buffer = AdaptiveJitterBuffer(
+        self._jitter_buffer = container.get('adaptivejitterbuffer')
             target_latency_ms=self._config.jitter_buffer_target_ms,
             max_latency_ms=self._config.jitter_buffer_max_ms,
-            sample_rate=self._config.send_sample_rate
+            sample_rate=self._config.send_sample_rate,
         )
 
     def set_telemetry_logger(self, logger: AudioTelemetryLogger) -> None:
@@ -278,12 +280,14 @@ class AudioCapture:
             filter_length_ms=config.aec_filter_length_ms,
             convergence_threshold_db=config.aec_convergence_threshold_db,
         )
-        
+
         # Update jitter buffer parameters
         # Note: Jitter buffer recreation would be needed for target/max changes
         # For now, we'll just log the change
-        logger.info(f"Audio config updated: jitter_target={config.jitter_buffer_target_ms}ms")
-        
+        logger.info(
+            f"Audio config updated: jitter_target={config.jitter_buffer_target_ms}ms"
+        )
+
         # Update mute/unmute delays
         self._latency_samples = int(
             self._audio_latency_ms * config.send_sample_rate // 1000
@@ -312,7 +316,7 @@ class AudioCapture:
 
             try:
                 self._async_queue.get_nowait()
-                if hasattr(audio_state, 'capture_queue_drops'):
+                if hasattr(audio_state, "capture_queue_drops"):
                     audio_state.capture_queue_drops += 1
             except asyncio.QueueEmpty:
                 pass
@@ -336,7 +340,7 @@ class AudioCapture:
         # Start telemetry frame tracking
         if self._telemetry_logger:
             self._telemetry_logger.start_frame()
-        
+
         capture_start = time.perf_counter()
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
@@ -361,7 +365,7 @@ class AudioCapture:
             # Apply Rust-accelerated spectral denoising for cleaner output
             # spectral_denoise expects int16 and returns dict with 'samples'
             result = spectral_denoise(cleaned_chunk, noise_floor=0.02)
-            cleaned_chunk = np.array(result['samples'], dtype=np.int16)
+            cleaned_chunk = np.array(result["samples"], dtype=np.int16)
 
         # Update global AEC state for monitoring
         audio_state.update_aec_state(
@@ -371,14 +375,14 @@ class AudioCapture:
             delay_ms=aec_state.estimated_delay_ms,
             double_talk=aec_state.double_talk_detected,
         )
-        
+
         # Record AEC metrics to telemetry
         if self._telemetry_logger:
             self._telemetry_logger.record_aec(
                 latency_ms=aec_latency_ms,
                 erle_db=aec_state.erle_db,
                 converged=aec_state.converged,
-                double_talk=aec_state.double_talk_detected
+                double_talk=aec_state.double_talk_detected,
             )
 
         # Check if user is speaking (post-AEC analysis)
@@ -424,7 +428,7 @@ class AudioCapture:
         vad_start = time.perf_counter()
         if should_mute and self._smooth_muter._current_gain < 0.1:
             # Force VAD to false and energy to 0 to prevent barge-in triggers
-            vad = HyperVADResult(
+            vad = container.get('hypervadresult')
                 is_soft=False,
                 is_hard=False,
                 energy_rms=0.0,
@@ -468,15 +472,17 @@ class AudioCapture:
         now = time.monotonic()
         if now - self._last_telemetry_time >= 1.0 / 15.0:
             self._last_telemetry_time = now
-            if getattr(self, "_on_audio_telemetry", None) and \
-               self._loop and not self._loop.is_closed():
+            if (
+                getattr(self, "_on_audio_telemetry", None)
+                and self._loop
+                and not self._loop.is_closed()
+            ):
                 payload = {
                     "rms": vad.energy_rms,
-                    "gain": self._smooth_muter._current_gain
+                    "gain": self._smooth_muter._current_gain,
                 }
                 asyncio.run_coroutine_threadsafe(
-                    self._on_audio_telemetry("audio_telemetry", payload),
-                    self._loop
+                    self._on_audio_telemetry("audio_telemetry", payload), self._loop
                 )
 
         if self._paralinguistic_analyzer and self._on_affective_data:
@@ -502,7 +508,7 @@ class AudioCapture:
                 latency_ms=vad_latency_ms,
                 is_speech=vad.is_hard,
                 is_soft=vad.is_soft,
-                rms_energy=vad.energy_rms
+                rms_energy=vad.energy_rms,
             )
             self._telemetry_logger.end_frame()
 
@@ -516,7 +522,7 @@ class AudioCapture:
         try:
             mic_info = self._pya.get_default_input_device_info()
         except IOError as exc:
-            raise AudioDeviceNotFoundError(
+            raise container.get('audiodevicenotfounderror')
                 "No default input device found. Check your microphone.",
                 cause=exc,
                 context={"available_devices": self._list_devices()},
@@ -545,7 +551,7 @@ class AudioCapture:
         Audio routing is now handled natively via call_soon_threadsafe.
         """
         if not self._stream:
-            raise AudioDeviceNotFoundError("Call start() before run()")
+            raise container.get('audiodevicenotfounderror')"Call start() before run()")
 
         logger.info("Audio capture task active (Zero-latency direct injection)")
 

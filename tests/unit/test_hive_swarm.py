@@ -37,7 +37,9 @@ async def test_hive_full_lifecycle():
     handoff.set_hive_params(hive, restart_event)
 
     # 3. Test Expertise Matching
-    coding_expert_name = await hive.evaluate_intent("Could you write a python script for me?")
+    coding_expert_name = await hive.evaluate_intent(
+        "Could you write a python script for me?"
+    )
     assert coding_expert_name == "CodingExpert"
 
     # Should be None because we are already in ArchitectExpert (the default)

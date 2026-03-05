@@ -39,12 +39,16 @@ patcher = patch.dict(
 )
 patcher.start()
 
-import sys; from unittest.mock import Mock; sys.modules['pyaudio'] = Mock()
+import sys
+from unittest.mock import Mock
+
+sys.modules["pyaudio"] = Mock()
 from core.audio.capture import AudioCapture, SmoothMuter  # noqa: E402
 from core.infra.config import AudioConfig  # noqa: E402
 
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 512
+
 
 @pytest.fixture
 def mock_dependencies():
@@ -54,13 +58,14 @@ def mock_dependencies():
     mock_vad = MagicMock()
     mock_analyzer = MagicMock()
     mock_paralinguistic = MagicMock()
-    
+
     # We also need to mock the classes instantiated inside AudioCapture
-    with (patch('core.audio.capture.DynamicAEC') as MockDynamicAEC,
-          patch('core.audio.capture.SmoothMuter') as MockSmoothMuter,
-          patch('core.audio.capture.HysteresisGate') as MockHysteresis,
-          patch('core.audio.capture.AECBridge') as MockAECBridge):
-        
+    with (
+        patch("core.audio.capture.DynamicAEC") as MockDynamicAEC,
+        patch("core.audio.capture.SmoothMuter") as MockSmoothMuter,
+        patch("core.audio.capture.HysteresisGate") as MockHysteresis,
+        patch("core.audio.capture.AECBridge") as MockAECBridge,
+    ):
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
         mock_aec_state = MagicMock()
@@ -69,14 +74,17 @@ def mock_dependencies():
         mock_aec_state.erle_db = 25.0
         mock_aec_state.estimated_delay_ms = 0.0
         mock_aec_state.double_talk_detected = False
-        mock_aec_instance.process_frame.return_value = (np.zeros(CHUNK_SIZE, dtype=np.int16), mock_aec_state)
-        
+        mock_aec_instance.process_frame.return_value = (
+            np.zeros(CHUNK_SIZE, dtype=np.int16),
+            mock_aec_state,
+        )
+
         mock_smooth_muter_instance = MockSmoothMuter.return_value
         mock_smooth_muter_instance._current_gain = 1.0
 
         # Hysteresis gate just mirrors is_playing
         MockHysteresis.return_value.update.side_effect = lambda x: x
-        
+
         yield {
             "config": mock_config,
             "queue": mock_queue,
@@ -87,12 +95,14 @@ def mock_dependencies():
             "MockSmoothMuter": MockSmoothMuter,
         }
 
+
 def _sine_pcm16(
     freq_hz: float, amp: float, n: int = CHUNK_SIZE, sr: int = SAMPLE_RATE
 ) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
+
 
 @pytest.fixture(scope="session", autouse=True)
 def _stop_patcher():
@@ -182,33 +192,37 @@ def capture_instance():
         inst._loop = MagicMock()
         return inst
 
-
     instance = AudioCapture(
-        config=mock_dependencies['config'],
-        output_queue=mock_dependencies['queue'],
-        vad_engine=mock_dependencies['vad'],
-        analyzer=mock_dependencies['analyzer'],
-        paralinguistic_analyzer=mock_dependencies['paralinguistic'],
+        config=mock_dependencies["config"],
+        output_queue=mock_dependencies["queue"],
+        vad_engine=mock_dependencies["vad"],
+        analyzer=mock_dependencies["analyzer"],
+        paralinguistic_analyzer=mock_dependencies["paralinguistic"],
     )
     # Mock the event loop for thread-safe calls
     instance._loop = MagicMock()
     return instance
 
-def test_callback_when_ai_is_silent_and_user_speaks(capture_instance, mock_dependencies):
+
+def test_callback_when_ai_is_silent_and_user_speaks(
+    capture_instance, mock_dependencies
+):
     """
     Scenario: AI is not playing, user speaks.
     Expected: SmoothMuter.unmute() is called.
     """
     import core.audio.capture
+
     core.audio.capture.audio_state.is_playing = False
     core.audio.capture.audio_state.just_started_playing = False
     core.audio.capture.audio_state.just_stopped_playing = False
 
-    aec_instance = mock_dependencies['MockDynamicAEC'].return_value
+    aec_instance = mock_dependencies["MockDynamicAEC"].return_value
     aec_instance.is_user_speaking.return_value = True
     in_data = (np.ones(CHUNK_SIZE, dtype=np.int16) * 1000).tobytes()
-    
+
     capture_instance._callback(in_data, frame_count=CHUNK_SIZE, time_info={}, status=0)
+
 
 def test_callback_runs_when_ai_not_playing(capture_instance: AudioCapture):
     mock_audio_state.is_playing = False
@@ -218,21 +232,24 @@ def test_callback_runs_when_ai_not_playing(capture_instance: AudioCapture):
     assert out is None
     assert status is not None
 
+
 def test_callback_thalamic_gate_mutes_echo(capture_instance, mock_dependencies):
     """
     Scenario: AI is playing, and the incoming audio is determined to be echo.
     Expected: SmoothMuter.mute() is called.
     """
     import core.audio.capture
+
     core.audio.capture.audio_state.is_playing = True
     core.audio.capture.audio_state.just_started_playing = False
     core.audio.capture.audio_state.just_stopped_playing = False
 
-    aec_instance = mock_dependencies['MockDynamicAEC'].return_value
+    aec_instance = mock_dependencies["MockDynamicAEC"].return_value
     aec_instance.is_user_speaking.return_value = False
     in_data = (np.ones(CHUNK_SIZE, dtype=np.int16) * 1000).tobytes()
-    
+
     capture_instance._callback(in_data, frame_count=CHUNK_SIZE, time_info={}, status=0)
+
 
 def test_callback_runs_when_ai_playing(capture_instance: AudioCapture):
     mock_audio_state.is_playing = True
@@ -249,11 +266,12 @@ def test_callback_thalamic_gate_allows_barge_in(capture_instance, mock_dependenc
     Expected: SmoothMuter.unmute() is called.
     """
     import core.audio.capture
+
     core.audio.capture.audio_state.is_playing = True
     core.audio.capture.audio_state.just_started_playing = False
     core.audio.capture.audio_state.just_stopped_playing = False
 
-    aec_instance = mock_dependencies['MockDynamicAEC'].return_value
+    aec_instance = mock_dependencies["MockDynamicAEC"].return_value
     aec_instance.is_user_speaking.return_value = True
     in_data = (np.ones(CHUNK_SIZE, dtype=np.int16) * 1000).tobytes()
 

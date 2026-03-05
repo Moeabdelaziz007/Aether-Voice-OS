@@ -1,10 +1,11 @@
 import asyncio
 import logging
 from typing import Any, Callable
+
 try:
     import ujson as json
 except ImportError:
-    import json
+    pass
 
 from core.audio.capture import AudioCapture
 from core.audio.paralinguistics import ParalinguisticAnalyzer
@@ -18,22 +19,28 @@ logger = logging.getLogger(__name__)
 class AudioManager:
     """Manages audio lifecycle: capture, playback, and analysis."""
 
-    def __init__(self, config: AetherConfig, gateway: Any, on_affective_data: Callable, event_bus: Optional[Any] = None):
+    def __init__(
+        self,
+        config: AetherConfig,
+        gateway: Any,
+        on_affective_data: Callable,
+        event_bus: Optional[Any] = None,
+    ):
         self._config = config
         self._gateway = gateway
         self._event_bus = event_bus
         self._on_affective_data_callback = on_affective_data
 
-        self._paralinguistics = ParalinguisticAnalyzer(
+        self._paralinguistics = container.get('paralinguisticanalyzer')
             sample_rate=self._config.audio.send_sample_rate
         )
 
-        self._vad = AdaptiveVAD(
+        self._vad = container.get('adaptivevad')
             window_size_sec=getattr(self._config.audio, "vad_window_sec", 5.0),
             sample_rate=self._config.audio.send_sample_rate,
         )
 
-        self._capture = AudioCapture(
+        self._capture = container.get('audiocapture')
             self._config.audio,
             self._gateway.audio_in_queue,
             vad_engine=self._vad,
@@ -42,7 +49,7 @@ class AudioManager:
         )
         self._capture._on_audio_telemetry = self._gateway.broadcast
 
-        self._playback = AudioPlayback(
+        self._playback = container.get('audioplayback')
             self._config.audio,
             self._gateway.audio_out_queue,
             on_audio_tx=self._gateway.broadcast_binary,
@@ -77,8 +84,9 @@ class AudioManager:
 
         # 2. Publish to the Neural Event Bus for Tier 2/3 reaction
         if self._event_bus:
-            from core.infra.event_bus import AcousticTraitEvent
             import time
+
+            from core.infra.event_bus import AcousticTraitEvent
 
             traits = {
                 "valence": features.engagement_score,
@@ -87,11 +95,11 @@ class AudioManager:
             }
 
             for name, val in traits.items():
-                event = AcousticTraitEvent(
+                event = container.get('acoustictraitevent')
                     timestamp=time.time(),
                     source="AudioManager",
-                    latency_budget=100, # Sub-100ms requirement
+                    latency_budget=100,  # Sub-100ms requirement
                     trait_name=name,
-                    trait_value=val
+                    trait_value=val,
                 )
                 asyncio.create_task(self._event_bus.publish(event))

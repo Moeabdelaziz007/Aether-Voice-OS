@@ -1,7 +1,8 @@
-import numpy as np
 import collections
 import logging
-from typing import Optional, Deque
+from typing import Deque
+
+import numpy as np
 
 logger = logging.getLogger("AetherOS.VAD")
 
@@ -11,23 +12,27 @@ logger = logging.getLogger("AetherOS.VAD")
 # based on ambient noise floor tracking.
 # ==========================================
 
+
 class AetherVAD:
     """
     Software-defined Voice Activity Detector.
-    Uses Hysteresis gating to prevent clipping and 
+    Uses Hysteresis gating to prevent clipping and
     dynamic thresholding to adapt to room noise.
     """
+
     def __init__(self, sample_rate: int = 16000, frame_duration_ms: int = 20):
         self.sample_rate = sample_rate
         self.frame_size = int(sample_rate * frame_duration_ms / 1000)
-        
+
         # State Tracking
         self.is_voice_active = False
         self._voice_hysteresis_frames = 0
         self._silence_hysteresis_frames = 0
-        
+
         # Calibration (Rolling RMS statistics)
-        self._rms_history: Deque[float] = collections.deque(maxlen=100) # 2 seconds of history
+        self._rms_history: Deque[float] = collections.deque(
+            maxlen=100
+        )  # 2 seconds of history
         self._noise_floor = 0.01
 
     def process_frame(self, pcm_data: bytes) -> bool:
@@ -36,11 +41,12 @@ class AetherVAD:
         Implements a state machine to reduce 'choppiness'.
         """
         audio_np = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32) / 32768.0
-        if len(audio_np) == 0: return False
-        
+        if len(audio_np) == 0:
+            return False
+
         rms = np.sqrt(np.mean(audio_np**2))
         self._rms_history.append(rms)
-        
+
         # Re-calibrate noise floor every 2 seconds
         # We take the 20th percentile to estimate the base noise floor
         if len(self._rms_history) > 20:
@@ -49,14 +55,14 @@ class AetherVAD:
         # Dynamic Thresholding
         # Voice is usually 2x to 5x higher than the noise floor
         threshold = self._noise_floor * 2.5 + 0.005
-        
+
         frame_has_energy = rms > threshold
 
         # Hysteresis State Machine
         if frame_has_energy:
             self._voice_hysteresis_frames += 1
             self._silence_hysteresis_frames = 0
-            
+
             # Require 2 consecutive energy frames to trigger 'active'
             if self._voice_hysteresis_frames >= 2:
                 if not self.is_voice_active:
@@ -65,7 +71,7 @@ class AetherVAD:
         else:
             self._silence_hysteresis_frames += 1
             self._voice_hysteresis_frames = 0
-            
+
             # Require 15 consecutive silent frames (~300ms) to trigger 'idle'
             # This prevents sentence clipping
             if self._silence_hysteresis_frames >= 15:
@@ -77,5 +83,6 @@ class AetherVAD:
 
     def get_rms(self) -> float:
         """Returns the current frame's energy for telemetry."""
-        if not self._rms_history: return 0.0
+        if not self._rms_history:
+            return 0.0
         return self._rms_history[-1]

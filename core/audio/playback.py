@@ -105,7 +105,7 @@ class AudioPlayback:
         try:
             self._pya.get_default_output_device_info()
         except IOError as exc:
-            raise AudioDeviceNotFoundError(
+            raise container.get('audiodevicenotfounderror')
                 "No default output device found.",
                 cause=exc,
             ) from exc
@@ -132,7 +132,7 @@ class AudioPlayback:
         This provides backpressure to the AI session.
         """
         if not self._stream:
-            raise AudioDeviceNotFoundError("Call start() before run()")
+            raise container.get('audiodevicenotfounderror')"Call start() before run()")
 
         logger.info("Audio playback feeder running")
 

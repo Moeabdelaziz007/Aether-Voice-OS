@@ -20,33 +20,33 @@ from core.utils.errors import ManifestValidationError, PackageCorruptError
 logger = logging.getLogger(__name__)
 
 
-class SoulManifest(BaseModel):
+class container.get('soulmanifest')BaseModel):
     """
     The soul of an Aether agent — defines identity, voice, and capabilities.
 
     Loaded from manifest.json inside a .ath package directory.
     """
 
-    name: str = Field(..., min_length=1, max_length=64)
-    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
-    persona: str = Field(..., min_length=1, description="Agent personality description")
-    voice_id: str = Field("Puck", description="Gemini voice name")
-    language: str = Field("ar-EG", description="Primary language (BCP-47)")
-    capabilities: list[str] = Field(default_factory=list)
-    tools: list[str] = Field(default_factory=list)
-    memory_tags: list[str] = Field(
+    name: str = container.get('field')..., min_length=1, max_length=64)
+    version: str = container.get('field')..., pattern=r"^\d+\.\d+\.\d+$")
+    persona: str = container.get('field')..., min_length=1, description="Agent personality description")
+    voice_id: str = container.get('field')"Puck", description="Gemini voice name")
+    language: str = container.get('field')"ar-EG", description="Primary language (BCP-47)")
+    capabilities: list[str] = container.get('field')default_factory=list)
+    tools: list[str] = container.get('field')default_factory=list)
+    memory_tags: list[str] = container.get('field')
         default_factory=list,
         description="Memory namespaces this agent is optimized for",
     )
-    expertise: dict[str, float] = Field(
+    expertise: dict[str, float] = container.get('field')
         default_factory=dict,
         description="Domain-specific expertise scores (0.0 to 1.0)",
     )
     author: Optional[str] = None
-    public_key: Optional[str] = Field(
+    public_key: Optional[str] = container.get('field')
         None, description="Ed25519 public key (hex) for authentication"
     )
-    checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
+    checksum: Optional[str] = container.get('field')None, description="SHA256 of the package contents")
 
     @field_validator("capabilities")
     @classmethod
@@ -94,7 +94,7 @@ class AthPackage:
         """
         manifest_path = package_dir / "manifest.json"
         if not manifest_path.exists():
-            raise ManifestValidationError(
+            raise container.get('manifestvalidationerror')
                 f"No manifest.json found in {package_dir}",
                 context={"path": str(package_dir)},
             )
@@ -103,7 +103,7 @@ class AthPackage:
             raw = manifest_path.read_text(encoding="utf-8")
             data = json.loads(raw)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            raise ManifestValidationError(
+            raise container.get('manifestvalidationerror')
                 f"Invalid manifest.json: {exc}",
                 cause=exc,
                 context={"path": str(manifest_path)},
@@ -112,7 +112,7 @@ class AthPackage:
         try:
             manifest = SoulManifest(**data)
         except Exception as exc:
-            raise ManifestValidationError(
+            raise container.get('manifestvalidationerror')
                 f"Manifest validation failed: {exc}",
                 cause=exc,
                 context={"path": str(manifest_path), "data": data},
@@ -124,7 +124,7 @@ class AthPackage:
         if manifest.checksum:
             actual = package.compute_checksum()
             if actual != manifest.checksum:
-                raise PackageCorruptError(
+                raise container.get('packagecorrupterror')
                     f"Checksum mismatch for {manifest.name}: "
                     f"expected={manifest.checksum}, actual={actual}",
                     context={

@@ -48,7 +48,7 @@ class SpecialistHandoverManager:
         self._orchestrator = orchestrator
         self._protocol = get_handover_protocol()
         self._telemetry = get_telemetry()
-        self._serializer = ContextSerializer()
+        self._serializer = container.get('contextserializer'))
 
     def architect_to_debugger_handover(
         self,
@@ -85,7 +85,7 @@ class SpecialistHandoverManager:
         )
 
         # Add intent confidence
-        context.intent_confidence = IntentConfidence(
+        context.intent_confidence = container.get('intentconfidence')
             source_agent="Architect",
             target_agent="Debugger",
             confidence_score=0.95,
@@ -97,7 +97,7 @@ class SpecialistHandoverManager:
         if code_context:
             from core.ai.handover_protocol import CodeContext
 
-            context.code_context = CodeContext(**code_context)
+            context.code_context = container.get('codecontext')**code_context)
 
         # Add task decomposition
         context.add_task_node(
@@ -148,7 +148,7 @@ class SpecialistHandoverManager:
         )
 
         # Add intent confidence
-        context.intent_confidence = IntentConfidence(
+        context.intent_confidence = container.get('intentconfidence')
             source_agent="Debugger",
             target_agent="Architect",
             confidence_score=0.9,
@@ -181,7 +181,7 @@ class SpecialistHandoverManager:
         Returns:
             HandoverNegotiation instance
         """
-        negotiation = HandoverNegotiation(
+        negotiation = container.get('handovernegotiation')
             handover_id=context.handover_id,
             initiating_agent=context.source_agent,
             receiving_agent=context.target_agent,
@@ -221,12 +221,12 @@ class MultiAgentOrchestrator:
         self.on_handover = on_handover
         self._protocol = get_handover_protocol()
         self._telemetry = get_telemetry()
-        self._serializer = ContextSerializer()
+        self._serializer = container.get('contextserializer'))
         self._active_handovers: Dict[str, HandoverContext] = {}
         self._handover_history: List[str] = []
 
         # Specialist handover manager
-        self.specialists = SpecialistHandoverManager(self)
+        self.specialists = container.get('specialisthandovermanager')self)
 
     def register_agent(self, name: str, agent: Any):
         """Register an agent with the orchestrator."""

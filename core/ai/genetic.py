@@ -8,12 +8,11 @@ prompts for better user engagement in future sessions.
 
 from __future__ import annotations
 
-import json
 import logging
 import random
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from core.infra.cloud.firebase import FirebaseConnector
 
@@ -25,22 +24,23 @@ class AgentDNA:
     """
     Encodes the behavior and resource allocation for an Expert Soul.
     """
+
     # Behavioral Traits
-    verbosity: float = 0.5           # 0 (concise) to 1 (verbose)
-    empathy: float = 0.5             # 0 (robotic) to 1 (warm)
-    proactivity: float = 0.5         # 0 (reactive) to 1 (proactive tools)
-    
+    verbosity: float = 0.5  # 0 (concise) to 1 (verbose)
+    empathy: float = 0.5  # 0 (robotic) to 1 (warm)
+    proactivity: float = 0.5  # 0 (reactive) to 1 (proactive tools)
+
     # Resource Allocation
-    latency_budget_ms: int = 500      # Target response time
-    audio_fidelity: float = 0.8       # 0.5 to 1.0 (sample rate/codec quality)
-    
+    latency_budget_ms: int = 500  # Target response time
+    audio_fidelity: float = 0.8  # 0.5 to 1.0 (sample rate/codec quality)
+
     # Tool Selection Biases
-    rag_preference: float = 0.7       # Bias towards semantic search
-    vision_preference: float = 0.5    # Bias towards screenshots
-    code_index_preference: float = 0.8 # Bias towards local index
-    
+    rag_preference: float = 0.7  # Bias towards semantic search
+    vision_preference: float = 0.5  # Bias towards screenshots
+    code_index_preference: float = 0.8  # Bias towards local index
+
     # Context Management
-    context_window_size: int = 20     # Number of recent turns to weight
+    context_window_size: int = 20  # Number of recent turns to weight
     long_term_memory_weight: float = 0.3
 
     def to_dict(self) -> Dict[str, Any]:
@@ -49,6 +49,7 @@ class AgentDNA:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> AgentDNA:
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
+
 
 GENETIC_SYSTEM_PROMPT = """
 You are the Aether Evolutionary Engine. Your task is to optimize the
@@ -83,16 +84,15 @@ class GeneticOptimizer:
     Orchestrates the evolution of the Agent's soul.
     """
 
-    def __init__(self, firebase: FirebaseConnector, api_key: str, ema_alpha: float = 0.3):
+    def __init__(
+        self, firebase: FirebaseConnector, api_key: str, ema_alpha: float = 0.3
+    ):
         self._firebase = firebase
         self._api_key = api_key
         self._ema_alpha = ema_alpha  # Exponential Moving Average smoothing factor
 
     async def evolve(
-        self, 
-        expert_id: str,
-        current_dna: AgentDNA,
-        session_id: Optional[str] = None
+        self, expert_id: str, current_dna: AgentDNA, session_id: Optional[str] = None
     ) -> AgentDNA:
         """
         Perform a mutation or crossover step based on the last session's performance.
@@ -117,10 +117,10 @@ class GeneticOptimizer:
         # 2. Heuristic-Based Mutation (First Gen GA)
         # In a full GA, we'd have a population. Here we use 'Stochastic Hill Climbing'
         # which is a simplified (1+1) Evolutionary Strategy.
-        
+
         new_dna_dict = current_dna.to_dict()
-        mutation_rate = 0.1 * (1.1 - fitness) # Higher mutation if fitness is low
-        
+        mutation_rate = 0.1 * (1.1 - fitness)  # Higher mutation if fitness is low
+
         for key, value in new_dna_dict.items():
             if isinstance(value, float):
                 # Apply Gaussian Mutation
@@ -130,7 +130,7 @@ class GeneticOptimizer:
                 # Integer Shift
                 change = random.choice([-1, 0, 1])
                 new_dna_dict[key] = max(1, value + change)
-        
+
         mutated_dna = AgentDNA.from_dict(new_dna_dict)
 
         # 3. Log mutation to Firestore
@@ -141,44 +141,51 @@ class GeneticOptimizer:
                 "session_id": sid,
                 "prev_fitness": fitness,
                 "dna_delta": self._calculate_delta(current_dna, mutated_dna),
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
         )
 
         return mutated_dna
 
     async def mutate_mid_session(
-        self,
-        current_dna: AgentDNA,
-        trait_name: str,
-        trait_value: float
+        self, current_dna: AgentDNA, trait_name: str, trait_value: float
     ) -> AgentDNA:
         """
         Performs high-speed, incremental mutation based on real-time paralinguistic triggers.
         This enables 'Hot-Mutation' for the Affective Soul.
         """
         new_dna_dict = current_dna.to_dict()
-        
+
         # Adaptive Logic:
         # 1. Stress/Arousal -> Decrease Verbosity, increase Empathy
         if trait_name == "arousal" and trait_value > 0.7:
             target_verbosity = max(0.2, new_dna_dict["verbosity"] - 0.2)
             target_empathy = min(1.0, new_dna_dict["empathy"] + 0.2)
             # Apply EMA smoothing: trait = (1-alpha)*current + alpha*target
-            new_dna_dict["verbosity"] = (1.0 - self._ema_alpha) * new_dna_dict["verbosity"] + (self._ema_alpha * target_verbosity)
-            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict["empathy"] + (self._ema_alpha * target_empathy)
-            logger.info("🔥 Hot-Mutation (EMA): High Arousal detected. Context switching to 'Calm Operator'.")
+            new_dna_dict["verbosity"] = (1.0 - self._ema_alpha) * new_dna_dict[
+                "verbosity"
+            ] + (self._ema_alpha * target_verbosity)
+            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict[
+                "empathy"
+            ] + (self._ema_alpha * target_empathy)
+            logger.info(
+                "🔥 Hot-Mutation (EMA): High Arousal detected. Context switching to 'Calm Operator'."
+            )
 
         # 2. Valence (Positive/Negative) -> Adjust Empathy
         if trait_name == "valence" and trait_value < 0.4:
             target_empathy = min(1.0, new_dna_dict["empathy"] + 0.3)
-            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict["empathy"] + (self._ema_alpha * target_empathy)
-            logger.info("🔥 Hot-Mutation (EMA): Negative Valence detected. Boosting Empathy.")
+            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict[
+                "empathy"
+            ] + (self._ema_alpha * target_empathy)
+            logger.info(
+                "🔥 Hot-Mutation (EMA): Negative Valence detected. Boosting Empathy."
+            )
 
         # 3. Energy -> Adjust Proactivity
         if trait_name == "energy" and trait_value > 0.8:
             new_dna_dict["proactivity"] = min(1.0, new_dna_dict["proactivity"] + 0.05)
-            
+
         return AgentDNA.from_dict(new_dna_dict)
 
     def _calculate_delta(self, dna1: AgentDNA, dna2: AgentDNA) -> float:

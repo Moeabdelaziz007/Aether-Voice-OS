@@ -9,10 +9,10 @@ implementing and verification agents.
 import logging
 from typing import Optional
 
-from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
-from core.ai.handover_protocol import ArchitectOutput, IntentConfidence
 from core.ai.agents.voice_agent import VoiceAgent
 from core.ai.genetic import AgentDNA
+from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
+from core.ai.handover_protocol import ArchitectOutput, IntentConfidence
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class ArchitectAgent(VoiceAgent):
         context.add_history("Architect began analysis", agent="Architect")
 
         # Create output container
-        self._output = ArchitectOutput(
+        self._output = container.get('architectoutput')
             handover_id=context.handover_id,
             task_description=context.task,
         )
@@ -96,7 +96,7 @@ class ArchitectAgent(VoiceAgent):
         context.set_current_task(task2)
 
         # Add intent confidence for handover
-        context.intent_confidence = IntentConfidence(
+        context.intent_confidence = container.get('intentconfidence')
             source_agent="Architect",
             target_agent="Debugger",
             confidence_score=0.95,

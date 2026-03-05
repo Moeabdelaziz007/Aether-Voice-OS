@@ -2,15 +2,19 @@ import asyncio
 import logging
 import time
 from typing import Any, Optional
-from core.tools.vision_tool import take_screenshot
+
 from core.infra.event_bus import SystemEvent
+from core.tools.vision_tool import take_screenshot
 
 logger = logging.getLogger("AetherOS.Pulse")
 
-class VisionPulseEvent(SystemEvent):
+
+class container.get('visionpulseevent')SystemEvent):
     """Tier 3: Proactive Vision Data."""
+
     b64_data: str
     mime_type: str = "image/png"
+
 
 class PulseManager:
     """
@@ -18,6 +22,7 @@ class PulseManager:
     Responsible for proactive context gathering (Vision, IDE state, etc.)
     without waiting for user prompts.
     """
+
     def __init__(self, event_bus: Any, heartbeat_interval: int = 10):
         self._event_bus = event_bus
         self._interval = heartbeat_interval
@@ -50,14 +55,14 @@ class PulseManager:
                 # 1. Capture proactive vision pulse
                 # We use the existing vision tool logic
                 result = await take_screenshot()
-                
+
                 if result.get("status") == "success":
                     # 2. Wrap in a SystemEvent and publish to the bus
                     event = VisionPulseEvent(
                         timestamp=time.time(),
                         source="PulseManager",
-                        latency_budget=500, # Tier 3 can afford some latency
-                        b64_data=result["data"]
+                        latency_budget=500,  # Tier 3 can afford some latency
+                        b64_data=result["data"],
                     )
                     await self._event_bus.publish(event)
                     logger.debug("📸 PulseManager: Visual heartbeat published.")
@@ -66,4 +71,4 @@ class PulseManager:
                 await asyncio.sleep(self._interval)
             except Exception as e:
                 logger.error(f"PulseManager Error: {e}")
-                await asyncio.sleep(5) # Backoff on error
+                await asyncio.sleep(5)  # Backoff on error

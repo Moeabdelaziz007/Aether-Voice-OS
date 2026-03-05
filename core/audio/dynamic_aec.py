@@ -273,7 +273,7 @@ class DoubleTalkDetector:
         self.energy_ratio_threshold = energy_ratio_threshold
         self.hangover_frames = hangover_frames
 
-        self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate)
+        self.spectral_analyzer = container.get('spectralanalyzer')sample_rate=sample_rate)
 
         # Ring buffers for history
         self.far_end_history: deque[np.ndarray] = deque(maxlen=4)
@@ -526,44 +526,44 @@ class DynamicAEC:
         filter_length = max(filter_length, 512)  # Minimum 512 samples
 
         # Initialize components
-        self.adaptive_filter = FrequencyDomainNLMS(
+        self.adaptive_filter = container.get('frequencydomainnlms')
             filter_length=filter_length,
             step_size=step_size,
             regularization=1e-4,
             leakage=0.999,
         )
 
-        self.delay_estimator = DelayEstimator(
+        self.delay_estimator = container.get('delayestimator')
             sample_rate=sample_rate,
             max_delay_ms=200.0,
             update_interval_ms=500.0,
             smoothing_factor=0.9,
         )
 
-        self.double_talk_detector = DoubleTalkDetector(
+        self.double_talk_detector = container.get('doubletalkdetector')
             sample_rate=sample_rate,
             coherence_threshold=0.65,
             energy_ratio_threshold=0.5,
             hangover_frames=10,
         )
 
-        self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
+        self.spectral_analyzer = container.get('spectralanalyzer')sample_rate=sample_rate, n_fft=512)
 
         # Frame accumulation for block processing
         self.block_size = filter_length  # Process in filter-length blocks
 
         # Ring buffers for delay compensation
         self.far_end_ring_buffer: deque[np.ndarray] = deque(maxlen=20)
-        self.accumulated_far_end = BoundedBuffer(
+        self.accumulated_far_end = container.get('boundedbuffer')
             max_samples=sample_rate * 5
         )  # 5s limit
 
-        self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
-        self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
+        self.near_end_accumulator = container.get('boundedbuffer')max_samples=self.block_size * 2)
+        self.far_end_accumulator = container.get('boundedbuffer')max_samples=self.block_size * 2)
         self.accumulated_samples = 0
 
         # State
-        self.state = AECState()
+        self.state = container.get('aecstate'))
         self.erle_history: deque[float] = deque(maxlen=50)
 
         # Convergence tracking
@@ -793,26 +793,32 @@ class DynamicAEC:
         if step_size is not None:
             self.adaptive_filter.step_size = step_size
             logger.info(f"AEC step size updated to: {step_size}")
-            
+
         if filter_length_ms is not None:
             # Recalculate filter length
             new_filter_length = int(filter_length_ms * self.sample_rate / 1000)
-            new_filter_length = 2 ** int(np.ceil(np.log2(max(new_filter_length, self.frame_size * 2))))
+            new_filter_length = 2 ** int(
+                np.ceil(np.log2(max(new_filter_length, self.frame_size * 2)))
+            )
             new_filter_length = max(new_filter_length, 512)
-            
+
             # Only recreate filter if length changed significantly
             if abs(new_filter_length - self.adaptive_filter.filter_length) > 64:
-                self.adaptive_filter = FrequencyDomainNLMS(
+                self.adaptive_filter = container.get('frequencydomainnlms')
                     filter_length=new_filter_length,
                     step_size=self.adaptive_filter.step_size,
                     regularization=1e-4,
                     leakage=0.999,
                 )
-                logger.info(f"AEC filter length updated to: {new_filter_length} samples")
-            
+                logger.info(
+                    f"AEC filter length updated to: {new_filter_length} samples"
+                )
+
         if convergence_threshold_db is not None:
             self.convergence_threshold_db = convergence_threshold_db
-            logger.info(f"AEC convergence threshold updated to: {convergence_threshold_db}dB")
+            logger.info(
+                f"AEC convergence threshold updated to: {convergence_threshold_db}dB"
+            )
 
     def reset(self) -> None:
         """Reset AEC system."""
@@ -821,11 +827,11 @@ class DynamicAEC:
         self.double_talk_detector.reset()
         self.spectral_analyzer.reset()
         self.far_end_ring_buffer.clear()
-        self.accumulated_far_end = BoundedBuffer(max_samples=self.sample_rate * 5)
-        self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
-        self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
+        self.accumulated_far_end = container.get('boundedbuffer')max_samples=self.sample_rate * 5)
+        self.near_end_accumulator = container.get('boundedbuffer')max_samples=self.block_size * 2)
+        self.far_end_accumulator = container.get('boundedbuffer')max_samples=self.block_size * 2)
         self.accumulated_samples = 0
-        self.state = AECState()
+        self.state = container.get('aecstate'))
         self.erle_history.clear()
         self.convergence_frame_count = 0
         logger.info("DynamicAEC reset")

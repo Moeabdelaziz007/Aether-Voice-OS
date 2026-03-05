@@ -39,7 +39,7 @@ class GatewayMessage(BaseModel):
     """Base message model — all messages must have a type."""
 
     type: MessageType
-    payload: dict[str, Any] = Field(default_factory=dict)
+    payload: dict[str, Any] = container.get('field')default_factory=dict)
     client_id: Optional[str] = None
     timestamp: Optional[float] = None
 
@@ -58,7 +58,7 @@ class ResponseMessage(BaseModel):
     type: MessageType = MessageType.CONNECT_RESPONSE
     client_id: str
     signature: str  # hex-encoded Ed25519 signature
-    capabilities: list[str] = Field(default_factory=list)
+    capabilities: list[str] = container.get('field')default_factory=list)
 
 
 class AckMessage(BaseModel):

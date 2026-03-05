@@ -1,8 +1,9 @@
-import numpy as np
-import time
 import logging
-from typing import List, Deque, Optional
+import time
 from collections import deque
+from typing import Deque
+
+import numpy as np
 
 logger = logging.getLogger("AetherOS.EchoGuard")
 
@@ -11,21 +12,25 @@ logger = logging.getLogger("AetherOS.EchoGuard")
 # Implementing the "Acoustic Identity" concept.
 # ==========================================
 
+
 class EchoGuard:
     """
     Electronic Echo Gating with Spectral Awareness.
     Distinguishes between 'Self' and 'User' by caching
     MFCC fingerprints of system output.
     """
+
     def __init__(self, window_size_sec: float = 3.0, sample_rate: int = 16000):
         self.sample_rate = sample_rate
         # Sliding window of output fingerprints (Acoustic Identity Cache)
-        self._output_cache: Deque[np.ndarray] = deque(maxlen=int(window_size_sec * 50)) # 50 vectors/sec
-        
+        self._output_cache: Deque[np.ndarray] = deque(
+            maxlen=int(window_size_sec * 50)
+        )  # 50 vectors/sec
+
         # Internal Gates
         self._is_speaking = False
         self._last_output_timestamp = 0.0
-        
+
         # Noise Floor Tracking
         self._ambient_noise_floor = 0.05
         self._rms_history: Deque[float] = deque(maxlen=100)
@@ -38,15 +43,18 @@ class EchoGuard:
         """
         self._is_speaking = True
         self._last_output_timestamp = time.time()
-        
+
         # Compute Fingerprint (Simplified)
         audio_np = np.frombuffer(pcm_data, dtype=np.int16).astype(np.float32) / 32768.0
-        if len(audio_np) == 0: return
-        
+        if len(audio_np) == 0:
+            return
+
         # Simplified MFCC-like vector (Mean of frequency bands)
         spectrum = np.abs(np.fft.rfft(audio_np))
-        fingerprint = np.mean(np.array_split(spectrum, 13), axis=1) # 13 Mel-like coefficients
-        
+        fingerprint = np.mean(
+            np.array_split(spectrum, 13), axis=1
+        )  # 13 Mel-like coefficients
+
         self._output_cache.append(fingerprint)
 
     def is_user_speaking(self, mic_pcm: bytes) -> bool:
@@ -57,11 +65,12 @@ class EchoGuard:
         3. Identity Conflict Check (Self vs User)
         """
         audio_np = np.frombuffer(mic_pcm, dtype=np.int16).astype(np.float32) / 32768.0
-        if len(audio_np) == 0: return False
-        
+        if len(audio_np) == 0:
+            return False
+
         rms = np.sqrt(np.mean(audio_np**2))
         self._rms_history.append(rms)
-        
+
         # Update dynamic noise floor (Median of last 2 seconds)
         if len(self._rms_history) > 10:
             self._ambient_noise_floor = np.median(list(self._rms_history))
@@ -76,14 +85,18 @@ class EchoGuard:
             # This handles delay compensation naturally by scanning the window
             input_spectrum = np.abs(np.fft.rfft(audio_np))
             input_fp = np.mean(np.array_split(input_spectrum, 13), axis=1)
-            
+
             # Simple Cosine Similarity comparison against cache
             for cached_fp in self._output_cache:
                 # Basic similarity check; in production, use a more robust distance metric
-                similarity = np.dot(input_fp, cached_fp) / (np.linalg.norm(input_fp) * np.linalg.norm(cached_fp) + 1e-6)
-                if similarity > 0.85: # High match = Echo detected
-                    if time.time() % 0.5 < 0.1: # Periodic logging to omit spam
-                        logger.debug(f"[EchoGuard] 🚫 Self-Acoustic Match (sim={similarity:.2f}). Gating input.")
+                similarity = np.dot(input_fp, cached_fp) / (
+                    np.linalg.norm(input_fp) * np.linalg.norm(cached_fp) + 1e-6
+                )
+                if similarity > 0.85:  # High match = Echo detected
+                    if time.time() % 0.5 < 0.1:  # Periodic logging to omit spam
+                        logger.debug(
+                            f"[EchoGuard] 🚫 Self-Acoustic Match (sim={similarity:.2f}). Gating input."
+                        )
                     return False
 
             # Lock-out timer: If we just stopped speaking, give it 150ms for room reverb

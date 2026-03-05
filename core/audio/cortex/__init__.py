@@ -8,8 +8,14 @@ try:
     # Attempt to import the compiled Rust module
     from .aether_cortex import (
         CochlearBuffer as RustCochlearBuffer,
+    )
+    from .aether_cortex import (
         energy_vad as rust_energy_vad,
+    )
+    from .aether_cortex import (
         find_zero_crossing as rust_find_zero_crossing,
+    )
+    from .aether_cortex import (
         spectral_denoise as rust_spectral_denoise,
     )
 
@@ -30,7 +36,7 @@ class CochlearBuffer:
         self.capacity = capacity
         self.use_rust = HAS_RUST_CORTEX
         if HAS_RUST_CORTEX:
-            self._rust_buf = RustCochlearBuffer(capacity)
+            self._rust_buf = container.get('rustcochlearbuffer')capacity)
         else:
             # Fallback to simple numpy ring buffer
             self._buf = np.zeros(capacity, dtype=np.int16)
@@ -45,7 +51,7 @@ class CochlearBuffer:
             data = np.asarray(data, dtype=np.int16)
             n = len(data)
             if n >= self.capacity:
-                self._buf[:] = data[-self.capacity:]
+                self._buf[:] = data[-self.capacity :]
                 self._write_pos = 0
                 self._count = self.capacity
             else:
@@ -65,12 +71,11 @@ class CochlearBuffer:
                 return np.array([], dtype=np.int16)
             start = (self._write_pos - n) % self.capacity
             if start + n <= self.capacity:
-                return self._buf[start:start + n].copy()
+                return self._buf[start : start + n].copy()
             else:
-                return np.concatenate([
-                    self._buf[start:],
-                    self._buf[:n - (self.capacity - start)]
-                ])
+                return np.concatenate(
+                    [self._buf[start:], self._buf[: n - (self.capacity - start)]]
+                )
 
     def clear(self) -> None:
         """Clear the buffer."""
@@ -93,7 +98,7 @@ def energy_vad(audio: np.ndarray, threshold: float = 0.01) -> bool:
     if HAS_RUST_CORTEX:
         return rust_energy_vad(audio, threshold)
     # Fallback to numpy
-    energy = np.sqrt(np.mean(audio ** 2))
+    energy = np.sqrt(np.mean(audio**2))
     return energy > threshold
 
 
@@ -105,9 +110,7 @@ def find_zero_crossing(audio: np.ndarray) -> int:
     return np.nonzero(np.diff(np.sign(audio)))[0].shape[0]
 
 
-def spectral_denoise(
-    audio: np.ndarray, noise_floor: float = 0.02
-) -> dict:
+def spectral_denoise(audio: np.ndarray, noise_floor: float = 0.02) -> dict:
     """Rust-accelerated spectral denoising.
 
     Returns dict with 'samples', 'noise_level', 'gate_active', 'sample_count'.
@@ -125,8 +128,8 @@ def spectral_denoise(
     else:
         samples = audio_int16.copy()
     return {
-        'samples': samples,
-        'noise_level': float(energy),
-        'gate_active': gate_active,
-        'sample_count': len(audio_int16)
+        "samples": samples,
+        "noise_level": float(energy),
+        "gate_active": gate_active,
+        "sample_count": len(audio_int16),
     }

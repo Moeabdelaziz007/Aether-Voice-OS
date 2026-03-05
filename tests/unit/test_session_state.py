@@ -1,7 +1,11 @@
-import pytest
 import asyncio
-from datetime import datetime
-from core.infra.transport.session_state import SessionStateManager, SessionState, SessionMetadata
+
+from core.infra.transport.session_state import (
+    SessionMetadata,
+    SessionState,
+    SessionStateManager,
+)
+
 
 def test_create_snapshot_with_metadata():
     manager = SessionStateManager()
@@ -12,7 +16,7 @@ def test_create_snapshot_with_metadata():
         soul_name="TestSoul",
         message_count=5,
         handoff_count=1,
-        error_count=0
+        error_count=0,
     )
 
     async def run_test():
@@ -39,6 +43,7 @@ def test_create_snapshot_with_metadata():
     assert "started_at" in snapshot["metadata"]
     assert "last_activity" in snapshot["metadata"]
 
+
 def test_create_snapshot_without_metadata():
     manager = SessionStateManager()
 
@@ -57,6 +62,7 @@ def test_create_snapshot_without_metadata():
     assert snapshot["metadata"] is None
     assert snapshot["consecutive_errors"] == 0
     assert "timestamp" in snapshot
+
 
 def test_create_snapshot_with_errors():
     manager = SessionStateManager()

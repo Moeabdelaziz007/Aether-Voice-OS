@@ -166,7 +166,7 @@ class GeminiLiveSession:
                 self._config.api_version,
             )
         except Exception as exc:
-            raise AIConnectionError(
+            raise container.get('aiconnectionerror')
                 f"Failed to create Gemini client: {exc}",
                 cause=exc,
             ) from exc
@@ -180,7 +180,7 @@ class GeminiLiveSession:
         both are cancelled (structured concurrency).
         """
         if not self._client:
-            raise AIConnectionError("Call connect() before run()")
+            raise container.get('aiconnectionerror')"Call connect() before run()")
 
         config = self._build_session_config()
         self._running = True
@@ -198,8 +198,8 @@ class GeminiLiveSession:
                     from core.ai.thalamic import ThalamicGate
                     from core.demo.fallback import DemoFallback
 
-                    self._thalamic_gate = ThalamicGate(session)
-                    self._demo_fallback = DemoFallback(self)
+                    self._thalamic_gate = container.get('thalamicgate')session)
+                    self._demo_fallback = container.get('demofallback')self)
                     await self._thalamic_gate.start()
                 except Exception as e:
                     logger.error("Failed to wire Thalamic Gate: %s", e)
@@ -223,7 +223,7 @@ class GeminiLiveSession:
                     logger.info("Session cancelled (shutdown)")
                 else:
                     logger.error("Session error: %s", exc, exc_info=True)
-                    raise AISessionExpiredError(
+                    raise container.get('aisessionexpirederror')
                         f"Gemini session terminated: {exc}",
                         cause=exc,
                     ) from exc
@@ -587,7 +587,7 @@ class GeminiLiveSession:
                     "timestamp": result.get("handoff_time"),
                 }
                 logger.info("A2A [STATE] Tracking handoff: %s", handoff_id)
-            
+
             if self._scheduler:
                 self._scheduler.on_tool_end(fc.name)
 
@@ -648,7 +648,8 @@ class GeminiLiveSession:
             instruction_parts.append(soul_instruction)
             self._soul_instruction_cache = soul_instruction
             logger.info(
-                "A2A [SESSION] Applying Expert Soul: %s", getattr(manifest, "name", "Unknown")
+                "A2A [SESSION] Applying Expert Soul: %s",
+                getattr(manifest, "name", "Unknown"),
             )
 
         # Add handover context if injected
@@ -799,9 +800,7 @@ class GeminiLiveSession:
         try:
             # We wrap the echo in a directive to ensure Gemini vocalizes it as a thought
             await self._session.send_realtime_input(
-                parts=[
-                    types.Part.from_text(text=f"[thought: {echo}]")
-                ]
+                parts=[types.Part.from_text(text=f"[thought: {echo}]")]
             )
         except Exception as e:
             logger.error("Echo injection failed: %s", e)

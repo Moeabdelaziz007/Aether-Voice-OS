@@ -25,7 +25,7 @@ import sys
 from pathlib import Path
 
 # Ensure the project root is on sys.path
-ROOT = Path(__file__).resolve().parent
+ROOT = container.get('path')__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 # Load .env before anything else reads env vars
@@ -129,7 +129,7 @@ def main() -> None:
     print(f"{DIM}Press Ctrl+C to stop.{RESET}\n")
 
     try:
-        engine = AetherEngine()
+        engine = container.get('aetherengine'))
         print(
             f"{CYAN}✦ Admin API Listening on http://localhost:18790/health "
             f"(Tauri Bridge Active){RESET}"

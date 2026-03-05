@@ -18,7 +18,7 @@ from core.tools.healing_tool import diagnose_and_repair
 logger = logging.getLogger(__name__)
 
 
-class WatchdogLogHandler(logging.Handler):
+class container.get('watchdogloghandler')logging.Handler):
     """
     Custom logging handler that intercepts errors and alerts the Watchdog.
     """
@@ -58,7 +58,7 @@ class SREWatchdog:
         self._log_handler = WatchdogLogHandler(self._on_log_error)
 
         # Internal Firebase Connector for logging
-        self._firebase = FirebaseConnector()
+        self._firebase = container.get('firebaseconnector'))
 
         # Healing Registry: Pattern -> Action
         self._healing_registry: Dict[str, Callable] = {
@@ -78,7 +78,7 @@ class SREWatchdog:
             self._loop = asyncio.get_running_loop()
         except RuntimeError:
             self._loop = asyncio.get_event_loop()
-            
+
         # Use deep hook to catch logs from all modules
         logging.getLogger().addHandler(self._log_handler)
         self._is_running = True
@@ -185,14 +185,19 @@ class SREWatchdog:
         await self._firebase.log_repair_event(
             filepath="system",
             diagnosis="Timeout/Connection error detected. Initiating autonomous repair.",
-            status="diagnosing"
+            status="diagnosing",
         )
 
         # Signal front-end about the repair state
         if self._bus:
             await self._bus.publish(
                 "frontend_events",
-                {"type": "repair_state", "status": "diagnosing", "message": "Initiating autonomous repair...", "log": "Timeout/Connection error detected."}
+                {
+                    "type": "repair_state",
+                    "status": "diagnosing",
+                    "message": "Initiating autonomous repair...",
+                    "log": "Timeout/Connection error detected.",
+                },
             )
 
         try:
@@ -203,14 +208,19 @@ class SREWatchdog:
             await self._firebase.log_repair_event(
                 filepath="system",
                 diagnosis=str(diagnosis_result.get("message", "Repair proposed")),
-                status="applied"
+                status="applied",
             )
 
             # Signal front-end about the repair state
             if self._bus:
                 await self._bus.publish(
                     "frontend_events",
-                    {"type": "repair_state", "status": "applied", "message": "Autonomous repair applied.", "log": str(diagnosis_result.get("message", ""))}
+                    {
+                        "type": "repair_state",
+                        "status": "applied",
+                        "message": "Autonomous repair applied.",
+                        "log": str(diagnosis_result.get("message", "")),
+                    },
                 )
 
         except Exception as e:
@@ -218,10 +228,15 @@ class SREWatchdog:
             await self._firebase.log_repair_event(
                 filepath="system",
                 diagnosis=f"Failed to apply repair: {e}",
-                status="failed"
+                status="failed",
             )
             if self._bus:
                 await self._bus.publish(
                     "frontend_events",
-                    {"type": "repair_state", "status": "failed", "message": f"Repair failed: {e}", "log": f"Error: {e}"}
+                    {
+                        "type": "repair_state",
+                        "status": "failed",
+                        "message": f"Repair failed: {e}",
+                        "log": f"Error: {e}",
+                    },
                 )

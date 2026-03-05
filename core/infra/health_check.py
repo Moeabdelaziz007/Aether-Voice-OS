@@ -36,7 +36,7 @@ class ComponentHealth:
 class HealthChecker:
     """
     Periodic health monitoring for system components.
-    
+
     Monitors:
     - Gemini API connectivity
     - Audio pipeline latency
@@ -53,7 +53,7 @@ class HealthChecker:
         self._interval = check_interval
         self._threshold = failure_threshold
         self._on_unhealthy = on_unhealthy
-        
+
         self._components: dict[str, ComponentHealth] = {}
         self._running = False
         self._task: Optional[asyncio.Task] = None
@@ -64,7 +64,7 @@ class HealthChecker:
         check_fn: Callable[[], Coroutine[None, None, tuple[bool, float, str]]],
     ) -> None:
         """Register a component for health monitoring."""
-        self._components[name] = ComponentHealth(
+        self._components[name] = container.get('componenthealth')
             name=name,
             status=HealthStatus.UNKNOWN,
             last_check=0.0,
@@ -98,7 +98,7 @@ class HealthChecker:
                     is_healthy, latency, msg = await component.check_fn()
                     component.last_check = time.time()
                     component.latency_ms = latency
-                    
+
                     if is_healthy:
                         component.status = HealthStatus.HEALTHY
                         component.consecutive_failures = 0
@@ -106,7 +106,7 @@ class HealthChecker:
                     else:
                         component.consecutive_failures += 1
                         component.error_message = msg
-                        
+
                         if component.consecutive_failures >= self._threshold:
                             component.status = HealthStatus.UNHEALTHY
                             logger.error(
@@ -117,15 +117,13 @@ class HealthChecker:
                                 self._on_unhealthy(name)
                         else:
                             component.status = HealthStatus.DEGRADED
-                            logger.warning(
-                                f"⚠️ {name} degraded: {msg}"
-                            )
-                            
+                            logger.warning(f"⚠️ {name} degraded: {msg}")
+
                 except Exception as e:
                     component.status = HealthStatus.UNKNOWN
                     component.error_message = str(e)
                     logger.error(f"❌ Health check error for {name}: {e}")
-            
+
             await asyncio.sleep(self._interval)
 
     def get_health(self, name: str) -> Optional[ComponentHealth]:
@@ -138,22 +136,20 @@ class HealthChecker:
 
     def is_healthy(self) -> bool:
         """Check if all components are healthy."""
-        return all(
-            c.status == HealthStatus.HEALTHY
-            for c in self._components.values()
-        )
+        return all(c.status == HealthStatus.HEALTHY for c in self._components.values())
 
 
 # Pre-built health check functions
 async def check_gemini_api() -> tuple[bool, float, str]:
     """Check Gemini API connectivity."""
     import os
+
     import httpx
-    
+
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key:
         return False, 0.0, "API key not configured"
-    
+
     start = time.perf_counter()
     try:
         async with httpx.AsyncClient(timeout=10.0) as client:
@@ -162,7 +158,7 @@ async def check_gemini_api() -> tuple[bool, float, str]:
                 headers={"x-goog-api-key": api_key},
             )
         latency = (time.perf_counter() - start) * 1000
-        
+
         if response.status_code == 200:
             return True, latency, "OK"
         return False, latency, f"HTTP {response.status_code}"
@@ -176,9 +172,9 @@ async def check_audio_pipeline(
 ) -> tuple[bool, float, str]:
     """Check audio pipeline health via telemetry."""
     from core.audio.state import audio_state
-    
+
     latency = getattr(audio_state, "last_latency_ms", 0.0)
-    
+
     if latency > latency_threshold_ms:
         return False, latency, f"High latency: {latency:.1f}ms"
     return True, latency, "OK"
@@ -187,10 +183,10 @@ async def check_audio_pipeline(
 async def check_aec_convergence() -> tuple[bool, float, str]:
     """Check AEC convergence status."""
     from core.audio.state import audio_state
-    
+
     converged = getattr(audio_state, "aec_converged", False)
     erle = getattr(audio_state, "aec_erle_db", 0.0)
-    
+
     if converged:
         return True, 0.0, f"Converged (ERLE: {erle:.1f}dB)"
     return True, 0.0, "Not yet converged"

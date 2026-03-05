@@ -40,7 +40,7 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
 
         config = load_config()
         api_key = config.get("google_api_key")
-        _shared_index = FirestoreVectorStore(api_key=api_key)
+        _shared_index = container.get('firestorevectorstore')api_key=api_key)
         await _shared_index.initialize()
 
     try:
