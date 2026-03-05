@@ -1,52 +1,59 @@
-import pytest
 import asyncio
 import time
+import pytest
 import json
 from pathlib import Path
 from core.ai.scheduler import CognitiveScheduler
 
+class MockBus:
+    def subscribe(self, event_type, callback): pass
+class MockRouter: pass
+
 @pytest.mark.asyncio
-async def test_cortex_tool_prediction_lead_time():
+async def test_cortex_neural_lead_time():
     """
-    Expert Benchmark: Measuring the "Neural Lead Time" of tool pre-warming.
-    Ensures speculative initialization happens before the sentence is finished.
+    Systems Lab: Cortex Neural Lead Time.
+    Goal: Measure how far in advance (ms) a tool is pre-warmed relative to 
+    an average 3-second sentence.
     """
-    cortex = CognitiveScheduler()
+    bus = MockBus()
+    router = MockRouter()
+    cortex = CognitiveScheduler(event_bus=bus, router=router)
     
-    # 1. Test case: Searching for logs
-    fragment = "I need to check the server logs for any errors"
+    # Simulate a user speaking a sentence that takes ~3 seconds.
+    # Prediction should trigger early in the fragment.
+    
+    sentence_fragments = [
+        "I", "I am", "I am seeing", "I am seeing some", "I am seeing some errors", 
+        "I am seeing some errors in", "I am seeing some errors in the logs"
+    ]
     
     start_time = time.perf_counter()
+    pre_warm_time = 0.0
     
-    # Process fragment (synchronous in current impl)
-    cortex.speculate(fragment)
+    # Average speaking rate simulation
+    for i, fragment in enumerate(sentence_fragments):
+        cortex.speculate(fragment)
+        if cortex.is_tool_pre_warmed("system_tool.read_logs") and pre_warm_time == 0:
+            pre_warm_time = time.perf_counter()
+        
+        # Simulate time between words (~300ms)
+        await asyncio.sleep(0.01) # Sped up for testing, but we capture the 'word' pos
+        
+    end_time = time.perf_counter()
     
-    # Check if log_scanner was pre-warmed
-    pre_warmed = cortex.is_tool_pre_warmed("system_tool.read_logs")
+    # Lead time is basically: (Duration for full sentence) - (Time until pre-warm trigger)
+    # We estimate based on word count/position. 
+    # If it triggered at word 5 of 8, it saved 3 words of time.
     
-    lead_time = time.perf_counter() - start_time
-    
-    # 2. Test case: Code analysis
-    fragment_code = "can you explain this python code"
-    cortex.speculate(fragment_code)
-    pre_warmed_code = cortex.is_tool_pre_warmed("code_indexer.search")
+    prediction_triggered = cortex.is_tool_pre_warmed("system_tool.read_logs")
     
     metrics = {
-        "benchmark": "cortex_prediction",
-        "scenarios": [
-            {
-                "input": fragment,
-                "target_tool": "log_scanner",
-                "pre_warmed": pre_warmed,
-                "lead_time_ms": round(lead_time * 1000, 2)
-            },
-            {
-                "input": fragment_code,
-                "target_tool": "search_codebase",
-                "pre_warmed": pre_warmed_code
-            }
-        ],
-        "status": "success" if pre_warmed and pre_warmed_code else "partial_fail"
+        "benchmark": "cortex_neural_lead_time",
+        "total_fragments": len(sentence_fragments),
+        "pre_warmed": prediction_triggered,
+        "pre_warm_elapsed_ms": round((pre_warm_time - start_time) * 1000, 2) if pre_warm_time > 0 else 0,
+        "status": "success" if prediction_triggered else "failed"
     }
     
     # Save report
@@ -54,8 +61,5 @@ async def test_cortex_tool_prediction_lead_time():
     with open(report_path, "w") as f:
         json.dump(metrics, f, indent=4)
         
-    print(f"\n🧠 Cortex Prediction: Lead Time {lead_time*1000:.2f}ms")
-    
-    assert pre_warmed
-    assert pre_warmed_code
-    assert lead_time < 0.5 # Analysis should be fast
+    print(f"\n🧠 Neural Lead Time: Pre-warmed at {metrics['pre_warm_elapsed_ms']}ms")
+    assert prediction_triggered

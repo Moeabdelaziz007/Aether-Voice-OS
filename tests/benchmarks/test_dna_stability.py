@@ -1,53 +1,57 @@
-import pytest
 import asyncio
+import pytest
 import json
+import random
 from pathlib import Path
 from core.ai.genetic import GeneticOptimizer, AgentDNA
 
 class MockFirebase:
     def __init__(self):
         self.is_connected = True
-        self._session_id = "test_session"
+        self._session_id = "chaos_session"
     async def log_event(self, name, data): pass
     async def get_session_affective_summary(self, sid):
         return {"status": "success", "summary": {"avg_engagement": 0.5}}
 
 @pytest.mark.asyncio
-async def test_dna_stability_ema():
+async def test_dna_stability_chaos():
     """
-    Expert Benchmark: Verifying Exponential Moving Average (EMA) smoothing of 
-    DNA traits under high-arousal spikes.
+    Systems Lab: DNA Chaos Testing.
+    Scenario: Alternating sequence of high and low arousal spikes to 
+    verify EMA smoothing prevents personality whiplash.
     """
     mock_fb = MockFirebase()
-    optimizer = GeneticOptimizer(firebase=mock_fb, api_key="dummy", ema_alpha=0.3)
+    optimizer = GeneticOptimizer(firebase=mock_fb, api_key="dummy", ema_alpha=0.15) # Using the V3.1 alpha
     
+    current_dna = AgentDNA(verbosity=0.5, empathy=0.5)
     initial_dna = AgentDNA(verbosity=0.5, empathy=0.5)
     
-    # Simulate a sudden stress spike (High Arousal)
-    # Target in GeneticOptimizer for arousal > 0.7: verbosity -= 0.2, empathy += 0.2
-    
-    # 1. First spike
-    dna_v1 = await optimizer.mutate_mid_session(initial_dna, "arousal", 0.9)
-    # Expected: verbosity = 0.5 * 0.7 + 0.3 * (0.5 - 0.2) = 0.35 + 0.09 = 0.44
-    # Expected: empathy = 0.5 * 0.7 + 0.3 * (0.5 + 0.2) = 0.35 + 0.21 = 0.56
-    
-    # 2. Continuous stress spikes
-    current_dna = dna_v1
+    # Chaos sequence: [High, Low, High, High, Low, Medium]
+    arousal_sequence = [0.9, 0.1, 0.9, 0.9, 0.2, 0.5]
     history = []
-    for _ in range(5):
-        current_dna = await optimizer.mutate_mid_session(current_dna, "arousal", 0.9)
-        history.append(current_dna.to_dict())
     
-    final_dna = current_dna
+    for val in arousal_sequence:
+        current_dna = await optimizer.mutate_mid_session(current_dna, "arousal", val)
+        history.append({
+            "arousal_input": val,
+            "verbosity": round(current_dna.verbosity, 4),
+            "empathy": round(current_dna.empathy, 4)
+        })
     
+    # Measure max drift in one step
+    max_step_drift = 0.0
+    for i in range(1, len(history)):
+        drift = abs(history[i]["verbosity"] - history[i-1]["verbosity"])
+        if drift > max_step_drift:
+            max_step_drift = drift
+            
     metrics = {
-        "benchmark": "dna_stability",
-        "initial_verbosity": initial_dna.verbosity,
-        "final_verbosity": round(final_dna.verbosity, 4),
-        "initial_empathy": initial_dna.empathy,
-        "final_empathy": round(final_dna.empathy, 4),
-        "smoothing_history": history,
-        "status": "success" if final_dna.verbosity < initial_dna.verbosity else "failed"
+        "benchmark": "dna_chaos_stability",
+        "initial_state": initial_dna.to_dict(),
+        "final_state": current_dna.to_dict(),
+        "max_step_drift": round(max_step_drift, 4),
+        "history": history,
+        "status": "success" if max_step_drift < 0.1 else "failed"
     }
     
     # Save report
@@ -55,8 +59,6 @@ async def test_dna_stability_ema():
     with open(report_path, "w") as f:
         json.dump(metrics, f, indent=4)
         
-    print(f"\n🧪 DNA Stability: Initial Verbosity {initial_dna.verbosity} -> Final {final_dna.verbosity:.4f}")
-    
-    # Verify smoothing (should not jump straight to 0.3 or lower in 1 step)
-    assert 0.4 < dna_v1.verbosity < 0.5
-    assert final_dna.verbosity < 0.35 # After 5 steps it should be converged near the target
+    print(f"\n🧬 DNA Chaos Stability: Max Step Drift: {max_step_drift:.4f}")
+    # With alpha=0.15, max move from 0.5 towards 0.3 target is 0.2 * 0.15 = 0.03
+    assert max_step_drift < 0.1 

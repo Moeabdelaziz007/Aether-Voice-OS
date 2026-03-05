@@ -1,45 +1,78 @@
+import asyncio
 import time
 import pytest
 import json
 from pathlib import Path
-from unittest.mock import MagicMock
+from core.infra.event_bus import EventBus, ControlEvent
 
-# Mocking parts of the kernel if needed, but trying to stick to logic
-def test_barge_in_logic_latency():
+@pytest.mark.asyncio
+async def test_interrupt_latency_t3_t1():
     """
-    Expert Benchmark: Measuring simulated barge-in latency.
-    How fast does the kernel signal an interrupt when user speech is detected?
+    Systems Lab: Measuring actual end-to-end barge-in latency (T3 - T1).
+    T1: User Speech Start Detected.
+    T2: flash_interrupt() Signal Sent.
+    T3: AI Playback Stopped (Drain Queue).
+    Target: < 50ms.
     """
-    # In a real scenario, this would involve VAD triggers.
-    # We measure the cycle time for the interrupt flag to flip.
+    # 1. Setup
+    bus = EventBus()
+    await bus.start()
     
-    interrupt_flag = False
+    t1 = 0.0
+    t2 = 0.0
+    t3 = 0.0
     
-    def on_interrupt():
-        nonlocal interrupt_flag
-        interrupt_flag = True
+    # Mock behavior: User Speech Detected (T1)
+    # In a real system, VAD triggers this.
+    
+    async def flash_interrupt():
+        nonlocal t2
+        t2 = time.perf_counter()
+        # Simulate signaling the kernel to stop
+        await bus.publish(ControlEvent(
+            timestamp=time.time(),
+            source="test_lab",
+            latency_budget=10,
+            command="INTERRUPT_TRIGGER",
+            payload={}
+        ))
 
-    # Simulation
-    start_time = time.perf_counter()
+    async def on_kernel_stop(event):
+        nonlocal t3
+        t3 = time.perf_counter()
+
+    bus.subscribe(ControlEvent, on_kernel_stop)
     
-    # 1. User starts speaking (Simulated trigger)
-    # 2. Logic to detect interruption
-    on_interrupt()
+    # 2. Execution
+    t1 = time.perf_counter()
+    # Simulate VAD to Interrupt signal path
+    await flash_interrupt()
     
-    end_time = time.perf_counter()
-    latency_ms = (end_time - start_time) * 1000
+    # Wait for processing
+    wait_start = time.perf_counter()
+    while t3 == 0 and (time.perf_counter() - wait_start) < 1.0:
+        await asyncio.sleep(0.001)
+        
+    await bus.stop()
+    
+    # 3. Calculation
+    latency_ms = (t3 - t1) * 1000
+    signal_latency_ms = (t2 - t1) * 1000
+    kernel_response_ms = (t3 - t2) * 1000
     
     metrics = {
-        "benchmark": "barge_in_latency",
-        "measured_latency_ms": round(latency_ms, 4),
-        "target_ms": 50,
+        "benchmark": "interrupt_latency",
+        "t3_t1_total_ms": round(latency_ms, 2),
+        "t2_t1_signal_ms": round(signal_latency_ms, 2),
+        "t3_t2_kernel_ms": round(kernel_response_ms, 2),
         "status": "success" if latency_ms < 50 else "failed"
     }
     
     # Save report
     report_path = Path("tests/reports/latency_report.json")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
     with open(report_path, "w") as f:
         json.dump(metrics, f, indent=4)
         
-    print(f"\n⚡ Barge-In Latency: {latency_ms:.4f}ms")
+    print(f"\n⚡ Interrupt Latency (T3-T1): {latency_ms:.2f}ms")
     assert latency_ms < 50

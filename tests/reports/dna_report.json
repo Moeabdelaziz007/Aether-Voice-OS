@@ -1,0 +1,61 @@
+{
+    "benchmark": "dna_chaos_stability",
+    "initial_state": {
+        "verbosity": 0.5,
+        "empathy": 0.5,
+        "proactivity": 0.5,
+        "latency_budget_ms": 500,
+        "audio_fidelity": 0.8,
+        "rag_preference": 0.7,
+        "vision_preference": 0.5,
+        "code_index_preference": 0.8,
+        "context_window_size": 20,
+        "long_term_memory_weight": 0.3
+    },
+    "final_state": {
+        "verbosity": 0.4099999999999999,
+        "empathy": 0.5900000000000001,
+        "proactivity": 0.5,
+        "latency_budget_ms": 500,
+        "audio_fidelity": 0.8,
+        "rag_preference": 0.7,
+        "vision_preference": 0.5,
+        "code_index_preference": 0.8,
+        "context_window_size": 20,
+        "long_term_memory_weight": 0.3
+    },
+    "max_step_drift": 0.03,
+    "history": [
+        {
+            "arousal_input": 0.9,
+            "verbosity": 0.47,
+            "empathy": 0.53
+        },
+        {
+            "arousal_input": 0.1,
+            "verbosity": 0.47,
+            "empathy": 0.53
+        },
+        {
+            "arousal_input": 0.9,
+            "verbosity": 0.44,
+            "empathy": 0.56
+        },
+        {
+            "arousal_input": 0.9,
+            "verbosity": 0.41,
+            "empathy": 0.59
+        },
+        {
+            "arousal_input": 0.2,
+            "verbosity": 0.41,
+            "empathy": 0.59
+        },
+        {
+            "arousal_input": 0.5,
+            "verbosity": 0.41,
+            "empathy": 0.59
+        }
+    ],
+    "status": "success"
+}
