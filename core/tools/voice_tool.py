@@ -128,8 +128,8 @@ class VoiceTool:
         self._audio_out = asyncio.Queue()
 
         # Components
-        self._capture = AudioCaptureself._config.audio, self._audio_in)
-        self._playback = AudioPlaybackself._config.audio, self._audio_out)
+        self._capture = AudioCapture(self._config.audio, self._audio_in)
+        self._playback = AudioPlayback(self._config.audio, self._audio_out)
 
         # In standalone mode, we use a mock gateway for broadcasting
         # To avoid strictly requiring a full AetherGateway instance
