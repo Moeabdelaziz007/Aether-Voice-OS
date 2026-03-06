@@ -87,3 +87,75 @@ def test_create_snapshot_with_errors():
     assert snapshot["consecutive_errors"] == 1
     assert snapshot["metadata"]["error_count"] == 1
     assert "timestamp" in snapshot
+
+
+from unittest.mock import AsyncMock  # noqa: E402
+
+
+def test_health_check_shutdown_ignored():
+    manager = SessionStateManager()
+    manager._state = SessionState.SHUTDOWN
+
+    async def run_test():
+        manager.transition_to = AsyncMock()
+        await manager._perform_health_check()
+        manager.transition_to.assert_not_called()
+
+    asyncio.run(run_test())
+
+
+def test_health_check_error_triggers_recovery():
+    manager = SessionStateManager()
+    manager._state = SessionState.ERROR
+    manager._consecutive_errors = manager._max_consecutive_errors - 1
+
+    async def run_test():
+        manager.transition_to = AsyncMock()
+        await manager._perform_health_check()
+        manager.transition_to.assert_called_once_with(
+            SessionState.RECOVERING, "Auto-recovery triggered"
+        )
+
+    asyncio.run(run_test())
+
+
+def test_health_check_error_triggers_shutdown():
+    manager = SessionStateManager()
+    manager._state = SessionState.ERROR
+    manager._consecutive_errors = manager._max_consecutive_errors
+
+    async def run_test():
+        manager.transition_to = AsyncMock()
+        await manager._perform_health_check()
+        manager.transition_to.assert_called_once_with(
+            SessionState.SHUTDOWN, "Max errors reached"
+        )
+
+    asyncio.run(run_test())
+
+
+def test_health_check_error_triggers_shutdown_greater_than_max():
+    manager = SessionStateManager()
+    manager._state = SessionState.ERROR
+    manager._consecutive_errors = manager._max_consecutive_errors + 1
+
+    async def run_test():
+        manager.transition_to = AsyncMock()
+        await manager._perform_health_check()
+        manager.transition_to.assert_called_once_with(
+            SessionState.SHUTDOWN, "Max errors reached"
+        )
+
+    asyncio.run(run_test())
+
+
+def test_health_check_does_nothing_if_not_error_or_shutdown():
+    manager = SessionStateManager()
+    manager._state = SessionState.CONNECTED
+
+    async def run_test():
+        manager.transition_to = AsyncMock()
+        await manager._perform_health_check()
+        manager.transition_to.assert_not_called()
+
+    asyncio.run(run_test())
