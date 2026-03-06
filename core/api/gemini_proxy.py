@@ -9,26 +9,43 @@ from __future__ import annotations
 import os
 from typing import Any
 
-import httpx
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket
 
-router = APIRouterprefix="/api/gemini", tags=["gemini"])
+router = APIRouter(prefix="/api/gemini", tags=["gemini"])
 
-GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws"
 GEMINI_HTTP_URL = "https://generativelanguage.googleapis.com"
+
+
+def _http_error(status_code: int, code: str, message: str) -> HTTPException:
+    """Create a consistent HTTPException payload."""
+    return HTTPException(
+        status_code=status_code,
+        detail={
+            "error": {
+                "code": code,
+                "message": message,
+            }
+        },
+    )
 
 
 def get_api_key() -> str:
     """Get Gemini API key from environment."""
     key = os.getenv("GOOGLE_API_KEY")
     if not key:
-        raise HTTPExceptionstatus_code=500, detail="API key not configured")
+        raise _http_error(
+            status_code=500,
+            code="GEMINI_API_KEY_MISSING",
+            message="GOOGLE_API_KEY is not configured on the server.",
+        )
     return key
 
 
 @router.post("/generate")
 async def proxy_generate(request: Request) -> dict[str, Any]:
     """Proxy HTTP requests to Gemini API."""
+    import httpx
+
     api_key = get_api_key()
     data = await request.json()
 
@@ -47,65 +64,43 @@ async def proxy_generate(request: Request) -> dict[str, Any]:
             )
             response.raise_for_status()
             return response.json()
-        except httpx.HTTPStatusError as e:
-            raise HTTPException
-                status_code=e.response.status_code,
-                detail=f"Gemini API error: {e.response.text}",
-            )
-        except httpx.RequestError as e:
-            raise HTTPExceptionstatus_code=502, detail=f"Request failed: {str(e)}")
+        except httpx.HTTPStatusError as exc:
+            raise _http_error(
+                status_code=exc.response.status_code,
+                code="GEMINI_HTTP_ERROR",
+                message="Gemini API returned a non-success response.",
+            ) from exc
+        except httpx.RequestError as exc:
+            raise _http_error(
+                status_code=502,
+                code="GEMINI_UPSTREAM_UNREACHABLE",
+                message=f"Could not reach Gemini API: {exc}",
+            ) from exc
 
 
 @router.websocket("/live")
-async def proxy_live_websocket(websocket: WebSocket):
-    """Proxy WebSocket connections to Gemini Live API."""
+async def proxy_live_websocket(websocket: WebSocket) -> None:
+    """Temporarily disabled websocket proxy for Gemini Live API."""
     await websocket.accept()
-    api_key = get_api_key()
-    model = websocket.query_params.get(
-        "model", "gemini-2.5-flash-preview-native-audio-dialog"
+    await websocket.send_json(
+        {
+            "error": {
+                "code": "LIVE_PROXY_DISABLED",
+                "message": (
+                    "The Gemini Live WebSocket proxy is temporarily disabled "
+                    "until a full bidirectional bridge is implemented."
+                ),
+            }
+        }
     )
-
-    ws_url = f"{GEMINI_WS_URL}/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key={api_key}"
-
-    async with httpx.AsyncClient() as client:
-        gemini_ws = None
-        try:
-            async with client.stream("GET", ws_url) as response:
-                if response.status_code != 200:
-                    await websocket.close(code=1011, reason="Gemini connection failed")
-                    return
-
-                async def forward_to_gemini():
-                    """Forward messages from client to Gemini."""
-                    try:
-                        while True:
-                            data = await websocket.receive_text()
-                            await gemini_ws.send_text(data)
-                    except WebSocketDisconnect:
-                        pass
-                    except Exception as e:
-                        print(f"Forward error: {e}")
-
-                async def forward_to_client():
-                    """Forward messages from Gemini to client."""
-                    try:
-                        while True:
-                            data = await gemini_ws.receive_text()
-                            await websocket.send_text(data)
-                    except Exception as e:
-                        print(f"Receive error: {e}")
-
-                await asyncio.gather(
-                    forward_to_gemini(),
-                    forward_to_client(),
-                )
-        except Exception as e:
-            await websocket.close(code=1011, reason=str(e))
+    await websocket.close(code=1013, reason="Gemini live proxy disabled")
 
 
 @router.get("/health")
 async def health_check() -> dict[str, str]:
-    """Health check endpoint."""
+    """Health check endpoint for Gemini connectivity."""
+    import httpx
+
     api_key = get_api_key()
 
     async with httpx.AsyncClient(timeout=10.0) as client:
@@ -114,11 +109,17 @@ async def health_check() -> dict[str, str]:
                 f"{GEMINI_HTTP_URL}/v1beta/models",
                 headers={"x-goog-api-key": api_key},
             )
-            if response.status_code == 200:
-                return {"status": "healthy", "gemini": "connected"}
-            return {"status": "degraded", "gemini": f"error_{response.status_code}"}
-        except Exception as e:
-            return {"status": "unhealthy", "error": str(e)}
-
-
-import asyncio  # noqa: E402
+            response.raise_for_status()
+            return {"status": "healthy", "gemini": "connected"}
+        except httpx.HTTPStatusError as exc:
+            raise _http_error(
+                status_code=exc.response.status_code,
+                code="GEMINI_HEALTHCHECK_HTTP_ERROR",
+                message="Gemini health check received a non-success response.",
+            ) from exc
+        except httpx.RequestError as exc:
+            raise _http_error(
+                status_code=502,
+                code="GEMINI_HEALTHCHECK_UNREACHABLE",
+                message=f"Gemini health check failed: {exc}",
+            ) from exc
