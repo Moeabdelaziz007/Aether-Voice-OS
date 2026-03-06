@@ -59,15 +59,27 @@ class Queries:
             def _fetch_and_parse():
                 # For small limits, get() is more efficient than stream()
                 docs = query.get()
-                return [
-                    Sessionmetadata**{**doc.to_dict(), "session_id": doc.id})
-                    for doc in docs
-                ]
+                parsed_sessions = []
+
+                for doc in docs:
+                    doc_data = doc.to_dict() or {}
+                    session_payload = {
+                        **doc_data,
+                        "session_id": doc.id,
+                        "user_id": doc_data.get("user_id") or user_id,
+                        "emotion_events": doc_data.get("emotion_events") or [],
+                        "code_insights": doc_data.get("code_insights") or [],
+                    }
+
+                    parsed_sessions.append(SessionMetadata(**session_payload))
+
+                return parsed_sessions
 
             results = await asyncio.to_thread(_fetch_and_parse)
 
             _recent_sessions_cache[cache_key] = (results, now)
             return results
         except Exception as e:
+            _recent_sessions_cache.pop(cache_key, None)
             logger.error("Failed to fetch recent sessions: %s", e)
             return []
