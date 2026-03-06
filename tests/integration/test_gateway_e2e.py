@@ -8,9 +8,13 @@ import asyncio
 import json
 import os
 
-import nacl.encoding
-import nacl.signing
 import pytest
+
+try:
+    import nacl.encoding
+    import nacl.signing
+except ImportError:
+    pytest.skip("pynacl is not installed, skipping test", allow_module_level=True)
 import websockets
 
 
