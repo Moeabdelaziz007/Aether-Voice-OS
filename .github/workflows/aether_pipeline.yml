@@ -12,8 +12,34 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write  # Needed for commenting on PRs
 
 jobs:
+  # ─────────────────────────────────────────────────────────────────
+  # Stage -1: Automated Pattern Learning & Improvement Check
+  # ─────────────────────────────────────────────────────────────────
+  auto-improve:
+    name: "🤖 Automated Improvement & Checking"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run Pattern Analyzer
+        run: |
+          python scripts/auto_improve.py || true
+
+      - name: Comment PR with Report
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v2
+        with:
+          filePath: auto_improve_report.md
+          comment_tag: auto_improve_report
   # ─────────────────────────────────────────────────────────────────
   # Stage 0: Rust Signal Layer (Cortex)
   # ─────────────────────────────────────────────────────────────────

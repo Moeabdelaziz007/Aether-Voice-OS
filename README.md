@@ -306,6 +306,10 @@ Client                              Gateway
 
 ## 🗺️ Roadmap
 
+### CI/CD Upgrades (Current)
+- ✅ **Automated Pattern Learning:** Implemented a non-LLM Python AST analyzer (`auto_improve.py`) that checks for cyclomatic complexity, long functions, and common anti-patterns, automatically commenting on PRs.
+- ✅ **Firebase CD:** Automated frontend deployment to Firebase Hosting and Functions on `main` branch merges.
+
 ### v2.1 (Next Sprint)
 
 - [ ] Emotion calibration baseline standardizations.
