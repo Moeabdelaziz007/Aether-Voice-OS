@@ -695,7 +695,9 @@ class AetherGateway:
     async def _tick_loop(self) -> None:
         """Send periodic heartbeats and prune dead clients."""
         while self._running:
-            await asyncio.sleep(self._gateway_config.tick_interval_s)
+            # We use a shorter sleep internally (e.g. 5s) to ensure we ping frequently enough for Cloud Run (which kills idle connections)
+            ping_interval = min(self._gateway_config.tick_interval_s, 5.0)
+            await asyncio.sleep(ping_interval)
 
             # Periodic cleanup of completed/failed handovers to prevent memory leaks
             self._hive.cleanup_handovers()
@@ -717,17 +719,23 @@ class AetherGateway:
 
                     # Send tick
                     try:
+                        # Cloud Run requires constant traffic on websockets or they are dropped.
+                        # We send a standard 'tick' type.
                         tick_msg = json.dumps(
                             {
-                                "type": MessageType.TICK.value,
+                                "type": "tick",
                                 "timestamp": now,
                             }
                         )
                         await session.ws.send(tick_msg)
-                    except websockets.exceptions.ConnectionClosed:
+
+                        # Also ping at the protocol level just in case
+                        await session.ws.ping()
+                    except (websockets.exceptions.ConnectionClosed, Exception):
                         dead_clients.append(cid)
 
-                # Prune dead clients (outside iteration)
+            # Prune dead clients (outside iteration)
+            async with self._lock:
                 for cid in dead_clients:
                     self._clients.pop(cid, None)
                     logger.info("Pruned dead client: %s", cid)

@@ -48,6 +48,10 @@ class SoulManifest(BaseModel):
     )
     checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
 
+    # Text-based identity and Voice Acting instructions loaded from markdown files
+    general_instructions: str = Field("", description="Contents of Soul.md")
+    soulprint: Optional[str] = Field(None, description="Contents of Soulprint.md for bidirectional acoustic modeling")
+
     @field_validator("capabilities")
     @classmethod
     def validate_capabilities(cls, v: list[str]) -> list[str]:
@@ -117,6 +121,21 @@ class AthPackage:
                 cause=exc,
                 context={"path": str(manifest_path), "data": data},
             ) from exc
+
+        # Load dynamic text instructions from Markdown files
+        soul_path = package_dir / "Soul.md"
+        if soul_path.exists():
+            try:
+                manifest.general_instructions = soul_path.read_text(encoding="utf-8")
+            except Exception as e:
+                logger.warning("Failed to read Soul.md for %s: %s", manifest.name, e)
+
+        soulprint_path = package_dir / "Soulprint.md"
+        if soulprint_path.exists():
+            try:
+                manifest.soulprint = soulprint_path.read_text(encoding="utf-8")
+            except Exception as e:
+                logger.warning("Failed to read Soulprint.md for %s: %s", manifest.name, e)
 
         package = cls(package_dir, manifest)
 

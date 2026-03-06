@@ -171,10 +171,16 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
 
                     // ── Audio Telemetry (Thalamic Gate VAD/RMS/Gain) ──
                     else if (msg.type === "audio_telemetry") {
-                        // We use getState() to prevent React re-render loops if components subscribe directly.
-                        // However, updating Zustand will cause re-renders for direct subscribers,
-                        // so AetherOrb is updated to read it transitively.
-                        useAetherStore.getState().setAudioLevels(msg.payload.rms || 0, msg.payload.gain || 0);
+                        // In high-frequency telemetry, we intentionally bypass updating the Zustand store
+                        // to avoid global React re-renders.
+                        // Visualizers use `requestAnimationFrame` to query state, but since we're bypassing Zustand,
+                        // visual components should ideally tap into this hook's direct refs or listen to raw WebSocket events,
+                        // OR we set the state directly on a non-reactive property if Zustand is designed to handle it.
+                        // Since useAetherStore is global, we update its state but without triggering a re-render.
+                        useAetherStore.setState({
+                            micLevel: msg.payload.rms || 0,
+                            speakerLevel: msg.payload.gain || 0
+                        });
                     }
 
                     // ── Repair State (Watchdog → Frontend healing) ──
@@ -225,14 +231,16 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                     // ── Affected / Paralinguistics Telemetry (Alpha Kernel V2) ──
                     else if (msg.type === "telemetry") {
                         if (msg.metric_name === "paralinguistics") {
-                            store.setTelemetry({
+                            // Using setState directly to bypass React re-renders
+                            useAetherStore.setState({
                                 pitch: msg.metadata?.pitch_hz,
                                 spectralCentroid: msg.metadata?.spectral_centroid,
-                                frustration: msg.metadata?.frustration,
-                            }, latencyMs);
-                            store.setAudioLevels(msg.metadata?.volume || 0, store.speakerLevel);
+                                frustrationScore: msg.metadata?.frustration,
+                                micLevel: msg.metadata?.volume || 0,
+                                latencyMs: latencyMs
+                            });
                         } else if (msg.metric_name === "noise_floor") {
-                            store.setTelemetry({ noiseFloor: msg.value }, latencyMs);
+                            useAetherStore.setState({ noiseFloor: msg.value, latencyMs: latencyMs });
                         }
                     }
 

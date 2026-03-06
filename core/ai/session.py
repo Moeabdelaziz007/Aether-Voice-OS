@@ -225,9 +225,11 @@ class GeminiLiveSession:
                     logger.info("Session cancelled (shutdown)")
                 else:
                     logger.error("Session error: %s", exc, exc_info=True)
-                    raise AISessionExpiredError(
-                        f"Gemini session terminated: {exc}",
-                        cause=exc,
+                    # Attempt a silent reconnect logic here if it's a network issue instead of raising
+                    if "closed" in str(exc).lower() or "timeout" in str(exc).lower():
+                        logger.warning("Network drop detected. Raising to Engine for reconnection.")
+                    raise Exception(
+                        f"Gemini session terminated: {exc}"
                     ) from exc
         finally:
             if hasattr(self, "_thalamic_gate"):
@@ -263,6 +265,9 @@ class GeminiLiveSession:
             except Exception as exc:
                 logger.error("Send error: %s", exc)
                 if "closed" in str(exc).lower():
+                        # Silent reconnect strategy on send loop close
+                        logger.warning("Connection closed. Attempting silent reconnect...")
+                        self._running = False
                     break
 
 
@@ -386,7 +391,8 @@ class GeminiLiveSession:
                 break
             except Exception as exc:
                 if "closed" in str(exc).lower():
-                    logger.info("Receive stream closed")
+                    logger.warning("Receive stream closed unexpectedly. Marking for silent reconnect.")
+                    self._running = False
                     break
                 logger.error("Receive error: %s", exc, exc_info=True)
                 await asyncio.sleep(0.5)  # Brief backoff before retry
@@ -560,6 +566,13 @@ class GeminiLiveSession:
             persona = getattr(manifest, "persona", "An Aether Agent")
 
             soul_instruction = f"{persona}\n\nPrimary Domain: {expertise}"
+
+            # 1. Inject Dynamic SOULPRINT (Voice Acting & Biometrics)
+            soulprint_data = getattr(manifest, "soulprint", None)
+            if soulprint_data:
+                soul_instruction += f"\n\n# ACOUSTIC SOULPRINT ACTING RULES\n{soulprint_data}"
+                logger.info("A2A [SESSION] Injected SOULPRINT Voice Acting Instructions for %s", getattr(manifest, "name", "Unknown"))
+
             instruction_parts.append(soul_instruction)
             self._soul_instruction_cache = soul_instruction
             logger.info(

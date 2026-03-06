@@ -275,12 +275,23 @@ class AudioCapture:
 
         # Push to queue if hard speech detected or AI is silent (ambient feed)
         if vad.is_hard or not should_mute:
-            msg = {
-                "data": in_data,
-                "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",
-            }
-            if self._loop and not self._loop.is_closed():
-                self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
+            # Batching PCM data to avoid overwhelming the Event Loop with `call_soon_threadsafe`
+            if not hasattr(self, "_batch_buffer"):
+                self._batch_buffer = bytearray()
+
+            self._batch_buffer.extend(in_data)
+
+            # Send batch every ~100ms (16kHz * 2 bytes * 0.1s = 3200 bytes)
+            BATCH_SIZE = int(self._config.send_sample_rate * 2 * 0.1)
+
+            if len(self._batch_buffer) >= BATCH_SIZE:
+                msg = {
+                    "data": bytes(self._batch_buffer),
+                    "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",
+                }
+                self._batch_buffer.clear()
+                if self._loop and not self._loop.is_closed():
+                    self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
 
         return (None, pyaudio.paContinue)
 

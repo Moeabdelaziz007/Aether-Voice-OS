@@ -34,12 +34,36 @@ const MiniChart = ({ label, value, color }: { label: string; value: number; colo
 };
 
 export default function SystemAnalytics() {
-    const micLevel = useAetherStore((s) => s.micLevel);
-    const speakerLevel = useAetherStore((s) => s.speakerLevel);
+    const [telemetry, setTelemetry] = React.useState({
+        micLevel: 0,
+        speakerLevel: 0,
+        latencyMs: 0,
+        pitch: 0,
+        spectralCentroid: 0
+    });
+
     const engineState = useAetherStore((s) => s.engineState);
-    const latencyMs = useAetherStore((s) => s.latencyMs);
-    const pitch = useAetherStore((s) => s.pitch);
-    const spectralCentroid = useAetherStore((s) => s.spectralCentroid);
+
+    // Bypass React state for high-frequency telemetry using requestAnimationFrame
+    React.useEffect(() => {
+        let rafId: number;
+        const update = () => {
+            const state = useAetherStore.getState();
+            setTelemetry({
+                micLevel: state.micLevel,
+                speakerLevel: state.speakerLevel,
+                latencyMs: state.latencyMs,
+                pitch: state.pitch,
+                spectralCentroid: state.spectralCentroid
+            });
+            // We throttle UI updates to 10fps for diagnostics panel to save CPU
+            setTimeout(() => {
+                rafId = requestAnimationFrame(update);
+            }, 100);
+        };
+        rafId = requestAnimationFrame(update);
+        return () => cancelAnimationFrame(rafId);
+    }, []);
 
     return (
         <motion.div
@@ -56,31 +80,31 @@ export default function SystemAnalytics() {
 
             <MiniChart
                 label="Neural Flux"
-                value={micLevel * 100}
+                value={telemetry.micLevel * 100}
                 color="rgba(var(--accent-r),var(--accent-g),var(--accent-b),1)"
             />
 
             <MiniChart
                 label="Signal Integrity"
-                value={Math.max(0, 100 - (latencyMs / 20))}
+                value={Math.max(0, 100 - (telemetry.latencyMs / 20))}
                 color="rgba(255,255,255,0.4)"
             />
 
             <div className="flex flex-col gap-1 mb-6 border-l border-white/5 pl-3">
                 <div className="flex justify-between items-center text-[10px] font-mono">
                     <span className="text-white/20 uppercase">Pitch</span>
-                    <span className="text-white/60">{Math.round(pitch)} Hz</span>
+                    <span className="text-white/60">{Math.round(telemetry.pitch)} Hz</span>
                 </div>
                 <div className="flex justify-between items-center text-[10px] font-mono">
                     <span className="text-white/20 uppercase">Spectral</span>
-                    <span className="text-white/60">{Math.round(spectralCentroid)} Hz</span>
+                    <span className="text-white/60">{Math.round(telemetry.spectralCentroid)} Hz</span>
                 </div>
             </div>
 
             <div className="mt-8 text-[9px] font-mono text-white/10 uppercase tracking-tighter leading-tight">
                 AetherOS Node: 0x710<br />
-                Latency: {latencyMs.toFixed(1)}ms<br />
-                Frequency: {(pitch / 1000).toFixed(2)} kHz
+                Latency: {telemetry.latencyMs.toFixed(1)}ms<br />
+                Frequency: {(telemetry.pitch / 1000).toFixed(2)} kHz
             </div>
         </motion.div>
     );

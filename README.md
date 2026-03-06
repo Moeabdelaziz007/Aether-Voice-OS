@@ -264,6 +264,17 @@ cd web/dashboard && npm run dev
 
 ---
 
+## 🧬 Bi-directional Acoustic Identity: SOULPRINT
+
+Aether replaces static, text-based personas with **SOULPRINT**—a living, breathing neural signature that commands both how the AI sounds and how it listens to you.
+
+- **Outbound Soul (Voice Acting):** Instructs Gemini 2.0 Native Audio to produce specific speech rhythms, breath mechanics (sighs, exhales), and emotional modulation. The Architect speaks slowly with cognitive pauses (`...`), while the Engineer fires rapid, staccato commands (`--`).
+- **Inbound Soul (Voice Trust & Security):** Continuously extracts Feature Vectors (Spectral Centroid, Pitch Variance, Zero-Crossing Rate) via the Thalamic Gate to generate a rolling **Trust Score ($T_s$)**. If you sound stressed or mismatched, Aether locks down `system_tool` access and shifts into Empathy State.
+
+For deep architectural details on the Trust Formula and Integration Points, see [docs/SOULPRINT.md](docs/SOULPRINT.md).
+
+---
+
 ## 📦 The `.ath` Package System | نظام الحزم
 
 Aether introduces the **`.ath` (Aether Pack)** — a portable, signed identity package for AI agents.
@@ -271,8 +282,8 @@ Aether introduces the **`.ath` (Aether Pack)** — a portable, signed identity p
 | File | Purpose | الغرض |
 |:---|:---|:---|
 | `Soul.md` | Behavioral identity & core values | الهوية السلوكية والقيم الأساسية |
+| `Soulprint.md` | Bi-directional Voice Acting & Trust Scoring | البصمة الصوتية (الأداء الصوتي والثقة) |
 | `Skills.md` | Procedural tool knowledge | المعرفة الإجرائية للأدوات |
-| `Heartbeat.md` | Autonomous background routines | الروتينات الخلفية المستقلة |
 | `manifest.json` | Metadata, capabilities, version | البيانات الوصفية، القدرات، الإصدار |
 
 ```python

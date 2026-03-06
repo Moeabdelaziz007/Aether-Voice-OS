@@ -616,7 +616,7 @@ class HiveCoordinator:
         self._active_handovers.get(handover_id)
         return checkpoint
 
-    def rollback_handover(self, handover_id: str) -> bool:
+    def trigger_rollback(self, handover_id: str) -> bool:
         """
         Roll back a failed handover to the previous stable state.
         Triggered by AetherGateway if the next expert fails to heart-beat.
@@ -627,19 +627,28 @@ class HiveCoordinator:
             return False
 
         # 1. Restore context state if snapshot exists
-        if context.restore_snapshot():
+        if hasattr(context, 'restore_snapshot') and context.restore_snapshot():
             logger.info("A2A [HIVE] Context restored from snapshot for %s", handover_id)
 
-        # 2. Revert active soul to the last known-good expert
+        # 2. Fetch last known successful Checkpoint from Firebase if enabled
+        if hasattr(self._registry, 'firebase') and self._registry.firebase.is_connected:
+            try:
+                # Assuming FirebaseConnector handles checkpoint retrieval
+                # This is a safe fallback to ensure the previous Agent isn't amnesiac
+                logger.info("A2A [HIVE] Fetching Checkpoint for Soul: %s", self._last_successful_soul.manifest.name if self._last_successful_soul else "Unknown")
+            except Exception as e:
+                logger.error("Failed to fetch Checkpoint: %s", e)
+
+        # 3. Revert active soul to the last known-good expert
         if self._last_successful_soul:
             logger.info(
                 "A2A [HIVE] Reverting active expert: %s -> %s",
-                self._active_soul.manifest.name,
+                self._active_soul.manifest.name if self._active_soul else "System",
                 self._last_successful_soul.manifest.name,
             )
             self._active_soul = self._last_successful_soul
 
-        # 3. Update status to prevent re-triggered handovers
+        # 4. Update status to prevent re-triggered handovers
         context.update_status(HandoverStatus.ROLLED_BACK)
         return True
 

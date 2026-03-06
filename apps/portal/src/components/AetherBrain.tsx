@@ -169,7 +169,11 @@ export default function AetherBrain() {
         if (pipeline.state !== "active") return;
 
         const interval = setInterval(() => {
-            store.setAudioLevels(pipeline.micLevel, pipeline.speakerLevel);
+            // Note: We intentionally avoid calling store.setAudioLevels here at a high frequency
+            // because it would cause the entire React tree that depends on those levels to re-render.
+            // Instead, components that need audio levels (like Visualizer or AetherLine) should read
+            // them directly via `useAetherStore.getState().micLevel` inside a `requestAnimationFrame` loop.
+            // We only keep the logic for Acoustic Emotion Trigger running.
 
             // ─── Acoustic Emotion Trigger ─────────────────────
             const rms = pipeline.micLevel;
