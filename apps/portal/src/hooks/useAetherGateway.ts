@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import nacl from "tweetnacl";
 import { useAetherStore } from "../store/useAetherStore";
+import { routeGatewayMessage } from "@/lib/gatewayMessageRouter";
 
 /**
  * Aether Voice OS — Aether Gateway Hook (V2).
@@ -33,6 +34,8 @@ interface AetherGatewayReturn {
     sendVisionFrame: (base64: string) => void;
     sendIntent: (input: string, level?: 1 | 2 | 3) => Promise<void>;
     onAudioResponse: React.MutableRefObject<((audio: ArrayBuffer) => void) | null>;
+    onInterrupt: React.MutableRefObject<(() => void) | null>;
+    onTranscript: React.MutableRefObject<((text: string, role: "user" | "agent") => void) | null>;
 }
 
 // ── Ed25519 Keypair (persisted in localStorage for cross-tab persistence) ──
@@ -70,6 +73,8 @@ function fromHex(hex: string): Uint8Array {
 }
 
 const DEFAULT_URL = process.env.NEXT_PUBLIC_AETHER_GATEWAY_URL || "ws://localhost:18789";
+const RECONNECT_DELAYS = [1000, 2000, 4000, 8000];
+const MAX_RETRIES = 3;
 
 export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
     const [status, setStatus] = useState<GatewayStatus>("disconnected");
@@ -77,10 +82,33 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
     const wsRef = useRef<WebSocket | null>(null);
     const store = useAetherStore();
     const onAudioResponse = useRef<((audio: ArrayBuffer) => void) | null>(null);
+    const onInterrupt = useRef<(() => void) | null>(null);
+    const onTranscript = useRef<((text: string, role: "user" | "agent") => void) | null>(null);
     const keyPairRef = useRef<nacl.SignKeyPair | null>(null);
+    const intentionalClose = useRef(false);
+    const retryCount = useRef(0);
+    const retryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const connectRef = useRef<(() => Promise<void>) | null>(null);
+
+    const attemptReconnect = useCallback(() => {
+        if (intentionalClose.current) return;
+        if (retryCount.current >= MAX_RETRIES) {
+            setStatus("error");
+            return;
+        }
+
+        const delay = RECONNECT_DELAYS[Math.min(retryCount.current, RECONNECT_DELAYS.length - 1)];
+        retryCount.current += 1;
+        setStatus("connecting");
+
+        retryTimer.current = setTimeout(() => {
+            connectRef.current?.();
+        }, delay);
+    }, []);
 
     const connect = useCallback(async () => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
+        intentionalClose.current = false;
         setStatus("connecting");
 
         // Initialize keypair (persisted in local storage)
@@ -97,6 +125,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
             ws.onopen = () => {
                 console.log("✦ Aether Gateway connection opened");
                 setStatus("handshaking");
+                retryCount.current = 0;
             };
 
             ws.onmessage = async (event) => {
@@ -115,140 +144,14 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                         }));
                     }
 
-                    // ── Handshake Ack ──
-                    else if (msg.type === "connect.ack") {
-                        console.log("✦ Gateway Handshake Successful");
-                        setStatus("connected");
-                        store.setSessionStartTime(Date.now());
-                        store.addSystemLog("[Gateway] Authenticated successfully.");
-                    }
-
-                    // ── Error ──
-                    else if (msg.type === "error") {
-                        console.error("Gateway error:", msg.message);
-                        store.addSystemLog(`[Gateway] Error: ${msg.message}`);
-                        if (msg.fatal) setStatus("error");
-                    }
-
-                    // ── Tick (Heartbeat + Latency) ──
-                    else if (msg.type === "tick") {
-                        const now = Date.now();
-                        const serverTime = msg.timestamp * 1000;
-                        const measuredLatency = Math.abs(now - serverTime);
-                        setLatencyMs(measuredLatency);
-                        store.setLatencyMs(measuredLatency);
-                    }
-
-                    // ── Engine State (LISTENING, SPEAKING, THINKING, etc.) ──
-                    else if (msg.type === "engine_state") {
-                        store.setEngineState(msg.state);
-                        store.addSystemLog(`[Engine] State → ${msg.state}`);
-                    }
-
-                    // ── Transcript (User/Agent speech segments) ──
-                    else if (msg.type === "transcript") {
-                        store.addTranscriptMessage({
-                            role: msg.role === "user" ? "user" : "agent",
-                            content: msg.text || msg.content || "",
-                        });
-                    }
-
-                    // ── Affective Score (Thalamic Gate telemetry) ──
-                    else if (msg.type === "affective_score") {
-                        store.setTelemetry({
-                            frustration: msg.frustration,
-                            valence: msg.valence,
-                            arousal: msg.arousal,
-                            engagement: msg.engagement,
-                            pitch: msg.pitch,
-                            rate: msg.rate,
-                        }, latencyMs);
-                    }
-
-                    // ── Audio Telemetry (Thalamic Gate VAD/RMS/Gain) ──
-                    else if (msg.type === "audio_telemetry") {
-                        // Directly update store for high-frequency updates
-                        useAetherStore.getState().setAudioLevels(msg.payload.rms || 0, msg.payload.gain || 0);
-                    }
-
-                    // ── Repair State (Watchdog → Frontend healing) ──
-                    else if (msg.type === "repair_state") {
-                        useAetherStore.getState().setRepairState({
-                            status: msg.payload?.status || msg.status || 'diagnosing',
-                            message: msg.payload?.message || msg.message || '',
-                            log: msg.payload?.log || msg.log || '',
-                            timestamp: Date.now(),
-                        });
-                    }
-
-                    // ── Neural Event (Hive agent activity) ──
-                    else if (msg.type === "neural_event") {
-                        store.addNeuralEvent({
-                            fromAgent: msg.from_agent || "AetherCore",
-                            toAgent: msg.to_agent || "Unknown",
-                            task: msg.task || msg.description || "",
-                            status: msg.status || "active",
-                        });
-                    }
-
-                    // ── Vision Pulse (Screen capture acknowledgment) ──
-                    else if (msg.type === "vision_pulse") {
-                        store.setVisionPulse(msg.timestamp || new Date().toISOString());
-                        store.setVisionActive(true);
-                    }
-
-                    // ── Intent Update (V1.1 Lifecycle) ──
-                    else if (msg.type === "intent_update") {
-                        if (msg.memory_update?.predicted_next_goal) {
-                            store.setPredictedGoal(msg.memory_update.predicted_next_goal);
-                        }
-                    }
-
-                    // ── Mutation Event (Code/file changes) ──
-                    else if (msg.type === "mutation_event") {
-                        store.setMutation(msg.description || msg.mutation || "Unknown mutation");
-                    }
-
-                    // ── Tool Result (Silent hints, code suggestions) ──
-                    else if (msg.type === "tool_result") {
-                        store.addSilentHint({
-                            id: crypto.randomUUID(),
-                            text: msg.tool_name || "Tool completed",
-                            code: msg.code,
-                            explanation: msg.result || msg.message,
-                            priority: msg.priority || "info",
-                            type: msg.code ? "code" : "hint",
-                            timestamp: Date.now(),
-                        });
-                        store.addSystemLog(`[Tool] ${msg.tool_name}: ${msg.status || "done"}`);
-                    }
-
-                    // ── Affected / Paralinguistics Telemetry (Alpha Kernel V2) ──
-                    else if (msg.type === "telemetry") {
-                        if (msg.metric_name === "paralinguistics") {
-                            store.setTelemetry({
-                                pitch: msg.metadata?.pitch_hz,
-                                spectralCentroid: msg.metadata?.spectral_centroid,
-                                frustration: msg.metadata?.frustration,
-                            }, latencyMs);
-                            store.setAudioLevels(msg.metadata?.volume || 0, store.speakerLevel);
-                        } else if (msg.metric_name === "noise_floor") {
-                            store.setTelemetry({ noiseFloor: msg.value }, latencyMs);
-                        }
-                    }
-
-                    // ── Soul Handoff (Multi-agent switch) ──
-                    else if (msg.type === "soul_handoff" || msg.type === "handover") {
-                        const target = msg.target_soul || msg.target_agent_id || "AetherCore";
-                        store.setActiveSoul(target);
-                        store.addNeuralEvent({
-                            fromAgent: msg.from_soul || msg.source_agent_id || "AetherCore",
-                            toAgent: target,
-                            task: msg.task_goal || msg.reason || "Context handover",
-                            status: "active",
-                        });
-                        store.addSystemLog(`[Hive] Handover → ${target}`);
-                    }
+                    routeGatewayMessage(msg, {
+                        store,
+                        latencyMs,
+                        setLatencyMs,
+                        setStatus,
+                        onInterrupt: onInterrupt.current ?? undefined,
+                        onTranscript: onTranscript.current ?? undefined,
+                    });
                 }
                 else if (event.data instanceof ArrayBuffer) {
                     // Raw audio bytes from Aether backend (Gemini -> Engine -> Gateway)
@@ -265,15 +168,24 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
 
             ws.onclose = () => {
                 console.log("Gateway WS closed");
-                setStatus("disconnected");
                 wsRef.current = null;
+                if (intentionalClose.current) {
+                    setStatus("disconnected");
+                    return;
+                }
+
+                attemptReconnect();
             };
 
         } catch (err) {
             console.error("Failed to connect to Gateway:", err);
-            setStatus("error");
+            attemptReconnect();
         }
-    }, [url, store, latencyMs]);
+    }, [url, store, latencyMs, attemptReconnect]);
+
+    useEffect(() => {
+        connectRef.current = connect;
+    }, [connect]);
 
     const sendAudio = useCallback((pcm: ArrayBuffer) => {
         const ws = wsRef.current;
@@ -333,6 +245,12 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
     }, [status]);
 
     const disconnect = useCallback(() => {
+        intentionalClose.current = true;
+        if (retryTimer.current) {
+            clearTimeout(retryTimer.current);
+            retryTimer.current = null;
+        }
+        retryCount.current = 0;
         wsRef.current?.close();
         wsRef.current = null;
         setStatus("disconnected");
@@ -344,5 +262,5 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
         };
     }, [disconnect]);
 
-    return { status, latencyMs, connect, disconnect, sendAudio, sendVisionFrame, sendIntent, onAudioResponse };
+    return { status, latencyMs, connect, disconnect, sendAudio, sendVisionFrame, sendIntent, onAudioResponse, onInterrupt, onTranscript };
 }

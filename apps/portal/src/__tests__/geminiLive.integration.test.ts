@@ -1,262 +1,95 @@
-/**
- * Gemini Live WebSocket — Real Integration Tests.
- *
- * These tests connect to the REAL Gemini Bidi WebSocket API.
- * They verify:
- *   - WebSocket connection + setup handshake
- *   - Audio message format (realtimeInput.mediaChunks)
- *   - Vision frame message format (image/jpeg)
- *   - Tool declarations in setup
- *   - Connection teardown
- *
- * Requires: NEXT_PUBLIC_GEMINI_KEY environment variable.
- */
+import { act, renderHook } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useAetherGateway } from "@/hooks/useAetherGateway";
 
-import { describe, it, expect, beforeAll } from 'vitest';
+class MockWebSocket {
+  static instances: MockWebSocket[] = [];
+  static OPEN = 1;
+  static CLOSED = 3;
 
-const GEMINI_WS_URL =
-    'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent';
+  readyState = 0;
+  binaryType = "blob";
+  sent: Array<string | ArrayBuffer> = [];
 
-const API_KEY = process.env.NEXT_PUBLIC_GEMINI_KEY || '';
-const MODEL = 'models/gemini-2.5-flash-preview-native-audio-dialog';
+  onopen: ((ev: Event) => void) | null = null;
+  onmessage: ((ev: MessageEvent) => void) | null = null;
+  onclose: ((ev: CloseEvent) => void) | null = null;
+  onerror: ((ev: Event) => void) | null = null;
 
-// Skip tests entirely if no API key
-const describeWithKey = API_KEY ? describe : describe.skip;
+  constructor(_url: string) {
+    MockWebSocket.instances.push(this);
+  }
 
-describeWithKey('Gemini Live WebSocket — Real Integration', () => {
-    beforeAll(() => {
-        if (!API_KEY) {
-            console.warn('⚠ NEXT_PUBLIC_GEMINI_KEY not set, skipping integration tests');
-        }
+  send(data: string | ArrayBuffer) {
+    this.sent.push(data);
+  }
+
+  open() {
+    this.readyState = MockWebSocket.OPEN;
+    this.onopen?.({} as Event);
+  }
+
+  close(code = 1000, reason = "closed") {
+    this.readyState = MockWebSocket.CLOSED;
+    this.onclose?.({ code, reason } as CloseEvent);
+  }
+
+  emitJson(data: Record<string, unknown>) {
+    this.onmessage?.({ data: JSON.stringify(data) } as MessageEvent);
+  }
+
+  emitAudio(data: ArrayBuffer) {
+    this.onmessage?.({ data } as MessageEvent);
+  }
+}
+
+describe("Aether gateway integration", () => {
+  beforeEach(() => {
+    MockWebSocket.instances = [];
+    vi.useFakeTimers();
+    vi.stubGlobal("WebSocket", MockWebSocket as any);
+  });
+
+  it("covers handshake, reconnect, transcript, audio and interruption using one hook API", async () => {
+    const { result } = renderHook(() => useAetherGateway("ws://localhost:9999"));
+
+    await act(async () => {
+      await result.current.connect();
     });
 
-    it('should connect and receive setupComplete within 10s', async () => {
-        const ws = new WebSocket(`${GEMINI_WS_URL}?key=${API_KEY}`);
+    const ws = MockWebSocket.instances[0];
 
-        const result = await new Promise<{ success: boolean; msg?: string }>((resolve) => {
-            const timeout = setTimeout(() => {
-                ws.close();
-                resolve({ success: false, msg: 'Timeout waiting for setupComplete' });
-            }, 10000);
+    act(() => {
+      ws.open();
+      ws.emitJson({ type: "connect.challenge", challenge: "00" });
+      ws.emitJson({ type: "connect.ack" });
+    });
 
-            ws.onopen = () => {
-                const setup = {
-                    setup: {
-                        model: MODEL,
-                        generation_config: {
-                            response_modalities: ['AUDIO'],
-                            speech_config: {
-                                voice_config: {
-                                    prebuilt_voice_config: { voice_name: 'Aoede' },
-                                },
-                            },
-                        },
-                        system_instruction: {
-                            parts: [{ text: 'You are Aether. Respond briefly.' }],
-                        },
-                        tools: [
-                            {
-                                function_declarations: [
-                                    {
-                                        name: 'show_silent_hint',
-                                        description: 'Display a hint on screen',
-                                        parameters: {
-                                            type: 'OBJECT',
-                                            properties: {
-                                                text: { type: 'STRING', description: 'Hint text' },
-                                            },
-                                            required: ['text'],
-                                        },
-                                    },
-                                ],
-                            },
-                        ],
-                    },
-                };
-                ws.send(JSON.stringify(setup));
-            };
+    expect(result.current.status).toBe("connected");
+    expect(String(ws.sent[0])).toContain("connect.response");
 
-            ws.onmessage = (event) => {
-                if (typeof event.data === 'string') {
-                    const msg = JSON.parse(event.data);
-                    if (msg.setupComplete) {
-                        clearTimeout(timeout);
-                        ws.close();
-                        resolve({ success: true });
-                    }
-                }
-            };
+    const transcriptSpy = vi.fn();
+    const interruptSpy = vi.fn();
+    const audioSpy = vi.fn();
+    result.current.onTranscript.current = transcriptSpy;
+    result.current.onInterrupt.current = interruptSpy;
+    result.current.onAudioResponse.current = audioSpy;
 
-            ws.onerror = () => {
-                clearTimeout(timeout);
-                ws.close();
-                resolve({ success: false, msg: 'WebSocket error' });
-            };
-        });
+    act(() => {
+      ws.emitJson({ type: "transcript", role: "user", text: "hello world" });
+      ws.emitJson({ type: "interruption" });
+      ws.emitAudio(new Int16Array([1, 2, 3]).buffer);
+    });
 
-        expect(result.success).toBe(true);
-    }, 15000);
+    expect(transcriptSpy).toHaveBeenCalledWith("hello world", "user");
+    expect(interruptSpy).toHaveBeenCalledTimes(1);
+    expect(audioSpy).toHaveBeenCalledTimes(1);
 
-    it('should accept audio PCM chunks without error', async () => {
-        const ws = new WebSocket(`${GEMINI_WS_URL}?key=${API_KEY}`);
+    act(() => {
+      ws.close(1006, "network");
+      vi.advanceTimersByTime(1000);
+    });
 
-        const result = await new Promise<{ success: boolean; msg?: string }>((resolve) => {
-            const timeout = setTimeout(() => {
-                ws.close();
-                resolve({ success: false, msg: 'Timeout' });
-            }, 15000);
-
-            let setupDone = false;
-
-            ws.onopen = () => {
-                const setup = {
-                    setup: {
-                        model: MODEL,
-                        generation_config: {
-                            response_modalities: ['AUDIO'],
-                            speech_config: {
-                                voice_config: {
-                                    prebuilt_voice_config: { voice_name: 'Aoede' },
-                                },
-                            },
-                        },
-                        system_instruction: {
-                            parts: [{ text: 'You are Aether.' }],
-                        },
-                    },
-                };
-                ws.send(JSON.stringify(setup));
-            };
-
-            ws.onmessage = (event) => {
-                if (typeof event.data === 'string') {
-                    const msg = JSON.parse(event.data);
-
-                    if (msg.setupComplete) {
-                        setupDone = true;
-
-                        // Send a small PCM chunk (256 samples of silence)
-                        const pcm = new Int16Array(256).fill(0);
-                        const bytes = new Uint8Array(pcm.buffer);
-                        let b64 = '';
-                        for (let i = 0; i < bytes.length; i += 8192) {
-                            b64 += String.fromCharCode(...bytes.subarray(i, i + 8192));
-                        }
-                        b64 = btoa(b64);
-
-                        const audioMsg = {
-                            realtimeInput: {
-                                mediaChunks: [
-                                    {
-                                        mimeType: 'audio/pcm;rate=16000',
-                                        data: b64,
-                                    },
-                                ],
-                            },
-                        };
-
-                        ws.send(JSON.stringify(audioMsg));
-
-                        // If no error after 3s, it was accepted
-                        setTimeout(() => {
-                            clearTimeout(timeout);
-                            ws.close();
-                            resolve({ success: true });
-                        }, 3000);
-                    }
-                }
-            };
-
-            ws.onerror = () => {
-                clearTimeout(timeout);
-                ws.close();
-                resolve({ success: false, msg: setupDone ? 'Error after audio send' : 'Connection error' });
-            };
-        });
-
-        expect(result.success).toBe(true);
-    }, 20000);
-
-    it('should accept vision JPEG frames without error', async () => {
-        const ws = new WebSocket(`${GEMINI_WS_URL}?key=${API_KEY}`);
-
-        const result = await new Promise<{ success: boolean; msg?: string }>((resolve) => {
-            const timeout = setTimeout(() => {
-                ws.close();
-                resolve({ success: false, msg: 'Timeout' });
-            }, 15000);
-
-            ws.onopen = () => {
-                const setup = {
-                    setup: {
-                        model: MODEL,
-                        generation_config: {
-                            response_modalities: ['AUDIO'],
-                            speech_config: {
-                                voice_config: {
-                                    prebuilt_voice_config: { voice_name: 'Aoede' },
-                                },
-                            },
-                        },
-                        system_instruction: {
-                            parts: [{ text: 'You are Aether with vision.' }],
-                        },
-                    },
-                };
-                ws.send(JSON.stringify(setup));
-            };
-
-            ws.onmessage = (event) => {
-                if (typeof event.data === 'string') {
-                    const msg = JSON.parse(event.data);
-
-                    if (msg.setupComplete) {
-                        // Send a tiny valid JPEG (1x1 pixel black)
-                        // This is the smallest valid JPEG file
-                        const tinyJpegB64 =
-                            '/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRof' +
-                            'Hh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwh' +
-                            'MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAAR' +
-                            'CAABAAEDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAA' +
-                            'AgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkK' +
-                            'FhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWG' +
-                            'h4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl' +
-                            '5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREA' +
-                            'AgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYk' +
-                            'NOEl8RcYI4Q/RFhScJAiEyUxUGZoY2R0cnODk5OktMTE5QUlNVVzhJWltcX1ZnZ2VodHV2h3' +
-                            'eJl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX' +
-                            '2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD3+gD/2Q==';
-
-                        const visionMsg = {
-                            realtimeInput: {
-                                mediaChunks: [
-                                    {
-                                        mimeType: 'image/jpeg',
-                                        data: tinyJpegB64,
-                                    },
-                                ],
-                            },
-                        };
-
-                        ws.send(JSON.stringify(visionMsg));
-
-                        // If no error after 3s, frame was accepted
-                        setTimeout(() => {
-                            clearTimeout(timeout);
-                            ws.close();
-                            resolve({ success: true });
-                        }, 3000);
-                    }
-                }
-            };
-
-            ws.onerror = () => {
-                clearTimeout(timeout);
-                ws.close();
-                resolve({ success: false, msg: 'WebSocket error' });
-            };
-        });
-
-        expect(result.success).toBe(true);
-    }, 20000);
+    expect(MockWebSocket.instances.length).toBe(2);
+  });
 });
