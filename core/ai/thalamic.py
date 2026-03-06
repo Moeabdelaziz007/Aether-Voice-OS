@@ -17,8 +17,8 @@ class ThalamicGate:
 
     def __init__(self, gemini_session):
         self._gemini_session = gemini_session
-        self._calibrator = EmotionCalibrator)
-        self._metrics = Demometrics)
+        self._calibrator = EmotionCalibrator()
+        self._metrics = DemoMetrics()
         self._frustration_streak = 0
         self._running = False
 
