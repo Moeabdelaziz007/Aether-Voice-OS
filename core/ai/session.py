@@ -193,9 +193,9 @@ class GeminiLiveSession:
 
         try:
             model_name = self._config.model.value if hasattr(self._config.model, 'value') else self._config.model
-            # Ensure proper prefixing for google-genai SDK
-            if isinstance(model_name, str) and not model_name.startswith("models/"):
-                model_name = f"models/{model_name}"
+            # the google-genai SDK natively adds the models/ prefix internally and explicitly using it fails with 1008
+            if isinstance(model_name, str) and model_name.startswith("models/"):
+                model_name = model_name[7:]
 
             async with self._client.aio.live.connect(
                 model=model_name,
