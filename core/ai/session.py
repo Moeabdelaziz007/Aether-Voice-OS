@@ -17,7 +17,6 @@ Uses the official `google-genai` SDK (not google-generativeai).
 from __future__ import annotations
 
 import asyncio
-import base64
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
@@ -29,15 +28,15 @@ if TYPE_CHECKING:
 from google import genai
 from google.genai import types
 
+from core.ai.agents.proactive import VisionPulseAgent
 from core.ai.handover_protocol import HandoverContext, HandoverStatus
+from core.ai.thalamic import ThalamicGate
+from core.demo.fallback import DemoFallback
 from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
 from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
-from core.ai.thalamic import ThalamicGate
-from core.demo.fallback import DemoFallback
-from core.ai.agents.proactive import VisionPulseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -265,7 +264,6 @@ class GeminiLiveSession:
                 logger.error("Send error: %s", exc)
                 if "closed" in str(exc).lower():
                     break
-
 
     async def _backchannel_loop(self, session) -> None:
         """

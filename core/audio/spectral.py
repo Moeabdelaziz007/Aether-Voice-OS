@@ -398,7 +398,7 @@ def gcc_phat(
         x: Reference signal
         y: Target signal
         sample_rate: Sample rate in Hz
-        max_delay: Maximum delay to search (samples), 
+        max_delay: Maximum delay to search (samples),
             None for half signal length
 
     Returns:

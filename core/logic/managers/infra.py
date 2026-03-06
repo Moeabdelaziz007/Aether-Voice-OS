@@ -13,7 +13,8 @@ class InfraManager:
 
     def __init__(self, gateway: Any):
         self._firebase = FirebaseConnector
-        self._watchdog = SREWatchdog(node_id=f"aether-node-{os.getpid()}",
+        self._watchdog = SREWatchdog(
+            node_id=f"aether-node-{os.getpid()}",
             bus=gateway._bus,
             gateway=gateway,
         )

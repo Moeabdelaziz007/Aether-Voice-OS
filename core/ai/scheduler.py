@@ -5,7 +5,6 @@ from typing import Any, Dict, List, Optional
 
 from core.ai.echo import EchoGenerator
 from core.infra.event_bus import AcousticTraitEvent, VisionPulseEvent
-from core.infra.service_container import container
 
 logger = logging.getLogger("AetherOS.Cortex")
 
