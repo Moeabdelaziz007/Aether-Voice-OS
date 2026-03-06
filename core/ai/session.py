@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
+from time import perf_counter
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 if TYPE_CHECKING:
@@ -35,6 +36,8 @@ from core.demo.fallback import DemoFallback
 from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
 from core.infra.telemetry import (
+    get_tool_timeout_dashboard,
+    record_tool_dispatch_telemetry,
     record_usage,
 )  # Import record_usage from telemetry module
 
@@ -424,11 +427,62 @@ class GeminiLiveSession:
             self._gateway.broadcast("engine_state", {"state": "THINKING"})
         )
 
-        tasks = []
-        for fc in calls:
+        async def _dispatch_with_timeout(fc):
+            timeout_s = 2.0
+            if hasattr(self._tool_router, "get_timeout_for_tool"):
+                try:
+                    timeout_s = float(self._tool_router.get_timeout_for_tool(fc.name))
+                except Exception:
+                    timeout_s = 2.0
+
+            tool_meta = None
+            if hasattr(self._tool_router, "get_registration"):
+                tool_meta = self._tool_router.get_registration(fc.name)
+            latency_tier = tool_meta.latency_tier if tool_meta else "p95_sub_2s"
+            start = perf_counter()
+
             if self._scheduler:
                 self._scheduler.on_tool_start(fc.name)
-            tasks.append(self._tool_router.dispatch(fc))
+
+            try:
+                result = await asyncio.wait_for(
+                    self._tool_router.dispatch(fc),
+                    timeout=timeout_s,
+                )
+                elapsed_ms = (perf_counter() - start) * 1000
+                record_tool_dispatch_telemetry(fc.name, elapsed_ms, timed_out=False)
+                return result
+            except asyncio.TimeoutError:
+                elapsed_ms = (perf_counter() - start) * 1000
+                logger.warning(
+                    "Tool %s timed out after %.2fms [tier=%s budget=%.2fs]",
+                    fc.name,
+                    elapsed_ms,
+                    latency_tier,
+                    timeout_s,
+                )
+                record_tool_dispatch_telemetry(fc.name, elapsed_ms, timed_out=True)
+                return {
+                    "status": "timeout",
+                    "error": (
+                        f"Tool '{fc.name}' exceeded latency budget for "
+                        f"{latency_tier}."
+                    ),
+                    "partial_context": {
+                        "tool_name": fc.name,
+                        "args": fc.args or {},
+                        "latency_tier": latency_tier,
+                        "timeout_s": timeout_s,
+                    },
+                    "retry_hint": "retry_with_narrower_scope_or_fewer_results",
+                    "x-a2a-status": 504,
+                    "x-a2a-latency": latency_tier,
+                }
+            finally:
+                if self._scheduler:
+                    self._scheduler.on_tool_end(fc.name)
+
+        tasks = [_dispatch_with_timeout(fc) for fc in calls]
 
         # 2. Parallel Execution
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -503,10 +557,16 @@ class GeminiLiveSession:
                 }
                 logger.info("A2A [STATE] Tracking handoff: %s", handoff_id)
 
-            if self._scheduler:
-                self._scheduler.on_tool_end(fc.name)
 
-        # 4. Final step: Send all responses back in a single turn
+        # 4. Aggregate timeout telemetry snapshot for gateway dashboards
+        try:
+            dashboard = get_tool_timeout_dashboard()
+            if hasattr(self._gateway, "metrics") and isinstance(self._gateway.metrics, dict):
+                self._gateway.metrics["tool_dispatch_dashboard"] = dashboard
+        except Exception as exc:
+            logger.debug("Failed to update tool timeout dashboard: %s", exc)
+
+        # 5. Final step: Send all responses back in a single turn
         try:
             await session.send_tool_response(function_responses)
             logger.info(
