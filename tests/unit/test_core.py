@@ -110,11 +110,17 @@ class TestConfig:
 
         with patch("os.path.exists", return_value=False):
             with patch.dict(os.environ, {}, clear=True):
-                # Pydantic Settings will look for .env default if not passed
-                # _env_file=None. But here we want to ensure it fails if
-                # GOOGLE_API_KEY is missing and no env file is found.
-                with pytest.raises(Exception):
+                with pytest.raises(RuntimeError, match="GOOGLE_API_KEY is required"):
                     load_config()
+
+    def test_load_config_allows_mock_key_only_with_explicit_flag(self):
+        from core.infra.config import load_config
+
+        with patch("os.path.exists", return_value=False):
+            with patch.dict(os.environ, {"AETHER_ALLOW_MOCK_KEY": "true"}, clear=True):
+                cfg = load_config()
+
+        assert cfg.ai.api_key == "AIza_MOCK_KEY_FOR_BENCHMARK"
 
 
 # ═══════════════════════════════════════════════════════════
