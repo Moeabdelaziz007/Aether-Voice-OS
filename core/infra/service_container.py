@@ -48,3 +48,4 @@ class ServiceContainer:
 
 # Global container instance
 container = ServiceContainer()
+Container = ServiceContainer  # Alias for backward compatibility

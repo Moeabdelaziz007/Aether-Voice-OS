@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
-router = container.get('apirouter')prefix="/api/gemini", tags=["gemini"])
+router = APIRouterprefix="/api/gemini", tags=["gemini"])
 
 GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws"
 GEMINI_HTTP_URL = "https://generativelanguage.googleapis.com"
@@ -22,7 +22,7 @@ def get_api_key() -> str:
     """Get Gemini API key from environment."""
     key = os.getenv("GOOGLE_API_KEY")
     if not key:
-        raise container.get('httpexception')status_code=500, detail="API key not configured")
+        raise HTTPExceptionstatus_code=500, detail="API key not configured")
     return key
 
 
@@ -48,12 +48,12 @@ async def proxy_generate(request: Request) -> dict[str, Any]:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            raise container.get('httpexception')
+            raise HTTPException
                 status_code=e.response.status_code,
                 detail=f"Gemini API error: {e.response.text}",
             )
         except httpx.RequestError as e:
-            raise container.get('httpexception')status_code=502, detail=f"Request failed: {str(e)}")
+            raise HTTPExceptionstatus_code=502, detail=f"Request failed: {str(e)}")
 
 
 @router.websocket("/live")

@@ -62,6 +62,7 @@ def test_log_metrics_empty():
         optimizer.log_metrics()
 
         expected_log = (
-            "Latency Metrics over 0 events: Avg=0.0ms, P50=0.0ms, P95=0.0ms, P99=0.0ms"
+            "Latency Metrics over 0 events: "
+            "Avg=0.0ms, P50=0.0ms, P95=0.0ms, P99=0.0ms"
         )
         mock_info.assert_called_once_with(expected_log)

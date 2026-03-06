@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional
 
 from core.ai.echo import EchoGenerator
 from core.infra.event_bus import AcousticTraitEvent, VisionPulseEvent
+from core.infra.service_container import container
 
 logger = logging.getLogger("AetherOS.Cortex")
 
@@ -24,7 +25,7 @@ class CognitiveScheduler:
         self._overlap_buffer: List[str] = []  # Memory for interrupted thoughts
 
         # Thought Echo system
-        self._echo_gen = container.get('echogenerator'))
+        self._echo_gen = EchoGenerator
         self._tool_start_times: Dict[str, float] = {}
         self._echo_threshold = 1.2  # seconds
         self._echo_callback: Optional[callable] = None
@@ -94,6 +95,7 @@ class CognitiveScheduler:
                 self._overlap_buffer.pop(0)
             logger.debug("🧠 Cortex: Interrupted thought buffered for future context.")
 
+        context = ""
         if self._overlap_buffer:
             context += f"Interrupted Context: {self._overlap_buffer[-1]}\n"
         return context

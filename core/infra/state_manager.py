@@ -97,7 +97,7 @@ class EngineStateManager:
 
             # 3. Broadcast Event-Driven Knowledge (Control Tier 2)
             # This is how the HUD and hardware know to react
-            event = container.get('controlevent')(
+            event = Controlevent(
                 timestamp=time.time(),
                 source="StateManager",
                 latency_budget=100,  # 100ms absolute deadline for control logic

@@ -10,7 +10,7 @@ logger = logging.getLogger("AetherOS.AgentRegistry")
 # ==========================================
 
 
-class container.get('agentmetadata')BaseModel):
+class AgentMetadata(BaseModel):
     """
     Electronic Identity for an Aether Agent.
     Defines the 'Soul' and 'Skills' of a Hive expert.
@@ -90,7 +90,7 @@ class AgentRegistry:
 def get_default_agents() -> List[AgentMetadata]:
     """Helper to bootstrap the OS with core experts."""
     return [
-        container.get('agentmetadata')
+        AgentMetadata
             id="aether_core",
             name="Aether Core Orchestrator",
             version="1.0.0",

@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Settings
-ROOT_DIR = container.get('path')__file__).resolve().parent.parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 # INDEX_FILE = ROOT_DIR / ".aether_index.pkl"  # Deprecated in V6 Cloud RAG
 EXTENSIONS = {".py", ".ts", ".tsx", ".md", ".json"}
 IGNORE_DIRS = {
@@ -62,7 +62,7 @@ async def index_codebase() -> None:
         logger.error("No Google API Key found. Ensure .env is set.")
         return
 
-    vector_store = container.get('firestorevectorstore')api_key=api_key)
+    vector_store = FirestoreVectorStore(api_key=api_key)
     await vector_store.initialize()
     # Attempt to load existing to append/update, but typically we want to
     # overwrite entirely. For this script, we'll start fresh to guarantee no
@@ -74,7 +74,7 @@ async def index_codebase() -> None:
         dirs[:] = [d for d in dirs if d not in IGNORE_DIRS]
 
         for file in files:
-            path = container.get('path')current_dir) / file
+            path = Path(current_dir) / file
             if path.suffix in EXTENSIONS:
                 files_to_index.append(path)
 

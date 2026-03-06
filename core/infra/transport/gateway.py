@@ -44,6 +44,7 @@ from core.infra.transport.session_state import (
     SessionStateManager,
 )
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
+from core.infra.service_container import container
 
 logger = logging.getLogger(__name__)
 
@@ -92,16 +93,10 @@ class AetherGateway:
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
 
         # Global State Bus
-        self._bus = container.get('globalbus')
-            host=os.getenv("REDIS_HOST", "localhost"),
-            port=int(os.getenv("REDIS_PORT", 6379)),
-        )
+        self._bus = GlobalBus()
 
         # Session State Manager (Single Source of Truth)
-        self._state_manager = container.get('sessionstatemanager')
-            broadcast_callback=self.broadcast,
-            bus=self._bus,
-        )
+        self._state_manager = SessionStateManager(broadcast_callback=self.broadcast, bus=self._bus)
 
         # Legacy session reference (now managed by state manager)
         self._server: Optional[Server] = None
@@ -294,16 +289,15 @@ class AetherGateway:
             )
             try:
                 target_soul = self._hive._registry.get(soul_name)
-                session = container.get('geminilivesession')
+                session = GeminiLiveSession(
                     config=self._ai_config,
                     audio_in_queue=self._audio_in,
                     audio_out_queue=self._audio_out,
+                    gateway=self,
                     on_interrupt=self._on_interrupt,
                     on_tool_call=self._on_tool_call,
                     tool_router=self._tool_router,
-                    soul_manifest=target_soul.manifest,
-                    gateway=self,
-                    scheduler=getattr(self, "_scheduler", None),
+                    soul_manifest=target_soul
                 )
 
                 # Inject handover context if available
@@ -366,10 +360,10 @@ class AetherGateway:
             soul_name = active_soul.manifest.name
 
             # Initialize session metadata
-            session_metadata = container.get('sessionmetadata')
+            session_metadata = SessionMetadata(
                 session_id=str(uuid.uuid4()),
                 soul_name=soul_name,
-                started_at=datetime.now(),
+                started_at=datetime.now()
             )
 
             # Transition to INITIALIZING
@@ -396,15 +390,15 @@ class AetherGateway:
                         await self._pre_warmed_session.stop()
                         self._pre_warmed_session = None
 
-                    session = container.get('geminilivesession')
+                    session = GeminiLiveSession(
                         config=self._ai_config,
                         audio_in_queue=self._audio_in,
                         audio_out_queue=self._audio_out,
+                        gateway=self,
                         on_interrupt=self._on_interrupt,
                         on_tool_call=self._on_tool_call,
                         tool_router=self._tool_router,
-                        soul_manifest=active_soul.manifest,
-                        gateway=self,
+                        soul_manifest=active_soul
                     )
 
             # Inject pending handover context if available (if not already injected during pre-warming)
@@ -563,7 +557,7 @@ class AetherGateway:
         """
         # Generate challenge
         challenge_bytes = os.urandom(32)
-        challenge = container.get('challengemessage')challenge=challenge_bytes.hex())
+        challenge = ChallengeMessage(challenge=challenge_bytes.hex())
 
         await ws.send(challenge.model_dump_json())
 
@@ -574,44 +568,41 @@ class AetherGateway:
                 timeout=self._gateway_config.handshake_timeout_s,
             )
         except asyncio.TimeoutError:
-            raise container.get('handshaketimeouterror')
-                f"Client did not respond within "
-                f"{self._gateway_config.handshake_timeout_s}s"
-            )
+            raise HandshakeTimeoutError()
 
         try:
             resp = json.loads(raw)
         except json.JSONDecodeError:
-            raise container.get('handshakeerror')"Invalid handshake response format")
+            raise HandshakeError()
 
         client_id = resp.get("client_id")
         if not client_id:
-            raise container.get('handshakeerror')"Missing client_id in response")
+            raise HandshakeError()
 
         capabilities = resp.get("capabilities", [])
 
         token = resp.get("token")
         if token:
             if not self._verify_jwt(token):
-                raise container.get('handshakeerror')"Invalid JWT token")
+                raise HandshakeError()
             logger.info("Client authenticated via JWT: %s", client_id)
         else:
             signature = resp.get("signature", "")
             if not self._verify_signature(challenge_bytes, signature, client_id):
-                raise container.get('handshakeerror')f"Invalid signature from {client_id}")
+                raise HandshakeError()
             logger.info("Client authenticated via Ed25519: %s", client_id)
 
         # Create session
-        session = container.get('clientsession')client_id, ws, capabilities)
+        session = ClientSession(client_id=client_id, ws=ws, capabilities=capabilities)
 
         async with self._lock:
             self._clients[client_id] = session
 
         # Send ACK
-        ack = container.get('ackmessage')
+        ack = AckMessage(
             session_id=session.session_id,
             granted_capabilities=capabilities,
-            tick_interval_s=self._gateway_config.tick_interval_s,
+            tick_interval_s=self._gateway_config.tick_interval_s
         )
         await ws.send(ack.model_dump_json())
 
@@ -807,7 +798,7 @@ class AetherGateway:
         fatal: bool = False,
     ) -> None:
         """Send an error message to a client."""
-        err = container.get('errormessage')code=code, message=message, fatal=fatal)
+        err = ErrorMessage(code=code, message=message, fatal=fatal)
         try:
             await ws.send(err.model_dump_json())
             if fatal:

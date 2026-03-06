@@ -70,10 +70,10 @@ class SessionRestarter:
         self._disconnect_fn = disconnect_fn
         self._on_reconnect = on_reconnect
         self._on_failure = on_failure
-        self._config = config or container.get('reconnectconfig'))
+        self._config = config or ReconnectConfig)
 
         self._state = SessionState.DISCONNECTED
-        self._stats = container.get('sessionstats'))
+        self._stats = SessionStats)
         self._session_task: Optional[asyncio.Task] = None
         self._heartbeat_task: Optional[asyncio.Task] = None
         self._last_heartbeat: float = 0.0
@@ -158,7 +158,7 @@ class SessionRestarter:
         self._state = SessionState.FAILED
         self._stats.failed_reconnects += 1
         if self._on_failure:
-            self._on_failure(container.get('exception')"Max reconnection attempts reached"))
+            self._on_failure(Exception"Max reconnection attempts reached"))
         logger.error("❌ Session failed after max attempts")
         return False
 

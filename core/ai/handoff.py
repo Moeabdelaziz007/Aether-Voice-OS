@@ -36,10 +36,10 @@ class HandoffRequest:
 
     target_agent_id: str
     task_description: str
-    context_keys: list[str] = field(default_factory=list)
+    context_keys: list[str] = Field(default_factory=list)
     priority: str = "medium"
     timeout_seconds: int = 30
-    handoff_time: str = field(default_factory=lambda: datetime.now().isoformat())
+    handoff_time: str = Field((default_factory=lambda: datetime.now().isoformat())
 
 
 async def delegate_to_agent(

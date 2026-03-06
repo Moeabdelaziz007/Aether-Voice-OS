@@ -132,7 +132,7 @@ def main() -> None:
     print(f"{DIM}Press Ctrl+C to stop.{RESET}\n")
 
     try:
-        engine = container.get('aetherengine')
+        engine = AetherEngine
         print(
             f"{CYAN}✦ Admin API Listening on http://localhost:18790/health "
             f"(Tauri Bridge Active){RESET}"

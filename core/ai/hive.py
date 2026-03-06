@@ -86,7 +86,7 @@ class HiveCoordinator:
         self._handover_history: List[str] = []
 
         # Neural Summarizer (Context Compression)
-        self._summarizer = container.get('neuralsummarizer')ai_config) if ai_config else None
+        self._summarizer = NeuralSummarizer(ai_config) if ai_config else None
 
         # Safety: Rollback and Checkpointing
         self._last_successful_soul: Optional[AthPackage] = (
@@ -97,7 +97,7 @@ class HiveCoordinator:
         # Genetic DNA Repository
         self._dna_pool: Dict[str, AgentDNA] = {}
         self._genetic_optimizer = (
-            container.get('geneticoptimizer')registry.firebase, api_key)
+            GeneticOptimizer(registry.firebase, api_key)
             if registry.firebase and api_key
             else None
         )
@@ -125,7 +125,7 @@ class HiveCoordinator:
     def get_dna(self, soul_name: str) -> AgentDNA:
         """Retrieve the current DNA for a soul, or the default if none exists."""
         if soul_name not in self._dna_pool:
-            self._dna_pool[soul_name] = container.get('agentdna'))
+            self._dna_pool[soul_name] = AgentDNA()
         return self._dna_pool[soul_name]
 
     async def evolve_soul(
@@ -226,7 +226,7 @@ class HiveCoordinator:
             if code_context:
                 from core.ai.handover_protocol import CodeContext
 
-                context.code_context = container.get('codecontext')**code_context)
+                context.code_context = CodeContext(**code_context)
 
             # Initialize telemetry
             if self._telemetry:
@@ -357,7 +357,7 @@ class HiveCoordinator:
                 for result in validation_results:
                     from core.ai.handover_protocol import VerificationResult
 
-                    checkpoint.add_validation(container.get('verificationresult')**result))
+                    checkpoint.add_validation(VerificationResult(**result))
                 context.validation_checkpoint = checkpoint
 
                 # Check if validations passed
@@ -474,7 +474,7 @@ class HiveCoordinator:
 
     def _initiate_negotiation(self, context: HandoverContext) -> HandoverNegotiation:
         """Initialize negotiation for a handover."""
-        negotiation = container.get('handovernegotiation')
+        negotiation = HandoverNegotiation(
             handover_id=context.handover_id,
             initiating_agent=context.source_agent,
             receiving_agent=context.target_agent,

@@ -11,9 +11,10 @@ from core.audio.state import audio_state
 
 logger = logging.getLogger(__name__)
 
-# Mock authorized signature (Vocal Fingerprint)
-# in a real system, this would be a 128-bit vector or a hash of formants.
-AUTHORIZED_PITCH_RANGE = (100, 180)  # Hz for a typical male voice, adjust as needed
+# Biometric State
+calibrated_pitch: float = 120.0  # Default fallback
+calibration_window: float = 20.0 # Tolerance (+/- Hz)
+is_calibrated: bool = False
 
 
 class VoiceAuthGuard:
@@ -26,56 +27,83 @@ class VoiceAuthGuard:
     def is_authorized() -> bool:
         """
         Verifies the current speaker's biometric signature.
-        Uses the last_rms and last_zcr from audio_state to infer pitch/presence.
         """
         rms = audio_state.last_rms
         zcr = audio_state.last_zcr
 
-        # Simple heuristic: ZCR * sample_rate / 2 approximates fundamental
-        # frequency (F0).
-        # 0.05 ZCR at 16k -> 0.05 * 8000 = 400Hz
-        # Too high for speech, likely noise.
-        # 0.015 ZCR at 16k -> 120Hz (Valid human male pitch)
         estimated_pitch = zcr * 8000
-
-        logger.debug(
-            "Bio-Auth: Estimated Pitch %.2fHz (RMS: %.3f)", estimated_pitch, rms
-        )
 
         if rms < 0.01:
             return False  # No presence
 
-        if AUTHORIZED_PITCH_RANGE[0] <= estimated_pitch <= AUTHORIZED_PITCH_RANGE[1]:
-            return True
+        if not is_calibrated:
+            logger.warning("Bio-Auth: System not calibrated. Using default range.")
+            return 100 <= estimated_pitch <= 180
 
-        return False
+        # Authentic matching against calibrated soul fingerprint
+        return (calibrated_pitch - calibration_window) <= estimated_pitch <= (calibrated_pitch + calibration_window)
+
+    @staticmethod
+    def calibrate(pitch: float):
+        global calibrated_pitch, is_calibrated
+        calibrated_pitch = pitch
+        is_calibrated = True
+        logger.info(f"Bio-Auth: System calibrated with F0: {pitch:.2f}Hz")
 
 
 async def verify_admin(**kwargs) -> dict:
-    """
-    Tool: Verifies if the current user is the Administrator via Voice Biometrics.
-    """
+    """Tool: Verifies if the current user is the Administrator via Voice Biometrics."""
     if VoiceAuthGuard.is_authorized():
         return {
             "status": "authorized",
             "message": "Voice signature matched. Administrator confirmed.",
         }
-    else:
+    return {
+        "status": "denied",
+        "message": "Voice signature mismatch. High-level commands locked.",
+    }
+
+
+async def calibrate_admin_voice(**kwargs) -> dict:
+    """
+    Tool: Calibrates the Administrator's voice biometric signature.
+    The user should speak a neutral sentence while this is active.
+    """
+    rms = audio_state.last_rms
+    zcr = audio_state.last_zcr
+
+    if rms < 0.01:
         return {
-            "status": "denied",
-            "message": "Voice signature mismatch. High-level commands locked.",
+            "status": "failure",
+            "message": "No audio detected. Please ensure your microphone is active and speak clearly.",
         }
+
+    pitch = zcr * 8000
+    if not (50 <= pitch <= 500):
+        return {
+            "status": "failure",
+            "message": f"Detected pitch ({pitch:.1f}Hz) is outside human range. Noise detected?",
+        }
+
+    VoiceAuthGuard.calibrate(pitch)
+    return {
+        "status": "success",
+        "message": f"Biometric calibration complete. Saved fingerprint at {pitch:.1f}Hz.",
+    }
 
 
 def get_tools() -> list[dict]:
     return [
         {
             "name": "verify_admin",
-            "description": (
-                "Verifies the user's biometric voice signature. Call this before "
-                "performing sensitive operations."
-            ),
+            "description": "Verifies the user's biometric voice signature.",
             "parameters": {},
             "handler": verify_admin,
+        },
+        {
+            "name": "calibrate_admin_voice",
+            "description": "Calibrates the voice recognition system using the current speaker's voice.",
+            "parameters": {},
+            "handler": calibrate_admin_voice,
         }
     ]

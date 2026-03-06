@@ -447,7 +447,7 @@ class SessionStateManager:
             # Only restore metadata, not state (start fresh)
             if snapshot.get("metadata"):
                 meta = snapshot["metadata"]
-                self._metadata = container.get('sessionmetadata')
+                self._metadata = SessionMetadata(
                     session_id=meta.get("session_id", "restored"),
                     soul_name=meta.get("soul_name", "unknown"),
                     started_at=datetime.fromisoformat(meta.get("started_at")),

@@ -16,8 +16,8 @@ class LifecycleManager:
     """
 
     def __init__(self):
-        self.event_bus = container.get('eventbus'))
-        self.state_manager = container.get('enginestatemanager')self.event_bus)
+        self.event_bus = EventBus)
+        self.state_manager = EngineStateManagerself.event_bus)
         self._shutdown_event = asyncio.Event()
         self._tasks: List[asyncio.Task] = []
 
@@ -105,5 +105,5 @@ class LifecycleManager:
 if __name__ == "__main__":
     # Internal test run
     logging.basicConfig(level=logging.INFO)
-    manager = container.get('lifecyclemanager'))
+    manager = LifecycleManager)
     manager.run_forever()
