@@ -53,6 +53,9 @@ jobs:
       - name: Run ruff check
         run: ruff check core/engine.py core/audio/capture.py core/audio/jitter_buffer.py core/ai/adk_agents.py core/infra/telemetry.py core/services/registry.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
 
+      - name: Run ruff undefined-name check (F821)
+        run: ruff check . --select F821
+
       - name: Run ruff format check
         run: ruff format --check core/engine.py core/audio/capture.py core/audio/jitter_buffer.py core/ai/adk_agents.py core/infra/telemetry.py core/services/registry.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
 
