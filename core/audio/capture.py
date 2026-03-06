@@ -65,37 +65,31 @@ class SmoothMuter:
         if chunk_len == 0:
             return pcm_chunk
 
-        step = 1.0 / self._ramp_samples
-        if self._current_gain > self._target_gain:
-            step = -step
-
-        # Generate a gain array for the chunk
-        gains = np.full(chunk_len, self._current_gain, dtype=np.float32)
-
-        # Max steps remaining to reach target
-        steps_needed = int(abs(self._target_gain - self._current_gain) / abs(step))
-        ramp_len = min(chunk_len, steps_needed)
-
-        if ramp_len > 0:
-            ramp = np.linspace(
-                self._current_gain,
-                self._current_gain + (step * ramp_len),
-                ramp_len,
-                dtype=np.float32,
-            )
-            gains[:ramp_len] = ramp
-            gains[ramp_len:] = (
-                gains[ramp_len - 1] if ramp_len > 0 else self._target_gain
-            )
-            self._current_gain = float(gains[-1])
-
-            # Snap to target if very close
-            if abs(self._current_gain - self._target_gain) < 0.05:
-                self._current_gain = self._target_gain
-        else:
+        if self._ramp_samples <= 0:
             self._current_gain = self._target_gain
-            gains[:] = self._current_gain
+            return (pcm_chunk * self._current_gain).astype(np.int16)
 
+        if abs(self._current_gain - self._target_gain) < 1e-5:
+            self._current_gain = self._target_gain
+            return (pcm_chunk * self._current_gain).astype(np.int16)
+
+        # Recursive Exponential Filter (EMA) gain ramping
+        # alpha determines the speed of convergence. 
+        # We want to reach ~99% of target in self._ramp_samples.
+        alpha = np.exp(np.log(0.01) / self._ramp_samples)
+        
+        gains = np.zeros(chunk_len, dtype=np.float32)
+        current = self._current_gain
+        for i in range(chunk_len):
+            current = current * alpha + self._target_gain * (1 - alpha)
+            gains[i] = current
+            
+        self._current_gain = float(current)
+        
+        # Snap to target if we are effectively there
+        if abs(self._current_gain - self._target_gain) < 1e-3:
+            self._current_gain = self._target_gain
+            
         return (pcm_chunk * gains).astype(np.int16)
 
     def mute(self) -> None:
@@ -150,6 +144,9 @@ class AudioCapture:
         self._vad = vad_engine
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
+        self._leakage_task: Optional[asyncio.Task] = None
+        self._last_pcm_chunk: Optional[np.ndarray] = None
+        self._chunk_lock = threading.Lock()
 
         from core.audio.leakage import LeakageDetector
         from core.audio.state import HysteresisGate
@@ -187,10 +184,12 @@ class AudioCapture:
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
         # 1. Leakage & Correlation check (is it just echo?)
-        # Fetching spectrum from global state (updated by playback.py)
-        if audio_state.ai_spectrum is not None:
-            self._leakage._ai_spectrum = audio_state.ai_spectrum
-        is_user = self._leakage.is_user_speaking(pcm_chunk)
+        # Store for background processing
+        with self._chunk_lock:
+            self._last_pcm_chunk = pcm_chunk
+
+        # Fetch pre-computed score from background pulse
+        is_user = self._leakage.last_score < 0.7
 
         # 2. Base Hysteresis update on AI state
         ai_playing_base = self._hysteresis.update(audio_state.is_playing)
@@ -317,6 +316,27 @@ class AudioCapture:
             frames_per_buffer=self._config.chunk_size,
         )
         self._running = True
+        self._leakage_task = asyncio.create_task(self._leakage_pulse_loop())
+
+    async def _leakage_pulse_loop(self) -> None:
+        """Background loop to compute leakage scores without blocking audio IO."""
+        logger.debug("Leakage pulse loop started")
+        while self._running:
+            # Sync spectrum from global state
+            if audio_state.ai_spectrum is not None:
+                self._leakage.capture_ai_spectrum(audio_state.ai_spectrum)
+
+            pcm = None
+            with self._chunk_lock:
+                if self._last_pcm_chunk is not None:
+                    pcm = self._last_pcm_chunk.copy()
+            
+            if pcm is not None:
+                # Perform the heavy FFT + Correlation here
+                self._leakage.calculate_score(pcm)
+            
+            # Pulse every 20ms or so (matches typical frame sizes)
+            await asyncio.sleep(0.02)
 
     async def run(self) -> None:
         """
@@ -338,6 +358,9 @@ class AudioCapture:
             self._stream.stop_stream()
             self._stream.close()
             self._stream = None
+        if self._leakage_task:
+            self._leakage_task.cancel()
+            self._leakage_task = None
         if self._pya:
             self._pya.terminate()
             self._pya = None

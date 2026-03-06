@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 
 import numpy as np
 
@@ -17,6 +18,14 @@ class LeakageDetector:
     def __init__(self, sample_rate: int = 16000):
         self._sample_rate = sample_rate
         self._ai_spectrum = None
+        self._last_score = 0.0
+        self._lock = threading.Lock()
+
+    @property
+    def last_score(self) -> float:
+        """The Pearson correlation coefficient from the last analysis."""
+        with self._lock:
+            return self._last_score
 
     def capture_ai_spectrum(self, ai_audio_chunk: bytes | np.ndarray) -> None:
         """Store the frequency spectrum of the AI's currently playing audio."""
@@ -34,42 +43,44 @@ class LeakageDetector:
             self._ai_spectrum = None
             return
 
-        self._ai_spectrum = np.abs(np.fft.rfft(pcm))
+        with self._lock:
+            self._ai_spectrum = np.abs(np.fft.rfft(pcm))
 
-    def is_user_speaking(self, mic_audio_chunk: bytes | np.ndarray) -> bool:
+    def calculate_score(self, mic_audio_chunk: bytes | np.ndarray) -> float:
         """
-        Determines if the microphone audio is the user or echo.
-        True = User is likely speaking
-        False = It's highly likely just echo
+        Calculates the correlation score between the mic input and the AI audio.
+        1.0 means perfect echo, 0.0 means no correlation.
         """
-        if self._ai_spectrum is None:
-            return True  # If AI isn't speaking or we have no data, assume user
-
         if isinstance(mic_audio_chunk, bytes):
             mic_pcm = np.frombuffer(mic_audio_chunk, dtype=np.int16)
         else:
             mic_pcm = mic_audio_chunk
 
+        with self._lock:
+            ai_spectrum = self._ai_spectrum
+
+        if ai_spectrum is None:
+            with self._lock:
+                self._last_score = 0.0
+            return 0.0
+
         mic_spectrum = np.abs(np.fft.rfft(mic_pcm))
 
-        # Ensure sizes match (padding if necessary, though they should be the same
-        # chunk size)
-        min_len = min(len(self._ai_spectrum), len(mic_spectrum))
+        min_len = min(len(ai_spectrum), len(mic_spectrum))
         if min_len == 0:
-            return True
+            return 0.0
 
-        ai_spec_cut = self._ai_spectrum[:min_len]
+        ai_spec_cut = ai_spectrum[:min_len]
         mic_spec_cut = mic_spectrum[:min_len]
 
-        # Prevent completely flat signals from causing NaNs in corrcoef
         if np.var(ai_spec_cut) < 1e-5 or np.var(mic_spec_cut) < 1e-5:
-            return True
+            score = 0.0
+        else:
+            # Correlation coefficient
+            score = float(np.corrcoef(ai_spec_cut, mic_spec_cut)[0, 1])
+            if np.isnan(score):
+                score = 0.0
 
-        # Calculate Pearson correlation coefficient between the two frequency spectrums
-        correlation = np.corrcoef(ai_spec_cut, mic_spec_cut)[0, 1]
-
-        # High correlation means the mic is just hearing what the speaker is
-        # outputting (Echo)
-        is_echo = correlation > 0.7
-
-        return not is_echo
+        with self._lock:
+            self._last_score = score
+        return score

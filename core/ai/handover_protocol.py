@@ -862,7 +862,7 @@ class HandoverProtocol:
         """Retrieve an active handover by ID."""
         return self._active_handovers.get(handover_id)
 
-    def prepare_handoff(self, handover_id: str) -> Tuple[bool, str]:
+    async def prepare_handoff(self, handover_id: str) -> Tuple[bool, str]:
         """
         Pre-transfer validation for handover.
 
@@ -900,7 +900,7 @@ class HandoverProtocol:
         context.add_history("Speculative pre-warming initiated")
         return True
 
-    def complete_handoff(self, handover_id: str) -> Tuple[bool, str]:
+    async def complete_handoff(self, handover_id: str) -> Tuple[bool, str]:
         """
         Post-transfer confirmation for handover.
 
@@ -923,7 +923,7 @@ class HandoverProtocol:
         logger.info("Handover %s completed successfully", handover_id)
         return True, "Handover completed successfully"
 
-    def rollback_handover(self, handover_id: str) -> Tuple[bool, str]:
+    async def rollback_handover(self, handover_id: str) -> Tuple[bool, str]:
         """
         Rollback a failed handover to its pre-transfer state.
 
