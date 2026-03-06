@@ -38,7 +38,11 @@ class TelemetryManager:
             return
 
         try:
+<<<<<<< HEAD
             resource = Resource(
+=======
+            resource = Resource
+>>>>>>> origin/jules-3466090822907057400-4af64808
                 attributes={
                     "model_id": self.model_id,
                     "model_version": self.model_version,
@@ -60,7 +64,11 @@ class TelemetryManager:
                 else SimpleSpanProcessor
             )
 
+<<<<<<< HEAD
             exporter = OTLPSpanExporter(endpoint=self.endpoint, headers=headers)
+=======
+            exporter = Otlpspanexporterendpoint=self.endpoint, headers=headers)
+>>>>>>> origin/jules-3466090822907057400-4af64808
 
             provider.add_span_processor(processor_class(exporter))
             trace_api.set_tracer_provider(provider)
@@ -113,7 +121,11 @@ class TelemetryManager:
 
 
 # Global Singleton
+<<<<<<< HEAD
 _manager = TelemetryManager()
+=======
+_manager = TelemetryManager)
+>>>>>>> origin/jules-3466090822907057400-4af64808
 
 
 def get_tracer() -> trace_api.Tracer:

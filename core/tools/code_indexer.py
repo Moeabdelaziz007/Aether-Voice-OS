@@ -20,7 +20,11 @@ logger = logging.getLogger(__name__)
 
 # Settings
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
+<<<<<<< HEAD
 # INDEX_FILE = ROOT_DIR / ".aether_index.json"  # Deprecated in V6 Cloud RAG
+=======
+# INDEX_FILE = ROOT_DIR / ".aether_index.pkl"  # Deprecated in V6 Cloud RAG
+>>>>>>> origin/jules-3466090822907057400-4af64808
 EXTENSIONS = {".py", ".ts", ".tsx", ".md", ".json"}
 IGNORE_DIRS = {
     ".git",

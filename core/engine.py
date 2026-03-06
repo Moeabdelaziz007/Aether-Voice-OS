@@ -57,6 +57,7 @@ class AetherEngine:
 
         print("  Engine: Initializing AudioManager...", flush=True)
         self._audio = self._container.get("audiomanager")(
+        self._audio = AudioManager(
             self._config,
             self._gateway,
             self._on_affective_data,
@@ -74,6 +75,15 @@ class AetherEngine:
         self._cortex = self._container.get("cognitivescheduler")(
             self._event_bus, self._router
         )
+        self._infra = InfraManager(self._gateway)
+        print("  Engine: Initializing AdminAPI...", flush=True)
+        self._admin_api = AdminAPIServer(port=18790)
+
+        print("  Engine: Initializing PulseManager...", flush=True)
+        self._pulse = PulseManager(self._event_bus)
+
+        print("  Engine: Initializing CognitiveScheduler...", flush=True)
+        self._cortex = CognitiveScheduler(
             self._event_bus, self._router
         )
 
@@ -99,6 +109,9 @@ class AetherEngine:
         global_index = self._container.get("localvectorstore")(
             api_key=self._config.ai.api_key
         )
+        root_dir = Path(__file__).resolve().parent.parent
+        index_path = root_dir / ".aether_index.pkl"
+        global_index = LocalVectorStore(
             api_key=self._config.ai.api_key
         )
         global_index.load(index_path)

@@ -66,12 +66,20 @@ async def verify_admin(**kwargs) -> dict:
 
 async def calibrate_admin_voice(**kwargs) -> dict:
     """
+<<<<<<< HEAD
     Tool: Calibrates the Administrator's voice biometric signature. 
+=======
+    Tool: Calibrates the Administrator's voice biometric signature.
+>>>>>>> origin/jules-3466090822907057400-4af64808
     The user should speak a neutral sentence while this is active.
     """
     rms = audio_state.last_rms
     zcr = audio_state.last_zcr
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> origin/jules-3466090822907057400-4af64808
     if rms < 0.01:
         return {
             "status": "failure",
@@ -85,6 +93,19 @@ async def calibrate_admin_voice(**kwargs) -> dict:
             "message": f"Detected pitch ({pitch:.1f}Hz) is outside human range. Noise detected?",
         }
     
+    VoiceAuthGuard.calibrate(pitch)
+    return {
+        "status": "success",
+        "message": f"Biometric calibration complete. Saved fingerprint at {pitch:.1f}Hz.",
+    }
+
+    pitch = zcr * 8000
+    if not (50 <= pitch <= 500):
+        return {
+            "status": "failure",
+            "message": f"Detected pitch ({pitch:.1f}Hz) is outside human range. Noise detected?",
+        }
+
     VoiceAuthGuard.calibrate(pitch)
     return {
         "status": "success",
