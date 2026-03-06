@@ -47,7 +47,7 @@ class CameraTool:
             return None
 
 
-camera_instance = CameraTool)
+camera_instance = CameraTool()
 
 
 def get_tools():

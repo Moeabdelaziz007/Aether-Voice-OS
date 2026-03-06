@@ -91,7 +91,7 @@ class AetherContextScraper:
 # Tool registration helper
 async def scrape_context(query: str, platform: str = "stackoverflow") -> str:
     """Entry point for the Aether Engine tool router."""
-    scraper = AetherContextScraper)
+    scraper = AetherContextScraper()
     results = await scraper.search_solution(query, platform)
     return scraper.format_as_context(results)
 
@@ -136,7 +136,7 @@ def get_tools() -> list[dict]:
 if __name__ == "__main__":
     # Quick test
     async def main():
-        scraper = AetherContextScraper)
+        scraper = AetherContextScraper()
         res = await scraper.search_solution(
             "Next.js 15 middleware error", "stackoverflow"
         )

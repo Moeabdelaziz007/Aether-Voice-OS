@@ -67,11 +67,7 @@ async def create_task(
     db = _get_db()
     if not db:
         return {
-<<<<<<< HEAD
-            "status": "error", 
-=======
             "status": "error",
->>>>>>> origin/jules-3466090822907057400-4af64808
             "message": "Synapse Link Offline: Cannot save task to cloud. Local caching is disabled for security."
         }
 
@@ -209,11 +205,7 @@ async def add_note(content: str, tag: str = "general", **kwargs) -> dict:
             "status": "error",
             "message": "Synapse Link Offline: Cannot save note to cloud."
         }
-<<<<<<< HEAD
-        
-=======
 
->>>>>>> origin/jules-3466090822907057400-4af64808
     try:
         doc_ref = db.collection("notes").document(note_id)
         await doc_ref.set(note_data)

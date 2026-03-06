@@ -6,7 +6,8 @@
  * - Unified 3D Scene with consolidated WebGL context
  * - State-responsive ambient effects and edge glow
  * - Dynamic realm morphing triggered by voice commands
- * 
+ * - Emotional Atmosphere System - UI responds to user emotions
+ *
  * Performance Optimized: Single Canvas for all 3D elements
  */
 
@@ -21,6 +22,7 @@ import SystemFailure from "@/components/HUD/SystemFailure";
 import PoweredByStrip from "@/components/shared/PoweredByStrip";
 import ParticleField from "@/components/shared/ParticleField";
 import SilentHintsOverlay from "@/components/shared/SilentHintsOverlay";
+import { EmotionalAtmosphere, useEmotionalState } from "@/components/EmotionalAtmosphere";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useAetherStore } from "@/store/useAetherStore";
 import NeuralBackground from "@/components/shared/NeuralBackground";
@@ -55,9 +57,13 @@ export default function AetherPortal() {
     const preferences = useAetherStore((s) => s.preferences);
     const engineState = useAetherStore((s) => s.engineState);
     const currentRealm = useAetherStore((s) => s.currentRealm);
+    const emotionSenseEnabled = useAetherStore((s) => s.preferences.superpowers.emotionSense);
 
     // Wire voice command → realm navigation
     useVoiceCommands();
+
+    // Get emotional state for atmosphere (only if emotionSense is enabled)
+    const emotionalState = useEmotionalState();
 
     // Avatar config based on realm (optimized for unified scene)
     const avatarConfig = useMemo(() => {
@@ -71,8 +77,15 @@ export default function AetherPortal() {
         }
     }, [currentRealm]);
 
-    // State indicator color
+    // State indicator color (enhanced with emotional awareness)
     const stateIndicatorColor = useMemo(() => {
+        // Override with emotional color if frustration detected
+        if (emotionSenseEnabled && emotionalState.isNegative) {
+            return emotionalState.emotion === "stressed" ? "#ff1744" : "#f59e0b";
+        }
+        if (emotionSenseEnabled && emotionalState.emotion === "flow_state") {
+            return "#39ff14"; // Neon green for flow
+        }
         switch (engineState) {
             case "SPEAKING": return "#00ff88";
             case "LISTENING": return "#39ff14";
@@ -80,27 +93,38 @@ export default function AetherPortal() {
             case "INTERRUPTING": return "#ff1744";
             default: return "#4b5563";
         }
-    }, [engineState]);
+    }, [engineState, emotionSenseEnabled, emotionalState]);
 
-    // ── Drive CSS custom properties from accent color ────────
+    // ── Drive CSS custom properties from accent color and emotional state ────────
     useEffect(() => {
         const root = document.documentElement;
         const rgb = ACCENT_RGB[preferences.accentColor] || ACCENT_RGB.green;
 
+        // Adjust intensity based on emotional state
+        let intensity = STATE_INTENSITY[engineState] ?? 0.2;
+        if (emotionSenseEnabled && emotionalState.intensity > 0.5) {
+            intensity = Math.min(1.5, intensity + emotionalState.intensity * 0.3);
+        }
+
         root.style.setProperty("--accent-r", String(rgb[0]));
         root.style.setProperty("--accent-g", String(rgb[1]));
         root.style.setProperty("--accent-b", String(rgb[2]));
-        root.style.setProperty(
-            "--glow-intensity",
-            String(STATE_INTENSITY[engineState] ?? 0.2)
-        );
-    }, [preferences.accentColor, engineState]);
+        root.style.setProperty("--glow-intensity", String(intensity));
+        
+        // Set emotional CSS variables
+        if (emotionSenseEnabled) {
+            root.style.setProperty("--emotion-valence", String(emotionalState.valence));
+            root.style.setProperty("--emotion-arousal", String(emotionalState.arousal));
+            root.style.setProperty("--emotion-intensity", String(emotionalState.intensity));
+        }
+    }, [preferences.accentColor, engineState, emotionSenseEnabled, emotionalState]);
 
     return (
-        <LayoutGroup>
-            {/* ── Ambient Background Layers ── */}
-            <NeuralBackground />
-            <ParticleField count={20} />
+        <EmotionalAtmosphere showDebugOverlay={false}>
+            <LayoutGroup>
+                {/* ── Ambient Background Layers ── */}
+                <NeuralBackground />
+                <ParticleField count={20} />
 
             {/* Unified 3D Scene — Single WebGL Context */}
             <UnifiedScene
@@ -166,5 +190,6 @@ export default function AetherPortal() {
             {/* Command bar — always visible at bottom */}
             <CommandBar />
         </LayoutGroup>
+        </EmotionalAtmosphere>
     );
 }

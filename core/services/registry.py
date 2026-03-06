@@ -21,7 +21,7 @@ from core.utils.errors import IdentityError, PackageNotFoundError
 logger = logging.getLogger(__name__)
 
 
-class PackageChangeHandler(FileSystemEventHandler)):
+class PackageChangeHandler(FileSystemEventHandler):
     """Handles filesystem events for the packages directory."""
 
     def __init__(self, registry: AetherRegistry) -> None:
@@ -32,13 +32,13 @@ class PackageChangeHandler(FileSystemEventHandler)):
             return
         if event.src_path.endswith("manifest.json"):
             # A package manifest changed, trigger reload
-            pkg_path = Pathevent.src_path).parent
+            pkg_path = Path(event.src_path).parent
             self._registry._handle_fs_change(pkg_path)
 
     def on_created(self, event: FileSystemEvent) -> None:
         if event.is_directory:
             # New directory might be a new package
-            self._registry._handle_fs_change(Pathevent.src_path))
+            self._registry._handle_fs_change(Path(event.src_path))
 
 
 class AetherRegistry:

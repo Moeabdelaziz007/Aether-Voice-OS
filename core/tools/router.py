@@ -134,7 +134,7 @@ class ToolRouter:
 
     def __init__(self) -> None:
         self._tools: dict[str, ToolRegistration] = {}
-        self._profiler = ToolExecutionProfiler)
+        self._profiler = ToolExecutionProfiler()
         self._vector_store: Optional[LocalVectorStore] = None
         self._biometric_middleware = BiometricMiddlewarefallback_authorized=True)
 
