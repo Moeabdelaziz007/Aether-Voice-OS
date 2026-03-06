@@ -218,23 +218,34 @@ class FirebaseConnector:
                 .document(session_id)
                 .collection("metrics")
             )
-            docs = metrics_ref.stream()
 
-            valence_sum = 0.0
-            arousal_sum = 0.0
+            # Use Firestore Aggregation Queries to avoid N+1 and minimize memory usage
+            agg_query = (
+                metrics_ref.count(alias="count")
+                .avg("valence", alias="avg_valence")
+                .avg("arousal", alias="avg_arousal")
+            )
+
+            # Wrap the blocking aggregation call
+            agg_results = await asyncio.to_thread(agg_query.get)
+
+            if not agg_results or not agg_results[0]:
+                return {"status": "empty", "message": "No telemetry data found"}
+
             count = 0
+            avg_valence = 0.0
+            avg_arousal = 0.0
 
-            for doc in docs:
-                data = doc.to_dict()
-                valence_sum += data.get("valence", 0.0)
-                arousal_sum += data.get("arousal", 0.0)
-                count += 1
+            for agg in agg_results[0]:
+                if agg.alias == "count":
+                    count = agg.value
+                elif agg.alias == "avg_valence":
+                    avg_valence = agg.value or 0.0
+                elif agg.alias == "avg_arousal":
+                    avg_arousal = agg.value or 0.0
 
             if count == 0:
                 return {"status": "empty", "message": "No telemetry data found"}
-
-            avg_valence = valence_sum / count
-            avg_arousal = arousal_sum / count
 
             # Heuristic fitness matching GeneticOptimizer expectation
             summary = {
