@@ -48,7 +48,7 @@ class ArchitectAgent(VoiceAgent):
         context.add_history("Architect began analysis", agent="Architect")
 
         # Create output container
-        self._output = ArchitectOutput
+        self._output = ArchitectOutput(
             handover_id=context.handover_id,
             task_description=context.task,
         )
