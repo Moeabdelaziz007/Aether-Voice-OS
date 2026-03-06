@@ -351,7 +351,8 @@ class AetherGateway:
             # Create session through state manager
             async with self._pre_warm_lock:
                 if (
-                    self._pre_warmed_session
+                    hasattr(self, "_pre_warmed_session")
+                    and getattr(self, "_pre_warmed_session")
                     and self._pre_warmed_session._soul.name == soul_name
                 ):
                     logger.info(
@@ -361,7 +362,7 @@ class AetherGateway:
                     session = self._pre_warmed_session
                     self._pre_warmed_session = None
                 else:
-                    if self._pre_warmed_session:
+                    if hasattr(self, "_pre_warmed_session") and self._pre_warmed_session:
                         await self._pre_warmed_session.stop()
                         self._pre_warmed_session = None
 

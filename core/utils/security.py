@@ -47,6 +47,10 @@ def verify_signature(
             else message
         )
 
+        # In gateway handshake, challenge is sent as hex string, but signature expects bytes of challenge
+        if isinstance(message, str) and len(message) == 64 and all(c in "0123456789abcdefABCDEF" for c in message):
+            msg_bytes = bytes.fromhex(message)
+
         verify_key = nacl.signing.VerifyKey(pk_bytes)
         verify_key.verify(msg_bytes, sig_bytes)
         return True

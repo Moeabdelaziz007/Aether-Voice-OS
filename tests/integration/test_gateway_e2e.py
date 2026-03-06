@@ -106,7 +106,7 @@ async def test_gateway_handshake_e2e():
         signing_key = nacl.signing.SigningKey.generate()
         verify_key = signing_key.verify_key
         # Use 64-char hex string to trigger the Ephemeral/Direct Mode in Gateway
-        client_id = verify_key.encode().hex()
+        client_id = verify_key.encode(encoder=nacl.encoding.HexEncoder).decode("utf-8")
 
         uri = f"ws://localhost:{gw_cfg.port}"
         async with websockets.connect(uri) as websocket:
@@ -118,6 +118,8 @@ async def test_gateway_handshake_e2e():
 
             # 4. Sign Challenge & Respond
             challenge_bytes = bytes.fromhex(challenge_token)
+            # Verify Gateway uses exactly this format
+            # (signature.signature is bytes, hex() makes it string)
             signature = signing_key.sign(challenge_bytes)
 
             client_response = {
