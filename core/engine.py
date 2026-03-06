@@ -418,6 +418,21 @@ class AetherEngine:
         self._tools[name] = tool
         logger.info("Registered tool: %s", name)
 
+    def _validate_registry_startup(self, discovered_count: int) -> None:
+        """Log startup package discovery status for operational visibility."""
+        logger.info(
+            "Package registry startup scan completed: %d packages discovered in %s",
+            discovered_count,
+            self._config.packages_dir,
+        )
+        if discovered_count == 0:
+            logger.warning(
+                "No identity packages discovered in %s. "
+                "Set AETHER_PACKAGES_DIR to override the package location.",
+                self._config.packages_dir,
+            )
+
+
     async def run(self) -> None:
         """
         Main engine lifecycle.
@@ -431,8 +446,9 @@ class AetherEngine:
         for sig in (signal.SIGINT, signal.SIGTERM):
             loop.add_signal_handler(sig, self._signal_shutdown)
 
-        # Load identity packages
-        self._registry.scan()
+        # Load identity packages and validate startup discovery
+        discovered = self._registry.scan()
+        self._validate_registry_startup(discovered)
         self._registry.start_watcher()
 
         # Initialize Firebase (non-blocking — engine runs even if Firebase fails)

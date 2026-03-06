@@ -249,8 +249,14 @@ cd web/dashboard && npm install && cd ../../
 cat > .env << EOF
 GOOGLE_API_KEY="your_gemini_api_key"
 AETHER_MODEL="gemini-2.5-flash"
+# Optional override for package discovery path (defaults to ./brain/packages)
+AETHER_PACKAGES_DIR="/absolute/path/to/brain/packages"
 EOF
 ```
+
+> Package discovery defaults to `brain/packages` relative to the repository root.
+> In containerized or multi-volume deployments, set `AETHER_PACKAGES_DIR` to point
+> at the mounted package directory.
 
 ### 3. Launch System
 

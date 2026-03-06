@@ -3,12 +3,19 @@ import json
 import logging
 import os
 from enum import Enum
+from pathlib import Path
 from typing import Optional
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
+
+
+def _default_packages_dir() -> str:
+    """Return the default package directory rooted at the repository path."""
+    repo_root = Path(__file__).resolve().parents[2]
+    return str(repo_root / "brain" / "packages")
 
 
 class AudioConfig(BaseModel):
@@ -229,7 +236,7 @@ class AetherConfig(BaseSettings):
 
     log_level: str = "INFO"
     log_file: Optional[str] = "logs/aether.log"
-    packages_dir: str = "packages"
+    packages_dir: str = Field(default_factory=_default_packages_dir)
 
     model_config = SettingsConfigDict(
         env_file=_get_env_file(),

@@ -51,8 +51,12 @@ gcloud run deploy aether-engine \
     --image gcr.io/[PROJECT_ID]/aether-engine \
     --platform managed \
     --allow-unauthenticated \
-    --set-env-vars="GOOGLE_API_KEY=[YOUR_KEY],AETHER_AI_MODEL=gemini-2.0-flash-exp"
+    --set-env-vars="GOOGLE_API_KEY=[YOUR_KEY],AETHER_AI_MODEL=gemini-2.0-flash-exp,AETHER_PACKAGES_DIR=/app/brain/packages"
 ```
+
+> `AETHER_PACKAGES_DIR` overrides the default package discovery path. If unset,
+> Aether resolves packages from `brain/packages` relative to the repository root.
+> Set this explicitly in production when packages are mounted from a separate volume.
 
 ---
 
