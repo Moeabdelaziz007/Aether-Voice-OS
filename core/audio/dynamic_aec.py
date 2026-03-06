@@ -273,11 +273,7 @@ class DoubleTalkDetector:
         self.energy_ratio_threshold = energy_ratio_threshold
         self.hangover_frames = hangover_frames
 
-<<<<<<< HEAD
         self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate)
-=======
-        self.spectral_analyzer = SpectralAnalyzersample_rate=sample_rate)
->>>>>>> origin/jules-3466090822907057400-4af64808
 
         # Ring buffers for history
         self.far_end_history: deque[np.ndarray] = deque(maxlen=4)
@@ -530,51 +526,35 @@ class DynamicAEC:
         filter_length = max(filter_length, 512)  # Minimum 512 samples
 
         # Initialize components
-<<<<<<< HEAD
         self.adaptive_filter = FrequencyDomainNLMS(
-=======
-        self.adaptive_filter = FrequencyDomainNLMS
->>>>>>> origin/jules-3466090822907057400-4af64808
             filter_length=filter_length,
             step_size=step_size,
             regularization=1e-4,
             leakage=0.999,
         )
 
-<<<<<<< HEAD
         self.delay_estimator = DelayEstimator(
-=======
-        self.delay_estimator = DelayEstimator
->>>>>>> origin/jules-3466090822907057400-4af64808
             sample_rate=sample_rate,
             max_delay_ms=200.0,
             update_interval_ms=500.0,
             smoothing_factor=0.9,
         )
 
-<<<<<<< HEAD
         self.double_talk_detector = DoubleTalkDetector(
-=======
-        self.double_talk_detector = DoubleTalkDetector
->>>>>>> origin/jules-3466090822907057400-4af64808
             sample_rate=sample_rate,
             coherence_threshold=0.65,
             energy_ratio_threshold=0.5,
             hangover_frames=10,
         )
 
-<<<<<<< HEAD
         self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
-=======
-        self.spectral_analyzer = SpectralAnalyzersample_rate=sample_rate, n_fft=512)
->>>>>>> origin/jules-3466090822907057400-4af64808
+        self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
 
         # Frame accumulation for block processing
         self.block_size = filter_length  # Process in filter-length blocks
 
         # Ring buffers for delay compensation
         self.far_end_ring_buffer: deque[np.ndarray] = deque(maxlen=20)
-<<<<<<< HEAD
         self.accumulated_far_end = BoundedBuffer(
             max_samples=sample_rate * 5
         )  # 5s limit
@@ -585,18 +565,7 @@ class DynamicAEC:
 
         # State
         self.state = AECState()
-=======
-        self.accumulated_far_end = BoundedBuffer
-            max_samples=sample_rate * 5
-        )  # 5s limit
 
-        self.near_end_accumulator = BoundedBuffermax_samples=self.block_size * 2)
-        self.far_end_accumulator = BoundedBuffermax_samples=self.block_size * 2)
-        self.accumulated_samples = 0
-
-        # State
-        self.state = AECState)
->>>>>>> origin/jules-3466090822907057400-4af64808
         self.erle_history: deque[float] = deque(maxlen=50)
 
         # Convergence tracking
@@ -837,11 +806,7 @@ class DynamicAEC:
 
             # Only recreate filter if length changed significantly
             if abs(new_filter_length - self.adaptive_filter.filter_length) > 64:
-<<<<<<< HEAD
                 self.adaptive_filter = FrequencyDomainNLMS(
-=======
-                self.adaptive_filter = FrequencyDomainNLMS
->>>>>>> origin/jules-3466090822907057400-4af64808
                     filter_length=new_filter_length,
                     step_size=self.adaptive_filter.step_size,
                     regularization=1e-4,
@@ -864,19 +829,11 @@ class DynamicAEC:
         self.double_talk_detector.reset()
         self.spectral_analyzer.reset()
         self.far_end_ring_buffer.clear()
-<<<<<<< HEAD
         self.accumulated_far_end = BoundedBuffer(max_samples=self.sample_rate * 5)
         self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
         self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
         self.accumulated_samples = 0
         self.state = AECState()
-=======
-        self.accumulated_far_end = BoundedBuffermax_samples=self.sample_rate * 5)
-        self.near_end_accumulator = BoundedBuffermax_samples=self.block_size * 2)
-        self.far_end_accumulator = BoundedBuffermax_samples=self.block_size * 2)
-        self.accumulated_samples = 0
-        self.state = AECState)
->>>>>>> origin/jules-3466090822907057400-4af64808
         self.erle_history.clear()
         self.convergence_frame_count = 0
         logger.info("DynamicAEC reset")
