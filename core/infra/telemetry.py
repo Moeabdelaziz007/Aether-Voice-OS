@@ -1,6 +1,8 @@
 import logging
 import os
-from typing import Optional
+import random
+import time
+from typing import Any, Callable, Dict, Optional
 
 try:
     from opentelemetry import trace as trace_api
@@ -11,8 +13,32 @@ try:
 
     OTEL_AVAILABLE = True
 except Exception:
-    from opentelemetry import trace as trace_api
+    class _NoOpSpan:
+        def is_recording(self) -> bool:
+            return False
 
+        def set_attribute(self, key: str, value: Any) -> None:
+            return None
+
+    class _NoOpTracer:
+        pass
+
+    class _NoOpTraceAPI:
+        Tracer = _NoOpTracer
+
+        @staticmethod
+        def get_tracer(name: str) -> _NoOpTracer:
+            return _NoOpTracer()
+
+        @staticmethod
+        def get_current_span() -> _NoOpSpan:
+            return _NoOpSpan()
+
+        @staticmethod
+        def set_tracer_provider(provider: Any) -> None:
+            return None
+
+    trace_api = _NoOpTraceAPI()
     OTEL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
@@ -35,6 +61,10 @@ class TelemetryManager:
         self.model_version = model_version
         self._is_initialized = False
         self.tracer: Optional[trace_api.Tracer] = None
+        self._flushables: Dict[str, Callable[[], Dict[str, Any]]] = {}
+        self._flush_interval_s = float(os.getenv("TELEMETRY_FLUSH_INTERVAL_SEC", "15"))
+        self._downsample_rate = float(os.getenv("TELEMETRY_DOWNSAMPLE_RATE", "1.0"))
+        self._last_flush_ts = time.monotonic()
 
         # Arize/Phoenix Config
         self.endpoint = os.getenv(
@@ -90,6 +120,34 @@ class TelemetryManager:
             logger.error("✧ Failed to initialize telemetry: %s", e)
             self.tracer = _fallback_tracer()
 
+
+    def register_flushable(self, name: str, callback: Callable[[], Dict[str, Any]]) -> None:
+        """Register a callback that returns a metrics snapshot during flush."""
+        self._flushables[name] = callback
+
+    def should_sample(self) -> bool:
+        """Apply global telemetry downsampling; defaults to full sampling."""
+        if self._downsample_rate >= 1.0:
+            return True
+        if self._downsample_rate <= 0:
+            return False
+        return random.random() <= self._downsample_rate
+
+    def maybe_flush(self) -> None:
+        if (time.monotonic() - self._last_flush_ts) < self._flush_interval_s:
+            return
+        self.flush_metrics()
+
+    def flush_metrics(self) -> Dict[str, Dict[str, Any]]:
+        flushed: Dict[str, Dict[str, Any]] = {}
+        for name, callback in self._flushables.items():
+            try:
+                flushed[name] = callback()
+            except Exception as exc:
+                logger.warning("Failed telemetry flush for %s: %s", name, exc)
+        self._last_flush_ts = time.monotonic()
+        return flushed
+
     def record_usage(
         self,
         session_id: str,
@@ -143,3 +201,19 @@ def record_usage(
     model: str = "gemini-2.0-flash",
 ):
     _manager.record_usage(session_id, prompt_tokens, completion_tokens, model)
+
+
+def register_flushable(name: str, callback: Callable[[], Dict[str, Any]]) -> None:
+    _manager.register_flushable(name, callback)
+
+
+def maybe_flush_metrics() -> None:
+    _manager.maybe_flush()
+
+
+def flush_metrics() -> Dict[str, Dict[str, Any]]:
+    return _manager.flush_metrics()
+
+
+def should_sample() -> bool:
+    return _manager.should_sample()
