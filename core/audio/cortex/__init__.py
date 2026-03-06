@@ -36,7 +36,7 @@ class CochlearBuffer:
         self.capacity = capacity
         self.use_rust = HAS_RUST_CORTEX
         if HAS_RUST_CORTEX:
-            self._rust_buf = RustCochlearBuffercapacity)
+            self._rust_buf = RustCochlearBuffer(capacity)
         else:
             # Fallback to simple numpy ring buffer
             self._buf = np.zeros(capacity, dtype=np.int16)

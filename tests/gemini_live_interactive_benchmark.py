@@ -622,11 +622,13 @@ class GeminiLiveInteractiveBenchmark:
 
     def _update_statistics(self):
         """Update computed statistics from collected data."""
-        if not self.latency_measurements:
+        # Filter out invalid measurements (negative or near-zero outliers)
+        valid_latencies = [l for l in self.latency_measurements if l > 0]
+        if not valid_latencies:
             return
 
         # Latency percentiles
-        sorted_latencies = sorted(self.latency_measurements)
+        sorted_latencies = sorted(valid_latencies)
         self.stats.latency_p50 = np.percentile(sorted_latencies, 50)
         self.stats.latency_p95 = np.percentile(sorted_latencies, 95)
         self.stats.latency_p99 = np.percentile(sorted_latencies, 99)

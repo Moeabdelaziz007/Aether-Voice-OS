@@ -85,6 +85,7 @@ class AIConfig(BaseSettings):
         ),
         extra="ignore",
         env_file_encoding="utf-8",
+        env_file_required=False,
     )
 
 
@@ -128,6 +129,7 @@ class AetherConfig(BaseSettings):
         ),
         env_nested_delimiter="__",
         extra="ignore",
+        env_file_required=False,
     )
 
 
@@ -147,13 +149,23 @@ def load_config() -> AetherConfig:
     try:
         # 1. Try with .env loading (standard local dev)
         return AetherConfig()
-    except (PermissionError, OSError):
-        # 2. Try without .env loading (restricted CI/Docker)
+    except (PermissionError, OSError) as e:
+        print(f"Note: .env loading bypassed (Reason: {e})")
+        # 2. Try without .env loading (restricted CI/Docker/Sandbox)
         try:
             return AetherConfig(_env_file=None)
-        except Exception as e:
-            # 3. Last resort fallback
-            raise OSError(f"Critical configuration missing or restricted: {e}")
+        except Exception as e2:
+            # 3. Last resort fallback (Manual defaults)
+            print(f"Critical: Failed to load config even without .env: {e2}")
+            # Try once more with a completely clean environment for Pydantic
+            try:
+                import pydantic
+                if pydantic.__version__.startswith("2"):
+                    # For Pydantic v2, we can try to force empty env
+                    return AetherConfig(_env_file=None, _env_prefix="NONE_")
+                return AetherConfig(_env_file=None)
+            except Exception:
+                raise OSError(f"Critical configuration missing or restricted: {e2}")
     except Exception as e:
         # Re-try without env file if it's a validation error or something else
         try:
