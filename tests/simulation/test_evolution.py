@@ -9,7 +9,7 @@ import random
 from typing import Dict
 
 from core.ai.genetic import AgentDNA, GeneticOptimizer
-from core.infra.cloud.firebase import FirebaseConnector
+from core.infra.cloud.firebase.interface import FirebaseConnector
 
 
 class MockFirebase(FirebaseConnector):

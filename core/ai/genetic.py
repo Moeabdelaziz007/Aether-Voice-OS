@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from core.infra.cloud.firebase import FirebaseConnector
+from core.infra.cloud.firebase.interface import FirebaseConnector
 
 logger = logging.getLogger(__name__)
 

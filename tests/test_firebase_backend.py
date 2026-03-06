@@ -1,7 +1,7 @@
 import asyncio
 import logging
 
-from core.infra.cloud.firebase import FirebaseConnector
+from core.infra.cloud.firebase.interface import FirebaseConnector
 
 logging.basicConfig(level=logging.INFO)
 

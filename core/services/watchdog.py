@@ -11,7 +11,7 @@ import re
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 
-from core.infra.cloud.firebase import FirebaseConnector
+from core.infra.cloud.firebase.interface import FirebaseConnector
 from core.infra.transport.bus import GlobalBus
 from core.tools.healing_tool import diagnose_and_repair
 
