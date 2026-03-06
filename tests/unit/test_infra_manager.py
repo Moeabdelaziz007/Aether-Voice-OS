@@ -149,3 +149,9 @@ def test_infra_manager_end_session_missing_router_attributes(infra_manager):
             "tool_count": None,
         }
     )
+
+def test_infra_manager_start_watchdog_error(infra_manager):
+    infra_manager._watchdog.start.side_effect = Exception("Failed to start")
+    with pytest.raises(Exception, match="Failed to start"):
+        infra_manager.start_watchdog()
+    infra_manager._watchdog.start.assert_called_once()
