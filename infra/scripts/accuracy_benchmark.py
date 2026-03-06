@@ -9,7 +9,7 @@ import time
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.internal.bug_generator import BugGenerator
 
-from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
+from core.ai.handover.manager import HandoverContext
 from core.tools.healing_tool import diagnose_and_repair
 
 logging.basicConfig(level=logging.INFO)
@@ -124,24 +124,35 @@ class AccuracyBench:
         log_path = os.path.join(log_dir, "session.log")
 
         with open(log_path, "w") as f:
-            f.write("WebSocket connection randomly terminated.\nError: Connection closed unexpectedly.")
+            f.write(
+                "WebSocket connection randomly terminated.\n"
+                "Error: Connection closed unexpectedly."
+            )
 
-        diagnosis = await diagnose_and_repair(context="WebSocket connection dropped unexpectedly")
+        diagnosis = await diagnose_and_repair(
+            context="WebSocket connection dropped unexpectedly"
+        )
 
         recovery_time = time.time() - start_time
-        success = "Connection closed unexpectedly" in diagnosis.get("terminal_output", "")
+        success = "Connection closed unexpectedly" in diagnosis.get(
+            "terminal_output", ""
+        )
 
         self.results["zero_shot_recovery"] = {
             "mttr_seconds": recovery_time,
             "success": success
         }
-        print(f"  Result: {'✅' if success else '❌'} (MTTR: {recovery_time:.2f}s)", flush=True)
+        print(
+            f"  Result: {'✅' if success else '❌'} (MTTR: {recovery_time:.2f}s)",
+            flush=True,
+        )
 
     async def run_dispatch_ambiguity_bench(self):
         print(
             "🤔 [ACCURACY] Testing Tool Dispatch Ambiguity...", flush=True
         )
 
+        from core.ai.handover.manager import MultiAgentOrchestrator
         orchestrator = MultiAgentOrchestrator()
         # Mock an agent just to test routing
         class MockAgent:
@@ -170,13 +181,19 @@ class AccuracyBench:
                 "did_clarify": did_clarify,
                 "passed": passed
             })
-            print(f"  Testing prompt: '{prompt}' -> {'✅' if passed else '❌'}", flush=True)
+            print(
+                f"  Testing prompt: '{prompt}' -> {'✅' if passed else '❌'}",
+                flush=True,
+            )
 
         self.results["dispatch_ambiguity"] = {
             "success": all_passed,
             "cases": results
         }
-        print(f"  Overall Dispatch Ambiguity: {'✅' if all_passed else '❌'}", flush=True)
+        print(
+            f"  Overall Dispatch Ambiguity: {'✅' if all_passed else '❌'}",
+            flush=True,
+        )
 
     async def execute(self):
         await self.run_healing_bench()
