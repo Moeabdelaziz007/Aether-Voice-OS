@@ -91,6 +91,14 @@ class ToolRouter:
         "update_firebase_config",
     }
 
+    # Latency SLO map used by session-level timeout guards.
+    LATENCY_TIER_SLO_SECONDS: dict[str, float] = {
+        "p95_sub_500ms": 0.5,
+        "p95_sub_2s": 2.0,
+        "p95_sub_5s": 5.0,
+        "p95_sub_10s": 10.0,
+    }
+
     def __init__(self) -> None:
         self._tools: dict[str, ToolRegistration] = {}
         self._profiler = ToolExecutionProfiler()
@@ -317,3 +325,16 @@ class ToolRouter:
     def get_performance_report(self) -> dict[str, dict[str, float]]:
         """Return performance stats for all tools."""
         return {name: self._profiler.get_stats(name) for name in self.names}
+
+    def get_timeout_for_tool(self, tool_name: str) -> float:
+        """Return timeout budget in seconds for a tool's declared latency tier."""
+        tool = self._tools.get(tool_name)
+        tier = tool.latency_tier if tool else "p95_sub_2s"
+        return self.LATENCY_TIER_SLO_SECONDS.get(
+            tier,
+            self.LATENCY_TIER_SLO_SECONDS["p95_sub_2s"],
+        )
+
+    def get_registration(self, tool_name: str) -> Optional[ToolRegistration]:
+        """Expose tool metadata for session orchestration logic."""
+        return self._tools.get(tool_name)

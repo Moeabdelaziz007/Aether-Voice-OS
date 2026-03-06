@@ -1,5 +1,8 @@
 import logging
 import os
+import statistics
+import threading
+from collections import deque
 from typing import Optional
 
 try:
@@ -16,6 +19,52 @@ except Exception:
     OTEL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+
+class ToolTimeoutTelemetry:
+    """Best-effort aggregator for tool timeout and latency percentile telemetry."""
+
+    def __init__(self, window_size: int = 2000) -> None:
+        self._durations_ms: deque[float] = deque(maxlen=window_size)
+        self._timeout_events: deque[dict[str, object]] = deque(maxlen=window_size)
+        self._lock = threading.Lock()
+
+    def record_tool_dispatch(self, tool_name: str, duration_ms: float, timed_out: bool) -> None:
+        with self._lock:
+            self._durations_ms.append(duration_ms)
+            if timed_out:
+                self._timeout_events.append(
+                    {
+                        "tool_name": tool_name,
+                        "duration_ms": duration_ms,
+                    }
+                )
+
+    def _percentile(self, values: list[float], pct: float) -> float:
+        if not values:
+            return 0.0
+        if len(values) == 1:
+            return values[0]
+        idx = int((len(values) - 1) * pct)
+        return values[idx]
+
+    def get_dashboard(self) -> dict[str, object]:
+        with self._lock:
+            values = sorted(self._durations_ms)
+            timeout_count = len(self._timeout_events)
+            total = len(values)
+
+            return {
+                "tool_dispatch": {
+                    "count": total,
+                    "timeout_count": timeout_count,
+                    "timeout_rate": (timeout_count / total) if total else 0.0,
+                    "p50_ms": self._percentile(values, 0.50),
+                    "p95_ms": self._percentile(values, 0.95),
+                    "p99_ms": self._percentile(values, 0.99),
+                    "avg_ms": statistics.mean(values) if values else 0.0,
+                }
+            }
 
 
 def _fallback_tracer() -> trace_api.Tracer:
@@ -143,3 +192,24 @@ def record_usage(
     model: str = "gemini-2.0-flash",
 ):
     _manager.record_usage(session_id, prompt_tokens, completion_tokens, model)
+
+
+_TOOL_TIMEOUT_TELEMETRY = ToolTimeoutTelemetry()
+
+
+def record_tool_dispatch_telemetry(
+    tool_name: str,
+    duration_ms: float,
+    timed_out: bool,
+) -> None:
+    """Record tool dispatch completion for aggregate timeout/latency dashboards."""
+    _TOOL_TIMEOUT_TELEMETRY.record_tool_dispatch(
+        tool_name=tool_name,
+        duration_ms=duration_ms,
+        timed_out=timed_out,
+    )
+
+
+def get_tool_timeout_dashboard() -> dict[str, object]:
+    """Return aggregate timeout and percentile metrics for tool dispatches."""
+    return _TOOL_TIMEOUT_TELEMETRY.get_dashboard()

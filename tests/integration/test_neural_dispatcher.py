@@ -11,7 +11,8 @@ Validates:
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+import asyncio
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -291,3 +292,70 @@ class TestEngineRouterIntegration:
             engine._register_tools()
             assert "create_task" in engine._router.names
             assert "list_tasks" in engine._router.names
+
+
+@pytest.mark.asyncio
+async def test_tool_timeout_does_not_deadlock_turn():
+    """Slow tools should degrade gracefully without blocking the full tool turn."""
+
+    class _Gateway:
+        def __init__(self):
+            self.metrics = {}
+
+        async def broadcast(self, _event, _payload):
+            return None
+
+    class _Router:
+        def __init__(self):
+            self.count = 2
+            self.names = ["fast_tool", "slow_tool"]
+
+        async def dispatch(self, fc):
+            if fc.name == "slow_tool":
+                await asyncio.sleep(0.25)
+                return {"result": {"ok": False}}
+            await asyncio.sleep(0.01)
+            return {"result": {"ok": True}, "x-a2a-status": 200}
+
+        def get_timeout_for_tool(self, tool_name):
+            return 0.05 if tool_name == "slow_tool" else 0.5
+
+        def get_registration(self, tool_name):
+            return type("Meta", (), {"latency_tier": "p95_sub_500ms"})()
+
+    from core.ai.session import GeminiLiveSession
+
+    session = GeminiLiveSession(
+        config=MagicMock(),
+        audio_in_queue=asyncio.Queue(),
+        audio_out_queue=asyncio.Queue(),
+        gateway=_Gateway(),
+        tool_router=_Router(),
+    )
+
+    mock_gemini_session = MagicMock()
+    mock_gemini_session.send_tool_response = AsyncMock()
+
+    tool_call = MagicMock()
+    fast = MagicMock()
+    fast.name = "fast_tool"
+    fast.args = {"q": "quick"}
+    slow = MagicMock()
+    slow.name = "slow_tool"
+    slow.args = {"q": "very-slow"}
+    tool_call.function_calls = [fast, slow]
+
+    await asyncio.wait_for(
+        session._handle_tool_call(mock_gemini_session, tool_call),
+        timeout=1.0,
+    )
+
+    mock_gemini_session.send_tool_response.assert_awaited_once()
+    responses = mock_gemini_session.send_tool_response.await_args.args[0]
+    assert len(responses) == 2
+
+    payload_by_tool = {resp.name: resp.response for resp in responses}
+    assert payload_by_tool["fast_tool"]["result"]["ok"] is True
+    assert payload_by_tool["slow_tool"]["status"] == "timeout"
+    assert "partial_context" in payload_by_tool["slow_tool"]
+    assert "retry_hint" in payload_by_tool["slow_tool"]
