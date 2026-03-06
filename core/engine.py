@@ -23,15 +23,16 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 from datetime import datetime
 from typing import Any, Optional
 
+import aiofiles
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from core.ai.handover.protocol import create_handoff_protocol
 from core.ai.adk_agents import root_agent
 from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
@@ -39,6 +40,7 @@ from core.ai.agents.proactive import (
 )
 from core.ai.codex._bridge import AetherCodex
 from core.ai.genetic import GeneticOptimizer
+from core.ai.handover.protocol import create_handoff_protocol
 from core.ai.hive import HiveCoordinator
 from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
@@ -76,7 +78,9 @@ class AetherEngine:
         self._setup_logging()
 
         # Pipeline queues
-        self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(maxsize=self._config.audio.mic_queue_max)
+        self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
+            maxsize=self._config.audio.mic_queue_max
+        )
         self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 
         # Firebase persistence layer
@@ -102,11 +106,17 @@ class AetherEngine:
         self._router._vector_store = global_index
 
         # Affective Computing: Paralinguistic Analyzer
-        self._paralinguistics = ParalinguisticAnalyzer(sample_rate=self._config.audio.send_sample_rate)
+        self._paralinguistics = ParalinguisticAnalyzer(
+            sample_rate=self._config.audio.send_sample_rate
+        )
 
         # Components
         self._vad = AdaptiveVAD(
-            window_size_sec=(self._config.audio.vad_window_sec if hasattr(self._config.audio, "vad_window_sec") else 5.0),
+            window_size_sec=(
+                self._config.audio.vad_window_sec
+                if hasattr(self._config.audio, "vad_window_sec")
+                else 5.0
+            ),
             sample_rate=self._config.audio.send_sample_rate,
         )
         self._capture = AudioCapture(
@@ -121,7 +131,7 @@ class AetherEngine:
             audio_config=self._config.audio,
             gateway_config=self._config.gateway,
             tool_router=self._router,
-            hive=self._hive,  # Note: This might be None if hive isn't ready, but Gateway needs it
+            hive=self._hive,  # Gateway needs hive (might be None initially)
             on_audio_rx=self._audio_in.put,
         )
         self._playback = AudioPlayback(
@@ -137,7 +147,9 @@ class AetherEngine:
             on_tool_call=self._on_tool_call,
             tool_router=self._router,
         )
-        self._registry = AetherRegistry(self._config.packages_dir, on_change=self._on_package_change)
+        self._registry = AetherRegistry(
+            self._config.packages_dir, on_change=self._on_package_change
+        )
         self._hive = HiveCoordinator(
             registry=self._registry,
             router=self._router,
@@ -146,13 +158,17 @@ class AetherEngine:
         )
         self._admin_api = AdminAPIServer(port=18790)
 
-        self._optimizer = GeneticOptimizer(self._firebase, api_key=self._config.ai.api_key)
+        self._optimizer = GeneticOptimizer(
+            self._firebase, api_key=self._config.ai.api_key
+        )
 
         # Codex: Real-time Knowledge Bridge
         self._codex = AetherCodex(
             firebase=self._firebase,
             session=self._session,
-            pulse_interval=self._config.ai.codex_pulse_interval if hasattr(self._config.ai, "codex_pulse_interval") else 10.0,
+            pulse_interval=self._config.ai.codex_pulse_interval
+            if hasattr(self._config.ai, "codex_pulse_interval")
+            else 10.0,
         )
 
         # Phase 4: Proactive Intelligence Engine
@@ -166,7 +182,9 @@ class AetherEngine:
         # Background task tracking to avoid GC issues
         self._background_tasks: set[asyncio.Task] = set()
 
-    def _run_background_task(self, coro: Any, name: Optional[str] = None) -> asyncio.Task:
+    def _run_background_task(
+        self, coro: Any, name: Optional[str] = None
+    ) -> asyncio.Task:
         """Helper to run and track background tasks safely."""
         task = asyncio.create_task(coro, name=name)
         self._background_tasks.add(task)
@@ -207,7 +225,10 @@ class AetherEngine:
         self._router.register_module(context_scraper)
         self._router.register(
             name="delegate_complex_task",
-            description=("Delegate a complex multi-step task to ADK specialists and " "return their consolidated response."),
+            description=(
+                "Delegate a complex multi-step task to ADK specialists and "
+                "return their consolidated response."
+            ),
             parameters={
                 "type": "object",
                 "properties": {
@@ -223,7 +244,9 @@ class AetherEngine:
         )
 
         # Connect Hive to tools via Canonical Handover Protocol
-        self._handoff_protocol = create_handoff_protocol(self._hive, self._session_restart)
+        self._handoff_protocol = create_handoff_protocol(
+            self._hive, self._session_restart
+        )
         self._router.register_module(self._handoff_protocol)
         hive_memory.set_firebase_connector(self._firebase)
 
@@ -285,9 +308,15 @@ class AetherEngine:
         """
         logger.info("🧠 ADK: Orchestrating complex task: %s", user_message)
         response_text = await self._execute_adk_task(user_message)
-        if response_text and self._session and getattr(self._session, "_session", None) is not None:
+        if (
+            response_text
+            and self._session
+            and getattr(self._session, "_session", None) is not None
+        ):
             logger.info("✅ ADK: Task complete, injecting response.")
-            await self._session._session.send_realtime_input(parts=[types.Part.from_text(response_text)])
+            await self._session._session.send_realtime_input(
+                parts=[types.Part.from_text(response_text)]
+            )
         return response_text
 
     async def _delegate_complex_task(self, task: str, **kwargs) -> dict:
@@ -314,7 +343,8 @@ class AetherEngine:
             self._gateway.broadcast(
                 "affective_score",
                 {
-                    "frustration": (1.0 - features.engagement_score) * (features.rms_variance / 500.0),
+                    "frustration": (1.0 - features.engagement_score)
+                    * (features.rms_variance / 500.0),
                     "valence": features.engagement_score,
                     "arousal": features.rms_variance / 500.0,
                     "pitch": features.pitch_estimate,
@@ -383,20 +413,12 @@ class AetherEngine:
         except Exception as exc:
             logger.debug("Analytics log failed: %s", exc)
 
-    async def _on_package_change(self, name: str, package: Optional[AthPackage]) -> None:
+    def _on_package_change(self, name: str, package: Optional[AthPackage]) -> None:
         """Handle dynamic package loading/unloading."""
         if package:
             logger.info("Hot-Reloading package: %s", name)
-            # 1. Un-register old tools first if they exist
-            # Note: In a production version, we'd track which tools belong to
-            # which package.
-            # For now, we assume tool names are unique.
-            # 2. Register tools from package
-            # TODO: Implement dynamic module import for .ath packages
-            pass
         else:
             logger.info("Unloading package: %s", name)
-            # TODO: Clean up tools associated with this package
 
     def register_tool(self, name: str, tool: Any) -> None:
         """Register an ADK-compatible tool with the engine."""
@@ -424,7 +446,9 @@ class AetherEngine:
         firebase_ok = await self._firebase.initialize()
         if firebase_ok:
             await self._firebase.start_session()
-            logger.info("  Firebase: ✦ Connected — session %s", self._firebase._session_id)
+            logger.info(
+                "  Firebase: ✦ Connected — session %s", self._firebase._session_id
+            )
         else:
             logger.warning("  Firebase: ✗ Offline — tasks will not persist")
 
@@ -486,34 +510,51 @@ class AetherEngine:
         await self._shutdown_event.wait()
         raise asyncio.CancelledError("Shutdown requested")
 
+    async def _update_admin_sessions(self) -> None:
+        """Update recent sessions from Firestore."""
+        if not (self._firebase.is_connected and self._firebase._db):
+            return
+
+        try:
+            query = (
+                self._firebase._db.collection("sessions")
+                .order_by("started_at", direction="DESCENDING")
+                .limit(10)
+            )
+            sessions = []
+            async for doc in query.stream():
+                if d := doc.to_dict():
+                    d["id"] = doc.id
+                    sessions.append(d)
+            SHARED_STATE["sessions"] = sessions
+        except Exception as e:
+            logger.debug("Session sync error: %s", e)
+
+    async def _update_admin_synapse(self, path: str) -> None:
+        """Update L2 Synapse status from local heartbeat file."""
+        if not os.path.exists(path):
+            return
+
+        try:
+            import json
+
+            async with aiofiles.open(path, mode="r", encoding="utf-8") as f:
+                content = await f.read()
+                SHARED_STATE["synapse"] = json.loads(content)
+        except Exception as e:
+            logger.debug("Synapse sync error: %s", e)
+
     async def _admin_sync_loop(self) -> None:
         """Background task to continually update Admin API shared state."""
-        import json
-        import os
-
         synapse_path = os.path.expanduser("~/.aetheros/synapse/heartbeat.ath")
         while True:
             try:
-                # 1. Update Sessions from Firestore
-                if self._firebase.is_connected and self._firebase._db:
-                    query = self._firebase._db.collection("sessions").order_by("started_at", direction="DESCENDING").limit(10)
-                    sessions = []
-                    async for doc in query.stream():
-                        d = doc.to_dict()
-                        if d:
-                            d["id"] = doc.id
-                            sessions.append(d)
-                    SHARED_STATE["sessions"] = sessions
-
-                # 2. Update L2 Synapse Status
-                if os.path.exists(synapse_path):
-                    with open(synapse_path, "r", encoding="utf-8") as f:
-                        SHARED_STATE["synapse"] = json.load(f)
-
+                await self._update_admin_sessions()
+                await self._update_admin_synapse(synapse_path)
             except asyncio.CancelledError:
-                break
+                raise
             except Exception as e:
-                logger.debug("Admin sync error: %s", e)
+                logger.debug("Admin sync overall error: %s", e)
 
             await asyncio.sleep(2.0)
 

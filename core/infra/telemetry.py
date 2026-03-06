@@ -29,7 +29,9 @@ class ToolTimeoutTelemetry:
         self._timeout_events: deque[dict[str, object]] = deque(maxlen=window_size)
         self._lock = threading.Lock()
 
-    def record_tool_dispatch(self, tool_name: str, duration_ms: float, timed_out: bool) -> None:
+    def record_tool_dispatch(
+        self, tool_name: str, duration_ms: float, timed_out: bool
+    ) -> None:
         with self._lock:
             self._durations_ms.append(duration_ms)
             if timed_out:

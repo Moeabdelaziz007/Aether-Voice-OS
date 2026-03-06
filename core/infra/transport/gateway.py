@@ -18,8 +18,6 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Optional
 
-import jwt
-
 if TYPE_CHECKING:
     from core.ai.hive import HiveCoordinator
     from core.tools.router import ToolRouter
@@ -44,6 +42,11 @@ from core.infra.transport.session_state import (
     SessionStateManager,
 )
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
+
+# New Decentralized Services
+from core.infra.transport.auth import AuthService
+from core.infra.transport.intent import IntentBroker
+from core.infra.transport.session_manager import SessionManager
 
 logger = logging.getLogger(__name__)
 
@@ -103,18 +106,29 @@ class AetherGateway:
         self._shutdown_event = asyncio.Event()
         self._session_restart_event = asyncio.Event()
 
-        # Audio queues are now owned by the gateway
+        # Decentralized Logic Brackets
+        self._auth = AuthService(
+            registry=self._hive._registry,
+            secret_key=os.environ.get("AETHER_JWT_SECRET") or os.environ.get("GOOGLE_API_KEY") or ""
+        )
+        self._intent_broker = IntentBroker()
+        
+        # Audio queues
         self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
             maxsize=self._audio_config.mic_queue_max
         )
         self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 
+        # Session Manager handles the Gemini lifecycle internally
+        self._session_manager = SessionManager(
+            engine_session=None  # Will be set during loop
+        )
+
         # Client management
         self._clients: dict[str, ClientSession] = {}
         self._lock = asyncio.Lock()
 
-        # Speculative Pre-warming
-        self._pre_warmed_session: Optional[GeminiLiveSession] = None
+        # Speculative Pre-warming Lock
         self._pre_warm_lock = asyncio.Lock()
 
     @property
@@ -270,46 +284,8 @@ class AetherGateway:
         return False
 
     async def pre_warm_soul(self, soul_name: str) -> None:
-        """
-        Speculatively initialize a session for the next soul.
-        This runs in the background to hide connection latency.
-        """
-        async with self._pre_warm_lock:
-            if self._pre_warmed_session:
-                if self._pre_warmed_session._soul.name == soul_name:
-                    logger.debug("Soul %s already pre-warmed", soul_name)
-                    return
-                # Cancel previous pre-warm if different soul
-                await self._pre_warmed_session.stop()
-                self._pre_warmed_session = None
-
-            logger.info(
-                "⚡ Speculative Pre-warm: Initializing '%s' in background...", soul_name
-            )
-            try:
-                target_soul = self._hive._registry.get(soul_name)
-                session = GeminiLiveSession(
-                    config=self._ai_config,
-                    audio_in_queue=self._audio_in,
-                    audio_out_queue=self._audio_out,
-                    gateway=self,
-                    on_interrupt=self._on_interrupt,
-                    on_tool_call=self._on_tool_call,
-                    tool_router=self._tool_router,
-                    soul_manifest=target_soul
-                )
-
-                # Inject handover context if available
-                pending = self._hive.get_pending_handover_for_target(soul_name)
-                if pending:
-                    session.inject_handover_context(pending)
-
-                # Start connection in background
-                # Note: We don't await connect() here to non-block the main flow
-                asyncio.create_task(session.connect())
-                self._pre_warmed_session = session
-            except Exception as e:
-                logger.error("Failed to pre-warm soul %s: %s", soul_name, e)
+        """Speculatively initialize a session for the next soul."""
+        await self._session_manager.pre_warm_soul(soul_name)
 
     async def run(self) -> None:
         """Start the WebSocket server and the main session management loop."""
@@ -450,8 +426,9 @@ class AetherGateway:
                     session_metadata.session_id[:8],
                 )
 
+                self._session_manager._session = session
                 async with asyncio.TaskGroup() as tg:
-                    session_task = tg.create_task(session.run(), name="gemini-session")
+                    session_task = tg.create_task(self._session_manager.start_session_loop(), name="gemini-session")
                     restart_waiter = tg.create_task(
                         self._session_restart_event.wait(), name="restart-waiter"
                     )
@@ -551,114 +528,39 @@ class AetherGateway:
                     self._clients.pop(client_id, None)
 
     async def _handshake(self, ws: ServerConnection) -> str:
-        """
-        Challenge-response authentication.
-        """
-        # Generate challenge
+        """Challenge-response authentication delegated to AuthService."""
         challenge_bytes = os.urandom(32)
         challenge = ChallengeMessage(challenge=challenge_bytes.hex())
-
         await ws.send(challenge.model_dump_json())
 
-        # Wait for response with timeout
         try:
-            raw = await asyncio.wait_for(
-                ws.recv(),
-                timeout=self._gateway_config.handshake_timeout_s,
-            )
-        except asyncio.TimeoutError:
-            raise HandshakeTimeoutError()
-
-        try:
+            raw = await asyncio.wait_for(ws.recv(), timeout=self._gateway_config.handshake_timeout_s)
             resp = json.loads(raw)
-        except json.JSONDecodeError:
-            raise HandshakeError()
+        except (asyncio.TimeoutError, json.JSONDecodeError):
+            raise HandshakeError("Handshake timed out or malformed")
 
         client_id = resp.get("client_id")
-        if not client_id:
-            raise HandshakeError()
-
-        capabilities = resp.get("capabilities", [])
-
         token = resp.get("token")
+        signature = resp.get("signature")
+
         if token:
-            if not self._verify_jwt(token):
-                raise HandshakeError()
-            logger.info("Client authenticated via JWT: %s", client_id)
+            if not self._auth.verify_jwt(token):
+                raise HandshakeError("Invalid JWT")
+        elif signature:
+            if not self._auth.verify_signature(challenge_bytes.hex(), signature, client_id):
+                raise HandshakeError("Invalid Signature")
         else:
-            signature = resp.get("signature", "")
-            if not self._verify_signature(challenge_bytes, signature, client_id):
-                raise HandshakeError()
-            logger.info("Client authenticated via Ed25519: %s", client_id)
+            raise HandshakeError("No authentication provided")
 
-        # Create session
-        session = ClientSession(client_id=client_id, ws=ws, capabilities=capabilities)
-
+        session = ClientSession(client_id=client_id, ws=ws, capabilities=resp.get("capabilities", []))
         async with self._lock:
             self._clients[client_id] = session
 
-        # Send ACK
-        ack = AckMessage(
-            session_id=session.session_id,
-            granted_capabilities=capabilities,
-            tick_interval_s=self._gateway_config.tick_interval_s
-        )
+        ack = AckMessage(session_id=session.session_id, granted_capabilities=session.capabilities, tick_interval_s=self._gateway_config.tick_interval_s)
         await ws.send(ack.model_dump_json())
-
         return client_id
 
-    def _verify_jwt(self, token: str) -> bool:
-        """
-        Verify a JWT token.
-        Uses AETHER_JWT_SECRET or GOOGLE_API_KEY as the secret.
-        """
-        secret = os.environ.get("AETHER_JWT_SECRET") or os.environ.get("GOOGLE_API_KEY")
-        if not secret:
-            logger.warning("No secret available for JWT verification")
-            return False
-
-        try:
-            # We accept HS256 for now, as it's common for internal service comms
-            jwt.decode(token, secret, algorithms=["HS256"])
-            return True
-        except jwt.PyJWTError as exc:
-            logger.warning("JWT verification failed: %s", exc)
-            return False
-
-    def _verify_signature(
-        self,
-        challenge: bytes,
-        signature: str,
-        client_id: str,
-    ) -> bool:
-        """
-        Verify an Ed25519 signature.
-
-        Attempts to find a public key for the client_id in the registry,
-        or falls back to treat client_id as a hex public key.
-        """
-        from core.utils.security import verify_signature
-
-        # 1. Try to find the Soul in the registry
-        try:
-            soul = self._hive._registry.get(client_id)
-            if soul.manifest.public_key:
-                return verify_signature(soul.manifest.public_key, signature, challenge)
-        except Exception:
-            pass
-
-        # 2. Ephemeral/Direct Mode: If client_id is a 64-char hex string,
-        # treat as pubkey
-        is_hex = all(c in "0123456789abcdef" for c in client_id.lower())
-        if len(client_id) == 64 and is_hex:
-            return verify_signature(client_id, signature, challenge)
-
-        # 3. Global Auth Fallback (Development)
-        global_key = os.environ.get("AETHER_GLOBAL_PUBLIC_KEY")
-        if global_key:
-            return verify_signature(global_key, signature, challenge)
-
-        return False
+    # Removed: Internal Auth methods replaced by AuthService delegate.
 
     async def _route_binary(self, client_id: str, data: bytes) -> None:
         """Route incoming binary audio chunks to the session's input queue."""
@@ -697,74 +599,12 @@ class AetherGateway:
             logger.debug("Unhandled message type: %s from %s", msg_type, client_id)
 
     async def _handle_intent(self, client_id: str, msg: dict[str, Any]) -> None:
-        """
-        Process a structured intent according to Schema V1.1.
-        """
-        intent_id = msg.get("intent_id")
-        level = msg.get("level", 1)
-        payload = msg.get("payload", {})
-        signature = msg.get("signature")
-
-        # 1. Verify Integrity (Hash-based signature)
-        if signature:
-            # In production, we verify the hash of the entire payload
-            if not self._verify_payload_signature(payload, signature, client_id):
-                logger.warning("Intent signature verification failed for %s", intent_id)
-                await self.broadcast("intent_error", {
-                    "intent_id": intent_id,
-                    "error": "SIGNATURE_INVALID"
-                })
-                return
-
-        logger.info("✦ Intent Received [L%d]: %s (ID: %s)", level, payload.get("raw_input"), intent_id)
-
-        # 4. Phase D: Intent Memory & Prediction
-        prediction = self._predict_next_goal(payload.get("raw_input", ""))
-        
-        # 5. Broadcast Intent Lifecycle Update (Contract V1.1)
-        await self.broadcast("intent_update", {
-            "intent_id": intent_id,
-            "status": "PROCESSED",
-            "memory_update": {
-                "predicted_next_goal": prediction,
-                "user_preference_delta": {"last_used_level": level}
-            }
-        })
-
-        # 2. Level-based Routing
-        if level == 1:
-            # Fast-path: Direct command execution
-            # TODO: Implement fast-path registry
-            pass
-        
-        # 3. Forward to Hive for cognitive processing
-        # This will eventually trigger the MultiAgentOrchestrator
-        # For now, we proxy text to Gemini session as usual
-        raw_text = payload.get("raw_input", "")
-        if raw_text:
-            await self.send_text(raw_text)
-
-    def _predict_next_goal(self, raw_input: str) -> str | None:
-        """
-        Simple heuristic-based intent prediction (V3.2 POC).
-        """
-        raw = raw_input.lower()
-        if "server" in raw: return "check logs"
-        if "test" in raw: return "run accuracy benchmark"
-        if "fix" in raw: return "apply autonomous repair"
-        return None
+        """Process structured intent via IntentBroker."""
+        await self._intent_broker.handle_intent(client_id, json.dumps(msg), self)
 
     def _verify_payload_signature(self, payload: dict, signature: str, client_id: str) -> bool:
-        """
-        Verify that the payload hash matches the provided Ed25519 signature.
-        """
-        import hashlib
-        from core.utils.security import verify_signature
-
-        payload_json = json.dumps(payload, sort_keys=True)
-        payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
-        
-        return self._verify_signature(payload_hash, signature, client_id)
+        """Verify payload signature via AuthService."""
+        return self._auth.verify_payload_signature(json.dumps(payload).encode(), signature, client_id)
 
     async def _tick_loop(self) -> None:
         """Send periodic heartbeats and prune dead clients."""
