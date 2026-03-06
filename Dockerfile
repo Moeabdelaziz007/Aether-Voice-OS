@@ -24,8 +24,8 @@ RUN cd cortex && \
     cargo build --release
 
 # We'll copy the cdylib
-RUN cp cortex/target/release/libcortex.so /build/aether_cortex.so 2>/dev/null || \
-    cp cortex/target/release/libcortex.dylib /build/aether_cortex.so 2>/dev/null || true
+RUN cp cortex/target/release/libaether_cortex.so /build/aether_cortex.so 2>/dev/null || \
+    cp cortex/target/release/libaether_cortex.dylib /build/aether_cortex.so 2>/dev/null || true
 
 
 # ── Stage 2: Python runtime ─────────────────────────────
