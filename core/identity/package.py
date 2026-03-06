@@ -94,11 +94,7 @@ class AthPackage:
         """
         manifest_path = package_dir / "manifest.json"
         if not manifest_path.exists():
-<<<<<<< HEAD
             raise ManifestValidationError(
-=======
-            raise ManifestValidationError
->>>>>>> origin/jules-3466090822907057400-4af64808
                 f"No manifest.json found in {package_dir}",
                 context={"path": str(package_dir)},
             )
@@ -107,11 +103,7 @@ class AthPackage:
             raw = manifest_path.read_text(encoding="utf-8")
             data = json.loads(raw)
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-<<<<<<< HEAD
             raise ManifestValidationError(
-=======
-            raise ManifestValidationError
->>>>>>> origin/jules-3466090822907057400-4af64808
                 f"Invalid manifest.json: {exc}",
                 cause=exc,
                 context={"path": str(manifest_path)},
@@ -120,11 +112,7 @@ class AthPackage:
         try:
             manifest = SoulManifest(**data)
         except Exception as exc:
-<<<<<<< HEAD
             raise ManifestValidationError(
-=======
-            raise ManifestValidationError
->>>>>>> origin/jules-3466090822907057400-4af64808
                 f"Manifest validation failed: {exc}",
                 cause=exc,
                 context={"path": str(manifest_path), "data": data},
