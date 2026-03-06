@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import AetherOrb from '../components/AetherOrb';
+import QuantumNeuralAvatar from '../components/QuantumNeuralAvatar';
 import { useAetherStore } from '../store/useAetherStore';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -8,6 +8,13 @@ describe('AetherOrb Render Performance', () => {
 
 // Mock canvas getContext to avoid errors in jsdom
 beforeAll(() => {
+    // Mock ResizeObserver
+    global.ResizeObserver = class {
+        observe() {}
+        unobserve() {}
+        disconnect() {}
+    };
+
     HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
         scale: vi.fn(),
         clearRect: vi.fn(),
@@ -25,7 +32,7 @@ beforeAll(() => {
         // Create a wrapper component to track renders
         const TrackedOrb = () => {
             renderCount++;
-            return <AetherOrb size={100} />;
+            return <QuantumNeuralAvatar size={100} />;
         };
 
         const { unmount } = render(<TrackedOrb />);
@@ -33,7 +40,7 @@ beforeAll(() => {
         // Initial render
         expect(renderCount).toBe(1);
 
-        // Update transient state that AetherOrb reads via useAetherStore.getState()
+        // Update transient state that QuantumNeuralAvatar reads via useAetherStore.getState()
         // but does NOT subscribe to via useAetherStore(s => ...)
         useAetherStore.getState().setAudioLevels(0.5, 0.8);
 
