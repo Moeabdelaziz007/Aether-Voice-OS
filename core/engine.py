@@ -37,6 +37,7 @@ from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
     ProactiveInterventionEngine,
 )
+from core.ai.codex._bridge import AetherCodex
 from core.ai.genetic import GeneticOptimizer
 from core.ai.hive import HiveCoordinator
 from core.ai.session import GeminiLiveSession
@@ -155,9 +156,15 @@ class AetherEngine:
         )
         self._admin_api = AdminAPIServer(port=18790)
 
-        # Genetic Evolution Layer
         self._optimizer = GeneticOptimizer(
             self._firebase, api_key=self._config.ai.api_key
+        )
+
+        # Codex: Real-time Knowledge Bridge
+        self._codex = AetherCodex(
+            firebase=self._firebase, 
+            session=self._session,
+            pulse_interval=self._config.ai.codex_pulse_interval if hasattr(self._config.ai, "codex_pulse_interval") else 10.0
         )
 
         # Phase 4: Proactive Intelligence Engine
@@ -471,6 +478,7 @@ class AetherEngine:
                 
                 # 3. Start Administrative & Proactive tasks
                 tg.create_task(self._admin_sync_loop(), name="admin-sync")
+                tg.create_task(self._codex.start(), name="codex-bridge")
                 
                 # 4. Wait for shutdown signal
                 await self._shutdown_event.wait()
@@ -538,6 +546,7 @@ class AetherEngine:
         # Stop in reverse order: capture first, then processor, then output
         await self._capture.stop()
         await self._session.stop()
+        await self._codex.stop()
         await self._playback.stop()
         await self._gateway.stop()
         self._registry.stop_watcher()

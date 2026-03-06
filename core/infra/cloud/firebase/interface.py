@@ -275,3 +275,22 @@ class FirebaseConnector:
             await asyncio.to_thread(_write)
         except Exception as e:
             logger.error(f"Failed to log event {event_type}: {e}")
+
+    async def get_recent_knowledge(self, limit: int = 5) -> list[dict]:
+        """Retrieves the most recent knowledge entries from the cloud brain."""
+        if not self.is_connected or not self._db:
+            return []
+
+        try:
+            def _read():
+                query = (
+                    self._db.collection("knowledge")
+                    .order_by("timestamp", direction=firestore.Query.DESCENDING)
+                    .limit(limit)
+                )
+                return [doc.to_dict() for doc in query.stream()]
+
+            return await asyncio.to_thread(_read)
+        except Exception as e:
+            logger.error(f"Failed to fetch recent knowledge: {e}")
+            return []

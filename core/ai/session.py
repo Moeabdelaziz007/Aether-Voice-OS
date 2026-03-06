@@ -533,6 +533,25 @@ class GeminiLiveSession:
         self._running = False
         logger.info("Gemini session stop requested")
 
+    async def send_text(self, text: str) -> bool:
+        """
+        Injects a text part into the active realtime session.
+        This allows asynchronous context injection (e.g., from Codex).
+        """
+        if not hasattr(self, "_session") or not self._session:
+            logger.warning("Cannot send text: No active session.")
+            return False
+
+        try:
+            from google.genai import types
+            await self._session.send_realtime_input(
+                parts=[types.Part.from_text(text)]
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Failed to send text to session: {e}")
+            return False
+
     # ── Deep Handover Protocol Methods ──
 
     def _build_system_instruction(self) -> str:
