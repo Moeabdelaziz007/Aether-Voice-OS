@@ -270,3 +270,12 @@ AetherOS has evolved from a reactive assistant into a **Proactive Neural OS**. *
 - **Verification**: Validated the entire core engine syntax and manager initialization. System is now structurally sound for high-fidelity interactive sessions.
 
 AetherOS core infrastructure is now restored and protocol-aligned. **[NEURAL ENGINE RECOVERY COMPLETE]**
+
+#### Phase 25: CI/CD Stabilization, PR Governance, and Memory Index Refresh [2026-03-06]
+
+- **Core CI Failure Root Cause**: Identified repeated Python matrix failures as test collection crashes from missing `PyNaCl` dependency (`ModuleNotFoundError: nacl`) in `tests/integration/test_gateway_e2e.py`.
+- **Hard Fix Applied**: Added `PyNaCl>=1.5.0` to [requirements.txt](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/requirements.txt) and pushed commit `4b105bd` to `main`.
+- **Validation Path**: Re-ran CI-equivalent local checks (ruff check, ruff format --check, compileall, targeted pytest with coverage threshold) and validated import success for `nacl.signing`.
+- **Pipeline Hardening Snapshot**: Prior stabilization commit `e4f92cc` introduced deterministic Python gates and import/syntax fixes across core runtime paths plus required `AGENTS.md` policy artifact.
+- **PR Governance Pass**: Reviewed and rated open PRs (#52–#57) with merge blocking on red or unstable checks; no unsafe merges performed while CI was failing.
+- **Operational Discipline**: Maintained honest merge policy: only green checks + clean merge state are eligible for merge.

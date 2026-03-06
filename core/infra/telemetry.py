@@ -18,6 +18,10 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 
+def _fallback_tracer() -> trace_api.Tracer:
+    return trace_api.get_tracer("aether.fallback")
+
+
 class TelemetryManager:
     """
     Centralized Telemetry Sink for AetherOS.
@@ -45,7 +49,7 @@ class TelemetryManager:
             return
 
         if not OTEL_AVAILABLE:
-            self.tracer = trace_api.get_no_op_tracer()
+            self.tracer = _fallback_tracer()
             self._is_initialized = True
             logger.warning("OpenTelemetry exporter not available, using no-op tracer.")
             return
@@ -84,8 +88,7 @@ class TelemetryManager:
 
         except Exception as e:
             logger.error("✧ Failed to initialize telemetry: %s", e)
-            # Fallback to a no-op tracer
-            self.tracer = trace_api.get_no_op_tracer()
+            self.tracer = _fallback_tracer()
 
     def record_usage(
         self,
@@ -122,7 +125,7 @@ class TelemetryManager:
     def get_tracer(self) -> trace_api.Tracer:
         if not self._is_initialized:
             self.initialize()
-        return self.tracer or trace_api.get_no_op_tracer()
+        return self.tracer or _fallback_tracer()
 
 
 # Global Singleton
