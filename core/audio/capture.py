@@ -371,20 +371,13 @@ class AudioCapture:
                 result = spectral_denoise(cleaned_chunk, noise_floor=0.02)
                 cleaned_chunk = np.array(result["samples"], dtype=np.int16)
 
-        # Update global AEC state for monitoring
-        audio_state.update_aec_state_safe(
-            converged=aec_state.converged,
-            convergence_progress=aec_state.convergence_progress,
-            erle_db=aec_state.erle_db,
-            delay_ms=aec_state.estimated_delay_ms,
-            double_talk=aec_state.double_talk_detected,
-        )
-
-        # Record AEC metrics to telemetry
-        if self._telemetry_logger:
-            self._telemetry_logger.record_aec(
-                latency_ms=aec_latency_ms,
+            # Update global AEC state for monitoring
+            audio_state.update_aec_state_safe(
+                converged=aec_state.converged,
+                convergence_progress=aec_state.convergence_progress,
                 erle_db=aec_state.erle_db,
+                delay_ms=aec_state.estimated_delay_ms,
+                double_talk=aec_state.double_talk_detected,
             )
 
             # Record AEC metrics to telemetry
