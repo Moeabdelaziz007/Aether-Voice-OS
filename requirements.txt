@@ -25,8 +25,11 @@ pytest-asyncio>=0.24.0
 
 # AI Agent Orchestration
 google-adk>=0.1.0,<0.2.0
+deprecated>=1.2.14
 scikit-learn>=1.5.0
 scrapling>=0.1.0
+curl-cffi>=0.7.0
+browserforge>=1.2.3
 
 # Linting
 ruff>=0.4.0
