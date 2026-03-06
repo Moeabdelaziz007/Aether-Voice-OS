@@ -29,7 +29,7 @@ class AgentManager:
             router=self._router,
             default_soul_name="ArchitectExpert",
             on_handover=on_handover,
-            ai_config=self._config.ai,
+
             event_bus=self._event_bus,
             api_key=self._config.ai.api_key,
         )

@@ -25,7 +25,7 @@ class FirestoreVectorStore:
     def __init__(self, api_key: str, model: str = "gemini-embedding-001") -> None:
         self._client = genai.Client(api_key=api_key)
         self._model = model
-        self._connector = FirebaseConnector)
+        self._connector = FirebaseConnector()
         self._collection_name = "aether_embeddings"
         self._local_cache_vectors: Dict[str, np.ndarray] = {}
         self._local_cache_metadata: Dict[str, Dict] = {}

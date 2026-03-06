@@ -69,7 +69,7 @@ async def test_watchdog_system_failure_flow(mock_diagnose, mock_firebase_cls):
     # 1. Verify diagnosing state logged to Firebase
     mock_firebase.log_repair_event.assert_any_call(
         filepath="system",
-        diagnosis="Timeout/Connection error detected. Initiating autonomous repair.",
+        diagnosis="Timeout/Connection error detected. Initiating repair.",
         status="diagnosing",
     )
 

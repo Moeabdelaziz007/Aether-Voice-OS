@@ -52,23 +52,37 @@ def audio_manager(mock_config, mock_gateway):
         return manager
 
 
-def test_audio_manager_start(audio_manager):
-    # Setup the async mocks for start methods
-    audio_manager._capture.start = AsyncMock()
-    audio_manager._playback.start = AsyncMock()
+@pytest.mark.asyncio
+async def test_audio_manager_start(audio_manager):
+    with (
+        patch("core.logic.managers.audio.AudioCapture") as MockCapture,
+        patch("core.logic.managers.audio.AudioPlayback") as MockPlayback
+    ):
+        mock_capture_instance = MockCapture.return_value
+        mock_capture_instance.start = AsyncMock()
+        mock_playback_instance = MockPlayback.return_value
+        mock_playback_instance.start = AsyncMock()
 
-    # Call the method
-    asyncio.run(audio_manager.start())
+        await audio_manager.start()
 
-    # Verify both were called
-    audio_manager._capture.start.assert_called_once()
-    audio_manager._playback.start.assert_called_once()
+        mock_capture_instance.start.assert_called_once()
+        mock_playback_instance.start.assert_called_once()
 
-def test_audio_manager_stop(audio_manager):
-    audio_manager._capture.stop = AsyncMock()
-    audio_manager._playback.stop = AsyncMock()
+@pytest.mark.asyncio
+async def test_audio_manager_stop(audio_manager):
+    with (
+        patch("core.logic.managers.audio.AudioCapture") as MockCapture,
+        patch("core.logic.managers.audio.AudioPlayback") as MockPlayback
+    ):
+        mock_capture_instance = MockCapture.return_value
+        mock_capture_instance.start = AsyncMock()
+        mock_capture_instance.stop = AsyncMock()
+        mock_playback_instance = MockPlayback.return_value
+        mock_playback_instance.start = AsyncMock()
+        mock_playback_instance.stop = AsyncMock()
 
-    asyncio.run(audio_manager.stop())
+        await audio_manager.start()
+        await audio_manager.stop()
 
-    audio_manager._capture.stop.assert_called_once()
-    audio_manager._playback.stop.assert_called_once()
+        mock_capture_instance.stop.assert_called_once()
+        mock_playback_instance.stop.assert_called_once()
