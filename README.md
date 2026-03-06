@@ -33,19 +33,6 @@
   </a>
 </p>
 
-<!-- Quantum Neural Avatar Badge -->
-<p align="center">
-  <img src="docs/assets/aether_avatar.png" alt="Quantum Neural Avatar" width="120px" style="border-radius:50%; box-shadow: 0 0 30px rgba(0, 243, 255, 0.6); animation: pulse 2s infinite;"/>
-</p>
-
-<style>
-@keyframes pulse {
-  0% { box-shadow: 0 0 30px rgba(0, 243, 255, 0.6); transform: scale(1); }
-  50% { box-shadow: 0 0 50px rgba(0, 243, 255, 0.9); transform: scale(1.05); }
-  100% { box-shadow: 0 0 30px rgba(0, 243, 255, 0.6); transform: scale(1); }
-}
-</style>
-
 <!-- Table of Contents -->
 
 ## 📑 Quick Navigation | التنقل السريع
