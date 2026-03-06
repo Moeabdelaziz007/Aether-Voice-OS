@@ -9,6 +9,7 @@ the Gateway, Engine, and connected clients.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -348,7 +349,7 @@ class SessionStateManager:
             return True
 
         try:
-            async with asyncio.timeout(timeout) if timeout else asyncio.nullcontext():
+            async with asyncio.timeout(timeout) if timeout else contextlib.nullcontext():
                 while self._state not in target_states:
                     await self._state_change_event.wait()
                     if self._state in target_states:
