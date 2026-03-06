@@ -14,7 +14,7 @@ import { useEffect, useMemo } from "react";
 import { LayoutGroup, motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import RealmController from "@/components/realms/RealmController";
-import CommandBar from "@/components/shared/CommandBar";
+import Omnibar from "@/components/shared/Omnibar";
 import EdgeGlow from "@/components/shared/EdgeGlow";
 import HUDContainer from "@/components/HUD/HUDContainer";
 import SystemFailure from "@/components/HUD/SystemFailure";
@@ -24,6 +24,7 @@ import SilentHintsOverlay from "@/components/shared/SilentHintsOverlay";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useAetherStore } from "@/store/useAetherStore";
 import NeuralBackground from "@/components/shared/NeuralBackground";
+import GenerativePortal from "@/components/generative/GenerativePortal";
 
 // Dynamic import for 3D scene to improve initial load
 const UnifiedScene = dynamic(() => import("@/components/UnifiedScene"), {
@@ -163,8 +164,11 @@ export default function AetherPortal() {
             {/* Tech attribution — ambient, premium */}
             <PoweredByStrip />
 
+            {/* Generative UI Widgets Overlay */}
+            <GenerativePortal />
+
             {/* Command bar — always visible at bottom */}
-            <CommandBar />
+            <Omnibar />
         </LayoutGroup>
     );
 }

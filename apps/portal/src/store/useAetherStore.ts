@@ -249,6 +249,10 @@ interface AetherState {
     activeSoul: string | null;
     toolCallHistory: ToolCallEntry[];
 
+    // Generative UI
+    activeWidgets: { id: string; type: string; props: any }[];
+    predictedGoal: string | null;
+
     // Persona & Preferences
     persona: AetherPersona;
     preferences: UserPreferences;
@@ -285,6 +289,12 @@ interface AetherState {
     // Actions — Multi-Agent (Hive)
     setActiveSoul: (soul: string | null) => void;
     addToolCall: (entry: Omit<ToolCallEntry, 'id' | 'timestamp'>) => void;
+
+    // Actions — Generative UI
+    addWidget: (type: string, props: any) => void;
+    removeWidget: (id: string) => void;
+    clearWidgets: () => void;
+    setPredictedGoal: (goal: string | null) => void;
 
     // Actions — Persona & Preferences
     setPersona: (updates: Partial<AetherPersona>) => void;
@@ -350,6 +360,8 @@ export const useAetherStore = create<AetherState>()(
             zenMode: false,
             repairState: { status: 'idle', message: '', log: '', timestamp: 0 },
             activeSoul: null,
+            activeWidgets: [],
+            predictedGoal: null,
             toolCallHistory: [],
             persona: DEFAULT_PERSONA,
             preferences: DEFAULT_PREFERENCES,
@@ -423,6 +435,16 @@ export const useAetherStore = create<AetherState>()(
                     timestamp: Date.now(),
                 }].slice(-50),
             })),
+
+            // Generative UI actions
+            addWidget: (type, props) => set((state) => ({
+                activeWidgets: [...state.activeWidgets, { id: crypto.randomUUID(), type, props }]
+            })),
+            removeWidget: (id) => set((state) => ({
+                activeWidgets: state.activeWidgets.filter(w => w.id !== id)
+            })),
+            clearWidgets: () => set({ activeWidgets: [] }),
+            setPredictedGoal: (predictedGoal) => set({ predictedGoal }),
 
             // Persona & Preferences actions
             setPersona: (updates) => set((state) => ({

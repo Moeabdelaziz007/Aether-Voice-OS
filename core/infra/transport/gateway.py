@@ -683,6 +683,10 @@ class AetherGateway:
                 if client_id in self._clients:
                     self._clients[client_id].last_pong = time.monotonic()
 
+        elif msg_type == "INTENT":
+            # Phase A: Handle V1.1 Intent Schema
+            await self._handle_intent(client_id, msg)
+
         elif msg_type == MessageType.DISCONNECT.value:
             async with self._lock:
                 session = self._clients.pop(client_id, None)
@@ -691,6 +695,76 @@ class AetherGateway:
 
         else:
             logger.debug("Unhandled message type: %s from %s", msg_type, client_id)
+
+    async def _handle_intent(self, client_id: str, msg: dict[str, Any]) -> None:
+        """
+        Process a structured intent according to Schema V1.1.
+        """
+        intent_id = msg.get("intent_id")
+        level = msg.get("level", 1)
+        payload = msg.get("payload", {})
+        signature = msg.get("signature")
+
+        # 1. Verify Integrity (Hash-based signature)
+        if signature:
+            # In production, we verify the hash of the entire payload
+            if not self._verify_payload_signature(payload, signature, client_id):
+                logger.warning("Intent signature verification failed for %s", intent_id)
+                await self.broadcast("intent_error", {
+                    "intent_id": intent_id,
+                    "error": "SIGNATURE_INVALID"
+                })
+                return
+
+        logger.info("✦ Intent Received [L%d]: %s (ID: %s)", level, payload.get("raw_input"), intent_id)
+
+        # 4. Phase D: Intent Memory & Prediction
+        prediction = self._predict_next_goal(payload.get("raw_input", ""))
+        
+        # 5. Broadcast Intent Lifecycle Update (Contract V1.1)
+        await self.broadcast("intent_update", {
+            "intent_id": intent_id,
+            "status": "PROCESSED",
+            "memory_update": {
+                "predicted_next_goal": prediction,
+                "user_preference_delta": {"last_used_level": level}
+            }
+        })
+
+        # 2. Level-based Routing
+        if level == 1:
+            # Fast-path: Direct command execution
+            # TODO: Implement fast-path registry
+            pass
+        
+        # 3. Forward to Hive for cognitive processing
+        # This will eventually trigger the MultiAgentOrchestrator
+        # For now, we proxy text to Gemini session as usual
+        raw_text = payload.get("raw_input", "")
+        if raw_text:
+            await self.send_text(raw_text)
+
+    def _predict_next_goal(self, raw_input: str) -> str | None:
+        """
+        Simple heuristic-based intent prediction (V3.2 POC).
+        """
+        raw = raw_input.lower()
+        if "server" in raw: return "check logs"
+        if "test" in raw: return "run accuracy benchmark"
+        if "fix" in raw: return "apply autonomous repair"
+        return None
+
+    def _verify_payload_signature(self, payload: dict, signature: str, client_id: str) -> bool:
+        """
+        Verify that the payload hash matches the provided Ed25519 signature.
+        """
+        import hashlib
+        from core.utils.security import verify_signature
+
+        payload_json = json.dumps(payload, sort_keys=True)
+        payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+        
+        return self._verify_signature(payload_hash, signature, client_id)
 
     async def _tick_loop(self) -> None:
         """Send periodic heartbeats and prune dead clients."""

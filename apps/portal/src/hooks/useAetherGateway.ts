@@ -31,33 +31,29 @@ interface AetherGatewayReturn {
     disconnect: () => void;
     sendAudio: (pcm: ArrayBuffer) => void;
     sendVisionFrame: (base64: string) => void;
+    sendIntent: (input: string, level?: 1 | 2 | 3) => Promise<void>;
     onAudioResponse: React.MutableRefObject<((audio: ArrayBuffer) => void) | null>;
 }
 
-// ── Ed25519 Keypair (persisted in sessionStorage for tab-lifetime) ──
+// ── Ed25519 Keypair (persisted in localStorage for cross-tab persistence) ──
 function getOrCreateKeypair(): nacl.SignKeyPair {
     const STORAGE_KEY = "aether_ed25519_seed";
     try {
-        const stored = sessionStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
             const seed = new Uint8Array(JSON.parse(stored));
             return nacl.sign.keyPair.fromSeed(seed);
         }
-    } catch { /* sessionStorage may not be available (SSR) */ }
+    } catch { /* localStorage may not be available (SSR) */ }
 
-    // Development seed (predictable "Architect" identity)
-    const DEV_SEED = new Uint8Array([
-        0xda, 0xee, 0x51, 0x93, 0x22, 0xd2, 0x1a, 0x56,
-        0x5d, 0x6e, 0x76, 0xe1, 0xba, 0x92, 0x7c, 0xf6,
-        0x61, 0x6e, 0x9e, 0x47, 0x72, 0x8a, 0x6b, 0x8b,
-        0xa3, 0x3d, 0x90, 0x8d, 0xb2, 0x4f, 0x5f, 0x6c
-    ]);
+    // Generate random seed for production security
+    const seed = nacl.randomBytes(32);
 
     try {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(DEV_SEED)));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(seed)));
     } catch { /* ignore */ }
 
-    return nacl.sign.keyPair.fromSeed(DEV_SEED);
+    return nacl.sign.keyPair.fromSeed(seed);
 }
 
 function toHex(data: Uint8Array): string {
@@ -203,6 +199,13 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                         store.setVisionActive(true);
                     }
 
+                    // ── Intent Update (V1.1 Lifecycle) ──
+                    else if (msg.type === "intent_update") {
+                        if (msg.memory_update?.predicted_next_goal) {
+                            store.setPredictedGoal(msg.memory_update.predicted_next_goal);
+                        }
+                    }
+
                     // ── Mutation Event (Code/file changes) ──
                     else if (msg.type === "mutation_event") {
                         store.setMutation(msg.description || msg.mutation || "Unknown mutation");
@@ -280,6 +283,47 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
         ws.send(pcm);
     }, [status]);
 
+    const sendIntent = useCallback(async (input: string, level: 1 | 2 | 3 = 1) => {
+        const ws = wsRef.current;
+        const kp = keyPairRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN || status !== "connected" || !kp) return;
+
+        const intent_id = crypto.randomUUID();
+        const payload = {
+            raw_input: input,
+            timestamp_ms: Date.now(),
+            user_context: {
+                active_file: "portal/main",
+                cursor_line: 0
+            }
+        };
+
+        // V1.1 Signature: Sign the SHA-256 hash of the entire payload string
+        const payloadStr = JSON.stringify(payload);
+        const encoder = new TextEncoder();
+        const msgUint8 = encoder.encode(payloadStr);
+        const hashBuffer = await crypto.subtle.digest("SHA-256", msgUint8);
+        const hashArray = new Uint8Array(hashBuffer);
+
+        const signature = nacl.sign.detached(hashArray, kp.secretKey);
+
+        ws.send(JSON.stringify({
+            type: "INTENT",
+            version: "1.1",
+            intent_id,
+            level,
+            source: "text",
+            payload,
+            signature: toHex(signature),
+            memory_context: {
+                last_intent_id: localStorage.getItem("aether_last_intent_id") || undefined,
+                session_depth: 0
+            }
+        }));
+
+        localStorage.setItem("aether_last_intent_id", intent_id);
+    }, [status]);
+
     const sendVisionFrame = useCallback((base64: string) => {
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN || status !== "connected") return;
@@ -302,5 +346,5 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
         };
     }, [disconnect]);
 
-    return { status, latencyMs, connect, disconnect, sendAudio, sendVisionFrame, onAudioResponse };
+    return { status, latencyMs, connect, disconnect, sendAudio, sendVisionFrame, sendIntent, onAudioResponse };
 }
