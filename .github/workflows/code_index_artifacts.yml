@@ -1,0 +1,28 @@
+name: "Code Index Artifacts"
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  generate-code-index:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Generate code inventory and dependency graph
+        run: python infra/scripts/generate_code_index.py --output-dir artifacts/code-index
+      - name: Upload code index artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-index-artifacts
+          path: artifacts/code-index
+          if-no-files-found: error
