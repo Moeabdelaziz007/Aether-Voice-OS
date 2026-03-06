@@ -1,4 +1,4 @@
-"""Tests for core.audio.processing VAD components.
+"""Tests for core.audio.dsp.processing VAD components.
 
 Covers:
 - AdaptiveVAD baseline adaptation
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from core.audio.processing import (
+from core.audio.dsp.processing import (
     AdaptiveVAD,
     HyperVADResult,
     SilenceType,

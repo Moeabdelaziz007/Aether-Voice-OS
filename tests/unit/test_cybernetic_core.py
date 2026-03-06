@@ -3,9 +3,9 @@ import unittest
 
 import numpy as np
 
-from core.audio.playback import AudioPlayback
-from core.audio.processing import SilenceType, SilentAnalyzer
-from core.audio.state import audio_state
+from core.audio.io.playback import AudioPlayback
+from core.audio.dsp.processing import SilenceType, SilentAnalyzer
+from core.audio.state.state import audio_state
 from core.infra.config import AudioConfig
 from core.tools.voice_auth import VoiceAuthGuard
 

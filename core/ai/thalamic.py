@@ -2,7 +2,7 @@ import asyncio
 import logging
 
 from core.analytics.demo_metrics import DemoMetrics
-from core.audio.state import audio_state
+from core.audio.state.state import audio_state
 from core.emotion.calibrator import EmotionCalibrator
 
 logger = logging.getLogger(__name__)
@@ -17,13 +17,8 @@ class ThalamicGate:
 
     def __init__(self, gemini_session):
         self._gemini_session = gemini_session
-<<<<<<< HEAD
         self._calibrator = EmotionCalibrator()
         self._metrics = DemoMetrics()
-=======
-        self._calibrator = EmotionCalibrator)
-        self._metrics = Demometrics)
->>>>>>> origin/jules-3466090822907057400-4af64808
         self._frustration_streak = 0
         self._running = False
 

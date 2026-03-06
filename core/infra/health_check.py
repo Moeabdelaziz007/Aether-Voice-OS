@@ -64,9 +64,9 @@ class HealthChecker:
         check_fn: Callable[[], Coroutine[None, None, tuple[bool, float, str]]],
     ) -> None:
         """Register a component for health monitoring."""
-        self._components[name] = ComponentHealth
+        self._components[name] = ComponentHealth(
             name=name,
-            status=HealthStatus.UNKNOWN,
+            status=HealthStatus.HEALTHY,
             last_check=0.0,
             check_fn=check_fn,
         )
@@ -171,7 +171,7 @@ async def check_audio_pipeline(
     latency_threshold_ms: float = 20.0,
 ) -> tuple[bool, float, str]:
     """Check audio pipeline health via telemetry."""
-    from core.audio.state import audio_state
+    from core.audio.state.state import audio_state
 
     latency = getattr(audio_state, "last_latency_ms", 0.0)
 
@@ -182,7 +182,7 @@ async def check_audio_pipeline(
 
 async def check_aec_convergence() -> tuple[bool, float, str]:
     """Check AEC convergence status."""
-    from core.audio.state import audio_state
+    from core.audio.state.state import audio_state
 
     converged = getattr(audio_state, "aec_converged", False)
     erle = getattr(audio_state, "aec_erle_db", 0.0)

@@ -48,10 +48,8 @@ class ArchitectAgent(VoiceAgent):
         context.add_history("Architect began analysis", agent="Architect")
 
         # Create output container
-        self._output = ArchitectOutput
-            handover_id=context.handover_id,
-            task_description=context.task,
-        )
+        self._output = ArchitectOutput()
+        self._knowledge_base = {}
 
         # Perform architectural analysis (simulated for MVP)
         self._create_blueprint(context)
@@ -96,7 +94,7 @@ class ArchitectAgent(VoiceAgent):
         context.set_current_task(task2)
 
         # Add intent confidence for handover
-        context.intent_confidence = IntentConfidence
+        context.intent_confidence = IntentConfidence(
             source_agent="Architect",
             target_agent="Debugger",
             confidence_score=0.95,

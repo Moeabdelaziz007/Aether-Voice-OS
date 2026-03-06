@@ -18,16 +18,16 @@ import numpy as np
 import pyaudio
 
 from core.audio.cortex import HAS_RUST_CORTEX, spectral_denoise
-from core.audio.dynamic_aec import DynamicAEC
-from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
-from core.audio.processing import (
+from core.audio.dsp.dynamic_aec import DynamicAEC
+from core.audio.analysis.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
+from core.audio.dsp.processing import (
     AdaptiveVAD,
     HyperVADResult,
     SilentAnalyzer,
     energy_vad,
 )
-from core.audio.state import HysteresisGate, audio_state
-from core.audio.telemetry import AudioTelemetryLogger
+from core.audio.state.state import HysteresisGate, audio_state
+from core.audio.analysis.telemetry import AudioTelemetryLogger
 from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
 
@@ -341,7 +341,7 @@ class AudioCapture:
         if self._telemetry_logger:
             self._telemetry_logger.start_frame()
 
-        capture_start = time.perf_counter()
+        time.perf_counter()
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
         # 1. Dynamic AEC Processing

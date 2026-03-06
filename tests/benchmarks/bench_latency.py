@@ -16,8 +16,8 @@ import time
 
 import numpy as np
 
-from core.audio.paralinguistics import ParalinguisticAnalyzer
-from core.audio.processing import AdaptiveVAD
+from core.audio.analysis.paralinguistics import ParalinguisticAnalyzer
+from core.audio.dsp.processing import AdaptiveVAD
 
 
 async def measure_internal_latency():
@@ -39,7 +39,7 @@ async def measure_internal_latency():
     latencies = []
 
     # measure 1000 iterations to get p99
-    from core.audio.processing import energy_vad
+    from core.audio.dsp.processing import energy_vad
 
     for _ in range(1000):
         start = time.perf_counter()

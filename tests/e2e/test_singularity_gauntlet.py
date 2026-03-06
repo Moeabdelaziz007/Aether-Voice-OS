@@ -16,7 +16,7 @@ import pytest
 from google.genai import types
 
 from core.ai import handoff
-from core.audio.processing import AdaptiveVAD
+from core.audio.dsp.processing import AdaptiveVAD
 from core.tools.router import ToolRouter
 
 
@@ -79,7 +79,7 @@ async def test_semantic_recovery_success():
 @pytest.mark.asyncio
 async def test_vad_stability_drift():
     """Phase 7.2: Verify Adaptive VAD noise floor tracking stays bounded."""
-    from core.audio.processing import energy_vad
+    from core.audio.dsp.processing import energy_vad
 
     vad = AdaptiveVAD(window_size_sec=1.0, sample_rate=16000)
 

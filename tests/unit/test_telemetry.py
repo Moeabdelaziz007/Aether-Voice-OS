@@ -10,7 +10,7 @@ from core.infra.config import AudioConfig
 # Mock pyaudio so we don't need it installed to run tests
 sys.modules["pyaudio"] = Mock()
 # Must import after mocking pyaudio
-from core.audio.capture import AudioCapture  # noqa: E402
+from core.audio.io.capture import AudioCapture  # noqa: E402
 
 
 @pytest.fixture
@@ -26,8 +26,8 @@ def test_audio_telemetry_throttling(capture_config):
     mock_telemetry_cb = Mock()
 
     with (
-        patch("core.audio.capture.DynamicAEC"),
-        patch("core.audio.capture.audio_state") as mock_state,
+        patch("core.audio.io.capture.DynamicAEC"),
+        patch("core.audio.io.capture.audio_state") as mock_state,
     ):
         mock_state.far_end_pcm.read_last.return_value = np.zeros(512, dtype=np.int16)
 
@@ -59,7 +59,7 @@ def test_audio_telemetry_throttling(capture_config):
             asyncio.run(coro)
 
         with patch(
-            "core.audio.capture.asyncio.run_coroutine_threadsafe",
+            "core.audio.io.capture.asyncio.run_coroutine_threadsafe",
             side_effect=mock_run_coroutine_threadsafe,
         ):
             in_data = b"\x00" * 1024  # 512 samples

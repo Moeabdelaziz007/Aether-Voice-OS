@@ -9,10 +9,10 @@ import pytest
 
 mock_audio_state = MagicMock()
 mock_audio_state.far_end_pcm.read_last.return_value = np.zeros(512, dtype=np.int16)
-patcher = patch.dict("sys.modules", {"core.audio.state": mock_audio_state})
+patcher = patch.dict("sys.modules", {"core.audio.state.state": mock_audio_state})
 patcher.start()
 
-from core.audio.capture import AudioCapture
+from core.audio.io.capture import AudioCapture
 from core.infra.config import AudioConfig
 
 # Constants
@@ -36,11 +36,11 @@ def capture_instance():
     mock_queue = MagicMock(spec=asyncio.Queue)
 
     with (
-        patch("core.audio.capture.DynamicAEC") as MockDynamicAEC,
-        patch("core.audio.capture.SmoothMuter"),
-        patch("core.audio.capture.HysteresisGate"),
-        patch("core.audio.capture.AECBridge"),
-        patch("core.audio.capture.energy_vad"),
+        patch("core.audio.io.capture.DynamicAEC") as MockDynamicAEC,
+        patch("core.audio.io.capture.SmoothMuter"),
+        patch("core.audio.io.capture.HysteresisGate"),
+        patch("core.audio.io.capture.AECBridge"),
+        patch("core.audio.io.capture.energy_vad"),
     ):
         mock_aec_instance = MockDynamicAEC.return_value
         mock_aec_state = MagicMock()

@@ -7,7 +7,7 @@ find_zero_crossing, and energy_vad.
 
 import numpy as np
 
-from core.audio.processing import (
+from core.audio.dsp.processing import (
     HyperVADResult,
     RingBuffer,
     energy_vad,

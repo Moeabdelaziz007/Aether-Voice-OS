@@ -1,4 +1,4 @@
-"""Tests for core.audio.paralinguistics.
+"""Tests for core.audio.analysis.paralinguistics.
 
 Validates feature extraction behavior:
 - pitch estimation accuracy on known-frequency sines
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from core.audio.paralinguistics import ParalinguisticAnalyzer
+from core.audio.analysis.paralinguistics import ParalinguisticAnalyzer
 
 SAMPLE_RATE = 16000
 

@@ -134,13 +134,13 @@ class ToolRouter:
 
     def __init__(self) -> None:
         self._tools: dict[str, ToolRegistration] = {}
-        self._profiler = ToolExecutionProfiler)
+        self._profiler = ToolExecutionProfiler()
         self._vector_store: Optional[LocalVectorStore] = None
-        self._biometric_middleware = BiometricMiddlewarefallback_authorized=True)
+        self._biometric_middleware = BiometricMiddleware(fallback_authorized=True)
 
     def init_vector_store(self, api_key: str) -> None:
         """Initialize the semantic search engine."""
-        self._vector_store = LocalVectorStoreapi_key=api_key)
+        self._vector_store = LocalVectorStore(api_key=api_key)
         logger.info("Neural Dispatcher: Semantic indexing engine initialized.")
 
     def register(
@@ -153,7 +153,7 @@ class ToolRouter:
         idempotent: bool = True,
     ) -> None:
         """Register a tool with its handler function and A2A metadata."""
-        self._tools[name] = ToolRegistration
+        self._tools[name] = ToolRegistration(
             name=name,
             description=description,
             parameters=parameters,

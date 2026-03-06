@@ -372,7 +372,7 @@ def benchmark_double_talk_performance() -> BenchmarkResult:
     """
     logger.info("📊 Benchmarking Double-Talk (Cross-Talk) Performance...")
 
-    from core.audio.dynamic_aec import DynamicAEC
+    from core.audio.dsp.dynamic_aec import DynamicAEC
 
     sample_rate = 16000
     frame_size = 1600  # 100ms
@@ -472,7 +472,7 @@ def benchmark_aec_effectiveness(
         f"{noise_type.title()} Noise at {snr_db}dB SNR..."
     )
 
-    from core.audio.dynamic_aec import DynamicAEC
+    from core.audio.dsp.dynamic_aec import DynamicAEC
 
     sample_rate = 16000
     frame_size = 1600  # 100ms
@@ -554,7 +554,7 @@ def benchmark_emotion_f1_score() -> BenchmarkResult:
 
     from sklearn.metrics import confusion_matrix, f1_score
 
-    from core.audio.paralinguistics import ParalinguisticAnalyzer
+    from core.audio.analysis.paralinguistics import ParalinguisticAnalyzer
 
     sample_rate = 16000
     analyzer = ParalinguisticAnalyzer(sample_rate=sample_rate)
@@ -673,7 +673,7 @@ def benchmark_vad_accuracy() -> BenchmarkResult:
     """
     logger.info("📊 [4/5] Benchmarking VAD Accuracy...")
 
-    from core.audio.processing import AdaptiveVAD, energy_vad
+    from core.audio.dsp.processing import AdaptiveVAD, energy_vad
 
     vad = AdaptiveVAD()
     correct = 0
@@ -721,7 +721,7 @@ def benchmark_thalamic_gate_latency() -> BenchmarkResult:
     """
     logger.info("📊 [5/5] Benchmarking Thalamic Gate Latency...")
 
-    from core.audio.dynamic_aec import DynamicAEC
+    from core.audio.dsp.dynamic_aec import DynamicAEC
 
     sample_rate = 16000
     frame_size = 1600

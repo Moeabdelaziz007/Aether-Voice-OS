@@ -186,7 +186,7 @@ class TestVAD:
     @pytest.fixture
     def vad(self):
         """Create VAD instance."""
-        from core.audio.vad import AetherVAD
+        from core.audio.dsp.vad import AetherVAD
 
         return AetherVAD(sample_rate=16000, frame_duration_ms=20)
 
@@ -289,7 +289,7 @@ class TestAEC:
     @pytest.fixture
     def aec(self):
         """Create AEC instance."""
-        from core.audio.dynamic_aec import DynamicAEC
+        from core.audio.dsp.dynamic_aec import DynamicAEC
 
         return DynamicAEC(
             sample_rate=16000,
@@ -436,7 +436,7 @@ class TestEchoGuard:
     @pytest.fixture
     def echo_guard(self):
         """Create EchoGuard instance."""
-        from core.audio.echo_guard import EchoGuard
+        from core.audio.dsp.echo_guard import EchoGuard
 
         return EchoGuard(window_size_sec=3.0, sample_rate=16000)
 
@@ -502,7 +502,7 @@ class TestEmotionDetection:
     @pytest.fixture
     def analyzer(self):
         """Create ParalinguisticAnalyzer instance."""
-        from core.audio.paralinguistics import ParalinguisticAnalyzer
+        from core.audio.analysis.paralinguistics import ParalinguisticAnalyzer
 
         return ParalinguisticAnalyzer(sample_rate=16000)
 
@@ -572,7 +572,7 @@ class TestPerformance:
 
     def test_memory_usage_vad(self):
         """Test VAD memory footprint."""
-        from core.audio.vad import AetherVAD
+        from core.audio.dsp.vad import AetherVAD
 
         gc.collect()
         tracemalloc.start()
@@ -592,7 +592,7 @@ class TestPerformance:
 
     def test_memory_usage_aec(self):
         """Test AEC memory footprint."""
-        from core.audio.dynamic_aec import DynamicAEC
+        from core.audio.dsp.dynamic_aec import DynamicAEC
 
         gc.collect()
         tracemalloc.start()
@@ -613,8 +613,8 @@ class TestPerformance:
 
     def test_sustained_processing(self):
         """Test sustained processing without memory leaks."""
-        from core.audio.echo_guard import EchoGuard
-        from core.audio.vad import AetherVAD
+        from core.audio.dsp.echo_guard import EchoGuard
+        from core.audio.dsp.vad import AetherVAD
 
         vad = AetherVAD()
         guard = EchoGuard()
@@ -647,8 +647,8 @@ class TestVoicePipeline:
 
     def test_pipeline_latency_budget(self):
         """Test total pipeline latency stays within budget."""
-        from core.audio.echo_guard import EchoGuard
-        from core.audio.vad import AetherVAD
+        from core.audio.dsp.echo_guard import EchoGuard
+        from core.audio.dsp.vad import AetherVAD
 
         vad = AetherVAD()
         guard = EchoGuard()
@@ -678,7 +678,7 @@ class TestVoicePipeline:
 
     def test_pipeline_under_load(self):
         """Test pipeline performance under sustained load."""
-        from core.audio.vad import AetherVAD
+        from core.audio.dsp.vad import AetherVAD
 
         vad = AetherVAD()
 
@@ -711,7 +711,7 @@ def run_comprehensive_tests() -> VoiceTestSuite:
 
     # VAD Tests
     try:
-        from core.audio.vad import AetherVAD
+        from core.audio.dsp.vad import AetherVAD
 
         vad = AetherVAD()
 
@@ -765,7 +765,7 @@ def run_comprehensive_tests() -> VoiceTestSuite:
 
     # AEC Tests
     try:
-        from core.audio.dynamic_aec import DynamicAEC
+        from core.audio.dsp.dynamic_aec import DynamicAEC
 
         aec = DynamicAEC(sample_rate=16000, frame_size=1600)
 
@@ -808,7 +808,7 @@ def run_comprehensive_tests() -> VoiceTestSuite:
 
     # Echo Guard Tests
     try:
-        from core.audio.echo_guard import EchoGuard
+        from core.audio.dsp.echo_guard import EchoGuard
 
         guard = EchoGuard()
 

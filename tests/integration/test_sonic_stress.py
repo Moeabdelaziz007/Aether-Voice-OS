@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from core.ai.session import GeminiLiveSession
-from core.audio.processing import AdaptiveVAD, energy_vad
+from core.audio.dsp.processing import AdaptiveVAD, energy_vad
 
 
 @pytest.mark.asyncio

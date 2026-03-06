@@ -20,7 +20,7 @@ from core.ai import handoff
 from core.ai.hive import HiveCoordinator
 
 # Aether Core Imports
-from core.audio.processing import AdaptiveVAD, energy_vad
+from core.audio.dsp.processing import AdaptiveVAD, energy_vad
 from core.services.registry import AetherRegistry
 from core.tools import hive_memory
 from core.tools.router import ToolRouter

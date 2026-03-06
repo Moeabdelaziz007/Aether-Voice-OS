@@ -57,7 +57,7 @@ async def save_memory(
     if not db:
         return {
             "status": "error",
-            "message": "Neural Persistence Offline: Cannot commit memory to cloud lattice."
+            "message": "Neural Persistence Offline: Cannot commit memory to cloud lattice.",
         }
 
     valid_priorities = ["low", "medium", "high"]

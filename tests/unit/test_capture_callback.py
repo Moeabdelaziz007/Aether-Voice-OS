@@ -1,4 +1,4 @@
-"""Tests for core.audio.capture AudioCapture callback + SmoothMuter.
+"""Tests for core.audio.io.capture AudioCapture callback + SmoothMuter.
 
 Focus:
 - SmoothMuter ramp is gradual and lands on target
@@ -32,7 +32,7 @@ mock_audio_state.capture_queue_drops = 0
 patcher = patch.dict(
     "sys.modules",
     {
-        "core.audio.state": MagicMock(
+        "core.audio.state.state": MagicMock(
             audio_state=mock_audio_state, HysteresisGate=MagicMock()
         )
     },
@@ -43,7 +43,7 @@ import sys
 from unittest.mock import Mock
 
 sys.modules["pyaudio"] = Mock()
-from core.audio.capture import AudioCapture, SmoothMuter  # noqa: E402
+from core.audio.io.capture import AudioCapture, SmoothMuter  # noqa: E402
 from core.infra.config import AudioConfig  # noqa: E402
 
 SAMPLE_RATE = 16000
@@ -61,10 +61,10 @@ def mock_dependencies():
 
     # We also need to mock the classes instantiated inside AudioCapture
     with (
-        patch("core.audio.capture.DynamicAEC") as MockDynamicAEC,
-        patch("core.audio.capture.SmoothMuter") as MockSmoothMuter,
-        patch("core.audio.capture.HysteresisGate") as MockHysteresis,
-        patch("core.audio.capture.AECBridge") as MockAECBridge,
+        patch("core.audio.io.capture.DynamicAEC") as MockDynamicAEC,
+        patch("core.audio.io.capture.SmoothMuter") as MockSmoothMuter,
+        patch("core.audio.io.capture.HysteresisGate") as MockHysteresis,
+        patch("core.audio.io.capture.AECBridge") as MockAECBridge,
     ):
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
@@ -164,9 +164,9 @@ def capture_instance():
     q: asyncio.Queue = MagicMock(spec=asyncio.Queue)
 
     with (
-        patch("core.audio.capture.DynamicAEC") as MockAEC,
-        patch("core.audio.capture.AECBridge") as MockBridge,
-        patch("core.audio.capture.HysteresisGate") as MockHyst,
+        patch("core.audio.io.capture.DynamicAEC") as MockAEC,
+        patch("core.audio.io.capture.AECBridge") as MockBridge,
+        patch("core.audio.io.capture.HysteresisGate") as MockHyst,
     ):
         # Configure AEC mock
         aec_state = MagicMock()
@@ -211,11 +211,11 @@ def test_callback_when_ai_is_silent_and_user_speaks(
     Scenario: AI is not playing, user speaks.
     Expected: SmoothMuter.unmute() is called.
     """
-    import core.audio.capture
+    import core.audio.io.capture
 
-    core.audio.capture.audio_state.is_playing = False
-    core.audio.capture.audio_state.just_started_playing = False
-    core.audio.capture.audio_state.just_stopped_playing = False
+    core.audio.io.capture.audio_state.is_playing = False
+    core.audio.io.capture.audio_state.just_started_playing = False
+    core.audio.io.capture.audio_state.just_stopped_playing = False
 
     aec_instance = mock_dependencies["MockDynamicAEC"].return_value
     aec_instance.is_user_speaking.return_value = True
@@ -238,11 +238,11 @@ def test_callback_thalamic_gate_mutes_echo(capture_instance, mock_dependencies):
     Scenario: AI is playing, and the incoming audio is determined to be echo.
     Expected: SmoothMuter.mute() is called.
     """
-    import core.audio.capture
+    import core.audio.io.capture
 
-    core.audio.capture.audio_state.is_playing = True
-    core.audio.capture.audio_state.just_started_playing = False
-    core.audio.capture.audio_state.just_stopped_playing = False
+    core.audio.io.capture.audio_state.is_playing = True
+    core.audio.io.capture.audio_state.just_started_playing = False
+    core.audio.io.capture.audio_state.just_stopped_playing = False
 
     aec_instance = mock_dependencies["MockDynamicAEC"].return_value
     aec_instance.is_user_speaking.return_value = False
@@ -265,11 +265,11 @@ def test_callback_thalamic_gate_allows_barge_in(capture_instance, mock_dependenc
     Scenario: AI is playing, but the user speaks over it (barge-in).
     Expected: SmoothMuter.unmute() is called.
     """
-    import core.audio.capture
+    import core.audio.io.capture
 
-    core.audio.capture.audio_state.is_playing = True
-    core.audio.capture.audio_state.just_started_playing = False
-    core.audio.capture.audio_state.just_stopped_playing = False
+    core.audio.io.capture.audio_state.is_playing = True
+    core.audio.io.capture.audio_state.just_started_playing = False
+    core.audio.io.capture.audio_state.just_stopped_playing = False
 
     aec_instance = mock_dependencies["MockDynamicAEC"].return_value
     aec_instance.is_user_speaking.return_value = True

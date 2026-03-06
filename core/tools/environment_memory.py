@@ -15,7 +15,7 @@ from core.tools.vector_store import LocalVectorStore
 logger = logging.getLogger(__name__)
 
 # Default path for environment index
-ENV_INDEX_PATH = Path".aether_env_index.pkl")
+ENV_INDEX_PATH = Path(".aether_env_index.pkl")
 
 
 class EnvironmentMemory:
@@ -24,7 +24,7 @@ class EnvironmentMemory:
     """
 
     def __init__(self, api_key: str):
-        self._vector_store = LocalVectorStoreapi_key=api_key)
+        self._vector_store = LocalVectorStore(api_key=api_key)
         self._vector_store.load(ENV_INDEX_PATH)
 
     async def add_frame_description(
@@ -89,5 +89,5 @@ _memory_instance: Optional[EnvironmentMemory] = None
 def get_env_memory(api_key: str) -> EnvironmentMemory:
     global _memory_instance
     if _memory_instance is None:
-        _memory_instance = EnvironmentMemoryapi_key)
+        _memory_instance = EnvironmentMemory(api_key)
     return _memory_instance

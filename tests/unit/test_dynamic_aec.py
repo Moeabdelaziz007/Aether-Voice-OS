@@ -1,4 +1,4 @@
-"""Tests for core.audio.dynamic_aec
+"""Tests for core.audio.dsp.dynamic_aec
 
 These tests are synthetic-signal based and aim to validate:
 - ERLE improvement on echo-only signals
@@ -18,7 +18,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from core.audio.dynamic_aec import DynamicAEC, FrequencyDomainNLMS
+from core.audio.dsp.dynamic_aec import DynamicAEC, FrequencyDomainNLMS
 
 SAMPLE_RATE = 16000
 FRAME_SIZE = 256

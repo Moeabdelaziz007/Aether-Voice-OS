@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from core.audio.processing import RingBuffer, energy_vad, find_zero_crossing
+from core.audio.dsp.processing import RingBuffer, energy_vad, find_zero_crossing
 
 
 class TestRingBuffer:

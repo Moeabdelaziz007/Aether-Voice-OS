@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from core.audio.capture import SmoothMuter
+from core.audio.io.capture import SmoothMuter
 
 # Constants
 RAMP_SAMPLES = 256

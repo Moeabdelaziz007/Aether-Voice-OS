@@ -20,7 +20,7 @@ from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_sc
 # Ensure core is in path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from core.audio.paralinguistics import ParalinguisticAnalyzer
+from core.audio.analysis.paralinguistics import ParalinguisticAnalyzer
 
 
 def generate_typing_chunk(sr=16000, duration=1.0, count=5):

@@ -126,7 +126,7 @@ class TestRingBuffer:
     """Test the O(1) circular buffer."""
 
     def test_basic_write_read(self):
-        from core.audio.processing import RingBuffer
+        from core.audio.dsp.processing import RingBuffer
 
         buf = RingBuffer(100)
         data = np.array([1, 2, 3, 4, 5], dtype=np.int16)
@@ -136,7 +136,7 @@ class TestRingBuffer:
         np.testing.assert_array_equal(result, data)
 
     def test_wrap_around(self):
-        from core.audio.processing import RingBuffer
+        from core.audio.dsp.processing import RingBuffer
 
         buf = RingBuffer(10)
         # Write 8 samples
@@ -148,7 +148,7 @@ class TestRingBuffer:
         np.testing.assert_array_equal(last5, np.arange(100, 105, dtype=np.int16))
 
     def test_overflow(self):
-        from core.audio.processing import RingBuffer
+        from core.audio.dsp.processing import RingBuffer
 
         buf = RingBuffer(5)
         big = np.arange(20, dtype=np.int16)
@@ -158,7 +158,7 @@ class TestRingBuffer:
         np.testing.assert_array_equal(result, np.arange(15, 20, dtype=np.int16))
 
     def test_clear(self):
-        from core.audio.processing import RingBuffer
+        from core.audio.dsp.processing import RingBuffer
 
         buf = RingBuffer(10)
         buf.write(np.ones(10, dtype=np.int16))
@@ -167,7 +167,7 @@ class TestRingBuffer:
         assert len(buf.read_last(10)) == 0
 
     def test_empty_read(self):
-        from core.audio.processing import RingBuffer
+        from core.audio.dsp.processing import RingBuffer
 
         buf = RingBuffer(10)
         result = buf.read_last(5)
@@ -178,7 +178,7 @@ class TestVAD:
     """Test Voice Activity Detection."""
 
     def test_silence_detected(self):
-        from core.audio.processing import energy_vad
+        from core.audio.dsp.processing import energy_vad
 
         silence = np.zeros(1024, dtype=np.int16)
         result = energy_vad(silence)
@@ -188,7 +188,7 @@ class TestVAD:
         assert result.sample_count == 1024
 
     def test_speech_detected(self):
-        from core.audio.processing import energy_vad
+        from core.audio.dsp.processing import energy_vad
 
         # Random noise satisfies enhanced_vad better than sines (wide spectrum)
         loud = np.random.randint(-20000, 20000, 1024, dtype=np.int16)
@@ -198,7 +198,7 @@ class TestVAD:
         assert result.energy_rms > 0.01
 
     def test_empty_input(self):
-        from core.audio.processing import energy_vad
+        from core.audio.dsp.processing import energy_vad
 
         empty = np.array([], dtype=np.int16)
         result = energy_vad(empty)
@@ -207,7 +207,7 @@ class TestVAD:
         assert result.sample_count == 0
 
     def test_threshold_boundary(self):
-        from core.audio.processing import energy_vad
+        from core.audio.dsp.processing import energy_vad
 
         # Random noise signal
         pcm = np.random.randint(-15000, 15000, 1024, dtype=np.int16)
@@ -221,7 +221,7 @@ class TestZeroCrossing:
     """Test zero-crossing detection."""
 
     def test_finds_crossing(self):
-        from core.audio.processing import find_zero_crossing
+        from core.audio.dsp.processing import find_zero_crossing
 
         # +1, +1, -1, -1 — crossing between index 1 and 2
         pcm = np.array([100, 100, -100, -100], dtype=np.int16)
@@ -229,14 +229,14 @@ class TestZeroCrossing:
         assert idx == 2  # first crossing point
 
     def test_no_crossing(self):
-        from core.audio.processing import find_zero_crossing
+        from core.audio.dsp.processing import find_zero_crossing
 
         pcm = np.full(100, 500, dtype=np.int16)  # all positive
         idx = find_zero_crossing(pcm, sample_rate=16_000, max_lookahead_ms=20.0)
         assert idx == len(pcm)
 
     def test_very_short_input(self):
-        from core.audio.processing import find_zero_crossing
+        from core.audio.dsp.processing import find_zero_crossing
 
         pcm = np.array([1], dtype=np.int16)
         idx = find_zero_crossing(pcm, sample_rate=16_000, max_lookahead_ms=20.0)

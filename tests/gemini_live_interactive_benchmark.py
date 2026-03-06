@@ -58,10 +58,10 @@ except ImportError:
 
 # Using existing session class instead of direct API calls
 
-from core.audio.capture import AudioCapture
-from core.audio.dynamic_aec import DynamicAEC
-from core.audio.playback import AudioPlayback
-from core.audio.processing import AdaptiveVAD
+from core.audio.io.capture import AudioCapture
+from core.audio.dsp.dynamic_aec import DynamicAEC
+from core.audio.io.playback import AudioPlayback
+from core.audio.dsp.processing import AdaptiveVAD
 from core.infra.config import load_config
 
 

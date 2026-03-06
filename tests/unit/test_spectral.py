@@ -1,4 +1,4 @@
-"""Tests for core.audio.spectral.
+"""Tests for core.audio.dsp.spectral.
 
 Covers:
 - gcc_phat delay estimation on delayed signals
@@ -13,7 +13,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from core.audio.spectral import SpectralAnalyzer, erle, gcc_phat
+from core.audio.dsp.spectral import SpectralAnalyzer, erle, gcc_phat
 
 SAMPLE_RATE = 16000
 

@@ -56,7 +56,7 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = self._container.get("audiomanager")(
+        self._audio = self._container.get("audiomanager")()
         self._audio = AudioManager(
             self._config,
             self._gateway,
@@ -83,9 +83,7 @@ class AetherEngine:
         self._pulse = PulseManager(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = CognitiveScheduler(
-            self._event_bus, self._router
-        )
+        self._cortex = CognitiveScheduler(self._event_bus, self._router)
 
         # Inject Scheduler into Hive for proactive prompt injection
         self._agents._hive._scheduler = self._cortex
@@ -111,9 +109,7 @@ class AetherEngine:
         )
         root_dir = Path(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"
-        global_index = LocalVectorStore(
-            api_key=self._config.ai.api_key
-        )
+        global_index = LocalVectorStore(api_key=self._config.ai.api_key)
         global_index.load(index_path)
         self._router._vector_store = global_index
 

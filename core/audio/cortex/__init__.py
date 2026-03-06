@@ -28,6 +28,7 @@ except ImportError as e:
         "Falling back to NumPy (Performance degraded)."
     )
     import traceback
+
     logger.debug(traceback.format_exc())
 
 
@@ -38,11 +39,7 @@ class CochlearBuffer:
         self.capacity = capacity
         self.use_rust = HAS_RUST_CORTEX
         if HAS_RUST_CORTEX:
-<<<<<<< HEAD
             self._rust_buf = RustCochlearBuffer(capacity)
-=======
-            self._rust_buf = RustCochlearBuffercapacity)
->>>>>>> origin/jules-3466090822907057400-4af64808
         else:
             # Fallback to simple numpy ring buffer
             self._buf = np.zeros(capacity, dtype=np.int16)
