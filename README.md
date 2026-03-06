@@ -497,49 +497,6 @@ This project is licensed under the **Apache 2.0 License** — see the [LICENSE](
 
 ---
 
-## 🔗 Connect & Follow | تواصل وتابع
-
-<div align="center">
-
-[![Twitter](https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white)](https://twitter.com/yourhandle)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/yourprofile)
-[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/yourserver)
-[![YouTube](https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtube.com/@yourchannel)
-[![GitHub](https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Moeabdelaziz007)
-
-</div>
-
----
-
-## 📁 Quick Access Links | روابط سريعة
-
-<div align="center">
-
-[![Documentation](https://img.shields.io/badge/📚_Documentation-00f3ff?style=for-the-badge&logo=readthedocs&logoColor=white)](docs/)
-[![API Reference](https://img.shields.io/badge/🔌_API_Reference-a855f7?style=for-the-badge&logo=postman&logoColor=white)](docs/api_reference.md)
-[![Architecture](https://img.shields.io/badge/🏗️_Architecture-ff6b6b?style=for-the-badge&logo=stackshare&logoColor=white)](docs/architecture.md)
-[![Deployment](https://img.shields.io/badge/🚀_Deployment-4ade80?style=for-the-badge&logo=googlecloud&logoColor=white)](docs/deployment.md)
-[![Security](https://img.shields.io/badge/🔒_Security-fb923c?style=for-the-badge&logo=security&logoColor=white)](docs/SECURITY_UI.md)
-
-</div>
-
----
-
-## 💖 Support & Sponsorship | الدعم والرعاية
-
-<div align="center">
-
-<p>If you find Aether Voice OS helpful, please consider:</p>
-
-[![Star Repo](https://img.shields.io/badge/⭐_Star_this_Repo-ffd700?style=for-the-badge&logo=star&logoColor=black)](https://github.com/Moeabdelaziz007/Aether-Voice-OS/stargazers)
-[![Sponsor](https://img.shields.io/badge/💰_Sponsor_Project-ff69b4?style=for-the-badge&logo=githubsponsors&logoColor=white)](https://github.com/sponsors/Moeabdelaziz007)
-[![Donate](https://img.shields.io/badge/☕_Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=black)](https://www.buymeacoffee.com/yourusername)
-[![Share](https://img.shields.io/badge/📢_Share_Project-00f3ff?style=for-the-badge&logo=share&logoColor=white)](https://twitter.com/intent/tweet?text=Check%20out%20Aether%20Voice%20OS%20-%20The%20Neural%20Interface%20for%20Voice%20AI!&url=https://github.com/Moeabdelaziz007/Aether-Voice-OS)
-
-</div>
-
----
-
 <p align="center">
   <img src="docs/assets/aether_banner.png" alt="Aether" width="50%" style="opacity: 0.7;"/>
   <br /><br />
