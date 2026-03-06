@@ -48,7 +48,7 @@ class ArchitectAgent(VoiceAgent):
         context.add_history("Architect began analysis", agent="Architect")
 
         # Create output container
-        self._output = ArchitectOutput
+        self._output = ArchitectOutput(
             handover_id=context.handover_id,
             task_description=context.task,
         )
@@ -60,7 +60,7 @@ class ArchitectAgent(VoiceAgent):
         decision = self._output.add_decision(
             category="architecture",
             description="Modular microservices architecture with clear API boundaries",
-            rationale="Provides scalability and maintainability for the described requirements",
+            rationale="Provides scalability and maintainability for requirements",
             impact_level="high",
         )
         logger.info("📐 Created decision: %s", decision.decision_id)
@@ -96,11 +96,11 @@ class ArchitectAgent(VoiceAgent):
         context.set_current_task(task2)
 
         # Add intent confidence for handover
-        context.intent_confidence = IntentConfidence
+        context.intent_confidence = IntentConfidence(
             source_agent="Architect",
             target_agent="Debugger",
             confidence_score=0.95,
-            reasoning="Design verification required - Debugger specializes in risk assessment",
+            reasoning="Design verification required - Debugger risk assessment",
             alternatives_considered=["CodingExpert"],
         )
 
