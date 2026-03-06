@@ -15,11 +15,7 @@ class EmotionCalibrator:
         from core.emotion.baseline import EmotionBaselineManager
 
         self._thresholds = {"frustration": 0.85}  # Initial baseline for intervention
-<<<<<<< HEAD
         self._baseline_mgr = EmotionBaselineManager(calibration_duration_seconds=30)
-=======
-        self._baseline_mgr = EmotionBaselineManagercalibration_duration_seconds=30)
->>>>>>> origin/jules-3466090822907057400-4af64808
         self._feedback_history = []
         logger.info("🧠 EmotionCalibrator: System online (Frustration Baseline: 0.85)")
 

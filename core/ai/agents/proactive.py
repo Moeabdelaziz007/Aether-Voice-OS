@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Dict, List, Any, Optional, Union
+from typing import Optional
 
 from core.emotion.calibrator import EmotionCalibrator
 from core.tools.vision_tool import take_screenshot
@@ -17,10 +17,8 @@ class ProactiveInterventionEngine:
     def __init__(self, cooldown_minutes: int = 5):
         self.cooldown_seconds = cooldown_minutes * 60
         self.last_intervention_time = 0
-        self.frustration_threshold = 0.70
-        self.calibrator = EmotionCalibrator()
         self.frustration_threshold = 0.70  # Lowered slightly for more responsiveness
-        self.calibrator = EmotionCalibrator)
+        self.calibrator = EmotionCalibrator()
         self._message_bank = [
             "أشعر بضيقك في هذا الجزء. هل تريد أن نلقي نظرة معاً على الكود لحلها؟",
             "يبدو أن هذا الخطأ محبط حقاً. هل تريد مني تشغيل فحص للملفات المتأثرة؟",
@@ -107,6 +105,7 @@ class VisionPulseAgent:
     async def capture_pulse(self) -> Optional[bytes]:
         """Captures a screenshot and adds it to the rolling buffer."""
         import base64
+
         from core.tools.vision_tool import take_screenshot
         
         res = await take_screenshot()

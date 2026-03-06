@@ -44,6 +44,8 @@ class AudioState:
 
     _instance = None
     _lock = threading.Lock()
+    _playing_lock = threading.Lock()
+    _aec_lock = threading.Lock()
 
     def __new__(cls):
         with cls._lock:
@@ -62,7 +64,6 @@ class AudioState:
                 cls._instance.is_hard = False
                 cls._instance.silence_type = "void"
                 cls._instance.capture_queue_drops = 0
-                cls._instance._playing_lock = threading.Lock()
                 # AEC (Acoustic Echo Cancellation) state
                 cls._instance.aec_converged = False
                 cls._instance.aec_convergence_progress = 0.0  # 0.0 to 1.0
@@ -71,8 +72,30 @@ class AudioState:
                 cls._instance.aec_double_talk = False  # Double-talk detection
                 # Reference buffer for loopback AEC (2 seconds @ 16kHz)
                 cls._instance.far_end_pcm = RingBuffer(32000)
-                cls._instance.far_end_pcm = RingBuffer(32000)
         return cls._instance
+
+    def update_aec_state_safe(
+        self,
+        converged: bool = False,
+        convergence_progress: float = 0.0,
+        erle_db: float = 0.0,
+        delay_ms: float = 0.0,
+        double_talk: bool = False,
+    ) -> None:
+        """Atomic update with timeout to prevent deadlock"""
+        acquired = self._aec_lock.acquire(timeout=0.1)
+        if acquired:
+            try:
+                self.aec_converged = converged
+                self.aec_convergence_progress = max(0.0, min(1.0, convergence_progress))
+                self.aec_erle_db = erle_db
+                self.aec_delay_ms = delay_ms
+                self.aec_double_talk = double_talk
+            finally:
+                self._aec_lock.release()
+        else:
+            import logging
+            logging.getLogger(__name__).warning("AEC state update skipped (lock timeout)")
 
     def update_aec_state(
         self,
@@ -126,5 +149,4 @@ class AudioState:
 
 
 # Global singleton
-audio_state = AudioState()
 audio_state = AudioState()

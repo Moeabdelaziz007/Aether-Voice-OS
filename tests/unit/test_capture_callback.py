@@ -64,7 +64,6 @@ def mock_dependencies():
         patch("core.audio.capture.DynamicAEC") as MockDynamicAEC,
         patch("core.audio.capture.SmoothMuter") as MockSmoothMuter,
         patch("core.audio.capture.HysteresisGate") as MockHysteresis,
-        patch("core.audio.capture.AECBridge"),
     ):
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
@@ -165,7 +164,6 @@ def capture_instance():
 
     with (
         patch("core.audio.capture.DynamicAEC") as MockAEC,
-        patch("core.audio.capture.AECBridge") as MockBridge,
         patch("core.audio.capture.HysteresisGate") as MockHyst,
     ):
         # Configure AEC mock
@@ -181,9 +179,6 @@ def capture_instance():
             aec_state,
         )
         MockAEC.return_value.is_user_speaking.return_value = True
-
-        # Bridge off
-        MockBridge.return_value.use_rust = False
 
         # Hysteresis gate just mirrors is_playing
         MockHyst.return_value.update.side_effect = lambda x: x
