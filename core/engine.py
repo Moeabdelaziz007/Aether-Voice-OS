@@ -31,7 +31,7 @@ from typing import Any, Optional
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from core.ai import handoff
+from core.ai.handover.protocol import create_handoff_protocol
 from core.ai.adk_agents import root_agent
 from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
@@ -229,8 +229,9 @@ class AetherEngine:
             latency_tier="p95_sub_2s",
         )
 
-        # Connect Hive to tools
-        handoff.set_hive_params(self._hive, self._session_restart)
+        # Connect Hive to tools via Canonical Handover Protocol
+        self._handoff_protocol = create_handoff_protocol(self._hive, self._session_restart)
+        self._router.register_module(self._handoff_protocol)
         hive_memory.set_firebase_connector(self._firebase)
 
         logger.info(
