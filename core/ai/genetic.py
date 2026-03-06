@@ -24,11 +24,14 @@ class AgentDNA:
     """
     Encodes the behavior and resource allocation for an Expert Soul.
     """
+    # Persona
+    persona: str = "calm_brilliant_partner" # Examples: "calm_brilliant_partner", "enthusiastic_coach"
 
     # Behavioral Traits
-    verbosity: float = 0.5  # 0 (concise) to 1 (verbose)
-    empathy: float = 0.5  # 0 (robotic) to 1 (warm)
-    proactivity: float = 0.5  # 0 (reactive) to 1 (proactive tools)
+    verbosity: float = 0.4  # 0 (concise) to 1 (verbose)
+    empathy: float = 0.7  # 0 (robotic) to 1 (warm)
+    proactivity: float = 0.6  # 0 (reactive) to 1 (proactive tools)
+    awareness: float = 0.6 # 0 (oblivious) to 1 (hyper-aware of user state)
 
     # Resource Allocation
     latency_budget_ms: int = 500  # Target response time

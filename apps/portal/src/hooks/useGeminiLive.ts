@@ -52,10 +52,10 @@ interface GeminiLiveReturn {
     >;
 }
 
-const GEMINI_WS_URL =
-    "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent";
+// The Aether Gateway handles the direct connection to Google's API
+const AETHER_GATEWAY_URL =
+    process.env.NEXT_PUBLIC_AETHER_GATEWAY_URL || "ws://localhost:18789";
 
-const API_KEY = process.env.NEXT_PUBLIC_GEMINI_KEY || "";
 const MODEL = "models/gemini-2.5-flash-preview-native-audio-dialog";
 
 // Reconnection constants
@@ -93,7 +93,8 @@ export function useGeminiLive(): GeminiLiveReturn {
         setStatus("connecting");
 
         try {
-            const url = `${GEMINI_WS_URL}?key=${API_KEY}`;
+            // The Gateway URL doesn't need the API key; the kernel handles auth.
+            const url = AETHER_GATEWAY_URL;
             const ws = new WebSocket(url);
             ws.binaryType = "arraybuffer";
             wsRef.current = ws;

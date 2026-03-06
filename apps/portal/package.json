@@ -5,6 +5,9 @@
     "scripts": {
         "dev": "next dev",
         "build": "next build",
+        "analyze": "ANALYZE=true next build --webpack",
+        "analyze:sm": "source-map-explorer .next/static/chunks/**/*.js",
+        "analyze:static": "NEXT_BUNDLE_ANALYZER_LOG_DIR=.next/analyze-static npm run analyze",
         "start": "next start",
         "lint": "echo \"Linting skipped\"",
         "test": "vitest run",
@@ -15,6 +18,7 @@
     },
     "dependencies": {
         "@ducanh2912/next-pwa": "^10.2.9",
+        "@next/bundle-analyzer": "^16.1.6",
         "@react-three/drei": "^10.7.7",
         "@react-three/fiber": "^9.5.0",
         "@react-three/postprocessing": "^3.0.4",
@@ -29,6 +33,7 @@
         "postprocessing": "^6.38.3",
         "react": "19.2.3",
         "react-dom": "19.2.3",
+        "source-map-explorer": "^2.5.3",
         "tailwind-merge": "^3.5.0",
         "three": "^0.183.2",
         "tweetnacl": "^1.0.3",
