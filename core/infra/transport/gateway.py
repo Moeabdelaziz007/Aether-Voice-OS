@@ -610,16 +610,40 @@ class AetherGateway:
     def _verify_jwt(self, token: str) -> bool:
         """
         Verify a JWT token.
-        Uses AETHER_JWT_SECRET or GOOGLE_API_KEY as the secret.
+        Uses AETHER_JWT_SECRET as the signing secret.
         """
-        secret = os.environ.get("AETHER_JWT_SECRET") or os.environ.get("GOOGLE_API_KEY")
+        secret = os.environ.get("AETHER_JWT_SECRET")
         if not secret:
-            logger.warning("No secret available for JWT verification")
+            logger.warning(
+                "JWT auth attempted but AETHER_JWT_SECRET is not configured. "
+                "Disable JWT auth mode explicitly or configure a dedicated secret."
+            )
+            return False
+
+        issuer = os.environ.get("AETHER_JWT_ISSUER")
+        audience = os.environ.get("AETHER_JWT_AUDIENCE")
+
+        if not issuer or not audience:
+            logger.warning(
+                "JWT verification requires configured issuer and audience claims."
+            )
             return False
 
         try:
-            # We accept HS256 for now, as it's common for internal service comms
-            jwt.decode(token, secret, algorithms=["HS256"])
+            jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                issuer=issuer,
+                audience=audience,
+                options={
+                    "require": ["exp", "iat", "iss", "aud", "sub"],
+                    "verify_exp": True,
+                    "verify_iat": True,
+                    "verify_iss": True,
+                    "verify_aud": True,
+                },
+            )
             return True
         except jwt.PyJWTError as exc:
             logger.warning("JWT verification failed: %s", exc)

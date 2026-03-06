@@ -65,3 +65,36 @@ async def test_shell_injection_prevention():
     )
     # Ensure it didn't actually run the second echo on a new line
     assert result["stdout"].count("hacked") == 1
+
+
+@pytest.mark.asyncio
+async def test_run_terminal_command_blocks_disallowed_working_directory():
+    result = await run_terminal_command("pwd", working_directory="/")
+    assert "error" in result
+    assert "outside allowed project roots" in result["error"]
+
+
+@pytest.mark.asyncio
+async def test_list_codebase_blocks_path_traversal():
+    from core.tools.system_tool import list_codebase
+
+    result = await list_codebase("../../")
+    assert result["status"] == "error"
+    assert "outside allowed project roots" in result["message"]
+
+
+@pytest.mark.asyncio
+async def test_read_file_content_blocks_path_traversal():
+    from core.tools.system_tool import read_file_content
+
+    result = await read_file_content("../../etc/passwd")
+    assert result["status"] == "error"
+    assert "outside allowed project roots" in result["message"]
+
+
+@pytest.mark.asyncio
+async def test_non_whitelisted_command_blocked():
+    result = await run_terminal_command("uname -a")
+    assert "error" in result
+    assert "not allowed in strict mode" in result["error"]
+    assert result.get("violation") == "uname"

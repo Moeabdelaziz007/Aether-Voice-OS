@@ -12,10 +12,12 @@ All functions are pure — no side effects beyond returning data.
 from __future__ import annotations
 
 import logging
+import os
 import platform
 import shlex
 import subprocess
 from datetime import datetime, timezone
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +67,36 @@ ALLOWED_GIT_SUBCOMMANDS = {
     "remote",
     "branch",
 }
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _get_allowed_roots() -> tuple[Path, ...]:
+    roots_env = os.environ.get("AETHER_ALLOWED_TOOL_ROOTS")
+    if not roots_env:
+        return (PROJECT_ROOT,)
+
+    resolved_roots: list[Path] = []
+    for root in roots_env.split(os.pathsep):
+        if root.strip():
+            resolved_roots.append(Path(root).expanduser().resolve())
+
+    return tuple(resolved_roots) if resolved_roots else (PROJECT_ROOT,)
+
+
+def _resolve_within_allowed_roots(candidate: str | Path) -> Path:
+    resolved_candidate = Path(candidate).expanduser().resolve()
+    for root in _get_allowed_roots():
+        try:
+            resolved_candidate.relative_to(root)
+            return resolved_candidate
+        except ValueError:
+            continue
+
+    raise PermissionError(
+        "Path escapes allowed working directory roots. "
+        f"allowed_roots={[str(root) for root in _get_allowed_roots()]}"
+    )
 
 
 async def get_current_time(**kwargs) -> dict:
@@ -128,6 +160,16 @@ async def run_terminal_command(command: str, **kwargs) -> dict:
     - 5-second timeout.
     """
     try:
+        try:
+            requested_cwd = kwargs.get("working_directory") or kwargs.get("cwd") or "."
+            safe_cwd = _resolve_within_allowed_roots(requested_cwd)
+        except PermissionError as exc:
+            logger.warning("Security Block: Unauthorized working directory: %s", exc)
+            return {
+                "error": "Working directory is outside allowed project roots.",
+                "violation": str(exc),
+            }
+
         # 1. Parse command safely
         args = shlex.split(command)
         if not args:
@@ -161,6 +203,7 @@ async def run_terminal_command(command: str, **kwargs) -> dict:
             text=True,
             timeout=5,  # Strict timeout
             shell=False,  # Prevent shell injection
+            cwd=str(safe_cwd),
         )
 
         return {
@@ -184,8 +227,6 @@ async def list_codebase(path: str = ".", **kwargs) -> dict:
     Returns a flat list of files in the project, ignoring common artifacts.
     Efficient for giving the agent a map of the codebase.
     """
-    import os
-
     ignore_dirs = {
         ".git",
         "__pycache__",
@@ -198,11 +239,17 @@ async def list_codebase(path: str = ".", **kwargs) -> dict:
     file_list = []
 
     try:
-        for root, dirs, files in os.walk(path):
+        safe_path = _resolve_within_allowed_roots(path)
+    except PermissionError as exc:
+        logger.warning("Security Block: Unauthorized codebase path: %s", exc)
+        return {"status": "error", "message": "Path outside allowed project roots."}
+
+    try:
+        for root, dirs, files in os.walk(safe_path):
             # Prune ignore_dirs in-place to prevent os.walk from entering them
             dirs[:] = [d for d in dirs if d not in ignore_dirs]
             for file in files:
-                rel_path = os.path.relpath(os.path.join(root, file), path)
+                rel_path = os.path.relpath(os.path.join(root, file), safe_path)
                 file_list.append(rel_path)
 
         return {
@@ -220,13 +267,17 @@ async def read_file_content(filepath: str, **kwargs) -> dict:
     Reads the content of a specific file.
     Security: Limits content to 10,000 characters to prevent OOM.
     """
-    import os
+    try:
+        safe_file = _resolve_within_allowed_roots(filepath)
+    except PermissionError as exc:
+        logger.warning("Security Block: Unauthorized file read: %s", exc)
+        return {"status": "error", "message": "Path outside allowed project roots."}
 
-    if not os.path.exists(filepath):
+    if not safe_file.exists():
         return {"status": "error", "message": "File not found."}
 
     try:
-        with open(filepath, "r", encoding="utf-8") as f:
+        with safe_file.open("r", encoding="utf-8") as f:
             content = f.read(10001)  # Read slightly more to detect truncation
 
         is_truncated = len(content) > 10000
@@ -234,7 +285,7 @@ async def read_file_content(filepath: str, **kwargs) -> dict:
             "status": "success",
             "content": content[:10000],
             "truncated": is_truncated,
-            "size_bytes": os.path.getsize(filepath),
+            "size_bytes": safe_file.stat().st_size,
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
