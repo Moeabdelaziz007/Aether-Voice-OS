@@ -77,16 +77,16 @@ class AudioStateManager:
         self._playback_start_time: Optional[float] = None
 
         # AEC state
-        self._aec_state = AECState)
+        self._aec_state = AECState()
 
         # VAD state
-        self._vad_state = VADState)
+        self._vad_state = VADState()
 
         # Session state
-        self._session_state = SessionState)
+        self._session_state = SessionState()
 
         # Audio stats
-        self._stats = AudioStats)
+        self._stats = AudioStats()
 
         # Far-end PCM buffer (AI output)
         self._far_end_buffer = np.zeros(buffer_capacity, dtype=np.int16)
@@ -142,7 +142,7 @@ class AudioStateManager:
     @property
     def aec_state(self) -> AECState:
         with self._lock:
-            return AECState
+            return AECState(
                 converged=self._aec_state.converged,
                 convergence_progress=self._aec_state.convergence_progress,
                 erle_db=self._aec_state.erle_db,
@@ -265,7 +265,7 @@ class _FarEndBufferProxy:
 # Global instance (for backwards compatibility during migration)
 # ═══════════════════════════════════════════════════════════════════
 
-audio_state_manager = AudioStateManager)
+audio_state_manager = AudioStateManager()
 
 
 # Proxy class for backwards compatibility with existing audio_state
@@ -321,4 +321,4 @@ class AudioStateProxy:
 
 
 # Global audio_state instance (backwards compatible)
-audio_state = AudioStateProxyaudio_state_manager)
+audio_state = AudioStateProxy(audio_state_manager)

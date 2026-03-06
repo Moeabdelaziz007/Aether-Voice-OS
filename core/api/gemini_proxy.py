@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
-router = APIRouterprefix="/api/gemini", tags=["gemini"])
+router = APIRouter(prefix="/api/gemini", tags=["gemini"])
 
 GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws"
 GEMINI_HTTP_URL = "https://generativelanguage.googleapis.com"
@@ -22,7 +22,7 @@ def get_api_key() -> str:
     """Get Gemini API key from environment."""
     key = os.getenv("GOOGLE_API_KEY")
     if not key:
-        raise HTTPExceptionstatus_code=500, detail="API key not configured")
+        raise HTTPException(status_code=500, detail="API key not configured")
     return key
 
 
@@ -48,12 +48,12 @@ async def proxy_generate(request: Request) -> dict[str, Any]:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            raise HTTPException
+            raise HTTPException(
                 status_code=e.response.status_code,
                 detail=f"Gemini API error: {e.response.text}",
             )
         except httpx.RequestError as e:
-            raise HTTPExceptionstatus_code=502, detail=f"Request failed: {str(e)}")
+            raise HTTPException(status_code=502, detail=f"Request failed: {str(e)}")
 
 
 @router.websocket("/live")
@@ -61,9 +61,7 @@ async def proxy_live_websocket(websocket: WebSocket):
     """Proxy WebSocket connections to Gemini Live API."""
     await websocket.accept()
     api_key = get_api_key()
-    model = websocket.query_params.get(
-        "model", "gemini-2.5-flash-preview-native-audio-dialog"
-    )
+    websocket.query_params.get("model", "gemini-2.5-flash-preview-native-audio-dialog")
 
     ws_url = f"{GEMINI_WS_URL}/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key={api_key}"
 

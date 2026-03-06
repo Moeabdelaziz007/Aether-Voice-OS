@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
@@ -39,7 +39,7 @@ class HandoffRequest:
     context_keys: list[str] = Field(default_factory=list)
     priority: str = "medium"
     timeout_seconds: int = 30
-    handoff_time: str = Field((default_factory=lambda: datetime.now().isoformat())
+    handoff_time: str = Field(default_factory=lambda: datetime.now().isoformat())
 
 
 async def delegate_to_agent(

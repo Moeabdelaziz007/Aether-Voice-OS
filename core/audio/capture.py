@@ -341,7 +341,7 @@ class AudioCapture:
         if self._telemetry_logger:
             self._telemetry_logger.start_frame()
 
-        capture_start = time.perf_counter()
+        time.perf_counter()
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
         # 1. Dynamic AEC Processing

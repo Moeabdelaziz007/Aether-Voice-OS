@@ -151,8 +151,8 @@ def generate_echo_signal(
     """Generate echo of original signal."""
     delay_samples = int(delay_ms * sample_rate / 1000)
     echo = np.zeros(len(original) + delay_samples, dtype=np.float64)
-    echo[delay_samples: delay_samples + len(original)] = original * attenuation
-    return echo[:len(original)].astype(np.int16)
+    echo[delay_samples : delay_samples + len(original)] = original * attenuation
+    return echo[: len(original)].astype(np.int16)
 
 
 def mix_signals(
@@ -220,7 +220,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(speech) - frame_size, frame_size):
-            frame = speech[i: i + frame_size]
+            frame = speech[i : i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -244,7 +244,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(noisy_speech) - frame_size, frame_size):
-            frame = noisy_speech[i: i + frame_size]
+            frame = noisy_speech[i : i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -419,7 +419,7 @@ class TestAEC:
             latencies.append(latency_ms)
 
         avg_latency = np.mean(latencies)
-        p99_latency = np.percentile(latencies, 99)
+        np.percentile(latencies, 99)
 
         # AEC should process in <5ms per 100ms frame
         assert avg_latency < 5.0, f"Average latency {avg_latency:.2f}ms exceeds 5ms"

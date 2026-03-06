@@ -60,7 +60,7 @@ class Queries:
                 # For small limits, get() is more efficient than stream()
                 docs = query.get()
                 return [
-                    Sessionmetadata**{**doc.to_dict(), "session_id": doc.id})
+                    SessionMetadata(**{**doc.to_dict(), "session_id": doc.id})
                     for doc in docs
                 ]
 

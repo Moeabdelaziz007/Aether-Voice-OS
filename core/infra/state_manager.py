@@ -3,7 +3,7 @@ import logging
 import time
 from enum import Enum
 
-from core.infra.event_bus import ControlEvent, EventBus
+from core.infra.event_bus import EventBus
 
 logger = logging.getLogger("AetherOS.StateManager")
 

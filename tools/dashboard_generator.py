@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+
 def generate_dashboard():
     """
     Generates a standalone HTML dashboard to visualize AetherOS benchmarks.
@@ -8,18 +9,20 @@ def generate_dashboard():
     """
     report_path = Path("tests/reports/benchmark_report.json")
     if not report_path.exists():
-        print("❌ Error: benchmark_report.json not found. Run the benchmark runner first.")
+        print(
+            "❌ Error: benchmark_report.json not found. Run the benchmark runner first."
+        )
         return
 
     with open(report_path, "r") as f:
         data = json.load(f)
 
     metrics = data.get("metrics", {})
-    
+
     # Extract data for charts
     dna_history = metrics.get("dna", {}).get("history", [])
-    stability_history = metrics.get("stability", {}).get("history", [])
-    
+    metrics.get("stability", {}).get("history", [])
+
     html_content = f"""
 <!DOCTYPE html>
 <html lang="en">
@@ -98,7 +101,7 @@ def generate_dashboard():
     <div class="grid">
         <div class="card">
             <div class="stat-label">Interrupt Latency (T3-T1)</div>
-            <div class="stat-value">{metrics.get('latency', {}).get('t3_t1_total_ms', 'N/A')}ms</div>
+            <div class="stat-value">{metrics.get("latency", {}).get("t3_t1_total_ms", "N/A")}ms</div>
             <p style="font-size:0.8rem; color:#666">Target: &lt; 50ms</p>
         </div>
         <div class="card">
@@ -108,7 +111,7 @@ def generate_dashboard():
         </div>
         <div class="card">
             <div class="stat-label">Neural Lead Time</div>
-            <div class="stat-value">{metrics.get('cortex', {}).get('pre_warm_elapsed_ms', 'N/A')}ms</div>
+            <div class="stat-value">{metrics.get("cortex", {}).get("pre_warm_elapsed_ms", "N/A")}ms</div>
             <p style="font-size:0.8rem; color:#666">Predictive Tool Warming</p>
         </div>
         <div class="card" style="grid-column: span 2">
@@ -117,7 +120,7 @@ def generate_dashboard():
         </div>
         <div class="card">
             <div class="stat-label">Memory Growth</div>
-            <div class="stat-value">{metrics.get('stability', {}).get('memory_growth_mb', 'N/A')} MB</div>
+            <div class="stat-value">{metrics.get("stability", {}).get("memory_growth_mb", "N/A")} MB</div>
             <p style="font-size:0.8rem; color:#666">Simulated Long Session</p>
         </div>
     </div>
@@ -154,12 +157,13 @@ def generate_dashboard():
 </body>
 </html>
     """
-    
+
     dashboard_path = Path("aether_benchmark_dashboard.html")
     with open(dashboard_path, "w") as f:
         f.write(html_content)
-    
+
     print(f"📊 Dashboard generated: {dashboard_path.absolute()}")
+
 
 if __name__ == "__main__":
     generate_dashboard()

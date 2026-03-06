@@ -9,10 +9,10 @@ import logging
 import signal
 from typing import Any, Optional
 
-from core.infra.service_container import Container
 from core.ai.scheduler import CognitiveScheduler
 from core.infra.config import AetherConfig, load_config
 from core.infra.event_bus import EventBus
+from core.infra.service_container import Container
 from core.infra.transport.gateway import AetherGateway
 from core.logic.managers.agents import AgentManager
 from core.logic.managers.audio import AudioManager
@@ -30,7 +30,7 @@ class AetherEngine:
     def __init__(self, config: Optional[AetherConfig] = None) -> None:
         self._config = config or load_config()
         self._setup_logging()
-        
+
         # Initialize service container
         self._container = Container()
 
@@ -76,9 +76,7 @@ class AetherEngine:
         self._pulse = PulseManager(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = CognitiveScheduler(
-            self._event_bus, self._router
-        )
+        self._cortex = CognitiveScheduler(self._event_bus, self._router)
 
         # Inject Scheduler into Hive for proactive prompt injection
         self._agents._hive._scheduler = self._cortex
@@ -100,9 +98,7 @@ class AetherEngine:
 
         root_dir = Path(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"
-        global_index = LocalVectorStore(
-            api_key=self._config.ai.api_key
-        )
+        global_index = LocalVectorStore(api_key=self._config.ai.api_key)
         global_index.load(index_path)
         self._router._vector_store = global_index
 

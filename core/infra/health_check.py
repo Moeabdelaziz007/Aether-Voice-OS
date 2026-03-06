@@ -64,7 +64,7 @@ class HealthChecker:
         check_fn: Callable[[], Coroutine[None, None, tuple[bool, float, str]]],
     ) -> None:
         """Register a component for health monitoring."""
-        self._components[name] = ComponentHealth
+        self._components[name] = ComponentHealth(
             name=name,
             status=HealthStatus.UNKNOWN,
             last_check=0.0,
