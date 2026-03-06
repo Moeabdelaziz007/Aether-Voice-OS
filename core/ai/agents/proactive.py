@@ -107,6 +107,7 @@ class VisionPulseAgent:
     async def capture_pulse(self) -> Optional[bytes]:
         """Captures a screenshot and adds it to the rolling buffer."""
         import base64
+
         from core.tools.vision_tool import take_screenshot
         
         res = await take_screenshot()
