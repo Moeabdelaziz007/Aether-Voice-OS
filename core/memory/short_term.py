@@ -3,7 +3,7 @@ import logging
 import time
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger("AetherOS.Memory")
 
@@ -21,7 +21,7 @@ class MemoryBlock(BaseModel):
     timestamp: float
     role: str  # 'user', 'assistant', 'system', 'tool'
     content: str
-    metadata: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ==========================================

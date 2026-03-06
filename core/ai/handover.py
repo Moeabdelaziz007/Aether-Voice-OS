@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from core.ai.agents.registry import AgentMetadata
 
@@ -27,8 +27,8 @@ class HandoverPacket(BaseModel):
     # State Payload
     task_goal: str
     conversation_summary: str
-    working_memory: Dict[str, Any] = {}
-    pending_tool_calls: list = []
+    working_memory: Dict[str, Any] = Field(default_factory=dict)
+    pending_tool_calls: list = Field(default_factory=list)
 
 
 # ==========================================

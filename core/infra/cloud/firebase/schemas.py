@@ -24,7 +24,7 @@ class CodeInsight(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid4()))
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     context_file: str
-    bugs_detected: List[CodeBug] = []
+    bugs_detected: List[CodeBug] = Field(default_factory=list)
 
 
 class SessionMetadata(BaseModel):
@@ -32,6 +32,6 @@ class SessionMetadata(BaseModel):
     user_id: str
     start_time: datetime = Field(default_factory=datetime.utcnow)
     end_time: Optional[datetime] = None
-    emotion_events: List[EmotionEvent] = []
-    code_insights: List[CodeInsight] = []
+    emotion_events: List[EmotionEvent] = Field(default_factory=list)
+    code_insights: List[CodeInsight] = Field(default_factory=list)
     was_recovered: bool = False

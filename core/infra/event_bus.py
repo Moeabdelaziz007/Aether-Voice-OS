@@ -4,7 +4,7 @@ import time
 from dataclasses import dataclass
 from typing import Any, Awaitable, Callable, Dict, List, Optional, Type
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 logger = logging.getLogger("AetherOS.EventBus")
 
@@ -50,7 +50,7 @@ class ControlEvent(SystemEvent):
     """Tier 2: State Changes and Control Commands (e.g. Listening -> Thinking)"""
 
     command: str
-    payload: Dict[str, Any] = {}
+    payload: Dict[str, Any] = Field(default_factory=dict)
 
 
 class TelemetryEvent(SystemEvent):
@@ -58,7 +58,7 @@ class TelemetryEvent(SystemEvent):
 
     metric_name: str
     value: float
-    metadata: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class AcousticTraitEvent(SystemEvent):
@@ -73,7 +73,7 @@ class VisionPulseEvent(SystemEvent):
     """Tier 3: Proactive Vision Pulse (Screenshot context)"""
 
     image_payload: Optional[bytes] = None
-    metadata: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ==========================================

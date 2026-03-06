@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger("AetherOS.LongTermMemory")
 
@@ -15,7 +15,7 @@ class MemoryEntry(BaseModel):
     id: str
     vector: List[float]
     content: str
-    metadata: Dict[str, Any] = {}
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     timestamp: float
 
 

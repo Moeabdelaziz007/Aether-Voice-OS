@@ -1,7 +1,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger("AetherOS.AgentRegistry")
 
@@ -22,7 +22,7 @@ class AgentMetadata(BaseModel):
     description: str
     capabilities: List[str]
     system_prompt: str
-    tools: List[Dict[str, Any]] = []
+    tools: List[Dict[str, Any]] = Field(default_factory=list)
     semantic_fingerprint: Optional[List[float]] = None  # For routing matching
 
 
