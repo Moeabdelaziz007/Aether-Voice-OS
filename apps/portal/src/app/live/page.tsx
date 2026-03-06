@@ -11,7 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAudioPipeline } from "@/hooks/useAudioPipeline";
-import { useGeminiLive, type SessionStatus } from "@/hooks/useGeminiLive";
+import { useAetherGatewayLive, type SessionStatus } from "@/hooks/useAetherGatewayLive";
 import AetherLine from "@/components/AetherLine";
 
 // Map session status to line status
@@ -36,7 +36,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function LivePage() {
     const audio = useAudioPipeline();
-    const gemini = useGeminiLive();
+    const gemini = useAetherGatewayLive();
     const [initialized, setInitialized] = useState(false);
     const hasStarted = useRef(false);
 

@@ -1,20 +1,16 @@
-"""
-Aether Voice OS — Neural Link Probe.
-Real-world E2E integration test for the Aether Gateway.
-Tests the actual Ed25519 handshake and WebSocket lifecycle without mocks.
-"""
+"""Gateway E2E integration and protocol contract tests."""
 
 import asyncio
+import base64
 import json
 import os
+from unittest.mock import AsyncMock
 
-import nacl.encoding
 import nacl.signing
 import pytest
 import websockets
 
 
-# Standardizing configuration to match what AetherGateway and AI Session expect
 class MockAudioConfig:
     mic_queue_max = 5
 
@@ -62,27 +58,52 @@ class MockSoul:
         self.expertise = self.manifest.expertise
 
 
+class FakeHive:
+    def __init__(self, soul):
+        self._active_soul = soul
+        self._last_handover_id = None
+
+    def set_pre_warm_callback(self, _cb):
+        return None
+
+    @property
+    def active_soul(self):
+        return self._active_soul
+
+    def get_pending_handover_for_target(self, _name):
+        return None
+
+    def cleanup_handovers(self):
+        return None
+
+    def prepare_handoff(self, *args, **kwargs):
+        return False, None, "not used"
+
+    def complete_handoff(self, *_args, **_kwargs):
+        return False
+
+    def rollback_handover(self, *_args, **_kwargs):
+        return False
+
+
+def _hook_compatible_event(raw: dict) -> tuple[str, dict]:
+    """Mirror portal fallback parsing: payload envelope OR flat legacy shape."""
+    payload = raw.get("payload") if isinstance(raw.get("payload"), dict) else raw
+    return raw.get("type", ""), payload
+
+
 @pytest.mark.asyncio
-async def test_gateway_handshake_e2e():
-    # 1. Setup Gateway Backend
-    from core.ai.hive import HiveCoordinator
+async def test_gateway_handshake_and_contract_events_e2e():
     from core.infra.transport.gateway import AetherGateway
-    from core.services.registry import AetherRegistry
     from core.tools.router import ToolRouter
 
     gw_cfg = MockGatewayConfig(port=18840)
     ai_cfg = UnifiedMockAIConfig()
 
-    # Ensure environment is clean
     os.environ["GOOGLE_API_KEY"] = "dummy"
 
-    # Instantiate dependencies
-    registry = AetherRegistry(packages_dir="/tmp")
     tool_router = ToolRouter()
-
-    # Inject active soul manually
-    hive = HiveCoordinator(registry=registry, router=tool_router)
-    hive._active_soul = MockSoul("ArchitectExpert")
+    hive = FakeHive(MockSoul("ArchitectExpert"))
 
     gateway = AetherGateway(
         gateway_config=gw_cfg,
@@ -91,76 +112,150 @@ async def test_gateway_handshake_e2e():
         tool_router=tool_router,
         hive=hive,
     )
-
-    # Mock GlobalBus to avoid Redis timeout
-    from unittest.mock import AsyncMock
-
     gateway._bus.connect = AsyncMock(return_value=True)
 
-    # Start gateway in the background
     gw_task = asyncio.create_task(gateway.run())
-    await asyncio.sleep(1)  # Wait for bind
+    await asyncio.sleep(1)
+
+    signing_key = nacl.signing.SigningKey.generate()
+    client_id = signing_key.verify_key.encode().hex()
 
     try:
-        # 2. Setup Client (Prober)
-        signing_key = nacl.signing.SigningKey.generate()
-        verify_key = signing_key.verify_key
-        # Use 64-char hex string to trigger the Ephemeral/Direct Mode in Gateway
-        client_id = verify_key.encode().hex()
-
         uri = f"ws://localhost:{gw_cfg.port}"
         async with websockets.connect(uri) as websocket:
-            # 3. Receive Challenge
-            raw_challenge = await websocket.recv()
-            challenge_msg = json.loads(raw_challenge)
+            challenge_msg = json.loads(await websocket.recv())
             assert challenge_msg["type"] == "connect.challenge"
-            challenge_token = challenge_msg["challenge"]
+            assert challenge_msg["version"] == "2.1"
 
-            # 4. Sign Challenge & Respond
-            challenge_bytes = bytes.fromhex(challenge_token)
+            challenge_bytes = bytes.fromhex(challenge_msg["challenge"])
             signature = signing_key.sign(challenge_bytes)
-
-            client_response = {
-                "type": "connect.response",
-                "client_id": client_id,
-                "signature": signature.signature.hex(),
-                "capabilities": ["voice.stream"],
-            }
-            await websocket.send(json.dumps(client_response))
-
-            # 5. Receive Handshake Response (ACK or Error)
-            raw_response = await websocket.recv()
-            resp_msg = json.loads(raw_response)
-
-            # Note: We are testing the GATEWAY'S secure handshake.
-            # Even if the subsequent Gemini connection fails (due to dummy key),
-            # the Gateway should have already verified our Ed25519 signature
-            # and potentially sent an ACK or is about to send an error from AI failure.
-
-            if resp_msg["type"] == "error":
-                # If it's an AI error, the handshake *itself* might have passed
-                # logic check if it reached the AI connection stage.
-                if "API key not valid" in resp_msg.get("message", ""):
-                    print(
-                        "\n✅ Handshake Verified (Ed25519 passed, but AI key is dummy)."
-                    )
-                    return
-                pytest.fail(
-                    f"Handshake failed with unexpected error: {resp_msg.get('message')}"
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "connect.response",
+                        "version": "2.1",
+                        "client_id": client_id,
+                        "signature": signature.signature.hex(),
+                        "capabilities": ["audio.input"],
+                    }
                 )
+            )
 
-            assert resp_msg["type"] == "connect.ack"
-            assert "session_id" in resp_msg
+            response = json.loads(await websocket.recv())
+            assert response["type"] == "connect.ack"
+            assert response["version"] == "2.1"
 
-            print("\n✅ Neural Link Probe Successful. Handshake Verified.")
+            # Validate canonical event envelopes emitted by backend
+            await gateway.broadcast("engine_state", {"state": "LISTENING"})
+            event = json.loads(await websocket.recv())
+            event_type, payload = _hook_compatible_event(event)
+            assert event_type == "engine_state"
+            assert payload["state"] == "LISTENING"
+            assert event["version"] == "2.1"
+
+            await gateway.broadcast("transcript", {"role": "ai", "text": "hello"})
+            event = json.loads(await websocket.recv())
+            event_type, payload = _hook_compatible_event(event)
+            assert event_type == "transcript"
+            assert payload["role"] == "ai"
+            assert payload["text"] == "hello"
+
+            await gateway.broadcast("tool_result", {"tool_name": "demo", "result": "ok"})
+            event = json.loads(await websocket.recv())
+            event_type, payload = _hook_compatible_event(event)
+            assert event_type == "tool_result"
+            assert payload["tool_name"] == "demo"
+
+            await gateway.broadcast("interrupt", {"reason": "barge-in"})
+            event = json.loads(await websocket.recv())
+            event_type, payload = _hook_compatible_event(event)
+            assert event_type == "interrupt"
+            assert payload["reason"] == "barge-in"
 
     finally:
         gw_task.cancel()
-        try:
+        with pytest.raises(asyncio.CancelledError):
             await gw_task
-        except asyncio.CancelledError:
-            pass
 
 
-if __name__ == "__main__":
-    asyncio.run(test_gateway_handshake_e2e())
+@pytest.mark.asyncio
+async def test_gateway_accepts_canonical_and_legacy_audio_messages():
+    from core.infra.transport.gateway import AetherGateway
+    from core.tools.router import ToolRouter
+
+    gw_cfg = MockGatewayConfig(port=18841)
+    ai_cfg = UnifiedMockAIConfig()
+    os.environ["GOOGLE_API_KEY"] = "dummy"
+
+    tool_router = ToolRouter()
+    hive = FakeHive(MockSoul("ArchitectExpert"))
+
+    gateway = AetherGateway(
+        gateway_config=gw_cfg,
+        ai_config=ai_cfg,
+        audio_config=MockAudioConfig(),
+        tool_router=tool_router,
+        hive=hive,
+    )
+    gateway._bus.connect = AsyncMock(return_value=True)
+
+    gw_task = asyncio.create_task(gateway.run())
+    await asyncio.sleep(1)
+
+    signing_key = nacl.signing.SigningKey.generate()
+    client_id = signing_key.verify_key.encode().hex()
+
+    try:
+        uri = f"ws://localhost:{gw_cfg.port}"
+        async with websockets.connect(uri) as websocket:
+            challenge_msg = json.loads(await websocket.recv())
+            challenge_bytes = bytes.fromhex(challenge_msg["challenge"])
+            signature = signing_key.sign(challenge_bytes)
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "connect.response",
+                        "client_id": client_id,
+                        "signature": signature.signature.hex(),
+                        "capabilities": ["audio.input"],
+                    }
+                )
+            )
+            _ = json.loads(await websocket.recv())
+
+            sample = b"\x00\x01\x02\x03"
+            await websocket.send(
+                json.dumps(
+                    {
+                        "type": "audio.chunk",
+                        "version": "2.1",
+                        "payload": {
+                            "mime_type": "audio/pcm;rate=16000",
+                            "data": base64.b64encode(sample).decode(),
+                        },
+                    }
+                )
+            )
+
+            legacy = {
+                "realtimeInput": {
+                    "mediaChunks": [
+                        {
+                            "mimeType": "audio/pcm;rate=16000",
+                            "data": base64.b64encode(sample).decode(),
+                        }
+                    ]
+                }
+            }
+            await websocket.send(json.dumps(legacy))
+
+            first = await asyncio.wait_for(gateway.audio_in_queue.get(), timeout=2)
+            second = await asyncio.wait_for(gateway.audio_in_queue.get(), timeout=2)
+
+            assert first["data"] == sample
+            assert second["data"] == sample
+
+    finally:
+        gw_task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await gw_task

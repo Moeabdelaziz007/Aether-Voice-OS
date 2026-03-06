@@ -166,13 +166,8 @@ class ToolRouter:
         """Names of all registered tools."""
         return list(self._tools.keys())
 
-    def get_declarations(self) -> list[types.FunctionDeclaration]:
-        """
-        Generate Gemini-compatible function declarations.
-
-        Returns a list of FunctionDeclaration objects to pass
-        into LiveConnectConfig.tools.
-        """
+    def build_function_declarations(self) -> list[types.FunctionDeclaration]:
+        """Build Gemini-compatible function declarations from server registry."""
         declarations = []
         for tool in self._tools.values():
             decl = types.FunctionDeclaration(
@@ -188,6 +183,10 @@ class ToolRouter:
             [d.name for d in declarations],
         )
         return declarations
+
+    def get_declarations(self) -> list[types.FunctionDeclaration]:
+        """Backward-compatible alias for function declaration generation."""
+        return self.build_function_declarations()
 
     async def dispatch(
         self,

@@ -104,7 +104,7 @@ class GeminiLiveSession:
         tools = []
 
         if self._tool_router and self._tool_router.count > 0:
-            declarations = self._tool_router.get_declarations()
+            declarations = self._tool_router.build_function_declarations()
             tools.append(types.Tool(function_declarations=declarations))
             logger.info(
                 "Session configured with %d tools: %s",
@@ -337,7 +337,7 @@ class GeminiLiveSession:
                                     # Broadcast transcript segment directly to UI
                                     asyncio.create_task(
                                         self._gateway.broadcast(
-                                            "transcript", {"text": part.text}
+                                            "transcript", {"role": "ai", "text": part.text}
                                         )
                                     )
                                 except Exception as e:
@@ -379,6 +379,9 @@ class GeminiLiveSession:
                     if response.server_content and response.server_content.interrupted:
                         logger.info("⚡ Barge-in detected — draining output")
                         self._drain_output()
+                        asyncio.create_task(
+                            self._gateway.broadcast("interrupt", {"reason": "barge-in"})
+                        )
                         if self._on_interrupt:
                             self._on_interrupt()
 
@@ -452,6 +455,7 @@ class GeminiLiveSession:
                 self._gateway.broadcast(
                     "tool_result",
                     {
+                        "call_id": getattr(fc, "id", None),
                         "tool_name": fc.name,
                         "result": str(result.get("result", result))
                         if isinstance(result, dict)

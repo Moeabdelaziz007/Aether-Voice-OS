@@ -1,124 +1,161 @@
-# 🛰️ Aether Gateway Protocol V2 — Aether OS
+# 🛰️ Aether Gateway Protocol V2.1
 
-> Secure, Zero-Latency Neural Handshake & Handover Protocol.
-> Port: **18789** | Auth: **Ed25519 (L3)** | Handover: **ADK 2.0 (Deep)**
+> Canonical WebSocket contract between backend gateway and portal clients.
+> Port: **18789** | Transport: **JSON control + binary audio** | Auth: **Ed25519 challenge-response**
 
----
+## Connection Lifecycle
 
-## 📡 Modern Connection Lifecycle
+1. `connect.challenge` (server → client)
+2. `connect.response` (client → server)
+3. `connect.ack` (server → client)
+4. steady-state event exchange (`tick`, `audio.chunk`, `transcript`, `interrupt`, `tool_result`, `engine_state`)
 
-```mermaid
-sequenceDiagram
-    participant C as Client (e.g. Dashboard)
-    participant G as Aether Gateway
-    participant H as Hive Coordinator
+## Versioning
 
-    C->>G: WebSocket Connect
-    G->>C: connect.challenge {challenge_hex, server_version}
-    C->>G: connect.response {client_id, signature, capabilities}
-    G->>C: connect.ack {session_id, tick_interval_s, granted_caps}
+- Canonical protocol version: `2.1`.
+- Every control-plane JSON message SHOULD include `version`.
+- New clients MUST accept missing `version` (legacy `<=2.0`).
+- New clients MUST accept both:
+  - canonical payload envelope: `{ "type": "...", "version": "2.1", "payload": { ... } }`
+  - legacy flat payloads: `{ "type": "...", "field": "..." }`
 
-    rect rgb(20, 20, 30)
-    Note right of G: Steady State (Heartbeat every 15s)
-    G->>C: tick {timestamp}
-    C->>G: pong
-    end
+## Handshake Messages
 
-    rect rgb(30, 20, 20)
-    Note right of G: Deep Handover (ADK 2.0)
-    G->>H: request_handoff(target_soul)
-    H->>G: pre_warm_soul(target_soul)
-    G->>C: ui.update {state: "HANDING_OFF"}
-    end
-```
-
----
-
-## Phase 1: Cryptographic Handshake
-
-The V2 protocol uses a non-interactive challenge-response based on Ed25519.
-
-### `connect.challenge` (Server → Client)
+### `connect.challenge` (S → C)
 
 ```json
 {
   "type": "connect.challenge",
-  "challenge": "7f8b...", // 32 bytes random hex
-  "server_version": "2.0.0"
+  "version": "2.1",
+  "challenge": "7f8b...",
+  "server_version": "2.1"
 }
 ```
 
-### `connect.response` (Client → Server)
+### `connect.response` (C → S)
 
 ```json
 {
   "type": "connect.response",
-  "client_id": "AetherDashboard", // Or public-key-hex
-  "signature": "...", // Ed25519 sign(challenge)
-  "capabilities": ["audio.input", "ui.render"]
+  "version": "2.1",
+  "client_id": "<ed25519-public-key-hex>",
+  "signature": "<signature-hex>",
+  "capabilities": ["audio.input", "audio.output", "tools.client"]
 }
 ```
 
-### `connect.ack` (Server → Client)
+### `connect.ack` (S → C)
 
 ```json
 {
   "type": "connect.ack",
-  "session_id": "u-u-i-d",
+  "version": "2.1",
+  "session_id": "uuid",
   "granted_capabilities": ["audio.input"],
   "tick_interval_s": 15.0
 }
 ```
 
----
+## Canonical Runtime Event Schemas
 
-## Phase 2: Performance Optimizations
+### 1) `audio.chunk`
 
-### ⚡ Speculative Pre-warming
+- Direction:
+  - C → S: client microphone audio
+  - S → C: optional base64 audio fallback when binary channel unavailable
+- Canonical JSON form:
 
-When a handover is initiated, the Gateway speculatively initializes the `GeminiLiveSession` for the target soul *before* the current session disconnects. This reduces the effective latency between experts by **~800ms**.
+```json
+{
+  "type": "audio.chunk",
+  "version": "2.1",
+  "payload": {
+    "mime_type": "audio/pcm;rate=16000",
+    "data": "<base64-pcm-bytes>"
+  }
+}
+```
 
-### 🔗 Deep Handover (ADK 2.0)
+- Binary fast path (recommended): raw PCM frame as WebSocket binary frame.
 
-Handovers now transfer **Full Neural Context** (compressed delta diffs) between agents.
+### 2) `transcript`
 
-1. `prepare_handoff`: Serializes current session state.
-2. `negotiate`: Target agent reviews the task context.
-3. `commit`: Final transition and session swap.
+```json
+{
+  "type": "transcript",
+  "version": "2.1",
+  "payload": {
+    "role": "ai",
+    "text": "Let me check that for you."
+  }
+}
+```
 
----
+### 3) `interrupt`
 
-## Message Schema V2
+```json
+{
+  "type": "interrupt",
+  "version": "2.1",
+  "payload": {
+    "reason": "barge-in"
+  }
+}
+```
 
-### Audio Transport (Binary)
+### 4) `tool_result`
 
-Client sends raw **16kHz 16-bit Mono PCM** as binary WebSocket frames. Server broadcasts the same back to visualizers/speakers.
+- Server → client (result display):
 
-### JSON Control Plane
+```json
+{
+  "type": "tool_result",
+  "version": "2.1",
+  "payload": {
+    "call_id": "tool-call-123",
+    "tool_name": "show_silent_hint",
+    "status": "success",
+    "result": "Refactor complete"
+  }
+}
+```
 
-| Type | Direction | Payload Example |
-| :--- | :--- | :--- |
-| `tick` | S → C | `{"timestamp": 1740...}` |
-| `audio.chunk` | C → S | `{"data": "...", "mime": "audio/pcm"}` |
-| `tool.call` | S → C | `{"name": "get_weather", "args": {...}}` |
-| `ui.update` | S → C | `{"state": "CONNECTED", "soul": "Moe"}` |
+- Client → server (tool response ack):
 
----
+```json
+{
+  "type": "tool_result",
+  "version": "2.1",
+  "payload": {
+    "call_id": "tool-call-123",
+    "result": {
+      "accepted": true
+    }
+  }
+}
+```
 
-## Error & Status Codes
+### 5) `engine_state`
 
-| Code | Label | Meaning |
-| :--- | :--- | :--- |
-| `100` | `SUCCESS` | Operation normal |
-| `401` | `AUTH_FAILED` | Invalid Ed25519 signature |
-| `403` | `CAP_DENIED` | Missing required capability |
-| `408` | `TIMEOUT` | Handshake or Tick timeout |
-| `500` | `CRASH` | Internal engine failure |
+```json
+{
+  "type": "engine_state",
+  "version": "2.1",
+  "payload": {
+    "state": "LISTENING"
+  }
+}
+```
 
----
+Supported state values: `INITIALIZING`, `CONNECTED`, `LISTENING`, `THINKING`, `SPEAKING`, `HANDING_OFF`, `ERROR`, `INTERRUPTED`.
 
-## Security (First Principles)
+## Compatibility Rules
 
-- **Zero Trust**: Every tool execution requires internal `BiometricMiddleware` check.
-- **Identity Integrity**: All `.ath` packages must be signed and verified by the Registry.
-- **Telemetry**: All handshakes and tool calls are traced via OTLP for real-time audit logs.
+- Server accepts legacy client input formats:
+  - binary audio frames (unchanged)
+  - legacy Gemini passthrough audio format (`realtimeInput.mediaChunks`)
+- Clients accept legacy server output formats:
+  - top-level event fields without `payload`
+  - no `version` field
+
+This keeps older portal builds functional while enabling stricter contracts in V2.1.

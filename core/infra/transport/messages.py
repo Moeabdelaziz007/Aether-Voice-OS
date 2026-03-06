@@ -26,8 +26,11 @@ class MessageType(str, Enum):
     DISCONNECT = "disconnect"
     # Data
     AUDIO_CHUNK = "audio.chunk"
+    TRANSCRIPT = "transcript"
+    INTERRUPT = "interrupt"
     TOOL_CALL = "tool.call"
-    TOOL_RESULT = "tool.result"
+    TOOL_RESULT = "tool_result"
+    ENGINE_STATE = "engine_state"
     # UI
     UI_UPDATE = "ui.update"
     VAD_EVENT = "vad.event"
@@ -49,7 +52,8 @@ class ChallengeMessage(BaseModel):
 
     type: MessageType = MessageType.CONNECT_CHALLENGE
     challenge: str  # hex-encoded random bytes
-    server_version: str = "1.0.0"
+    version: str = "2.1"
+    server_version: str = "2.1"
 
 
 class ResponseMessage(BaseModel):
@@ -68,6 +72,7 @@ class AckMessage(BaseModel):
     session_id: str
     granted_capabilities: list[str]
     tick_interval_s: float
+    version: str = "2.1"
 
 
 class ErrorMessage(BaseModel):

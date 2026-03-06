@@ -47,6 +47,8 @@ from core.utils.errors import HandshakeError, HandshakeTimeoutError
 
 logger = logging.getLogger(__name__)
 
+PROTOCOL_VERSION = "2.1"
+
 tracer = get_tracer()
 
 
@@ -504,6 +506,10 @@ class AetherGateway:
         # This can be proxied to the playback component
         # For now, just log it. The session itself handles draining its output queue.
         logger.info("⚡ Gateway received interrupt signal.")
+        try:
+            asyncio.create_task(self.broadcast("interrupt", {"reason": "barge-in"}))
+        except Exception:
+            logger.debug("Failed to enqueue interrupt broadcast", exc_info=True)
 
     async def _on_tool_call(self, tool_name: str, args: dict, result: dict) -> None:
         """Callback from session for tool analytics."""
@@ -556,7 +562,7 @@ class AetherGateway:
         """
         # Generate challenge
         challenge_bytes = os.urandom(32)
-        challenge = ChallengeMessage(challenge=challenge_bytes.hex())
+        challenge = ChallengeMessage(challenge=challenge_bytes.hex(), version=PROTOCOL_VERSION, server_version=PROTOCOL_VERSION)
 
         await ws.send(challenge.model_dump_json())
 
@@ -601,7 +607,8 @@ class AetherGateway:
         ack = AckMessage(
             session_id=session.session_id,
             granted_capabilities=capabilities,
-            tick_interval_s=self._gateway_config.tick_interval_s
+            tick_interval_s=self._gateway_config.tick_interval_s,
+            version=PROTOCOL_VERSION,
         )
         await ws.send(ack.model_dump_json())
 
@@ -674,14 +681,49 @@ class AetherGateway:
         except Exception as exc:
             logger.error("Error routing binary audio: %s", exc)
 
+    async def _route_audio_chunk(self, payload: dict[str, Any]) -> None:
+        """Route canonical JSON audio chunks (base64) to input queue."""
+        import base64
+
+        data_b64 = payload.get("data")
+        if not isinstance(data_b64, str):
+            return
+
+        mime_type = payload.get("mime_type") or payload.get("mimeType")
+        if not isinstance(mime_type, str):
+            mime_type = f"audio/pcm;rate={self._gateway_config.receive_sample_rate}"
+
+        try:
+            decoded = base64.b64decode(data_b64)
+            await self._audio_in.put({"data": decoded, "mime_type": mime_type})
+        except Exception as exc:
+            logger.error("Error routing JSON audio chunk: %s", exc)
+
     async def _route_message(self, client_id: str, msg: dict[str, Any]) -> None:
-        """Route incoming messages by type."""
+        """Route incoming messages by type with legacy compatibility."""
         msg_type = msg.get("type", "")
+        payload = msg.get("payload") if isinstance(msg.get("payload"), dict) else msg
 
         if msg_type == MessageType.PONG.value:
             async with self._lock:
                 if client_id in self._clients:
                     self._clients[client_id].last_pong = time.monotonic()
+
+        elif msg_type == MessageType.AUDIO_CHUNK.value:
+            await self._route_audio_chunk(payload)
+
+        elif msg_type == "tool_result":
+            logger.debug("Received client tool_result from %s", client_id)
+
+        elif "realtimeInput" in msg:
+            # Legacy Gemini passthrough client payload fallback
+            chunks = msg.get("realtimeInput", {}).get("mediaChunks", [])
+            for chunk in chunks:
+                mime = chunk.get("mimeType", "")
+                if isinstance(mime, str) and mime.startswith("audio/"):
+                    await self._route_audio_chunk(
+                        {"data": chunk.get("data"), "mime_type": mime}
+                    )
 
         elif msg_type == "INTENT":
             # Phase A: Handle V1.1 Intent Schema
@@ -794,6 +836,7 @@ class AetherGateway:
                         tick_msg = json.dumps(
                             {
                                 "type": MessageType.TICK.value,
+                                "version": PROTOCOL_VERSION,
                                 "timestamp": now,
                             }
                         )
@@ -808,7 +851,7 @@ class AetherGateway:
 
     async def broadcast(self, msg_type: str, payload: dict) -> None:
         """Broadcast a message to all connected clients."""
-        data = json.dumps({"type": msg_type, "payload": payload})
+        data = json.dumps({"type": msg_type, "version": PROTOCOL_VERSION, "payload": payload})
 
         async with self._lock:
             active_sessions = list(self._clients.values())
