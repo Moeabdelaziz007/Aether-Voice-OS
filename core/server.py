@@ -119,6 +119,7 @@ def main() -> None:
         sys.exit(1)
 
     # Import engine only after checks pass
+    from core.engine import AetherEngine
     from core.infra.service_container import Container
     
     Container()
@@ -131,7 +132,7 @@ def main() -> None:
     print(f"{DIM}Press Ctrl+C to stop.{RESET}\n")
 
     try:
-        engine = AetherEngine
+        engine = AetherEngine()
         print(
             f"{CYAN}✦ Admin API Listening on http://localhost:18790/health "
             f"(Tauri Bridge Active){RESET}"

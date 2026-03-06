@@ -26,6 +26,7 @@ from typing import Any, Callable, Optional
 from google.genai import types
 
 from core.tools.vector_store import LocalVectorStore
+from core.tools.voice_auth import VoiceAuthGuard
 
 logger = logging.getLogger(__name__)
 
@@ -244,15 +245,20 @@ class ToolRouter:
         # ── Biometric Soul-Lock Middleware ──────────────────────────
         if name in self.SENSITIVE_TOOLS:
             logger.info("🛡️ [SECURITY] [BIO-HASH] Sensitive tool detected: %s", name)
-            logger.info(
-                "🛡️ [SECURITY] [BIO-HASH] Extracting 128-bit voice-print vector..."
-            )
-            await asyncio.sleep(0.1)  # Simulate DSP overhead
+            
+            # Real Biometric Check using VoiceAuthGuard
+            if not VoiceAuthGuard.is_authorized():
+                logger.warning("🛡️ [SECURITY] [BIO-HASH] Biometric signature mismatch!")
+                return {
+                    "error": "Access Denied: Biometric signature mismatch.",
+                    "status": 403,
+                    "requires_auth": "voice_biometrics"
+                }
+                
             logger.info(
                 "🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against "
                 "Soul.md... SUCCESS"
             )
-            # In production, perform actual pitch/timbre comparison here.
 
         logger.info(
             "⚡ Dispatching: %s(%s) [Tier: %s]",

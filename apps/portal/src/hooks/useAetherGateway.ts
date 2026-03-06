@@ -64,6 +64,15 @@ function toHex(data: Uint8Array): string {
     return Array.from(data).map(b => b.toString(16).padStart(2, "0")).join("");
 }
 
+function fromHex(hex: string): Uint8Array {
+    const normalized = hex.length % 2 === 0 ? hex : `0${hex}`;
+    const bytes = new Uint8Array(normalized.length / 2);
+    for (let i = 0; i < normalized.length; i += 2) {
+        bytes[i / 2] = Number.parseInt(normalized.slice(i, i + 2), 16);
+    }
+    return bytes;
+}
+
 const DEFAULT_URL = process.env.NEXT_PUBLIC_AETHER_GATEWAY_URL || "ws://localhost:18789";
 
 export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
@@ -99,11 +108,11 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                     const msg = JSON.parse(event.data);
 
                     // ── Handshake Challenge ──
-                    if (msg.type === "challenge") {
-                        const challengeBytes = new TextEncoder().encode(msg.challenge);
+                    if (msg.type === "connect.challenge") {
+                        const challengeBytes = fromHex(msg.challenge);
                         const signatureBytes = nacl.sign.detached(challengeBytes, kp.secretKey);
                         ws.send(JSON.stringify({
-                            type: "response",
+                            type: "connect.response",
                             client_id: toHex(kp.publicKey),
                             signature: toHex(signatureBytes),
                             capabilities: ["audio_streaming", "telemetry", "vision"]
@@ -111,7 +120,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                     }
 
                     // ── Handshake Ack ──
-                    else if (msg.type === "ack") {
+                    else if (msg.type === "connect.ack") {
                         console.log("✦ Gateway Handshake Successful");
                         setStatus("connected");
                         store.setSessionStartTime(Date.now());
@@ -295,4 +304,3 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
 
     return { status, latencyMs, connect, disconnect, sendAudio, sendVisionFrame, onAudioResponse };
 }
-

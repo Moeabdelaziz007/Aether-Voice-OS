@@ -19,7 +19,18 @@ from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
-# Security: Hardcoded blacklist of dangerous commands
+COMMAND_WHITELIST = {
+    "ls",
+    "echo",
+    "date",
+    "whoami",
+    "pwd",
+    "grep",
+    "cat",
+    "sleep",
+    "git",
+}
+
 COMMAND_BLACKLIST = {
     "rm",
     "sudo",
@@ -30,6 +41,29 @@ COMMAND_BLACKLIST = {
     "dd",
     "mv",
     ":(){ :|:& };:",
+    "wget",
+    "curl",
+    "nc",
+    "netcat",
+    "sh",
+    "bash",
+    "zsh",
+    "chmod",
+    "chown",
+    "python",
+    "perl",
+    "ruby",
+}
+
+ALLOWED_GIT_SUBCOMMANDS = {
+    "status",
+    "log",
+    "diff",
+    "show",
+    "pull",
+    "push",
+    "remote",
+    "branch",
 }
 
 
@@ -101,12 +135,23 @@ async def run_terminal_command(command: str, **kwargs) -> dict:
 
         base_cmd = args[0]
 
-        # 2. Check Blacklist
         if base_cmd.lower() in COMMAND_BLACKLIST:
             logger.warning(f"Security Block: Attempted to run '{base_cmd}'")
             return {
                 "error": "Command blocked by security guardrails.",
                 "violation": base_cmd.lower(),
+            }
+
+        is_whitelisted = base_cmd in COMMAND_WHITELIST
+        if base_cmd == "git":
+            is_whitelisted = len(args) > 1 and args[1] in ALLOWED_GIT_SUBCOMMANDS
+
+        if not is_whitelisted:
+            logger.warning(f"Security Block: Command '{base_cmd}' not in whitelist.")
+            return {
+                "error": "Command not allowed in strict mode.",
+                "violation": base_cmd,
+                "allowed": sorted(COMMAND_WHITELIST),
             }
 
         # 3. Execute with Isolation

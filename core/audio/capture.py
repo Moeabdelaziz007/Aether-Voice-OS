@@ -16,9 +16,9 @@ import numpy as np
 import pyaudio
 
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad
+from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.state import audio_state
-from core.utils.config import AudioConfig
+from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
 
 logger = logging.getLogger(__name__)

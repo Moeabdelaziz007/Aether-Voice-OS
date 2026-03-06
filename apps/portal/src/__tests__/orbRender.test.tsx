@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import AetherOrb from '../components/AetherOrb';
+import AetherLine from '../components/AetherLine';
 import { useAetherStore } from '../store/useAetherStore';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -25,7 +25,7 @@ beforeAll(() => {
         // Create a wrapper component to track renders
         const TrackedOrb = () => {
             renderCount++;
-            return <AetherOrb size={100} />;
+            return <AetherLine />;
         };
 
         const { unmount } = render(<TrackedOrb />);
