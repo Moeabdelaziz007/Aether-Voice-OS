@@ -423,11 +423,7 @@ def energy_vad(
             is_hard = energy_rms > threshold
             is_soft = is_hard  # No soft distinction without adaptive engine
 
-<<<<<<< HEAD
         return HyperVADResult(
-=======
-        return HyperVADResult
->>>>>>> origin/jules-3466090822907057400-4af64808
             is_soft=bool(is_soft),
             is_hard=bool(is_hard),
             energy_rms=energy_rms,
@@ -460,11 +456,7 @@ def enhanced_vad(
         A `HyperVADResult` object with the VAD decision and energy stats.
     """
     if len(pcm_chunk) == 0:
-<<<<<<< HEAD
         return HyperVADResult(
-=======
-        return HyperVADResult
->>>>>>> origin/jules-3466090822907057400-4af64808
             is_soft=False, is_hard=False, energy_rms=0.0, sample_count=0
         )
 
@@ -507,11 +499,7 @@ def enhanced_vad(
         is_hard = (rms > threshold) and (speech_score > 0.5)
         is_soft = is_hard
 
-<<<<<<< HEAD
     return HyperVADResult(
-=======
-    return HyperVADResult
->>>>>>> origin/jules-3466090822907057400-4af64808
         is_soft=bool(is_soft),
         is_hard=bool(is_hard),
         energy_rms=rms,

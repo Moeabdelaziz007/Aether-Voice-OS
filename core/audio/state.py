@@ -70,11 +70,8 @@ class AudioState:
                 cls._instance.aec_delay_ms = 0.0  # Estimated echo delay
                 cls._instance.aec_double_talk = False  # Double-talk detection
                 # Reference buffer for loopback AEC (2 seconds @ 16kHz)
-<<<<<<< HEAD
                 cls._instance.far_end_pcm = RingBuffer(32000)
-=======
-                cls._instance.far_end_pcm = Ringbuffer32000)
->>>>>>> origin/jules-3466090822907057400-4af64808
+                cls._instance.far_end_pcm = RingBuffer(32000)
         return cls._instance
 
     def update_aec_state(
@@ -129,8 +126,5 @@ class AudioState:
 
 
 # Global singleton
-<<<<<<< HEAD
 audio_state = AudioState()
-=======
-audio_state = AudioState)
->>>>>>> origin/jules-3466090822907057400-4af64808
+audio_state = AudioState()
