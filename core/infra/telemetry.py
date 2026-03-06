@@ -72,7 +72,7 @@ class TelemetryManager:
         except Exception as e:
             logger.error("✧ Failed to initialize telemetry: %s", e)
             # Fallback to a no-op tracer
-            self.tracer = trace_api.get_no_op_tracer()
+            self.tracer = trace_api.NoOpTracer()
 
     def record_usage(
         self,
@@ -109,7 +109,7 @@ class TelemetryManager:
     def get_tracer(self) -> trace_api.Tracer:
         if not self._is_initialized:
             self.initialize()
-        return self.tracer or trace_api.get_no_op_tracer()
+        return self.tracer or trace_api.NoOpTracer()
 
 
 # Global Singleton
