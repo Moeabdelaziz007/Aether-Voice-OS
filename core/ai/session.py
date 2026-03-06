@@ -171,9 +171,8 @@ class GeminiLiveSession:
                 self._config.api_version,
             )
         except Exception as exc:
-            raise AIConnectionError(
+            raise RuntimeError(
                 f"Failed to create Gemini client: {exc}",
-                cause=exc,
             ) from exc
 
     async def run(self) -> None:
@@ -185,7 +184,7 @@ class GeminiLiveSession:
         both are cancelled (structured concurrency).
         """
         if not self._client:
-            raise AIConnectionError("Call connect() before run()")
+            raise RuntimeError("Call connect() before run()")
 
         config = self._build_session_config()
         self._running = True
@@ -225,12 +224,12 @@ class GeminiLiveSession:
                     logger.info("Session cancelled (shutdown)")
                 else:
                     logger.error("Session error: %s", exc, exc_info=True)
-                    # Attempt a silent reconnect logic here if it's a network issue instead of raising
+                    # Attempt a silent reconnect logic here if network issue
                     if "closed" in str(exc).lower() or "timeout" in str(exc).lower():
-                        logger.warning("Network drop detected. Raising to Engine for reconnection.")
-                    raise Exception(
-                        f"Gemini session terminated: {exc}"
-                    ) from exc
+                        logger.warning(
+                            "Network drop detected. Raising for reconnection."
+                        )
+                    raise Exception(f"Gemini session terminated: {exc}") from exc
         finally:
             if hasattr(self, "_thalamic_gate"):
                 self._thalamic_gate.stop()
@@ -265,9 +264,9 @@ class GeminiLiveSession:
             except Exception as exc:
                 logger.error("Send error: %s", exc)
                 if "closed" in str(exc).lower():
-                        # Silent reconnect strategy on send loop close
-                        logger.warning("Connection closed. Attempting silent reconnect...")
-                        self._running = False
+                    # Silent reconnect strategy on send loop close
+                    logger.warning("Connection closed. Attempting silent reconnect...")
+                    self._running = False
                     break
 
 
@@ -363,7 +362,8 @@ class GeminiLiveSession:
                                         # Log to telemetry
                                         if hasattr(self._gateway, 'metrics'):
                                             metrics = self._gateway.metrics
-                                            metrics["gemini_output_queue_drops"] = metrics.get("gemini_output_queue_drops", 0) + 1
+                                            drops = metrics.get("gemini_drops", 0)
+                                            metrics["gemini_drops"] = drops + 1
 
                                         if self._output_queue_drops % 10 == 0:
                                             logger.warning(
@@ -391,7 +391,10 @@ class GeminiLiveSession:
                 break
             except Exception as exc:
                 if "closed" in str(exc).lower():
-                    logger.warning("Receive stream closed unexpectedly. Marking for silent reconnect.")
+                    logger.warning(
+                        "Receive stream closed unexpectedly. "
+                        "Marking for silent reconnect."
+                    )
                     self._running = False
                     break
                 logger.error("Receive error: %s", exc, exc_info=True)
@@ -570,8 +573,14 @@ class GeminiLiveSession:
             # 1. Inject Dynamic SOULPRINT (Voice Acting & Biometrics)
             soulprint_data = getattr(manifest, "soulprint", None)
             if soulprint_data:
-                soul_instruction += f"\n\n# ACOUSTIC SOULPRINT ACTING RULES\n{soulprint_data}"
-                logger.info("A2A [SESSION] Injected SOULPRINT Voice Acting Instructions for %s", getattr(manifest, "name", "Unknown"))
+                soul_instruction += (
+                    f"\n\n# ACOUSTIC SOULPRINT ACTING RULES\n{soulprint_data}"
+                )
+                logger.info(
+                    "A2A [SESSION] Injected SOULPRINT Voice Acting "
+                    "Instructions for %s",
+                    getattr(manifest, "name", "Unknown")
+                )
 
             instruction_parts.append(soul_instruction)
             self._soul_instruction_cache = soul_instruction

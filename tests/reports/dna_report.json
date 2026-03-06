@@ -1,9 +1,11 @@
 {
     "benchmark": "dna_chaos_stability",
     "initial_state": {
+        "persona": "calm_brilliant_partner",
         "verbosity": 0.5,
         "empathy": 0.5,
-        "proactivity": 0.5,
+        "proactivity": 0.6,
+        "awareness": 0.6,
         "latency_budget_ms": 500,
         "audio_fidelity": 0.8,
         "rag_preference": 0.7,
@@ -13,9 +15,11 @@
         "long_term_memory_weight": 0.3
     },
     "final_state": {
+        "persona": "calm_brilliant_partner",
         "verbosity": 0.4099999999999999,
         "empathy": 0.5900000000000001,
-        "proactivity": 0.5,
+        "proactivity": 0.6,
+        "awareness": 0.6,
         "latency_budget_ms": 500,
         "audio_fidelity": 0.8,
         "rag_preference": 0.7,
