@@ -610,16 +610,33 @@ class AetherGateway:
     def _verify_jwt(self, token: str) -> bool:
         """
         Verify a JWT token.
-        Uses AETHER_JWT_SECRET or GOOGLE_API_KEY as the secret.
+        Uses only AETHER_JWT_SECRET as the verification secret.
         """
-        secret = os.environ.get("AETHER_JWT_SECRET") or os.environ.get("GOOGLE_API_KEY")
+        secret = os.environ.get("AETHER_JWT_SECRET")
         if not secret:
-            logger.warning("No secret available for JWT verification")
+            logger.warning("JWT auth disabled: missing AETHER_JWT_SECRET")
+            return False
+
+        issuer = os.environ.get("AETHER_JWT_ISSUER")
+        audience = os.environ.get("AETHER_JWT_AUDIENCE")
+
+        if not issuer or not audience:
+            logger.warning(
+                "JWT auth disabled: missing required claim config "
+                "(AETHER_JWT_ISSUER and/or AETHER_JWT_AUDIENCE)"
+            )
             return False
 
         try:
-            # We accept HS256 for now, as it's common for internal service comms
-            jwt.decode(token, secret, algorithms=["HS256"])
+            # Enforce signature + required claims for service communication.
+            jwt.decode(
+                token,
+                secret,
+                algorithms=["HS256"],
+                issuer=issuer,
+                audience=audience,
+                options={"require": ["exp", "iss", "aud"]},
+            )
             return True
         except jwt.PyJWTError as exc:
             logger.warning("JWT verification failed: %s", exc)
@@ -653,7 +670,16 @@ class AetherGateway:
         if len(client_id) == 64 and is_hex:
             return verify_signature(client_id, signature, challenge)
 
-        # 3. Global Auth Fallback (Development)
+        # 3. Global Auth Fallback (Development mode only)
+        dev_mode_enabled = os.environ.get("AETHER_ENABLE_DEV_AUTH", "false").lower() in {
+            "1",
+            "true",
+            "yes",
+            "on",
+        }
+        if not dev_mode_enabled:
+            return False
+
         global_key = os.environ.get("AETHER_GLOBAL_PUBLIC_KEY")
         if global_key:
             return verify_signature(global_key, signature, challenge)

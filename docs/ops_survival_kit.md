@@ -39,7 +39,7 @@ If you see `A2A [BUS] Connection failed`:
 
 **Error**: `connect.challenge failed` / `AUTH_FAILED`
 
-- **Frontend vs Backend**: The user identity is verified via Ed25519 signatures. Ensure the `DEV_SEED` in `web/src/hooks/useAetherGateway.ts` matches the identity expectations in `core/infra/transport/gateway.py`.
+- **Frontend vs Backend**: The user identity is verified via Ed25519 signatures. Frontend keys are generated randomly on first run and rotated by max-age policy; ensure any registered public keys and gateway expectations in `core/infra/transport/gateway.py` are aligned.
 
 ---
 

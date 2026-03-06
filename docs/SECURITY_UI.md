@@ -15,7 +15,13 @@ AetherOS implements a Zero-Trust communication layer between the Engine and exte
 The `AetherGateway` handles a dual-mode handshake:
 
 - **Primary: Ed25519 Challenge-Response**: Clients must sign a 32-byte cryptographic challenge using their private key. Verification is done against the Public Key stored in the `Agent Manifest`.
-- **Secondary: JWT (JSON Web Tokens)**: Used for intra-service communication and ephemeral frontend sessions. Uses `AETHER_JWT_SECRET` (HS256).
+- **Secondary: JWT (JSON Web Tokens)**: Used for intra-service communication and ephemeral frontend sessions. Uses only `AETHER_JWT_SECRET` (HS256) and requires `exp`, `iss`, and `aud` claim validation configured via `AETHER_JWT_ISSUER` + `AETHER_JWT_AUDIENCE`.
+
+### Development mode feature flag
+
+- Development-only global signature fallback is **disabled by default**.
+- Enable it explicitly with `AETHER_ENABLE_DEV_AUTH=true`.
+- When disabled, gateway authentication relies on registered client keys (or JWT when configured).
 
 ### B. Capability Negotiation
 

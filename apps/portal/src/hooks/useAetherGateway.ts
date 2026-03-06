@@ -36,21 +36,58 @@ interface AetherGatewayReturn {
 }
 
 // ── Ed25519 Keypair (persisted in localStorage for cross-tab persistence) ──
+const KEYPAIR_STORAGE_KEY = "aether_ed25519_seed";
+const KEYPAIR_META_STORAGE_KEY = "aether_ed25519_seed_meta";
+const DEFAULT_KEYPAIR_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+interface StoredKeypairMeta {
+    createdAtMs: number;
+}
+
+function parsePositiveInt(value: string | undefined): number | null {
+    if (!value) return null;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getKeypairMaxAgeMs(): number {
+    return parsePositiveInt(process.env.NEXT_PUBLIC_AETHER_KEYPAIR_MAX_AGE_MS)
+        ?? DEFAULT_KEYPAIR_MAX_AGE_MS;
+}
+
+function generateSeed(): Uint8Array {
+    // WebCrypto is preferred. tweetnacl RNG is used as a fallback.
+    if (typeof globalThis.crypto !== "undefined" && typeof globalThis.crypto.getRandomValues === "function") {
+        return globalThis.crypto.getRandomValues(new Uint8Array(32));
+    }
+    return nacl.randomBytes(32);
+}
+
 function getOrCreateKeypair(): nacl.SignKeyPair {
-    const STORAGE_KEY = "aether_ed25519_seed";
+    const maxAgeMs = getKeypairMaxAgeMs();
+    const nowMs = Date.now();
+
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
-        if (stored) {
-            const seed = new Uint8Array(JSON.parse(stored));
-            return nacl.sign.keyPair.fromSeed(seed);
+        const storedSeed = localStorage.getItem(KEYPAIR_STORAGE_KEY);
+        const storedMeta = localStorage.getItem(KEYPAIR_META_STORAGE_KEY);
+        if (storedSeed && storedMeta) {
+            const meta = JSON.parse(storedMeta) as StoredKeypairMeta;
+            const keyAge = nowMs - meta.createdAtMs;
+            if (Number.isFinite(meta.createdAtMs) && keyAge >= 0 && keyAge <= maxAgeMs) {
+                const seed = new Uint8Array(JSON.parse(storedSeed));
+                if (seed.length === 32) {
+                    return nacl.sign.keyPair.fromSeed(seed);
+                }
+            }
         }
     } catch { /* localStorage may not be available (SSR) */ }
 
-    // Generate random seed for production security
-    const seed = nacl.randomBytes(32);
+    const seed = generateSeed();
 
     try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(seed)));
+        const meta: StoredKeypairMeta = { createdAtMs: nowMs };
+        localStorage.setItem(KEYPAIR_STORAGE_KEY, JSON.stringify(Array.from(seed)));
+        localStorage.setItem(KEYPAIR_META_STORAGE_KEY, JSON.stringify(meta));
     } catch { /* ignore */ }
 
     return nacl.sign.keyPair.fromSeed(seed);
@@ -83,7 +120,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
         setStatus("connecting");
 
-        // Initialize keypair (persisted in sessionStorage)
+        // Initialize keypair (persisted in localStorage)
         if (!keyPairRef.current) {
             keyPairRef.current = getOrCreateKeypair();
         }
