@@ -44,7 +44,6 @@ from core.infra.transport.session_state import (
     SessionStateManager,
 )
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
-from core.infra.service_container import container
 
 logger = logging.getLogger(__name__)
 

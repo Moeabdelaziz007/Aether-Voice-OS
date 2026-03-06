@@ -130,7 +130,7 @@ class AetherBenchmarker:
                     print(f"❌ [BENCHMARK] Write failed: {res}")
                 else:
                     self.fb_latencies.append(res)
-            print(f"✅ [BENCHMARK] Load test complete. 50 writes processed.", flush=True)
+            print("✅ [BENCHMARK] Load test complete. 50 writes processed.", flush=True)
 
         self._report()
 
@@ -180,12 +180,12 @@ class AetherBenchmarker:
 
         print("\n" + "═" * 40)
         print("🏁 BENCHMARK RESULTS")
-        print(f"  [Network RTT]")
+        print("  [Network RTT]")
         print(f"  p50 (Median): {report['network_rtt_ms']['p50']:.2f}ms")
         print(f"  p95 (Target): {report['network_rtt_ms']['p95']:.2f}ms")
         print(f"  p99 (Peak):   {report['network_rtt_ms']['p99']:.2f}ms")
         if "firebase_writes_ms" in report:
-            print(f"\n  [Firebase Load Test (50 Concurrent Writes)]")
+            print("\n  [Firebase Load Test (50 Concurrent Writes)]")
             print(f"  p50 (Median): {report['firebase_writes_ms']['p50']:.2f}ms")
             print(f"  p95 (Target): {report['firebase_writes_ms']['p95']:.2f}ms")
             print(f"  p99 (Peak):   {report['firebase_writes_ms']['p99']:.2f}ms")

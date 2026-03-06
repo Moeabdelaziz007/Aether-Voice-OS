@@ -9,10 +9,10 @@ import logging
 import signal
 from typing import Any, Optional
 
-from core.infra.service_container import Container
 from core.ai.scheduler import CognitiveScheduler
 from core.infra.config import AetherConfig, load_config
 from core.infra.event_bus import EventBus
+from core.infra.service_container import Container
 from core.infra.transport.gateway import AetherGateway
 from core.logic.managers.agents import AgentManager
 from core.logic.managers.audio import AudioManager

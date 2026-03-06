@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+
 def generate_dashboard():
     """
     Generates a standalone HTML dashboard to visualize AetherOS benchmarks.
