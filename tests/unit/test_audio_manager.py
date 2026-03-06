@@ -2,6 +2,7 @@ import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
+
 def setup_mocks():
     mock_modules = ['firebase_admin', 'firebase_admin.credentials', 'firebase_admin.firestore', 'google.cloud.firestore', 'websockets', 'google.genai', 'pyaudio', 'watchdog', 'watchdog.observers', 'watchdog.events', 'webrtcvad']
     for module_name in mock_modules:
@@ -12,8 +13,8 @@ setup_mocks()
 
 import pytest  # noqa: E402
 
-from core.logic.managers.audio import AudioManager  # noqa: E402
 from core.infra.config import AetherConfig  # noqa: E402
+from core.logic.managers.audio import AudioManager  # noqa: E402
 
 
 @pytest.fixture

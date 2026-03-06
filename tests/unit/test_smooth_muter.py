@@ -132,3 +132,61 @@ def test_smoothness_of_ramp_to_prevent_clicks():
     assert max_diff < expected_max_diff * 1.5, (
         "Ramp is not smooth, potential for clicks"
     )
+
+# ============================================
+# ADD: New tests from the requirements
+# ============================================
+
+def test_mute_creates_smooth_ramp():
+    """Verify mute creates fade-out without clicks"""
+    muter = SmoothMuter(ramp_samples=256)
+
+    # Generate test signal
+    signal = np.ones(1024, dtype=np.int16) * 10000
+
+    # Apply mute
+    muter.mute()
+    result = muter.process(signal)
+
+    # Verify: should ramp from ~1.0 to 0.0
+    assert result[0] > result[-1]  # Fade out
+    assert result[-1] < 100  # Should be near zero at end
+
+    # Verify no discontinuities (clicks)
+    diff = np.diff(result.astype(np.float64))
+    max_step = np.max(np.abs(diff))
+    assert max_step < 500, f"Discontinuity detected: {max_step}"
+
+def test_unmute_creates_smooth_ramp():
+    """Verify unmute creates fade-in without clicks"""
+    muter = SmoothMuter(ramp_samples=256)
+    muter.mute()
+    muter.process(np.zeros(100, dtype=np.int16))  # Process while muted
+
+    muter.unmute()
+    signal = np.ones(1024, dtype=np.int16) * 10000
+    result = muter.process(signal)
+
+    # Should ramp from 0 to full volume
+    assert result[0] < result[-1]
+    assert result[-1] > 9000  # Near full volume
+
+def test_ramp_samples_affects_speed():
+    """Verify ramp_samples parameter affects ramp duration"""
+    muter_short = SmoothMuter(ramp_samples=64)
+    muter_long = SmoothMuter(ramp_samples=512)
+
+    signal = np.ones(2048, dtype=np.int16) * 10000
+
+    muter_short.mute()
+    result_short = muter_short.process(signal.copy())
+
+    muter_long.mute()
+    result_long = muter_long.process(signal.copy())
+
+    # Short ramp should reach zero faster
+    zero_idx_short = np.where(result_short == 0)[0]
+    zero_idx_long = np.where(result_long == 0)[0]
+
+    if len(zero_idx_short) > 0 and len(zero_idx_long) > 0:
+        assert zero_idx_short[0] < zero_idx_long[0]
