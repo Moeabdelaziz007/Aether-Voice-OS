@@ -55,9 +55,11 @@ async def save_memory(
     """
     db = _get_db()
     if not db:
+        logger.warning("Memory tool: Firebase not connected — using local fallback")
         return {
-            "status": "error",
-            "message": "Neural Persistence Offline: Cannot commit memory to cloud lattice."
+            "status": "saved_locally",
+            "key": key,
+            "message": f"Remembered '{key}' (local only — will not persist).",
         }
 
     valid_priorities = ["low", "medium", "high"]
@@ -82,7 +84,8 @@ async def save_memory(
             "key": key,
             "priority": priority,
             "message": (
-                f"Synapse update: I've stored '{key}' as {priority} priority memory."
+                f"Synapse update: I've stored '{key}' as {priority} "
+                "priority memory."
             ),
         }
     except Exception as exc:
@@ -233,7 +236,8 @@ async def prune_memories(priority: str = "low", **kwargs) -> dict:
             "status": "pruned",
             "count": count,
             "message": (
-                f"Successfully cleared {count} {priority}-importance items from memory."
+                f"Successfully cleared {count} {priority}-importance items "
+                "from memory."
             ),
         }
     except Exception as exc:

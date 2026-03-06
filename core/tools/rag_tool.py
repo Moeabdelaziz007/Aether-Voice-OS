@@ -9,15 +9,15 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from core.tools.firestore_vector_store import FirestoreVectorStore
+from core.tools.vector_store import LocalVectorStore
 
 logger = logging.getLogger(__name__)
 
 # Global reference to the shared index, set by the engine during startup
-_shared_index: Optional[FirestoreVectorStore] = None
+_shared_index: Optional[LocalVectorStore] = None
 
 
-def set_shared_index(index: FirestoreVectorStore) -> None:
+def set_shared_index(index: LocalVectorStore) -> None:
     """Inject the global vector store."""
     global _shared_index
     _shared_index = index
@@ -33,25 +33,21 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
             "Where is the frustration trigger defined?").
         limit: Max number of chunks to return (default 3).
     """
-    global _shared_index
     if not _shared_index:
-        # Auto-initialize if not set (for standalone tool usage)
-        from core.infra.config import load_config
-
-        config = load_config()
-        api_key = config.get("google_api_key")
-        _shared_index = FirestoreVectorStore(api_key=api_key)
-        await _shared_index.initialize()
+        return {"error": "Local codebase index is not initialized or loaded."}
 
     try:
         query_vec = await _shared_index.get_query_embedding(query)
-        results = await _shared_index.search(query_vec, limit=limit)
+        results = _shared_index.search(query_vec, limit=limit)
 
         if not results:
             return {"message": "No relevant codebase chunks found."}
 
         formatted_results = []
         for r in results:
+            # We recover the text using the chunk ID if needed, but the index currently
+            # only stores embeddings. Assume metadata includes file and chunk info.
+            # For now, return file paths and similarity so Gemini knows where to look.
             file_path = r["metadata"].get("file", "Unknown")
             chunk_idx = r["metadata"].get("chunk", 0)
             formatted_results.append(
@@ -59,7 +55,6 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
                     "file": file_path,
                     "chunk": chunk_idx,
                     "similarity": round(r["similarity"], 3),
-                    "text": r.get("text", "")[:300] + "...",  # Return a snippet
                 }
             )
 
