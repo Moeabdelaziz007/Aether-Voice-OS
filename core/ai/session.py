@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, Literal, Optional
 
 if TYPE_CHECKING:
     from core.infra.transport.gateway import AetherGateway
@@ -34,6 +34,10 @@ from core.ai.thalamic import ThalamicGate
 from core.demo.fallback import DemoFallback
 from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
+from core.audio.telemetry import (
+    log_output_queue_chunk_action,
+    log_output_queue_pressure_transition,
+)
 from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
@@ -56,7 +60,7 @@ class GeminiLiveSession:
         self,
         config: AIConfig,
         audio_in_queue: asyncio.Queue[dict[str, object]],
-        audio_out_queue: asyncio.Queue[bytes],
+        audio_out_queue: asyncio.Queue[bytes | dict[str, object]],
         gateway: "AetherGateway",
         on_interrupt: Optional[Callable] = None,
         on_tool_call: Optional[Callable] = None,
@@ -81,6 +85,7 @@ class GeminiLiveSession:
 
         # Telemetry counters (best-effort; exposed via gateway.metrics when possible)
         self._output_queue_drops = 0
+        self._pressure_tier: Literal["normal", "pressure", "critical"] = "normal"
 
         self._frame_buffer: list[
             tuple[float, bytes]
@@ -349,25 +354,7 @@ class GeminiLiveSession:
                             if part.inline_data and isinstance(
                                 part.inline_data.data, bytes
                             ):
-                                # Overflow protection: drop oldest if queue is full
-                                if self._out_queue.full():
-                                    try:
-                                        self._out_queue.get_nowait()
-                                        self._output_queue_drops += 1
-
-                                        # Log to telemetry
-                                        if hasattr(self._gateway, 'metrics'):
-                                            metrics = self._gateway.metrics
-                                            metrics["gemini_output_queue_drops"] = metrics.get("gemini_output_queue_drops", 0) + 1
-
-                                        if self._output_queue_drops % 10 == 0:
-                                            logger.warning(
-                                                "Output queue pressure: %d drops total",
-                                                self._output_queue_drops
-                                            )
-                                    except asyncio.QueueEmpty:
-                                        pass
-                                self._out_queue.put_nowait(part.inline_data.data)
+                                self._enqueue_output_audio_chunk(part.inline_data.data)
                                 # UI Broadcast: Speaking state
                                 asyncio.create_task(
                                     self._gateway.broadcast(
@@ -515,6 +502,103 @@ class GeminiLiveSession:
             )
         except Exception as exc:
             logger.error("Failed to send parallel tool responses: %s", exc)
+
+
+    def _queue_capacity(self) -> int:
+        return max(1, int(getattr(self._out_queue, "maxsize", 0) or 1))
+
+    def _current_pressure_tier(self) -> Literal["normal", "pressure", "critical"]:
+        utilization = self._out_queue.qsize() / self._queue_capacity()
+        audio_cfg = getattr(self._gateway, "_audio_config", None)
+        high = getattr(audio_cfg, "output_queue_high_watermark", 0.7)
+        critical = getattr(audio_cfg, "output_queue_critical_watermark", 0.9)
+        if utilization >= critical:
+            return "critical"
+        if utilization >= high:
+            return "pressure"
+        return "normal"
+
+    def _emit_pressure_transition(self, next_tier: Literal["normal", "pressure", "critical"]) -> None:
+        if next_tier == self._pressure_tier:
+            return
+        audio_cfg = getattr(self._gateway, "_audio_config", None)
+        high = getattr(audio_cfg, "output_queue_high_watermark", 0.7)
+        critical = getattr(audio_cfg, "output_queue_critical_watermark", 0.9)
+        log_output_queue_pressure_transition(
+            session_id=str(id(self)),
+            previous_tier=self._pressure_tier,
+            next_tier=next_tier,
+            queue_size=self._out_queue.qsize(),
+            queue_capacity=self._queue_capacity(),
+            high_watermark=high,
+            critical_watermark=critical,
+        )
+        self._pressure_tier = next_tier
+
+    def _safe_put_outbound(self, payload: bytes | dict[str, object]) -> bool:
+        try:
+            self._out_queue.put_nowait(payload)
+            return True
+        except asyncio.QueueFull:
+            try:
+                self._out_queue.get_nowait()
+            except asyncio.QueueEmpty:
+                return False
+            try:
+                self._out_queue.put_nowait(payload)
+                return True
+            except asyncio.QueueFull:
+                return False
+
+    def _enqueue_output_audio_chunk(self, audio_chunk: bytes) -> None:
+        tier = self._current_pressure_tier()
+        self._emit_pressure_transition(tier)
+
+        queue_size = self._out_queue.qsize()
+        queue_capacity = self._queue_capacity()
+
+        if tier == "normal":
+            self._safe_put_outbound(audio_chunk)
+            return
+
+        if tier == "pressure":
+            trimmed = audio_chunk[: max(2, int(len(audio_chunk) * 0.75))]
+            dropped_chunks = 0
+            if self._out_queue.full():
+                try:
+                    self._out_queue.get_nowait()
+                    dropped_chunks = 1
+                except asyncio.QueueEmpty:
+                    dropped_chunks = 0
+            self._safe_put_outbound(trimmed)
+            log_output_queue_chunk_action(
+                session_id=str(id(self)),
+                action="coalesce_trim",
+                tier=tier,
+                queue_size=queue_size,
+                queue_capacity=queue_capacity,
+                chunk_bytes=len(trimmed),
+                dropped_chunks=dropped_chunks,
+            )
+            return
+
+        # critical tier: drop chunk and insert marker so playback can smooth
+        self._output_queue_drops += 1
+        if hasattr(self._gateway, "metrics"):
+            metrics = self._gateway.metrics
+            metrics["gemini_output_queue_drops"] = metrics.get("gemini_output_queue_drops", 0) + 1
+
+        marker = {"type": "pressure_marker", "reason": "critical_drop", "fill_ms": 30}
+        self._safe_put_outbound(marker)
+        log_output_queue_chunk_action(
+            session_id=str(id(self)),
+            action="drop_with_marker",
+            tier=tier,
+            queue_size=queue_size,
+            queue_capacity=queue_capacity,
+            chunk_bytes=len(audio_chunk),
+            dropped_chunks=1,
+        )
 
     def _drain_output(self) -> None:
         """Drain the output queue on interruption (instant silence)."""

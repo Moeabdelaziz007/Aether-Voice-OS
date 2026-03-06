@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import queue
-from typing import Optional
+from typing import Any, Optional
 
 import pyaudio
 
@@ -55,7 +55,7 @@ class AudioPlayback:
     def __init__(
         self,
         config: AudioConfig,
-        input_queue: asyncio.Queue[bytes],
+        input_queue: asyncio.Queue[bytes | dict[str, Any]],
         on_audio_tx: Optional[callable] = None,
     ) -> None:
         self._config = config
@@ -174,8 +174,25 @@ class AudioPlayback:
 
         while self._running:
             try:
-                # 1. Get audio from AI session (asyncio)
-                audio_bytes = await self._async_queue.get()
+                # 1. Get audio/marker from AI session (asyncio)
+                payload = await self._async_queue.get()
+
+                audio_bytes: bytes
+                if isinstance(payload, dict) and payload.get("type") == "pressure_marker":
+                    fill_ms = int(payload.get("fill_ms", 20))
+                    sample_rate = self._config.receive_sample_rate
+                    samples = max(1, int(sample_rate * fill_ms / 1000))
+                    audio_bytes = b"\x00" * (samples * self._config.format_width)
+                    logger.debug(
+                        "Playback smoothing marker consumed: reason=%s fill_ms=%d",
+                        payload.get("reason", "unknown"),
+                        fill_ms,
+                    )
+                elif isinstance(payload, (bytes, bytearray)):
+                    audio_bytes = bytes(payload)
+                else:
+                    logger.debug("Skipping unsupported playback payload type: %s", type(payload))
+                    continue
 
                 # 1.5 Mirror to UI (WebSockets) if connected
                 if self._on_audio_tx:

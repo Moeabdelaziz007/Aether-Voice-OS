@@ -15,6 +15,54 @@ from core.infra.event_bus import EventBus, TelemetryEvent
 
 logger = structlog.get_logger("AetherOS.Telemetry")
 
+
+def log_output_queue_pressure_transition(
+    *,
+    session_id: str,
+    previous_tier: str,
+    next_tier: str,
+    queue_size: int,
+    queue_capacity: int,
+    high_watermark: float,
+    critical_watermark: float,
+):
+    """Emit a structured telemetry event when output queue pressure tier changes."""
+    logger.info(
+        "output_queue_pressure_transition",
+        session_id=session_id,
+        previous_tier=previous_tier,
+        next_tier=next_tier,
+        queue_size=queue_size,
+        queue_capacity=queue_capacity,
+        utilization=(queue_size / queue_capacity) if queue_capacity else 0.0,
+        high_watermark=high_watermark,
+        critical_watermark=critical_watermark,
+    )
+
+
+def log_output_queue_chunk_action(
+    *,
+    session_id: str,
+    action: str,
+    tier: str,
+    queue_size: int,
+    queue_capacity: int,
+    chunk_bytes: int,
+    dropped_chunks: int = 0,
+):
+    """Emit structured telemetry for dropped/coalesced/trimmed output audio chunks."""
+    logger.info(
+        "output_queue_chunk_action",
+        session_id=session_id,
+        action=action,
+        tier=tier,
+        queue_size=queue_size,
+        queue_capacity=queue_capacity,
+        utilization=(queue_size / queue_capacity) if queue_capacity else 0.0,
+        chunk_bytes=chunk_bytes,
+        dropped_chunks=dropped_chunks,
+    )
+
 def log_audio_metrics(
     rms: float,
     zcr: float,

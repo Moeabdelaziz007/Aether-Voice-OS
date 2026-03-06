@@ -29,6 +29,10 @@ class AudioConfig(BaseModel):
     input_device_index: Optional[int] = None
     output_device_index: Optional[int] = None
 
+    # Output queue pressure policy
+    output_queue_high_watermark: float = 0.7
+    output_queue_critical_watermark: float = 0.9
+
     # Dynamic AEC parameters (adjustable during runtime)
     aec_step_size: float = 0.5
     aec_filter_length_ms: float = 100.0
@@ -75,6 +79,15 @@ class AudioConfig(BaseModel):
             )
         return v
 
+
+    @field_validator("output_queue_high_watermark", "output_queue_critical_watermark")
+    @classmethod
+    def validate_output_queue_watermark(cls, v: float) -> float:
+        """Queue pressure watermarks must be between 0 and 1."""
+        if not 0.0 < v <= 1.0:
+            raise ValueError(f"Output queue watermark must be in (0, 1], got {v}")
+        return v
+
     @field_validator("aec_step_size")
     @classmethod
     def validate_aec_step_size(cls, v: float) -> float:
@@ -114,6 +127,16 @@ class AudioConfig(BaseModel):
         if not 10.0 <= v <= 500.0:
             raise ValueError(f"Jitter buffer must be 10-500ms, got {v}")
         return v
+
+
+    @model_validator(mode="after")
+    def validate_output_queue_policy(self) -> "AudioConfig":
+        """Ensure queue policy watermarks are ordered."""
+        if self.output_queue_high_watermark >= self.output_queue_critical_watermark:
+            raise ValueError(
+                "output_queue_high_watermark must be < output_queue_critical_watermark"
+            )
+        return self
 
     @model_validator(mode="after")
     def validate_jitter_consistency(self) -> "AudioConfig":

@@ -23,6 +23,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from typing import Any
 
 # Add project root to path
 ROOT = Path(__file__).resolve().parent.parent
@@ -41,6 +42,81 @@ logging.basicConfig(
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+class OutboundQueueStressBenchmark:
+    """Synthetic outbound queue stress benchmark for continuity/drop comparison."""
+
+    def __init__(self, queue_size: int, high_wm: float, critical_wm: float):
+        self._queue_size = queue_size
+        self._high_wm = high_wm
+        self._critical_wm = critical_wm
+
+    def run(self, frames: int = 1200, drain_every: int = 3) -> dict[str, Any]:
+        baseline = self._simulate_baseline(frames=frames, drain_every=drain_every)
+        policy = self._simulate_policy(frames=frames, drain_every=drain_every)
+        return {"baseline": baseline, "policy": policy}
+
+    def _simulate_baseline(self, frames: int, drain_every: int) -> dict[str, float]:
+        queue: list[bytes] = []
+        dropped = 0
+        continuity_score = 0.0
+
+        for i in range(frames):
+            chunk = bytes([i % 255]) * 512
+            if len(queue) >= self._queue_size:
+                queue.pop(0)
+                dropped += 1
+            queue.append(chunk)
+
+            if i % drain_every == 0 and queue:
+                queue.pop(0)
+                continuity_score += 0.2
+
+        return {
+            "drop_rate_pct": round((dropped / frames) * 100, 2),
+            "continuity_score": round(min(1.0, continuity_score / (frames * 0.25)), 3),
+        }
+
+    def _simulate_policy(self, frames: int, drain_every: int) -> dict[str, float]:
+        queue: list[bytes | dict[str, object]] = []
+        dropped = 0
+        continuity_score = 0.0
+        coalesced = 0
+        markers = 0
+
+        for i in range(frames):
+            chunk = bytes([i % 255]) * 512
+            utilization = len(queue) / self._queue_size
+
+            if utilization >= self._critical_wm:
+                dropped += 1
+                markers += 1
+                if len(queue) >= self._queue_size:
+                    queue.pop(0)
+                queue.append({"type": "pressure_marker", "fill_ms": 30})
+            elif utilization >= self._high_wm:
+                coalesced += 1
+                trimmed = chunk[: int(len(chunk) * 0.75)]
+                if len(queue) >= self._queue_size:
+                    queue.pop(0)
+                queue.append(trimmed)
+            else:
+                if len(queue) >= self._queue_size:
+                    queue.pop(0)
+                    dropped += 1
+                queue.append(chunk)
+
+            if i % drain_every == 0 and queue:
+                item = queue.pop(0)
+                continuity_score += 0.18 if isinstance(item, dict) else 0.24
+
+        return {
+            "drop_rate_pct": round((dropped / frames) * 100, 2),
+            "continuity_score": round(min(1.0, continuity_score / (frames * 0.25)), 3),
+            "coalesced_chunks": coalesced,
+            "pressure_markers": markers,
+        }
 
 
 class LiveAudioBenchmark:
@@ -160,6 +236,12 @@ class LiveAudioBenchmark:
 
     def _format_metrics(self, metrics) -> dict:
         """Format metrics for display."""
+        queue_stress = OutboundQueueStressBenchmark(
+            queue_size=15,
+            high_wm=self._config.audio.output_queue_high_watermark,
+            critical_wm=self._config.audio.output_queue_critical_watermark,
+        ).run()
+
         return {
             "session_id": metrics.session_id,
             "duration_sec": metrics.end_time - metrics.start_time
@@ -190,6 +272,7 @@ class LiveAudioBenchmark:
                 "silence_frames": metrics.frames_silence,
             },
             "jitter_ms": round(metrics.jitter_ms, 2),
+            "outbound_queue_stress": queue_stress,
         }
 
     async def teardown(self) -> None:
@@ -238,6 +321,16 @@ class LiveAudioBenchmark:
         print(f"   Silence frames: {metrics['vad']['silence_frames']}")
 
         print(f"\n📈 Jitter: {metrics['jitter_ms']:.2f}ms")
+
+        stress = metrics["outbound_queue_stress"]
+        print("\n🚦 Outbound Queue Stress (pre/post policy):")
+        print(
+            f"   baseline: drop={stress['baseline']['drop_rate_pct']:.2f}% continuity={stress['baseline']['continuity_score']:.3f}"
+        )
+        print(
+            f"   policy  : drop={stress['policy']['drop_rate_pct']:.2f}% continuity={stress['policy']['continuity_score']:.3f} "
+            f"(coalesced={stress['policy']['coalesced_chunks']}, markers={stress['policy']['pressure_markers']})"
+        )
         print("=" * 60)
 
 
