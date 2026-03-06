@@ -66,20 +66,14 @@ async def verify_admin(**kwargs) -> dict:
 
 async def calibrate_admin_voice(**kwargs) -> dict:
     """
-<<<<<<< HEAD
     Tool: Calibrates the Administrator's voice biometric signature. 
-=======
     Tool: Calibrates the Administrator's voice biometric signature.
->>>>>>> origin/jules-3466090822907057400-4af64808
     The user should speak a neutral sentence while this is active.
     """
     rms = audio_state.last_rms
     zcr = audio_state.last_zcr
-<<<<<<< HEAD
     
-=======
 
->>>>>>> origin/jules-3466090822907057400-4af64808
     if rms < 0.01:
         return {
             "status": "failure",

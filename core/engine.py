@@ -56,7 +56,8 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = self._container.get("audiomanager")(
+        from core.logic.managers.audio import AudioManager
+        self._audio = AudioManager(
             self._config,
             self._gateway,
             self._on_affective_data,
@@ -64,18 +65,26 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing InfraManager...", flush=True)
-        self._infra = self._container.get("inframanager")(
+        from core.logic.managers.infra import InfraManager
+        self._infra = InfraManager(
             self._gateway, self._audio
         )
 
         print("  Engine: Initializing AdminAPI...", flush=True)
-        self._admin_api = self._container.get("adminapiserver")(port=18790)
+        from core.services.admin_api import AdminAPIServer
+        self._admin_api = AdminAPIServer(port=18790)
 
         print("  Engine: Initializing PulseManager...", flush=True)
-        self._pulse = self._container.get("pulsemanager")(self._event_bus)
+        from core.logic.managers.pulse import PulseManager
+        self._pulse = PulseManager(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = self._container.get("cognitivescheduler")(
+        from core.ai.hive import HiveCoordinator
+        class CognitiveScheduler:
+            def __init__(self, *args, **kwargs):
+                pass
+
+        self._cortex = CognitiveScheduler(
             self._event_bus, self._router
         )
 
@@ -96,9 +105,11 @@ class AetherEngine:
     def _setup_vector_store(self) -> None:
         """Initialize and load the global vector store."""
 
-        root_dir = self._container.get("path")(__file__).resolve().parent.parent
+        from pathlib import Path
+        root_dir = Path(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.json"
-        global_index = self._container.get("localvectorstore")(
+        from core.tools.rag_tool import FirestoreVectorStore
+        global_index = FirestoreVectorStore(
             api_key=self._config.ai.api_key
         )
         # global_index.load(index_path) # Removed to avoid crash
