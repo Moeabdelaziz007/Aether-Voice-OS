@@ -275,7 +275,8 @@ class AudioCapture:
 
         # Push to queue if hard speech detected or AI is silent (ambient feed)
         if vad.is_hard or not should_mute:
-            # Batching PCM data to avoid overwhelming the Event Loop with `call_soon_threadsafe`
+            # Batching PCM data to avoid overwhelming the Event Loop
+            # with `call_soon_threadsafe`
             if not hasattr(self, "_batch_buffer"):
                 self._batch_buffer = bytearray()
 
