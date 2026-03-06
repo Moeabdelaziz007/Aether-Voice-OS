@@ -1,4 +1,3 @@
-import re
 with open("core/ai/hive.py", "r") as f:
     content = f.read()
 

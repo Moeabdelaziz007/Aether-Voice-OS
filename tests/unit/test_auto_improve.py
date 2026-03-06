@@ -1,6 +1,8 @@
 import os
 import tempfile
-from scripts.auto_improve import analyze_file, MAX_COMPLEXITY, MAX_FUNCTION_LENGTH
+
+from scripts.auto_improve import MAX_COMPLEXITY, analyze_file
+
 
 def test_analyze_file_no_issues():
     content = """
@@ -29,7 +31,7 @@ def debug_stuff():
     assert any("print()" in issue['message'] for issue in issues)
 
 def test_analyze_file_high_complexity():
-    content = f"""
+    content = """
 def complex_function():
 """
     for i in range(MAX_COMPLEXITY + 2):
