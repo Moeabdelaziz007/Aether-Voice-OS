@@ -81,30 +81,59 @@ class AetherBenchmarker:
 
         print("🚀 [BENCHMARK] Engine stabilized. Proceeding.", flush=True)
 
-        print("📊 [BENCHMARK] Measuring True Network RTT via Gemini WebSocket Ping...", flush=True)
+        print(
+            "📊 [BENCHMARK] Measuring True E2E Latency via AudioPlayback...", flush=True
+        )
         # Extract active Gemini Live Session websocket
         session = self.engine._gateway.get_session()
-        if not session or not session._session or not hasattr(session._session, '_ws'):
-            print("❌ [BENCHMARK] Could not find active Gemini Live WebSocket. Aborting.")
+        if not session or not session._session or not hasattr(session._session, "_ws"):
+            print(
+                "❌ [BENCHMARK] Could not find active Gemini Live WebSocket. Aborting."
+            )
             self.engine._shutdown_event.set()
             await engine_task
             return
 
-        ws = session._session._ws
+        # We wrap on_audio_tx to capture the real audio output
+        original_tx = self.engine._audio._playback._on_audio_tx
+        audio_received = asyncio.Event()
+
+        async def mock_tx(data: bytes):
+            audio_received.set()
+            if original_tx:
+                await original_tx(data)
+
+        self.engine._audio._playback._on_audio_tx = mock_tx
+
         for i in range(iterations):
             try:
-                # Manually measure RTT around ping/pong since the future might return None
-                ping_start = time.perf_counter()
-                pong_waiter = await ws.ping()
-                await pong_waiter
-                ping_end = time.perf_counter()
+                start = time.perf_counter()
+                audio_received.clear()
 
-                latency_ms = (ping_end - ping_start) * 1000
+                # Simulate a "Barge-in" trigger or high-RMS speech event
+                # We use the gateway's broadcast to trace the round-trip
+                print(f"  [Probe {i + 1}] Broadcasting...", flush=True)
+                await self.engine._gateway.broadcast(
+                    "benchmark_probe", {"id": i, "ts": start}
+                )
+                print(f"  [Probe {i + 1}] Broadcast done.", flush=True)
+
+                # Wait for the actual audio output byte
+                try:
+                    await asyncio.wait_for(audio_received.wait(), timeout=5.0)
+                except asyncio.TimeoutError:
+                    print(f"  [Probe {i + 1}] Timeout waiting for audio", flush=True)
+
+                end = time.perf_counter()
+                latency_ms = (end - start) * 1000
                 self.latencies.append(latency_ms)
-                print(f"  [Probe {i + 1}] RTT Latency: {latency_ms:.2f}ms", flush=True)
+                print(f"  [Probe {i + 1}] Latency: {latency_ms:.2f}ms", flush=True)
                 await asyncio.sleep(1)
             except Exception as e:
                 print(f"  [Probe {i + 1}] Failed: {e}", flush=True)
+
+        # Restore original callback
+        self.engine._audio._playback._on_audio_tx = original_tx
 
         snapshot_end = tracemalloc.take_snapshot()
         self._compute_memory_stats(snapshot_start, snapshot_end)
@@ -130,7 +159,7 @@ class AetherBenchmarker:
                     print(f"❌ [BENCHMARK] Write failed: {res}")
                 else:
                     self.fb_latencies.append(res)
-            print(f"✅ [BENCHMARK] Load test complete. 50 writes processed.", flush=True)
+            print("✅ [BENCHMARK] Load test complete. 50 writes processed.", flush=True)
 
         self._report()
 
@@ -141,7 +170,7 @@ class AetherBenchmarker:
 
     def _compute_memory_stats(self, snap1, snap2):
         print("🧠 [BENCHMARK] Computing Memory Allocation Stats...")
-        stats = snap2.compare_to(snap1, 'lineno')
+        stats = snap2.compare_to(snap1, "lineno")
         top_allocations = []
         for stat in stats[:10]:
             top_allocations.append(str(stat))
@@ -150,7 +179,7 @@ class AetherBenchmarker:
         self.mem_stats = {
             "current_bytes": current,
             "peak_bytes": peak,
-            "top_diff": top_allocations
+            "top_diff": top_allocations,
         }
 
     def _report(self):
@@ -164,10 +193,10 @@ class AetherBenchmarker:
                 "max": float(np.max(lats)) if len(lats) > 0 else 0,
                 "count": len(lats),
             },
-            "memory_stats": self.mem_stats
+            "memory_stats": self.mem_stats,
         }
 
-        if hasattr(self, 'fb_latencies') and len(self.fb_latencies) > 0:
+        if hasattr(self, "fb_latencies") and len(self.fb_latencies) > 0:
             fb_lats = np.array(self.fb_latencies)
             report["firebase_writes_ms"] = {
                 "p50": float(np.percentile(fb_lats, 50)),
@@ -180,12 +209,12 @@ class AetherBenchmarker:
 
         print("\n" + "═" * 40)
         print("🏁 BENCHMARK RESULTS")
-        print(f"  [Network RTT]")
+        print("  [Network RTT]")
         print(f"  p50 (Median): {report['network_rtt_ms']['p50']:.2f}ms")
         print(f"  p95 (Target): {report['network_rtt_ms']['p95']:.2f}ms")
         print(f"  p99 (Peak):   {report['network_rtt_ms']['p99']:.2f}ms")
         if "firebase_writes_ms" in report:
-            print(f"\n  [Firebase Load Test (50 Concurrent Writes)]")
+            print("\n  [Firebase Load Test (50 Concurrent Writes)]")
             print(f"  p50 (Median): {report['firebase_writes_ms']['p50']:.2f}ms")
             print(f"  p95 (Target): {report['firebase_writes_ms']['p95']:.2f}ms")
             print(f"  p99 (Peak):   {report['firebase_writes_ms']['p99']:.2f}ms")
