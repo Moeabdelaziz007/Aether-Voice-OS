@@ -53,8 +53,11 @@ class AccuracyBench:
             log_path = os.path.join(log_dir, "session.log")
             
             # Simulate crash log
-            with open(log_path, "w") as f:
-                f.write(f"Traceback in {bug_path}:\nError: {expected_keyword}")
+            def _write_log():
+                with open(log_path, "w") as f:
+                    f.write(f"Traceback in {bug_path}:\nError: {expected_keyword}")
+
+            await asyncio.to_thread(_write_log)
 
             diagnosis = await diagnose_and_repair(
                 context=f"The script {bug_path} crashed."
@@ -123,8 +126,11 @@ class AccuracyBench:
         os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, "session.log")
 
-        with open(log_path, "w") as f:
-            f.write("WebSocket connection randomly terminated.\nError: Connection closed unexpectedly.")
+        def _write_ws_log():
+            with open(log_path, "w") as f:
+                f.write("WebSocket connection randomly terminated.\nError: Connection closed unexpectedly.")
+
+        await asyncio.to_thread(_write_ws_log)
 
         diagnosis = await diagnose_and_repair(context="WebSocket connection dropped unexpectedly")
 
@@ -184,8 +190,11 @@ class AccuracyBench:
         await self.run_zero_shot_recovery_bench()
         await self.run_dispatch_ambiguity_bench()
         
-        with open("accuracy_audit.json", "w") as f:
-            json.dump(self.results, f, indent=4)
+        def _write_results():
+            with open("accuracy_audit.json", "w") as f:
+                json.dump(self.results, f, indent=4)
+
+        await asyncio.to_thread(_write_results)
         print("📊 Accuracy Audit saved to accuracy_audit.json", flush=True)
         self.bug_gen.cleanup()
 
