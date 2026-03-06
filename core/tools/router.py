@@ -245,16 +245,16 @@ class ToolRouter:
         # ── Biometric Soul-Lock Middleware ──────────────────────────
         if name in self.SENSITIVE_TOOLS:
             logger.info("🛡️ [SECURITY] [BIO-HASH] Sensitive tool detected: %s", name)
-            
+
             # Real Biometric Check using VoiceAuthGuard
             if not VoiceAuthGuard.is_authorized():
                 logger.warning("🛡️ [SECURITY] [BIO-HASH] Biometric signature mismatch!")
                 return {
                     "error": "Access Denied: Biometric signature mismatch.",
                     "status": 403,
-                    "requires_auth": "voice_biometrics"
+                    "requires_auth": "voice_biometrics",
                 }
-                
+
             logger.info(
                 "🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against "
                 "Soul.md... SUCCESS"

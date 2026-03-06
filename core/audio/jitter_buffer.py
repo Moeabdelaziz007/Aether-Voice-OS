@@ -2,6 +2,8 @@ import collections
 import logging
 from typing import Optional
 
+import numpy as np
+
 logger = logging.getLogger("AetherOS.JitterBuffer")
 
 # ==========================================
@@ -64,3 +66,38 @@ class AudioJitterBuffer:
     def latency_ms(self) -> int:
         """Current estimated latency contributed by the buffer."""
         return len(self._buffer) * self.packet_size_ms
+
+
+class AdaptiveJitterBuffer:
+    def __init__(
+        self,
+        target_latency_ms: float = 60.0,
+        max_latency_ms: float = 200.0,
+        sample_rate: int = 16000,
+    ) -> None:
+        self.sample_rate = sample_rate
+        self.target_samples = int(target_latency_ms * sample_rate / 1000)
+        self.max_samples = int(max_latency_ms * sample_rate / 1000)
+        self._buffer = np.zeros(0, dtype=np.int16)
+
+    def write(self, pcm: np.ndarray) -> None:
+        if pcm.size == 0:
+            return
+        chunk = np.asarray(pcm, dtype=np.int16).ravel()
+        self._buffer = np.concatenate([self._buffer, chunk])
+        if self._buffer.size > self.max_samples:
+            self._buffer = self._buffer[-self.max_samples :]
+
+    def read(self, samples: int) -> np.ndarray:
+        if samples <= 0:
+            return np.zeros(0, dtype=np.int16)
+        if self._buffer.size < samples:
+            out = np.zeros(samples, dtype=np.int16)
+            take = min(self._buffer.size, samples)
+            if take:
+                out[:take] = self._buffer[:take]
+                self._buffer = self._buffer[take:]
+            return out
+        out = self._buffer[:samples].copy()
+        self._buffer = self._buffer[samples:]
+        return out

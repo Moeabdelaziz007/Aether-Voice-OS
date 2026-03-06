@@ -2,11 +2,18 @@ import logging
 import os
 from typing import Optional
 
-from opentelemetry import trace as trace_api
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk import trace as trace_sdk
-from opentelemetry.sdk.resources import Resource
-from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+try:
+    from opentelemetry import trace as trace_api
+    from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+    from opentelemetry.sdk import trace as trace_sdk
+    from opentelemetry.sdk.resources import Resource
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+
+    OTEL_AVAILABLE = True
+except Exception:
+    from opentelemetry import trace as trace_api
+
+    OTEL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +42,12 @@ class TelemetryManager:
     def initialize(self):
         """Initialize the OpenTelemetry provider and exporters."""
         if self._is_initialized:
+            return
+
+        if not OTEL_AVAILABLE:
+            self.tracer = trace_api.get_no_op_tracer()
+            self._is_initialized = True
+            logger.warning("OpenTelemetry exporter not available, using no-op tracer.")
             return
 
         try:

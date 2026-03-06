@@ -15,11 +15,14 @@ from typing import Any, Callable, Optional
 import numpy as np
 import pyaudio
 
+from core.audio.jitter_buffer import AdaptiveJitterBuffer
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.state import audio_state
 from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
+
+__all__ = ["AdaptiveJitterBuffer", "AudioCapture", "SmoothMuter"]
 
 logger = logging.getLogger(__name__)
 

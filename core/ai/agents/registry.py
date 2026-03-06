@@ -90,7 +90,7 @@ class AgentRegistry:
 def get_default_agents() -> List[AgentMetadata]:
     """Helper to bootstrap the OS with core experts."""
     return [
-        AgentMetadata
+        AgentMetadata(
             id="aether_core",
             name="Aether Core Orchestrator",
             version="1.0.0",
