@@ -124,30 +124,6 @@ Gemini Live Audio
 
 ---
 
-## 🏆 Project Milestones & Achievements | الإنجازات
-
-<p align="center">
-  <img src="https://img.shields.io/badge/🎯_Sub_200ms_Achieved-00f3ff?style=for-the-badge&logo=target" alt="Latency Goal"/>
-  <img src="https://img.shields.io/badge/❤️_92%25_Emotion_AI-ff6b6b?style=for-the-badge&logo=heart" alt="Emotion AI"/>
-  <img src="https://img.shields.io/badge/🍃_Ultra_Light_CPU-4ade80?style=for-the-badge&logo=leaf" alt="Efficiency"/>
-  <img src="https://img.shields.io/badge/🚀_Gemini_Live_Certified-a855f7?style=for-the-badge&logo=google" alt="Certification"/>
-  <img src="https://img.shields.io/badge/🧠_Thalamic_Gate_v2-00f3ff?style=for-the-badge&logo=brain" alt="Thalamic Gate"/>
-  <img src="https://img.shields.io/badge/⚡_Real_Time_DSP-fb923c?style=for-the-badge&logo=bolt" alt="DSP"/>
-</p>
-
----
-
-## 🧪 Experiment Corner | زاوية التجارب
-
-<div align="center">
-
-[![🚀 Try Live Demo](https://img.shields.io/badge/🚀_Try_Live_Demo-00f3ff?style=for-the-badge&logo=rocket&logoColor=white)](https://your-demo-link.com)
-[![📦 CodeSandbox](https://img.shields.io/badge/📦_CodeSandbox-151515?style=for-the-badge&logo=codesandbox&logoColor=white)](https://codesandbox.io/p/sandbox/aether-voice-os)
-[![🤗 Hugging Face](https://img.shields.io/badge/🤗_Hugging_Face-FFD21E?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/your-space)
-[![🎮 Interactive Demo](https://img.shields.io/badge/🎮_Interactive_Demo-ff6b6b?style=for-the-badge&logo=gamepad&logoColor=white)](https://your-interactive-demo.com)
-
-</div>
-
 ## 🌟 The Vision | الرؤية
 
 > *"Aether removes the UI layer entirely—interaction becomes a continuous audio stream."*
