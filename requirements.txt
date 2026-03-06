@@ -49,3 +49,4 @@ arize-phoenix>=4.0.0
 # Redis (Global State Bus)
 redis>=5.0.0
 hiredis>=3.0.0
+PyNaCl

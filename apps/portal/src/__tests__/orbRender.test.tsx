@@ -1,5 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
+// @ts-ignore - Ignore missing component until it's implemented
 import AetherOrb from '../components/AetherOrb';
 import { useAetherStore } from '../store/useAetherStore';
 import { describe, it, expect, vi } from 'vitest';
