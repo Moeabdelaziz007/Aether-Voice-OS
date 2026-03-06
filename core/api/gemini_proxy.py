@@ -12,7 +12,7 @@ from typing import Any
 import httpx
 from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
 
-router = APIRouterprefix="/api/gemini", tags=["gemini"])
+router = APIRouter(prefix="/api/gemini", tags=["gemini"])
 
 GEMINI_WS_URL = "wss://generativelanguage.googleapis.com/ws"
 GEMINI_HTTP_URL = "https://generativelanguage.googleapis.com"
@@ -21,9 +21,14 @@ GEMINI_HTTP_URL = "https://generativelanguage.googleapis.com"
 def get_api_key() -> str:
     """Get Gemini API key from environment."""
     key = os.getenv("GOOGLE_API_KEY")
-    if not key:
-        raise HTTPExceptionstatus_code=500, detail="API key not configured")
-    return key
+    is_benchmark = os.getenv("AETHER_BENCHMARK_MODE", "false").lower() == "true"
+
+    if not key and not is_benchmark:
+        raise HTTPException(
+            status_code=500,
+            detail="GOOGLE_API_KEY not configured. Explicit key required unless AETHER_BENCHMARK_MODE=true",
+        )
+    return key or "AIza_MOCK_KEY_FOR_BENCHMARK"
 
 
 @router.post("/generate")
@@ -48,59 +53,27 @@ async def proxy_generate(request: Request) -> dict[str, Any]:
             response.raise_for_status()
             return response.json()
         except httpx.HTTPStatusError as e:
-            raise HTTPException
+            raise HTTPException(
                 status_code=e.response.status_code,
                 detail=f"Gemini API error: {e.response.text}",
             )
         except httpx.RequestError as e:
-            raise HTTPExceptionstatus_code=502, detail=f"Request failed: {str(e)}")
+            raise HTTPException(status_code=502, detail=f"Request failed: {str(e)}")
 
 
 @router.websocket("/live")
 async def proxy_live_websocket(websocket: WebSocket):
-    """Proxy WebSocket connections to Gemini Live API."""
+    """
+    DEPRECATED: Direct Gemini Live proxy is disabled in favor of Aether Gateway (Port 18789).
+    This endpoint now serves as a stub for compatibility.
+    """
     await websocket.accept()
-    api_key = get_api_key()
-    model = websocket.query_params.get(
-        "model", "gemini-2.5-flash-preview-native-audio-dialog"
-    )
-
-    ws_url = f"{GEMINI_WS_URL}/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent?key={api_key}"
-
-    async with httpx.AsyncClient() as client:
-        gemini_ws = None
-        try:
-            async with client.stream("GET", ws_url) as response:
-                if response.status_code != 200:
-                    await websocket.close(code=1011, reason="Gemini connection failed")
-                    return
-
-                async def forward_to_gemini():
-                    """Forward messages from client to Gemini."""
-                    try:
-                        while True:
-                            data = await websocket.receive_text()
-                            await gemini_ws.send_text(data)
-                    except WebSocketDisconnect:
-                        pass
-                    except Exception as e:
-                        print(f"Forward error: {e}")
-
-                async def forward_to_client():
-                    """Forward messages from Gemini to client."""
-                    try:
-                        while True:
-                            data = await gemini_ws.receive_text()
-                            await websocket.send_text(data)
-                    except Exception as e:
-                        print(f"Receive error: {e}")
-
-                await asyncio.gather(
-                    forward_to_gemini(),
-                    forward_to_client(),
-                )
-        except Exception as e:
-            await websocket.close(code=1011, reason=str(e))
+    await websocket.send_json({
+        "type": "error",
+        "message": "Direct Gemini Live WS Proxy is DISABLED. Use Aether Gateway Protocol on port 18789.",
+        "code": "WS_DISABLED_USE_GATEWAY"
+    })
+    await websocket.close(code=1000)
 
 
 @router.get("/health")

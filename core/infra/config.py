@@ -252,9 +252,10 @@ def load_config() -> AetherConfig:
         except Exception as e:
             print(f"Warning: Failed to load {json_path}: {e}")
 
-    # EMERGENCY: If GOOGLE_API_KEY is missing, providing a mock for benchmarking
+    # EMERGENCY: If GOOGLE_API_KEY is missing, providing a mock ONLY IF benchmarking is explicit
     if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GEMINI_API_KEY"):
-        os.environ["GOOGLE_API_KEY"] = "AIza_MOCK_KEY_FOR_BENCHMARK"
+        if os.getenv("AETHER_BENCHMARK_MODE", "false").lower() == "true":
+            os.environ["GOOGLE_API_KEY"] = "AIza_MOCK_KEY_FOR_BENCHMARK"
 
     try:
         # Try standard loading first

@@ -124,7 +124,12 @@ class AetherEngine:
             on_affective_data=self._on_affective_data,
         )
         self._gateway = AetherGateway(
-            self._config.gateway, on_audio_rx=self._audio_in.put
+            ai_config=self._config.ai,
+            audio_config=self._config.audio,
+            gateway_config=self._config.gateway,
+            tool_router=self._router,
+            hive=self._hive,  # Note: This might be None if hive isn't ready, but Gateway needs it
+            on_audio_rx=self._audio_in.put
         )
         self._playback = AudioPlayback(
             self._config.audio,
@@ -454,118 +459,22 @@ class AetherEngine:
             # Integrate Admin API locally
             self._admin_api.start()
 
-            # The Hive Loop: Manages the Gemini session lifecycle and soul handoffs
-            while not self._shutdown_event.is_set():
-                self._session_restart.clear()
+            logger.info("✦ System Initialized. Launching concurrent core tasks...")
 
-                # Create a fresh session with the active expert soul
-                active_soul = self._hive.active_soul
-                self._session = GeminiLiveSession(
-                    self._config.ai,
-                    self._audio_in,
-                    self._audio_out,
-                    on_interrupt=self._on_interrupt,
-                    on_tool_call=self._on_tool_call,
-                    tool_router=self._router,
-                    soul_manifest=active_soul.manifest,
-                )
-
-                await self._session.connect()
-
-                # UI Broadcast: State change
-                asyncio.create_task(
-                    self._gateway.broadcast("engine_state", {"state": "LISTENING"})
-                )
-
-                logger.info(
-                    "✦ Hive Active: Expert '%s' taking control",
-                    active_soul.manifest.name,
-                )
-
-                # Run session alongside other background tasks
-                async with asyncio.TaskGroup() as tg:
-                    tg.create_task(self._capture.run(), name="audio-capture")
-                    tg.create_task(self._playback.run(), name="audio-playback")
-                    session_task = tg.create_task(
-                        self._session.run(), name="gemini-session"
-                    )
-                    tg.create_task(self._gateway.run(), name="gateway")
-                    tg.create_task(self._admin_sync_loop(), name="admin-sync")
-
-                    # Watcher for shutdown or restart
-                    restart_waiter = tg.create_task(
-                        self._session_restart.wait(), name="restart-waiter"
-                    )
-                    shutdown_waiter = tg.create_task(
-                        self._shutdown_event.wait(), name="shutdown-waiter"
-                    )
-
-                    # Wait for either session to end, restart triggered, or shutdown
-                    done, pending = await asyncio.wait(
-                        [session_task, restart_waiter, shutdown_waiter],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-
-                    # Clean up pending tasks in the group
-                    for p in pending:
-                        p.cancel()
-
-                if self._session_restart.is_set():
-                    logger.info("🔄 Hive Handoff: Preparing next expert...")
-
-                    # TRIGGER GENETIC EVOLUTION
-                    # We evolve the 'soul' instructions based on the just-finished
-                    # session performance.
-                    mutation = await self._optimizer.evolve(
-                        current_instructions=active_soul.manifest.general_instructions,
-                        session_id=self._firebase._session_id,
-                    )
-
-                    # UI Broadcast: Start of evolution
-                    asyncio.create_task(
-                        self._gateway.broadcast(
-                            "neural_event",
-                            {
-                                "fromAgent": active_soul.manifest.name,
-                                "toAgent": "GeneticOptimizer",
-                                "task": "evolve_prompt",
-                                "status": "active",
-                            },
-                        )
-                    )
-                    if mutation:
-                        logger.info(
-                            "🧬 Genetic Leap: Soul '%s' instruction set evolved.",
-                            active_soul.manifest.name,
-                        )
-                        # UI Broadcast: Mutation details
-                        asyncio.create_task(
-                            self._gateway.broadcast(
-                                "mutation_event", {"mutation": mutation}
-                            )
-                        )
-                        asyncio.create_task(
-                            self._gateway.broadcast(
-                                "neural_event",
-                                {
-                                    "fromAgent": "GeneticOptimizer",
-                                    "toAgent": active_soul.manifest.name,
-                                    "task": "evolve_prompt",
-                                    "status": "completed",
-                                },
-                            )
-                        )
-
-                    await self._session.stop()
-                    # Brief delay for audio cross-fade (simulated)
-                    await asyncio.sleep(1.0)
-                else:
-                    # If session ended naturally and not because of restart/shutdown
-                    if not self._shutdown_event.is_set():
-                        logger.warning(
-                            "Gemini session ended unexpectedly. Restarting in 5s..."
-                        )
-                        await asyncio.sleep(5.0)
+            async with asyncio.TaskGroup() as tg:
+                # 1. Start Peripheral IO
+                tg.create_task(self._capture.run(), name="audio-capture")
+                tg.create_task(self._playback.run(), name="audio-playback")
+                
+                # 2. Start the Gateway (This now owns the Gemini session loop)
+                tg.create_task(self._gateway.run(), name="gateway")
+                
+                # 3. Start Administrative & Proactive tasks
+                tg.create_task(self._admin_sync_loop(), name="admin-sync")
+                
+                # 4. Wait for shutdown signal
+                await self._shutdown_event.wait()
+                logger.info("✦ Shutdown event received: Stopping core tasks...")
 
         except* KeyboardInterrupt:
             logger.info("Keyboard interrupt received")
@@ -575,6 +484,7 @@ class AetherEngine:
                     logger.error("Engine error: %s", exc, exc_info=True)
         finally:
             await self._shutdown()
+
 
     def _signal_shutdown(self) -> None:
         """Handle SIGINT/SIGTERM."""
