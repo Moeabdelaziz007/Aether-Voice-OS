@@ -1,7 +1,7 @@
 {
     "benchmark": "interrupt_latency",
-    "t3_t1_total_ms": 0.13,
-    "t2_t1_signal_ms": 0.0,
-    "t3_t2_kernel_ms": 0.13,
+    "t3_t1_total_ms": 0.29,
+    "t2_t1_signal_ms": 0.01,
+    "t3_t2_kernel_ms": 0.28,
     "status": "success"
 }

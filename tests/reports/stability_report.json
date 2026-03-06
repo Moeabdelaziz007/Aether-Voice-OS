@@ -1,209 +1,209 @@
 {
     "benchmark": "long_session_stability",
     "duration_simulated_events": 50000,
-    "initial_memory_mb": 362.12,
-    "final_memory_mb": 363.12,
-    "memory_growth_mb": 1.0,
+    "initial_memory_mb": 361.98,
+    "final_memory_mb": 362.61,
+    "memory_growth_mb": 0.62,
     "history": [
         {
             "iteration": 0,
-            "memory_mb": 362.24
+            "memory_mb": 362.61
         },
         {
             "iteration": 1,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 2,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 3,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 4,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 5,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 6,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 7,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 8,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 9,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 10,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 11,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 12,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 13,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 14,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 15,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 16,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 17,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 18,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 19,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 20,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 21,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 22,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 23,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 24,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 25,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 26,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 27,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 28,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 29,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 30,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 31,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 32,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 33,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 34,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 35,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 36,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 37,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 38,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 39,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 40,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 41,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 42,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 43,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 44,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 45,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 46,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 47,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 48,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         },
         {
             "iteration": 49,
-            "memory_mb": 363.12
+            "memory_mb": 362.61
         }
     ],
     "status": "success"

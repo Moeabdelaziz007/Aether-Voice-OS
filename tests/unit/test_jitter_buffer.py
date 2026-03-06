@@ -1,6 +1,5 @@
 # tests/unit/test_jitter_buffer.py
 
-import numpy as np
 
 from core.audio.jitter_buffer import AudioJitterBuffer as AdaptiveJitterBuffer
 

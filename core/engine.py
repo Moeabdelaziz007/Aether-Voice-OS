@@ -45,12 +45,12 @@ from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFea
 from core.audio.playback import AudioPlayback
 from core.audio.processing import AdaptiveVAD
 from core.identity.package import AthPackage
-from core.services.registry import AetherRegistry
+from core.infra.cloud.firebase.interface import FirebaseConnector
 from core.infra.config import AetherConfig, load_config
 from core.infra.transport.gateway import AetherGateway
 from core.services.admin_api import SHARED_STATE, AdminAPIServer
+from core.services.registry import AetherRegistry
 from core.tools import hive_memory, memory_tool, system_tool, tasks_tool, vision_tool
-from core.infra.cloud.firebase.interface import FirebaseConnector
 from core.tools.router import ToolRouter
 
 logger = logging.getLogger(__name__)

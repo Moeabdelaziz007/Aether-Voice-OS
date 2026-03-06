@@ -1,6 +1,6 @@
 {
     "benchmark": "event_bus_lane_isolation",
     "telemetry_flood_count": 10000,
-    "audio_latency_ms": 13.68,
+    "audio_latency_ms": 21.26,
     "status": "success"
 }

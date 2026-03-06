@@ -28,6 +28,7 @@ scikit-learn>=1.5.0
 scrapling>=0.1.0
 curl-cffi>=0.7.0
 browserforge>=1.0.0
+playwright>=1.40.0
 
 # Telemetry
 opentelemetry-api>=1.20.0
