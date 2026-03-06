@@ -199,6 +199,21 @@ class AudioCapture:
 
     The "Thalamic Gate" logic resides in the callback to minimize
     latency between echo detection and suppression.
+
+    Architecture Decision Record:
+    -----------------------------
+    - Decision: Use PyAudio C-callbacks with direct asyncio queue injection
+    - Rationale: Eliminates intermediate queue.Queue threading overhead
+    - Trade-off: Complex callback code, but achieves zero-latency thread transfer
+
+    Data Flow:
+    ----------
+    .. mermaid::
+       graph TD
+           A[Microphone PCM] --> B[Dynamic AEC]
+           B --> C[Smooth Muter]
+           C --> D[Adaptive VAD]
+           D --> E[asyncio.Queue]
     """
 
     def __init__(

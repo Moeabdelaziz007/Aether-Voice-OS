@@ -495,6 +495,21 @@ class DynamicAEC:
     - Frequency-domain NLMS adaptive filtering
     - Double-talk detection via spectral coherence
     - ERLE (Echo Return Loss Enhancement) computation
+
+    Architecture Decision Record:
+    -----------------------------
+    - Decision: Use Frequency-domain NLMS over Time-domain
+    - Rationale: Better convergence, lower CPU for long filters
+    - Trade-off: Higher latency (one block), acceptable for voice
+
+    Data Flow:
+    ----------
+    .. mermaid::
+       graph LR
+           A[Far-end] --> B[Delay Estimator]
+           B --> C[NLMS Filter]
+           C --> D[Double Talk]
+           D --> E[Clean Output]
     """
 
     def __init__(
@@ -584,6 +599,14 @@ class DynamicAEC:
         far_end: np.ndarray,  # Speaker output (reference)
     ) -> tuple[np.ndarray, AECState]:
         """Process one frame of audio through AEC.
+
+        Example:
+            >>> aec = DynamicAEC(sample_rate=16000, frame_size=512)
+            >>> near = np.random.randint(-100, 100, 512, dtype=np.int16)
+            >>> far = np.random.randint(-100, 100, 512, dtype=np.int16)
+            >>> cleaned, state = aec.process_frame(near, far)
+            >>> len(cleaned)
+            512
 
         Args:
             near_end: Near-end signal (microphone) - shape (frame_size,)

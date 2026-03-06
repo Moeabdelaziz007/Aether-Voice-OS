@@ -40,6 +40,12 @@ class AudioState:
     - _lock protects shared AEC and state fields during composite updates.
     - _playing_lock isolates playback transition flags to avoid races with the
       playback callback thread.
+
+    Architecture Decision Record:
+    -----------------------------
+    - Decision: Use Double-Locking Pattern for concurrent Audio State.
+    - Rationale: Separating `_lock` (AEC metadata) and `_playing_lock` (Playback transitions) minimizes blocking in C-callbacks.
+    - Trade-off: Slightly more complex lock management, but ensures thread-safe, non-blocking audio loops.
     """
 
     _instance = None

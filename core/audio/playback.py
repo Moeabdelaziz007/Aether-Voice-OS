@@ -30,6 +30,23 @@ class AudioPlayback:
 
     Supports instant interruption: when `interrupt()` is called,
     both the asyncio and thread-safe queues are drained.
+
+    Architecture Decision Record:
+    -----------------------------
+    - Decision: Isolate playback in thread-safe queues with PyAudio C-callbacks.
+    - Rationale: C-callbacks prevent audio buffer underruns, maintaining stable audio.
+    - Trade-off: Requires thread-safe handoffs which add slight complexity.
+
+    Data Flow:
+    ----------
+    .. mermaid::
+       graph TD
+           A[asyncio.Queue (AI Audio)] --> B[queue.Queue Buffer]
+           B --> C[PyAudio Callback]
+           C --> D[Subliminal Heartbeat Mixing]
+           D --> E[Speaker Output]
+           C --> F[16kHz Resampling]
+           F --> G[AEC Far-End Reference]
     """
 
     def __init__(
