@@ -17,9 +17,12 @@ from typing import Optional
 
 import pyaudio
 
+from core.audio.exceptions import (
+    AudioDeviceNotFoundError,
+    DeviceDisconnectedError,
+)
 from core.audio.state import audio_state
 from core.infra.config import AudioConfig
-from core.utils.errors import AudioDeviceNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -97,6 +100,15 @@ class AudioPlayback:
             audio_state.set_playing(False)
             # Return silence (frame_count * 2 bytes for 16-bit mono)
             return (b"\x00" * (frame_count * 2), pyaudio.paContinue)
+        except IOError as e:
+            if "Output underflowed" in str(e):
+                # Buffer underrun - not critical
+                logger.warning("Audio buffer underrun")
+                return (b"\x00" * (frame_count * 2), pyaudio.paContinue)
+            raise DeviceDisconnectedError(
+                f"Speaker disconnected: {e}",
+                device_name="speaker",
+            )
 
     async def start(self) -> None:
         """Open the speaker output stream with callback."""

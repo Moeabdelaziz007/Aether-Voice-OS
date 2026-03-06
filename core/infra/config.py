@@ -1,11 +1,14 @@
 import base64
 import json
+import logging
 import os
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class AudioConfig(BaseModel):
@@ -42,6 +45,96 @@ class AudioConfig(BaseModel):
     # Mute/unmute timing
     mute_delay_samples: int = 800
     unmute_delay_samples: int = 1200
+
+    @field_validator("send_sample_rate", "receive_sample_rate")
+    @classmethod
+    def validate_sample_rate(cls, v: int) -> int:
+        """Ensure sample rate is a supported value."""
+        supported = [8000, 16000, 24000, 44100, 48000]
+        if v not in supported:
+            raise ValueError(f"Sample rate {v} not supported. Use one of: {supported}")
+        return v
+
+    @field_validator("chunk_size")
+    @classmethod
+    def validate_chunk_size(cls, v: int) -> int:
+        """Ensure chunk size is power-of-2 and reasonable."""
+        if v < 64 or v > 8192:
+            raise ValueError(f"Chunk size must be 64-8192, got {v}")
+        if v & (v - 1) != 0:
+            raise ValueError(f"Chunk size should be power-of-2, got {v}")
+        return v
+
+    @field_validator("channels")
+    @classmethod
+    def validate_channels(cls, v: int) -> int:
+        """Aether supports mono only currently."""
+        if v != 1:
+            raise ValueError(
+                f"Aether currently supports mono (channels=1) only, got {v}"
+            )
+        return v
+
+    @field_validator("aec_step_size")
+    @classmethod
+    def validate_aec_step_size(cls, v: float) -> float:
+        """NLMS step size must be in (0, 1]."""
+        if not 0.0 < v <= 1.0:
+            raise ValueError(f"AEC step_size must be in (0, 1], got {v}")
+        return v
+
+    @field_validator("aec_filter_length_ms")
+    @classmethod
+    def validate_filter_length(cls, v: float) -> float:
+        """Filter length should be reasonable."""
+        if not 10.0 <= v <= 500.0:
+            raise ValueError(f"Filter length must be 10-500ms, got {v}")
+        return v
+
+    @field_validator("aec_convergence_threshold_db")
+    @classmethod
+    def validate_erle_threshold(cls, v: float) -> float:
+        """ERLE threshold should be achievable."""
+        if not 5.0 <= v <= 30.0:
+            raise ValueError(f"ERLE threshold must be 5-30dB, got {v}")
+        return v
+
+    @field_validator("vad_energy_threshold")
+    @classmethod
+    def validate_vad_threshold(cls, v: float) -> float:
+        """VAD threshold must be positive and small."""
+        if not 0.001 <= v <= 0.5:
+            raise ValueError(f"VAD threshold must be 0.001-0.5, got {v}")
+        return v
+
+    @field_validator("jitter_buffer_target_ms", "jitter_buffer_max_ms")
+    @classmethod
+    def validate_jitter_ms(cls, v: float) -> float:
+        """Jitter buffer timing must be reasonable."""
+        if not 10.0 <= v <= 500.0:
+            raise ValueError(f"Jitter buffer must be 10-500ms, got {v}")
+        return v
+
+    @model_validator(mode="after")
+    def validate_jitter_consistency(self) -> "AudioConfig":
+        """Ensure target <= max for jitter buffer."""
+        if self.jitter_buffer_target_ms > self.jitter_buffer_max_ms:
+            raise ValueError(
+                f"Jitter target ({self.jitter_buffer_target_ms}ms) "
+                f"cannot exceed max ({self.jitter_buffer_max_ms}ms)"
+            )
+        return self
+
+    @model_validator(mode="after")
+    def validate_sample_rate_ratio(self) -> "AudioConfig":
+        """Ensure receive/send ratio is reasonable."""
+        ratio = self.receive_sample_rate / self.send_sample_rate
+        if ratio not in [1.0, 1.5, 2.0, 3.0]:
+            logger.warning(
+                f"Unusual sample rate ratio: {ratio:.2f}. "
+                f"Typical ratios: 1.5 (24k/16k) or 2.0 (48k/24k)"
+            )
+        return self
 
 
 class GeminiModel(str, Enum):
@@ -135,6 +228,7 @@ class AetherConfig(BaseSettings):
     )
 
     log_level: str = "INFO"
+    log_file: Optional[str] = "logs/aether.log"
     packages_dir: str = "packages"
 
     model_config = SettingsConfigDict(

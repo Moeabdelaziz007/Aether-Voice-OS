@@ -15,6 +15,7 @@ mod cochlea;
 mod synapse;
 mod axon;
 mod thalamus;
+mod zcr;
 
 use pyo3::prelude::*;
 
@@ -38,6 +39,8 @@ fn aether_cortex(m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // === Thalamus: Sensory Filter (Noise Reduction) ===
     m.add_function(wrap_pyfunction!(thalamus::spectral_denoise, m)?)?;
+
+    m.add_function(wrap_pyfunction!(zcr::calculate_zcr, m)?)?;
 
     // Module metadata
     m.add("__version__", "0.1.0")?;

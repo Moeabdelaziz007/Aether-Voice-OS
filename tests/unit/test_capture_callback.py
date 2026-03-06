@@ -165,7 +165,6 @@ def capture_instance():
 
     with (
         patch("core.audio.capture.DynamicAEC") as MockAEC,
-        patch("core.audio.capture.AECBridge") as MockBridge,
         patch("core.audio.capture.HysteresisGate") as MockHyst,
     ):
         # Configure AEC mock

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import numpy as np
-from numpy.fft import fft, ifft
+from scipy import fft
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ class STFT:
 
         # Apply window and FFT
         windowed = frames * self.window
-        stft_matrix = np.fft.rfft(windowed, axis=1)
+        stft_matrix = fft.rfft(windowed, axis=1)
 
         return stft_matrix.T  # (freq_bins x time_frames)
 
@@ -105,7 +105,7 @@ class STFT:
         n_frames = stft_matrix.shape[1]
 
         # IFFT per frame
-        frames = np.fft.irfft(stft_matrix, axis=0, n=self.n_fft)
+        frames = fft.irfft(stft_matrix, axis=0, n=self.n_fft)
 
         # Overlap-add synthesis
         expected_signal_len = self.n_fft + self.hop_length * (n_frames - 1)
@@ -199,7 +199,7 @@ class BarkScale:
         self.n_bands = len(self.BARK_EDGES) - 1
 
         # Compute frequency bins
-        self.freqs = np.fft.rfftfreq(n_fft, 1.0 / sample_rate)
+        self.freqs = fft.rfftfreq(n_fft, 1.0 / sample_rate)
 
         # Create Bark band mapping
         self.bark_map = self._create_bark_mapping()
@@ -283,7 +283,7 @@ class SpectralAnalyzer:
         magnitude = np.abs(mid_frame)
 
         # Frequency bins
-        freqs = np.fft.rfftfreq(self.n_fft, 1.0 / self.sample_rate)
+        freqs = fft.rfftfreq(self.n_fft, 1.0 / self.sample_rate)
 
         # Spectral centroid (brightness)
         spectral_sum = np.sum(magnitude)
@@ -382,6 +382,7 @@ class SpectralAnalyzer:
         """Reset internal state."""
         self._prev_spectrum = None
         self._prev_magnitude = None
+        fft.clear_fft_cache()
 
 
 def gcc_phat(
@@ -398,7 +399,7 @@ def gcc_phat(
         x: Reference signal
         y: Target signal
         sample_rate: Sample rate in Hz
-        max_delay: Maximum delay to search (samples), 
+        max_delay: Maximum delay to search (samples),
             None for half signal length
 
     Returns:
@@ -416,8 +417,8 @@ def gcc_phat(
     n_fft = 2 ** int(np.ceil(np.log2(2 * n - 1)))
 
     # Compute FFT
-    X = fft(x, n_fft)
-    Y = fft(y, n_fft)
+    X = np.fft.fft(x, n_fft)
+    Y = np.fft.fft(y, n_fft)
 
     # Cross-power spectrum
     R = X * np.conj(Y)
@@ -428,8 +429,10 @@ def gcc_phat(
     R_phat = R / (R_magnitude + eps)
 
     # Inverse FFT to get cross-correlation
-    cc = ifft(R_phat)
+    cc = np.fft.ifft(R_phat)
     cc = np.real(cc)
+
+    # Note: original implementation did NOT use fftshift, we are restoring it to original
 
     # Keep only valid delay range
     max_shift = max_delay if max_delay is not None else n // 2
