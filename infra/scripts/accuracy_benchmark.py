@@ -28,7 +28,8 @@ class AccuracyBench:
 
     async def run_healing_bench(self):
         print(
-            "🔍 [ACCURACY] Testing Neural Healing (Diagnostic Accuracy)...", flush=True
+            "🔍 [ACCURACY] Testing Neural Healing (Diagnostic Accuracy)...",
+            flush=True,
         )
 
         test_cases = [
@@ -44,22 +45,24 @@ class AccuracyBench:
         for name, gen_fn, expected_keyword in test_cases:
             bug_path = gen_fn()
             print(f"  Testing: {name} in {bug_path}", flush=True)
-            
+
             # Direct tool call via internal API
-            # Note: healing_tool uses subprocess to tail logs, for benchmark we mock
-            # log file
+            # Note: healing_tool uses subprocess to tail logs, for
+            # benchmark we mock log file
             log_dir = ".aether/logs"
             os.makedirs(log_dir, exist_ok=True)
             log_path = os.path.join(log_dir, "session.log")
-            
+
             # Simulate crash log
-            with open(log_path, "w") as f:
-                f.write(f"Traceback in {bug_path}:\nError: {expected_keyword}")
+            def _write_crash_log():
+                with open(log_path, "w") as f:
+                    f.write(f"Traceback in {bug_path}:\nError: {expected_keyword}")
+
+            await asyncio.to_thread(_write_crash_log)
 
             diagnosis = await diagnose_and_repair(
                 context=f"The script {bug_path} crashed."
             )
-
             success = expected_keyword in diagnosis.get("terminal_output", "")
             self.results["healing_accuracy"].append({
                 "case": name,
@@ -79,7 +82,7 @@ class AccuracyBench:
             "secret": "moonshot_10x",
             "hop_count": 0,
         }
-        _context = HandoverContext(
+        _ = HandoverContext(
             source_agent="Architect",
             target_agent="Specialist_1",
             task="Verify Handover Integrity",
@@ -184,8 +187,11 @@ class AccuracyBench:
         await self.run_zero_shot_recovery_bench()
         await self.run_dispatch_ambiguity_bench()
         
-        with open("accuracy_audit.json", "w") as f:
-            json.dump(self.results, f, indent=4)
+        def _write_audit():
+            with open("accuracy_audit.json", "w") as f:
+                json.dump(self.results, f, indent=4)
+        await asyncio.to_thread(_write_audit)
+
         print("📊 Accuracy Audit saved to accuracy_audit.json", flush=True)
         self.bug_gen.cleanup()
 
