@@ -155,7 +155,7 @@ class VoiceTool:
         Blocks until shutdown is requested.
         """
         if not self._capture or not self._session or not self._playback:
-            raise RuntimeError"Call setup() before execute()")
+            raise RuntimeError("Call setup() before execute()")
 
         # Register signal handlers for clean shutdown
         loop = asyncio.get_running_loop()

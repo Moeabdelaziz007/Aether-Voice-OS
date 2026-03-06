@@ -47,7 +47,7 @@ class DebuggerAgent(VoiceAgent):
         context.add_history("Debugger began verification", agent="Debugger")
 
         # Create output container
-        self._output = DebuggerOutput
+        self._output = DebuggerOutput(
             handover_id=context.handover_id,
         )
 
