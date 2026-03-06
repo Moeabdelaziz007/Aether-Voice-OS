@@ -30,7 +30,7 @@ from google import genai
 from google.genai import types
 
 from core.ai.agents.proactive import VisionPulseAgent
-from core.ai.handover_protocol import HandoverContext, HandoverStatus
+from core.ai.handover.protocol_models import HandoverContext, HandoverStatus
 from core.ai.thalamic import ThalamicGate
 from core.demo.fallback import DemoFallback
 from core.identity.package import SoulManifest

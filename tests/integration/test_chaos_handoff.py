@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from core.ai.handover_protocol import HandoverStatus
+from core.ai.handover.protocol_models import HandoverStatus
 from core.ai.hive import HiveCoordinator
 
 

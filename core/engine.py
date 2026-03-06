@@ -31,7 +31,6 @@ from typing import Any, Optional
 from google.adk.runners import InMemoryRunner
 from google.genai import types
 
-from core.ai import handoff
 from core.ai.adk_agents import root_agent
 from core.ai.agents.proactive import (
     CodeAwareProactiveAgent,
@@ -39,6 +38,7 @@ from core.ai.agents.proactive import (
 )
 from core.ai.codex._bridge import AetherCodex
 from core.ai.genetic import GeneticOptimizer
+from core.ai.handover.protocol import create_handoff_protocol
 from core.ai.hive import HiveCoordinator
 from core.ai.session import GeminiLiveSession
 from core.audio.capture import AudioCapture
@@ -230,7 +230,10 @@ class AetherEngine:
         )
 
         # Connect Hive to tools
-        handoff.set_hive_params(self._hive, self._session_restart)
+        self._handoff_protocol = create_handoff_protocol(
+            hive=self._hive, restart_event=self._session_restart
+        )
+        self._router.register_module(self._handoff_protocol)
         hive_memory.set_firebase_connector(self._firebase)
 
         logger.info(

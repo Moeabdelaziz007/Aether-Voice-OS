@@ -12,7 +12,7 @@ from typing import Any, Dict, Optional
 from core.ai.agents.voice_agent import VoiceAgent
 from core.ai.genetic import AgentDNA
 from core.ai.handover.manager import HandoverContext, MultiAgentOrchestrator
-from core.ai.handover_protocol import DebuggerOutput, IntentConfidence
+from core.ai.handover.protocol_models import DebuggerOutput, IntentConfidence
 
 logger = logging.getLogger(__name__)
 

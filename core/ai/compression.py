@@ -15,7 +15,7 @@ from typing import Any, Dict
 from google import genai
 from google.genai import types
 
-from core.ai.handover_protocol import HandoverContext
+from core.ai.handover.protocol_models import HandoverContext
 from core.infra.config import AIConfig
 
 logger = logging.getLogger(__name__)

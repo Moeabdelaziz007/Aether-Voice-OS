@@ -25,14 +25,14 @@ if TYPE_CHECKING:
 
 from core.ai.compression import NeuralSummarizer
 from core.ai.genetic import AgentDNA, GeneticOptimizer
-from core.ai.handover_protocol import (
+from core.ai.handover.protocol_models import (
     HandoverContext,
     HandoverNegotiation,
     HandoverStatus,
     ValidationCheckpoint,
     get_handover_protocol,
 )
-from core.ai.handover_telemetry import (
+from core.ai.handover.telemetry import (
     FailureCategory,
     HandoverOutcome,
     get_telemetry,
@@ -226,7 +226,7 @@ class HiveCoordinator:
 
             # Add code context if provided
             if code_context:
-                from core.ai.handover_protocol import CodeContext
+                from core.ai.handover.protocol_models import CodeContext
 
                 context.code_context = CodeContext(**code_context)
 
@@ -357,7 +357,7 @@ class HiveCoordinator:
                     partial_output={"validation_results": validation_results},
                 )
                 for result in validation_results:
-                    from core.ai.handover_protocol import VerificationResult
+                    from core.ai.handover.protocol_models import VerificationResult
 
                     checkpoint.add_validation(VerificationResult(**result))
                 context.validation_checkpoint = checkpoint

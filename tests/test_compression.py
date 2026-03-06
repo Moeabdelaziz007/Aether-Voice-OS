@@ -7,7 +7,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from core.ai.compression import NeuralSummarizer
-from core.ai.handover_protocol import ConversationEntry, HandoverContext
+from core.ai.handover.protocol_models import ConversationEntry, HandoverContext
 from core.infra.config import AIConfig
 
 

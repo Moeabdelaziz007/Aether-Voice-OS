@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from core.ai import handoff
+from core.ai.handover import create_handoff_protocol
 from core.ai.hive import HiveCoordinator
 from core.services.registry import AetherRegistry
 from core.tools import hive_memory
@@ -34,7 +34,7 @@ async def test_hive_full_lifecycle():
     restart_event = asyncio.Event()
 
     # Setup tools for handoff
-    handoff.set_hive_params(hive, restart_event)
+    protocol = create_handoff_protocol(hive=hive, restart_event=restart_event)
 
     # 3. Test Expertise Matching
     coding_expert_name = await hive.evaluate_intent(
@@ -55,7 +55,7 @@ async def test_hive_full_lifecycle():
     # 4. Test Handoff Execution
     assert hive.active_soul.manifest.name == "ArchitectExpert"
 
-    result = await handoff.delegate_to_agent(
+    result = await protocol.delegate_to_agent(
         target_agent_id="CodingExpert", task_description="Refactor engine.py"
     )
 

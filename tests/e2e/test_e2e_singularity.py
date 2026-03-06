@@ -16,7 +16,7 @@ from unittest.mock import MagicMock
 import numpy as np
 import pytest
 
-from core.ai import handoff
+from core.ai.handover import create_handoff_protocol
 from core.ai.hive import HiveCoordinator
 
 # Aether Core Imports
@@ -102,11 +102,12 @@ async def test_e2e_singularity():
 
     # Register core modules into router
     router.register_module(hive_memory)
-    router.register_module(handoff)
+    protocol = create_handoff_protocol()
+    router.register_module(protocol)
 
     hive = HiveCoordinator(registry, router)
     restart_event = asyncio.Event()
-    handoff.set_hive_params(hive, restart_event)
+    protocol.configure(hive=hive, restart_event=restart_event)
 
     print("[E2E] System modules synchronized.")
 

@@ -14,7 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 import numpy as np
 import pytest
 
-from core.ai import handoff
+from core.ai.handover import create_handoff_protocol
 from core.audio.processing import AdaptiveVAD
 from core.tools.router import ToolRouter
 
@@ -70,7 +70,8 @@ async def test_semantic_recovery_success():
     )  # Must be AsyncMock for asyncio.create_task
 
     # Register the real tool
-    router.register_module(handoff)
+    protocol = create_handoff_protocol()
+    router.register_module(protocol)
 
     # Mock function call object
     mock_fc = MagicMock()
