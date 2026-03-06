@@ -7,9 +7,12 @@ and rollback capability for specialist handovers.
 """
 
 import logging
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
-from core.ai.handover_protocol import (
+from core.ai.agents.registry import AgentMetadata
+from core.ai.handover.dtos import HandoverPacket
+from core.ai.handover.protocol_models import (
     ArchitectOutput,
     ContextSerializer,
     DebuggerOutput,
@@ -20,7 +23,7 @@ from core.ai.handover_protocol import (
     ValidationCheckpoint,
     get_handover_protocol,
 )
-from core.ai.handover_telemetry import FailureCategory, HandoverOutcome, get_telemetry
+from core.ai.handover.telemetry import FailureCategory, HandoverOutcome, get_telemetry
 
 logger = logging.getLogger(__name__)
 
@@ -28,10 +31,49 @@ logger = logging.getLogger(__name__)
 # Re-export HandoverContext for backward compatibility
 # The new HandoverContext is a Pydantic model with richer capabilities
 __all__ = [
+    "AgentHandoverManager",
+    "HandoverPacket",
     "HandoverContext",
     "MultiAgentOrchestrator",
     "SpecialistHandoverManager",
 ]
+
+
+class AgentHandoverManager:
+    """Legacy simple handover manager retained in canonical package."""
+
+    def __init__(self):
+        self._last_handover: Optional[HandoverPacket] = None
+
+    async def execute_handover(
+        self,
+        source: AgentMetadata,
+        target: AgentMetadata,
+        task: str,
+        summary: str,
+        memory: Dict[str, Any],
+    ) -> HandoverPacket:
+        packet = HandoverPacket(
+            timestamp=time.time(),
+            source_agent_id=source.id,
+            target_agent_id=target.id,
+            task_goal=task,
+            conversation_summary=summary,
+            working_memory=memory,
+        )
+
+        logger.info(
+            "🎯 [Handover] Handing over from %s -> %s for task: '%s...'",
+            source.name,
+            target.name,
+            task[:50],
+        )
+
+        self._last_handover = packet
+        return packet
+
+    def get_last_packet(self) -> Optional[HandoverPacket]:
+        return self._last_handover
 
 
 class SpecialistHandoverManager:
@@ -95,7 +137,7 @@ class SpecialistHandoverManager:
 
         # Add code context if provided
         if code_context:
-            from core.ai.handover_protocol import CodeContext
+            from core.ai.handover.protocol_models import CodeContext
 
             context.code_context = CodeContext(**code_context)
 

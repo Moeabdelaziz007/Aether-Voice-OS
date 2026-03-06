@@ -10,8 +10,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-import threading
-import time
 from typing import Any, Callable, Optional
 
 import numpy as np
@@ -19,13 +17,12 @@ import pyaudio
 
 from core.audio.jitter_buffer import AdaptiveJitterBuffer
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer, energy_vad
+from core.audio.processing import AdaptiveVAD, SilentAnalyzer
 from core.audio.state import audio_state
 from core.infra.config import AudioConfig
 from core.utils.errors import AudioDeviceNotFoundError
-from core.audio.processing import HyperVADResult
 
-__all__ = ["AudioCapture", "SmoothMuter"]
+__all__ = ["AdaptiveJitterBuffer", "AudioCapture", "SmoothMuter"]
 
 logger = logging.getLogger(__name__)
 
@@ -68,38 +65,36 @@ class SmoothMuter:
         if chunk_len == 0:
             return pcm_chunk
 
-        target = self._target_gain
-        start = self._current_gain
-        delta = target - start
-        
-        # How many samples left in the total ramp (roughly)
         step = 1.0 / self._ramp_samples
-        remaining = int(abs(delta) / step)
-        
-        gains = np.full(chunk_len, start, dtype=np.float32)
-        
-        if remaining <= 0:
-            self._current_gain = target
-            gains = np.full(chunk_len, target, dtype=np.float32)
-        else:
-            ramp_len = min(chunk_len, remaining)
-            # Use endpoint=True so the last sample of the ramp hits the exact
-            # intermediate value (or the target if ramp completes in this chunk).
+        if self._current_gain > self._target_gain:
+            step = -step
+
+        # Generate a gain array for the chunk
+        gains = np.full(chunk_len, self._current_gain, dtype=np.float32)
+
+        # Max steps remaining to reach target
+        steps_needed = int(abs(self._target_gain - self._current_gain) / abs(step))
+        ramp_len = min(chunk_len, steps_needed)
+
+        if ramp_len > 0:
             ramp = np.linspace(
-                start,
-                start + delta * (ramp_len / remaining),
+                self._current_gain,
+                self._current_gain + (step * ramp_len),
                 ramp_len,
                 dtype=np.float32,
             )
             gains[:ramp_len] = ramp
-            if ramp_len < chunk_len:
-                gains[ramp_len:] = target
-            
+            gains[ramp_len:] = (
+                gains[ramp_len - 1] if ramp_len > 0 else self._target_gain
+            )
             self._current_gain = float(gains[-1])
 
             # Snap to target if very close
-            if abs(self._current_gain - target) < 0.05:
-                self._current_gain = target
+            if abs(self._current_gain - self._target_gain) < 0.05:
+                self._current_gain = self._target_gain
+        else:
+            self._current_gain = self._target_gain
+            gains[:] = self._current_gain
 
         return (pcm_chunk * gains).astype(np.int16)
 
@@ -146,6 +141,7 @@ class AudioCapture:
         """
         self._config = config
         self._async_queue = output_queue
+        # We no longer need an intermediate queue.Queue
         self._pya: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
@@ -154,30 +150,13 @@ class AudioCapture:
         self._vad = vad_engine
         self._paralinguistic_analyzer = paralinguistic_analyzer
         self._on_affective_data = on_affective_data
-        
-        self._on_audio_telemetry: Optional[Callable[[str, dict], Any]] = None
-        self._last_telemetry_time = 0.0
 
-        from core.audio.leakage import DynamicAEC, AECBridge
+        from core.audio.leakage import LeakageDetector
         from core.audio.state import HysteresisGate
 
         self._hysteresis = HysteresisGate()
-        self._dynamic_aec = DynamicAEC(
-            sample_rate=self._config.send_sample_rate,
-            frame_size=self._config.chunk_size,
-            filter_length_ms=100.0,
-            step_size=0.5,
-            convergence_threshold_db=15.0,
-        )
-        self._aec_bridge = AECBridge(filter_size=self._config.chunk_size)
+        self._leakage = LeakageDetector()
         self._smooth_muter = SmoothMuter()
-
-        # Adaptive Jitter Buffer for AEC reference signal
-        self._jitter_buffer = AdaptiveJitterBuffer(
-            target_latency_ms=60.0,
-            max_latency_ms=200.0,
-            sample_rate=self._config.send_sample_rate
-        )
 
         # Delay Compensation Counters
         self._audio_latency_ms = 50  # hardware latency approximation
@@ -188,89 +167,57 @@ class AudioCapture:
         self._unmute_delay_remaining = 0
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
-        """Thread-safe injection into the asyncio event loop.
-        
-        On overflow we drop the oldest message to keep latency bounded.
-        """
+        """Thread-safe injection into the asyncio event loop."""
         try:
             self._async_queue.put_nowait(msg)
         except asyncio.QueueFull:
-            # Telemetry: count capture queue drops.
-            try:
-                audio_state.capture_queue_drops += 1
-            except Exception:
-                pass
-
             try:
                 self._async_queue.get_nowait()
             except asyncio.QueueEmpty:
                 pass
-            
-            try:
-                self._async_queue.put_nowait(msg)
-            except asyncio.QueueFull:
-                pass
+            self._async_queue.put_nowait(msg)
 
     def _callback(
         self, in_data: bytes, frame_count: int, time_info: dict, status: int
     ) -> tuple[bytes | None, int]:
         """
         High-priority Thalamic Gate callback.
-        Analyzes energy and gates microphone input based on AI state and AEC.
+        Analyzes energy and gates microphone input based on AI state and Leakage.
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
-        # 1. Dynamic AEC Processing
-        # Read bit-perfect far-end (AI output) reference from shared PCM buffer
-        new_far_end = audio_state.far_end_pcm.read_last(len(pcm_chunk))
-        if len(new_far_end) > 0:
-            self._jitter_buffer.write(new_far_end)
-
-        # Read exactly chunk size from jitter buffer
-        far_end_ref = self._jitter_buffer.read(len(pcm_chunk))
-
-        cleaned_chunk, aec_state = self._dynamic_aec.process_frame(
-            pcm_chunk, far_end_ref
-        )
-
-        # 1.5 ✦ Aether Cortex Acceleration (Rust Pass)
-        if self._aec_bridge.use_rust:
-            cleaned_float = cleaned_chunk.astype(np.float32) / 32768.0
-            ref_float = far_end_ref.astype(np.float32) / 32768.0
-            accelerated = self._aec_bridge.process(cleaned_float, ref_float)
-            cleaned_chunk = (accelerated * 32768.0).astype(np.int16)
-
-        # Update global AEC state for monitoring
-        audio_state.update_aec_state(
-            converged=aec_state.converged,
-            convergence_progress=aec_state.convergence_progress,
-            erle_db=aec_state.erle_db,
-            delay_ms=aec_state.estimated_delay_ms,
-            double_talk=aec_state.double_talk_detected,
-        )
-
-        # Check if user is speaking (post-AEC analysis)
-        is_user = self._dynamic_aec.is_user_speaking(cleaned_chunk)
+        # 1. Leakage & Correlation check (is it just echo?)
+        # Fetching spectrum from global state (updated by playback.py)
+        if audio_state.ai_spectrum is not None:
+            self._leakage._ai_spectrum = audio_state.ai_spectrum
+        is_user = self._leakage.is_user_speaking(pcm_chunk)
 
         # 2. Base Hysteresis update on AI state
         ai_playing_base = self._hysteresis.update(audio_state.is_playing)
 
-        # 3. Delay Compensation
+        # 3. Delay Compensation (Hardware Latency & Echo fade-out)
         if audio_state.just_started_playing:
             self._mute_delay_remaining = self._latency_samples
         if audio_state.just_stopped_playing:
-            self._unmute_delay_remaining = int(self._latency_samples * 1.5)
+            self._unmute_delay_remaining = int(
+                self._latency_samples * 1.5
+            )  # grace period for echo to die
 
         if self._mute_delay_remaining > 0:
-            self._mute_delay_remaining = max(0, self._mute_delay_remaining - frame_count)
+            self._mute_delay_remaining = max(
+                0, self._mute_delay_remaining - frame_count
+            )
             ai_playing_compensated = False
         elif self._unmute_delay_remaining > 0:
-            self._unmute_delay_remaining = max(0, self._unmute_delay_remaining - frame_count)
+            self._unmute_delay_remaining = max(
+                0, self._unmute_delay_remaining - frame_count
+            )
             ai_playing_compensated = True
         else:
             ai_playing_compensated = ai_playing_base
 
         # 4. Final Thalamic Mute Decision
+        # If AI is deemed playing AND we are sure it's not the user talking
         should_mute = ai_playing_compensated and not is_user
 
         if should_mute:
@@ -278,57 +225,48 @@ class AudioCapture:
         else:
             self._smooth_muter.unmute()
 
-        # Apply Graceful Ramp to AEC-cleaned audio
-        processed_chunk = self._smooth_muter.process(cleaned_chunk)
+        # Apply Graceful Ramp
+        processed_chunk = self._smooth_muter.process(pcm_chunk)
 
         # Update VAD logic
         if should_mute and self._smooth_muter._current_gain < 0.1:
+            # Force VAD to false and energy to 0 to prevent barge-in triggers
+            from core.audio.processing import HyperVADResult
+
             vad = HyperVADResult(
                 is_soft=False,
                 is_hard=False,
                 energy_rms=0.0,
                 sample_count=len(processed_chunk),
             )
+            # Reconstruct in_data with zeros if fully muted
             in_data = b"\x00" * len(in_data)
         else:
+            from core.audio.processing import energy_vad
+
+            # HyperVAD Logic: Dual-Threshold (mu + sigma) + Multi-Feature
             vad = energy_vad(processed_chunk, adaptive_engine=self._vad)
             in_data = processed_chunk.tobytes()
 
-        # Update shared state
+        # Update shared state for brain-sync
         audio_state.last_rms = vad.energy_rms
         audio_state.is_soft = vad.is_soft
         audio_state.is_hard = vad.is_hard
 
-        # Low-allocation ZCR
-        if len(processed_chunk) > 1:
-            prev = processed_chunk[:-1]
-            curr = processed_chunk[1:]
-            crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
-            audio_state.last_zcr = float(np.count_nonzero(crossings) / len(processed_chunk))
-        else:
-            audio_state.last_zcr = 0.0
+        zero_crossings = np.where(np.diff(np.sign(processed_chunk)))[0]
+        audio_state.last_zcr = (
+            len(zero_crossings) / len(processed_chunk)
+            if len(processed_chunk) > 0
+            else 0
+        )
 
-        # Architecture of Silence
+        # Architecture of Silence: Classify silence if no clear speech
         if not vad.is_hard:
             audio_state.silence_type = self._analyzer.classify(
                 processed_chunk, vad.energy_rms
             ).value
         else:
             audio_state.silence_type = "speech"
-
-        # Telemetry Broadcast: Throttle to ~15Hz
-        now = time.monotonic()
-        if now - self._last_telemetry_time >= 1.0 / 15.0:
-            self._last_telemetry_time = now
-            if self._on_audio_telemetry and self._loop and not self._loop.is_closed():
-                payload = {
-                    "rms": vad.energy_rms,
-                    "gain": self._smooth_muter._current_gain
-                }
-                asyncio.run_coroutine_threadsafe(
-                    self._on_audio_telemetry("audio_telemetry", payload),
-                    self._loop
-                )
 
         if self._paralinguistic_analyzer and self._on_affective_data:
             if vad.is_hard or vad.energy_rms < 0.05:
@@ -338,6 +276,7 @@ class AudioCapture:
                 if self._loop and not self._loop.is_closed():
                     self._loop.call_soon_threadsafe(self._on_affective_data, features)
 
+        # Push to queue if hard speech detected or AI is silent (ambient feed)
         if vad.is_hard or not should_mute:
             msg = {
                 "data": in_data,
@@ -380,11 +319,15 @@ class AudioCapture:
         self._running = True
 
     async def run(self) -> None:
-        """Keeps the capture lifecycle active."""
+        """
+        Keeps the capture lifecycle active for the TaskGroup.
+        Audio routing is now handled natively via call_soon_threadsafe.
+        """
         if not self._stream:
             raise AudioDeviceNotFoundError("Call start() before run()")
 
         logger.info("Audio capture task active (Zero-latency direct injection)")
+
         while self._running:
             await asyncio.sleep(1.0)
 
@@ -401,7 +344,7 @@ class AudioCapture:
         logger.info("Audio capture stopped")
 
     def _list_devices(self) -> list[str]:
-        """List available audio device names."""
+        """List available audio device names for error context."""
         if not self._pya:
             return []
         return [
