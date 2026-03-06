@@ -3,9 +3,9 @@ import json
 import logging
 import os
 import random
+import sys
 import time
 
-import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from scripts.internal.bug_generator import BugGenerator
 

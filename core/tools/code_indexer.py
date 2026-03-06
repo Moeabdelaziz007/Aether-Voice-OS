@@ -1,6 +1,6 @@
 """
 Script to index the AetherOS codebase visually and semantically into a local Vector DB.
-It uses LocalVectorStore to generate embeddings and saves them to '.aether_index.pkl'.
+It uses LocalVectorStore to generate embeddings and saves them to '.aether_index.json'.
 """
 
 import asyncio
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 # Settings
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
-# INDEX_FILE = ROOT_DIR / ".aether_index.pkl"  # Deprecated in V6 Cloud RAG
+# INDEX_FILE = ROOT_DIR / ".aether_index.json"  # Deprecated in V6 Cloud RAG
 EXTENSIONS = {".py", ".ts", ".tsx", ".md", ".json"}
 IGNORE_DIRS = {
     ".git",

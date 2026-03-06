@@ -7,8 +7,8 @@ Uses numpy for cosine similarity and Gemini for embedding generation.
 
 from __future__ import annotations
 
+import json
 import logging
-import pickle
 from pathlib import Path
 from typing import Optional
 
@@ -28,11 +28,13 @@ class LocalVectorStore:
         self._metadata: dict[str, dict] = {}
 
     def load(self, filepath: str | Path) -> bool:
-        """Load the vector store from a local pickle file."""
+        """Load the vector store from a local JSON file."""
         try:
-            with open(filepath, "rb") as f:
-                data = pickle.load(f)
-                self._vectors = data.get("vectors", {})
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self._vectors = {
+                    k: np.array(v) for k, v in data.get("vectors", {}).items()
+                }
                 self._metadata = data.get("metadata", {})
             logger.info(
                 "Vector index loaded from %s (Entries: %d)",
@@ -48,16 +50,15 @@ class LocalVectorStore:
             return False
 
     def save(self, filepath: str | Path) -> None:
-        """Save the vector store to a local pickle file."""
+        """Save the vector store to a local JSON file."""
         try:
-            with open(filepath, "wb") as f:
-                pickle.dump(
+            with open(filepath, "w", encoding="utf-8") as f:
+                json.dump(
                     {
-                        "vectors": self._vectors,
+                        "vectors": {k: v.tolist() for k, v in self._vectors.items()},
                         "metadata": self._metadata,
                     },
                     f,
-                    protocol=min(5, pickle.HIGHEST_PROTOCOL),
                 )
             logger.info("Vector index saved to %s", filepath)
         except Exception as e:

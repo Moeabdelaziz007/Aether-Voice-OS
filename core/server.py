@@ -119,7 +119,6 @@ def main() -> None:
         sys.exit(1)
 
     # Import engine only after checks pass
-    from core.engine import AetherEngine
     from core.infra.service_container import Container
     
     container = Container()
