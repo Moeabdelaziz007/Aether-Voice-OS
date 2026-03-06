@@ -14,6 +14,7 @@ import logging
 from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
+
 from pydantic import Field
 
 if TYPE_CHECKING:
