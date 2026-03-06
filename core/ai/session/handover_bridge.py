@@ -43,7 +43,12 @@ def format_handover_context_for_instruction(session_facade) -> str:
         return ""
 
     ctx = session_facade._injected_handover_context
-    parts = ["# HANDOVER CONTEXT", f"Handover ID: {ctx.handover_id}", f"From: {ctx.source_agent} → To: {ctx.target_agent}", f"Task: {ctx.task}"]
+    parts = [
+        "# HANDOVER CONTEXT",
+        f"Handover ID: {ctx.handover_id}",
+        f"From: {ctx.source_agent} → To: {ctx.target_agent}",
+        f"Task: {ctx.task}",
+    ]
 
     if ctx.task_tree:
         parts.append("\n## Task Tree")
@@ -125,7 +130,9 @@ def complete_handover_acknowledgment(session_facade, handover_id: str, success: 
 def export_handover_state(session_facade) -> dict:
     return {
         "has_active_handover": session_facade._injected_handover_context is not None,
-        "handover_id": session_facade._injected_handover_context.handover_id if session_facade._injected_handover_context else None,
+        "handover_id": (
+            session_facade._injected_handover_context.handover_id if session_facade._injected_handover_context else None
+        ),
         "acknowledgments": session_facade._handover_acknowledgments.copy(),
         "timestamp": datetime.now().isoformat(),
     }

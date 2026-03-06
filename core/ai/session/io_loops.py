@@ -52,11 +52,7 @@ async def receive_loop(session_facade, session) -> None:
                     for part in response.server_content.model_turn.parts:
                         if part.text:
                             try:
-                                asyncio.create_task(
-                                    session_facade._gateway.broadcast(
-                                        "transcript", {"text": part.text}
-                                    )
-                                )
+                                asyncio.create_task(session_facade._gateway.broadcast("transcript", {"text": part.text}))
                             except Exception as e:
                                 logger.debug("Failed to broadcast transcript: %s", e)
 
@@ -70,24 +66,18 @@ async def receive_loop(session_facade, session) -> None:
                                 try:
                                     session_facade._out_queue.get_nowait()
                                     session_facade._output_queue_drops += 1
-                                    
+
                                     # Notify Frontend to slow down or visualize pressure
                                     asyncio.create_task(
                                         session_facade._gateway.broadcast(
-                                            "system_telemetry", 
-                                            {"type": "pressure_marker", "severity": "critical"}
+                                            "system_telemetry", {"type": "pressure_marker", "severity": "critical"}
                                         )
                                     )
                                 except asyncio.QueueEmpty:
                                     pass
-                            
+
                             session_facade._out_queue.put_nowait(part.inline_data.data)
-                            
-                            asyncio.create_task(
-                                session_facade._gateway.broadcast(
-                                    "engine_state", {"state": "SPEAKING"}
-                                )
-                            )
+                            asyncio.create_task(session_facade._gateway.broadcast("engine_state", {"state": "SPEAKING"}))
 
                 if response.server_content and response.server_content.interrupted:
                     logger.info("⚡ Barge-in detected — draining output")

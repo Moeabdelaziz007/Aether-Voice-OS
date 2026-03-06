@@ -86,9 +86,7 @@ async def handle_tool_call(session_facade, session, tool_call) -> None:
                 try:
                     with open(path, "rb") as f:
                         image_bytes = f.read()
-                    await session.send_realtime_input(
-                        parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
-                    )
+                    await session.send_realtime_input(parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")])
                     os.remove(path)
                 except Exception as e:
                     logger.error("Vision injection failed: %s", e)

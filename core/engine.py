@@ -76,9 +76,7 @@ class AetherEngine:
         self._setup_logging()
 
         # Pipeline queues
-        self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
-            maxsize=self._config.audio.mic_queue_max
-        )
+        self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(maxsize=self._config.audio.mic_queue_max)
         self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 
         # Firebase persistence layer
@@ -104,17 +102,11 @@ class AetherEngine:
         self._router._vector_store = global_index
 
         # Affective Computing: Paralinguistic Analyzer
-        self._paralinguistics = ParalinguisticAnalyzer(
-            sample_rate=self._config.audio.send_sample_rate
-        )
+        self._paralinguistics = ParalinguisticAnalyzer(sample_rate=self._config.audio.send_sample_rate)
 
         # Components
         self._vad = AdaptiveVAD(
-            window_size_sec=(
-                self._config.audio.vad_window_sec
-                if hasattr(self._config.audio, "vad_window_sec")
-                else 5.0
-            ),
+            window_size_sec=(self._config.audio.vad_window_sec if hasattr(self._config.audio, "vad_window_sec") else 5.0),
             sample_rate=self._config.audio.send_sample_rate,
         )
         self._capture = AudioCapture(
@@ -130,7 +122,7 @@ class AetherEngine:
             gateway_config=self._config.gateway,
             tool_router=self._router,
             hive=self._hive,  # Note: This might be None if hive isn't ready, but Gateway needs it
-            on_audio_rx=self._audio_in.put
+            on_audio_rx=self._audio_in.put,
         )
         self._playback = AudioPlayback(
             self._config.audio,
@@ -145,9 +137,7 @@ class AetherEngine:
             on_tool_call=self._on_tool_call,
             tool_router=self._router,
         )
-        self._registry = AetherRegistry(
-            self._config.packages_dir, on_change=self._on_package_change
-        )
+        self._registry = AetherRegistry(self._config.packages_dir, on_change=self._on_package_change)
         self._hive = HiveCoordinator(
             registry=self._registry,
             router=self._router,
@@ -156,15 +146,13 @@ class AetherEngine:
         )
         self._admin_api = AdminAPIServer(port=18790)
 
-        self._optimizer = GeneticOptimizer(
-            self._firebase, api_key=self._config.ai.api_key
-        )
+        self._optimizer = GeneticOptimizer(self._firebase, api_key=self._config.ai.api_key)
 
         # Codex: Real-time Knowledge Bridge
         self._codex = AetherCodex(
-            firebase=self._firebase, 
+            firebase=self._firebase,
             session=self._session,
-            pulse_interval=self._config.ai.codex_pulse_interval if hasattr(self._config.ai, "codex_pulse_interval") else 10.0
+            pulse_interval=self._config.ai.codex_pulse_interval if hasattr(self._config.ai, "codex_pulse_interval") else 10.0,
         )
 
         # Phase 4: Proactive Intelligence Engine
@@ -175,7 +163,15 @@ class AetherEngine:
         self._tools: dict[str, Any] = {}
 
         self._shutdown_event = asyncio.Event()
-        self._session_restart = asyncio.Event()
+        # Background task tracking to avoid GC issues
+        self._background_tasks: set[asyncio.Task] = set()
+
+    def _run_background_task(self, coro: Any, name: Optional[str] = None) -> asyncio.Task:
+        """Helper to run and track background tasks safely."""
+        task = asyncio.create_task(coro, name=name)
+        self._background_tasks.add(task)
+        task.add_done_callback(self._background_tasks.discard)
+        return task
 
     def _register_tools(self) -> None:
         """Register all tool modules with the Neural Dispatcher."""
@@ -211,10 +207,7 @@ class AetherEngine:
         self._router.register_module(context_scraper)
         self._router.register(
             name="delegate_complex_task",
-            description=(
-                "Delegate a complex multi-step task to ADK specialists and "
-                "return their consolidated response."
-            ),
+            description=("Delegate a complex multi-step task to ADK specialists and " "return their consolidated response."),
             parameters={
                 "type": "object",
                 "properties": {
@@ -292,15 +285,9 @@ class AetherEngine:
         """
         logger.info("🧠 ADK: Orchestrating complex task: %s", user_message)
         response_text = await self._execute_adk_task(user_message)
-        if (
-            response_text
-            and self._session
-            and getattr(self._session, "_session", None) is not None
-        ):
+        if response_text and self._session and getattr(self._session, "_session", None) is not None:
             logger.info("✅ ADK: Task complete, injecting response.")
-            await self._session._session.send_realtime_input(
-                parts=[types.Part.from_text(response_text)]
-            )
+            await self._session._session.send_realtime_input(parts=[types.Part.from_text(response_text)])
         return response_text
 
     async def _delegate_complex_task(self, task: str, **kwargs) -> dict:
@@ -312,7 +299,7 @@ class AetherEngine:
     def _on_affective_data(self, features: ParalinguisticFeatures) -> None:
         """Handle incoming affective metrics from the capture layer."""
         if self._firebase.is_connected:
-            asyncio.create_task(self._firebase.log_affective_metrics(features))
+            self._run_background_task(self._firebase.log_affective_metrics(features))
 
         # Phase 4: Proactive Intervention Trigger
         # Check if frustration levels warrant a system intervention
@@ -320,15 +307,14 @@ class AetherEngine:
         arousal = getattr(features, "arousal", 0.0)
 
         if self._proactive_engine.should_intervene(valence, arousal):
-            asyncio.create_task(self._trigger_intervention())
+            self._run_background_task(self._trigger_intervention())
 
         # UI Broadcast: Advanced Affective Metrics
-        asyncio.create_task(
+        self._run_background_task(
             self._gateway.broadcast(
                 "affective_score",
                 {
-                    "frustration": (1.0 - features.engagement_score)
-                    * (features.rms_variance / 500.0),
+                    "frustration": (1.0 - features.engagement_score) * (features.rms_variance / 500.0),
                     "valence": features.engagement_score,
                     "arousal": features.rms_variance / 500.0,
                     "pitch": features.pitch_estimate,
@@ -342,7 +328,7 @@ class AetherEngine:
         """Broadcasts a neural handover event to the UI."""
         logger.info(f"Broadcast: Neural Handover [{from_agent}] -> [{to_agent}]")
         if self._gateway:
-            asyncio.create_task(
+            self._run_background_task(
                 self._gateway.broadcast(
                     "neural_event",
                     {
@@ -397,9 +383,7 @@ class AetherEngine:
         except Exception as exc:
             logger.debug("Analytics log failed: %s", exc)
 
-    async def _on_package_change(
-        self, name: str, package: Optional[AthPackage]
-    ) -> None:
+    async def _on_package_change(self, name: str, package: Optional[AthPackage]) -> None:
         """Handle dynamic package loading/unloading."""
         if package:
             logger.info("Hot-Reloading package: %s", name)
@@ -440,9 +424,7 @@ class AetherEngine:
         firebase_ok = await self._firebase.initialize()
         if firebase_ok:
             await self._firebase.start_session()
-            logger.info(
-                "  Firebase: ✦ Connected — session %s", self._firebase._session_id
-            )
+            logger.info("  Firebase: ✦ Connected — session %s", self._firebase._session_id)
         else:
             logger.warning("  Firebase: ✗ Offline — tasks will not persist")
 
@@ -473,14 +455,14 @@ class AetherEngine:
                 # 1. Start Peripheral IO
                 tg.create_task(self._capture.run(), name="audio-capture")
                 tg.create_task(self._playback.run(), name="audio-playback")
-                
+
                 # 2. Start the Gateway (This now owns the Gemini session loop)
                 tg.create_task(self._gateway.run(), name="gateway")
-                
+
                 # 3. Start Administrative & Proactive tasks
                 tg.create_task(self._admin_sync_loop(), name="admin-sync")
                 tg.create_task(self._codex.start(), name="codex-bridge")
-                
+
                 # 4. Wait for shutdown signal
                 await self._shutdown_event.wait()
                 logger.info("✦ Shutdown event received: Stopping core tasks...")
@@ -493,7 +475,6 @@ class AetherEngine:
                     logger.error("Engine error: %s", exc, exc_info=True)
         finally:
             await self._shutdown()
-
 
     def _signal_shutdown(self) -> None:
         """Handle SIGINT/SIGTERM."""
@@ -515,11 +496,7 @@ class AetherEngine:
             try:
                 # 1. Update Sessions from Firestore
                 if self._firebase.is_connected and self._firebase._db:
-                    query = (
-                        self._firebase._db.collection("sessions")
-                        .order_by("started_at", direction="DESCENDING")
-                        .limit(10)
-                    )
+                    query = self._firebase._db.collection("sessions").order_by("started_at", direction="DESCENDING").limit(10)
                     sessions = []
                     async for doc in query.stream():
                         d = doc.to_dict()

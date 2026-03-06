@@ -117,12 +117,8 @@ class SpecialistHandoverManager:
             payload={
                 "architect_output": architect_output.model_dump(),
                 "blueprints": [bp.model_dump() for bp in architect_output.blueprints],
-                "high_impact_decisions": [
-                    d.model_dump() for d in architect_output.get_high_impact_decisions()
-                ],
-                "critical_risks": [
-                    r.model_dump() for r in architect_output.get_critical_risks()
-                ],
+                "high_impact_decisions": [d.model_dump() for d in architect_output.get_high_impact_decisions()],
+                "critical_risks": [r.model_dump() for r in architect_output.get_critical_risks()],
             },
         )
 
@@ -152,9 +148,7 @@ class SpecialistHandoverManager:
         )
 
         # Perform handover through orchestrator
-        return self._orchestrator.handover_with_context(
-            "Architect", "Debugger", context
-        )
+        return self._orchestrator.handover_with_context("Architect", "Debugger", context)
 
     def debugger_to_architect_feedback(
         self,
@@ -178,12 +172,8 @@ class SpecialistHandoverManager:
             task=f"Rework: {original_context.task}",
             payload={
                 "debugger_output": debugger_output.model_dump(),
-                "failed_verifications": [
-                    v.model_dump() for v in debugger_output.get_failed_results()
-                ],
-                "critical_warnings": [
-                    w.model_dump() for w in debugger_output.get_critical_warnings()
-                ],
+                "failed_verifications": [v.model_dump() for v in debugger_output.get_failed_results()],
+                "critical_warnings": [w.model_dump() for w in debugger_output.get_critical_warnings()],
                 "proposed_fixes": [f.model_dump() for f in debugger_output.fixes],
                 "original_handover_id": original_context.handover_id,
             },
@@ -202,9 +192,7 @@ class SpecialistHandoverManager:
         context.conversation_history = original_context.conversation_history.copy()
 
         # Perform handover
-        return self._orchestrator.handover_with_context(
-            "Debugger", "Architect", context
-        )
+        return self._orchestrator.handover_with_context("Debugger", "Architect", context)
 
     def negotiate_scope(
         self,
@@ -643,15 +631,9 @@ class MultiAgentOrchestrator:
             starter.set_orchestrator(self)
 
         # Use deep handover
-        success, final_context, message = self.handover_with_context(
-            "Orchestrator", primary_agent, context
-        )
+        success, final_context, message = self.handover_with_context("Orchestrator", primary_agent, context)
 
         if success and final_context:
-            return (
-                f"Task: {task}\n"
-                f"Status: {final_context.status.value}\n"
-                f"History: {final_context.history}"
-            )
+            return f"Task: {task}\n" f"Status: {final_context.status.value}\n" f"History: {final_context.history}"
         else:
             return f"Orchestration Failed: {message}"
