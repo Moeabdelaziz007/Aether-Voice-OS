@@ -356,7 +356,7 @@ class AetherGateway:
             self._session_restart_event.clear()
 
             active_soul = self._hive.active_soul
-            soul_name = active_soul.manifest.name
+            soul_name = active_soul.manifest.name if active_soul else "UnknownSoul"
 
             # Initialize session metadata
             session_metadata = SessionMetadata(
