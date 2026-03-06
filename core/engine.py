@@ -123,8 +123,21 @@ class AetherEngine:
             paralinguistic_analyzer=self._paralinguistics,
             on_affective_data=self._on_affective_data,
         )
+        self._registry = AetherRegistry(
+            self._config.packages_dir, on_change=self._on_package_change
+        )
+        self._hive = HiveCoordinator(
+            registry=self._registry,
+            router=self._router,
+            default_soul_name="ArchitectExpert",
+            on_handover=self._on_agent_handover,
+        )
         self._gateway = AetherGateway(
-            self._config.gateway, on_audio_rx=self._audio_in.put
+            gateway_config=self._config.gateway,
+            ai_config=self._config.ai,
+            audio_config=self._config.audio,
+            tool_router=self._router,
+            hive=self._hive,
         )
         self._playback = AudioPlayback(
             self._config.audio,
@@ -135,18 +148,10 @@ class AetherEngine:
             self._config.ai,
             self._audio_in,
             self._audio_out,
+            gateway=self._gateway,
             on_interrupt=self._on_interrupt,
             on_tool_call=self._on_tool_call,
             tool_router=self._router,
-        )
-        self._registry = AetherRegistry(
-            self._config.packages_dir, on_change=self._on_package_change
-        )
-        self._hive = HiveCoordinator(
-            registry=self._registry,
-            router=self._router,
-            default_soul_name="ArchitectExpert",
-            on_handover=self._on_agent_handover,
         )
         self._admin_api = AdminAPIServer(port=18790)
 
@@ -464,6 +469,7 @@ class AetherEngine:
                     self._config.ai,
                     self._audio_in,
                     self._audio_out,
+                    gateway=self._gateway,
                     on_interrupt=self._on_interrupt,
                     on_tool_call=self._on_tool_call,
                     tool_router=self._router,
