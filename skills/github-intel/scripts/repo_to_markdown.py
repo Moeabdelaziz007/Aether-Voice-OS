@@ -90,7 +90,8 @@ def repo_to_markdown(repo_url, max_files=50):
     print(f"# Repository: {repo_name}")
     print(f"Source: {repo_url}\n")
     print(
-        f"## Metadata\n- Generated at: {datetime.now().isoformat()}\n- File Count Limit: {max_files}\n"
+        f"## Metadata\n- Generated at: {datetime.now().isoformat()}\n"
+        f"- File Count Limit: {max_files}\n"
     )
 
     for file_path in files:

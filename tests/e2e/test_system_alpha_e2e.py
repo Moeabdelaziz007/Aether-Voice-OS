@@ -127,7 +127,8 @@ async def test_aether_system_alpha_full_cycle():
                 assert challenge_msg["type"] == "connect.challenge"
 
                 # Sign Challenge
-                # CRITICAL: gateway verifies against raw bytes, so we sign the bytes from the hex token
+                # CRITICAL: gateway verifies against raw bytes, so we sign the bytes \
+                # from the hex token
                 token_hex = challenge_msg["challenge"]
                 token_bytes = bytes.fromhex(token_hex)
                 sig_obj = signing_key.sign(token_bytes)
@@ -151,7 +152,8 @@ async def test_aether_system_alpha_full_cycle():
 
                 if ack_msg["type"] == "error":
                     print(
-                        f"[PROBE] Protocol Error (Expected if AI Auth fails): {ack_msg.get('message')}"
+                        f"[PROBE] Protocol Error (Expected if AI Auth fails): "
+                        f"{ack_msg.get('message')}"
                     )
                     return  # Passthrough success for protocol validation
 

@@ -25,8 +25,8 @@ def test_synergy():
     print(f"\n--- Final Result ---\n{result}\n--------------------")
 
     assert "Synergy Complete" in result
-    assert "Architect" in result
-    assert "Handover ID" in result
+    assert "Architect generated structural blueprint" in result
+    assert "Debugger verified and approved" in result
 
 
 if __name__ == "__main__":

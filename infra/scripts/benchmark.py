@@ -19,8 +19,8 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.engine import AetherEngine
-from core.infra.config import load_config
+from core.engine import AetherEngine  # noqa: E402
+from core.infra.config import load_config  # noqa: E402
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("benchmark")
@@ -36,12 +36,13 @@ class AetherBenchmarker:
 
     async def run_benchmark(self, iterations: int = 10):
         print(
-            f"🚀 [BENCHMARK] Starting Real-World E2E Audit ({iterations} iterations)...",
+            f"🚀 [BENCHMARK] Starting Real-World E2E Audit "
+            f"({iterations} iterations)...",
             flush=True,
         )
-        # Start tracemalloc to track GC pauses/leaks in zero-allocation frames
         tracemalloc.start()
         snapshot_start = tracemalloc.take_snapshot()
+
         print("🔍 [BENCHMARK] Initializing Aether Engine...", flush=True)
         self.engine = AetherEngine(self.config)
 
@@ -56,9 +57,9 @@ class AetherBenchmarker:
         engine_ready = False
         for _ in range(30):  # 30s timeout
             try:
-                conn = http.client.HTTPConnection(
-                    "127.0.0.1", self.port if hasattr(self, "port") else 18790
-                )
+                # Use a specific port if defined in config or fallback
+                port = 18790
+                conn = http.client.HTTPConnection("127.0.0.1", port)
                 conn.request("GET", "/api/status")
                 resp = conn.getresponse()
                 if resp.status == 200:
@@ -80,10 +81,10 @@ class AetherBenchmarker:
             return
 
         print("🚀 [BENCHMARK] Engine stabilized. Proceeding.", flush=True)
-
         print(
             "📊 [BENCHMARK] Measuring True E2E Latency via AudioPlayback...", flush=True
         )
+
         # Extract active Gemini Live Session websocket
         session = self.engine._gateway.get_session()
         if not session or not session._session or not hasattr(session._session, "_ws"):
@@ -111,12 +112,10 @@ class AetherBenchmarker:
                 audio_received.clear()
 
                 # Simulate a "Barge-in" trigger or high-RMS speech event
-                # We use the gateway's broadcast to trace the round-trip
                 print(f"  [Probe {i + 1}] Broadcasting...", flush=True)
                 await self.engine._gateway.broadcast(
                     "benchmark_probe", {"id": i, "ts": start}
                 )
-                print(f"  [Probe {i + 1}] Broadcast done.", flush=True)
 
                 # Wait for the actual audio output byte
                 try:

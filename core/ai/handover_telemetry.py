@@ -331,7 +331,7 @@ class HandoverTelemetry:
         self._active_recordings[handover_id] = record
 
         # OTLP Instrument
-        span = tracer.start_span(
+        span = tracer.start_as_current_span(
             f"handover:{source_agent}->{target_agent}",
             attributes={
                 "handover.id": handover_id,

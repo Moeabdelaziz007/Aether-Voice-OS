@@ -61,14 +61,22 @@ async def write_collective_memory(
 async def read_collective_memory(key: str) -> dict[str, object]:
     """Read a value from the Hive Collective Memory."""
     if not _firebase or not _firebase.is_connected:
-        return {"status": "error", "message": "Hive Memory offline"}
+        return {
+            "status": "error",
+            "data": {"value": None},
+            "message": "Hive Memory offline"
+        }
 
     try:
         doc_ref = _firebase._db.collection("hive_memory").document(key)
         doc = await doc_ref.get()
         if doc.exists:
             return {"status": "success", "data": doc.to_dict()}
-        return {"status": "not_found", "message": f"Memory slot '{key}' is empty."}
+        return {
+            "status": "not_found",
+            "data": {"value": None},
+            "message": f"Memory slot '{key}' is empty."
+        }
     except Exception as e:
         logger.error("Hive Memory read failed: %s", e)
         return {"status": "error", "message": str(e)}

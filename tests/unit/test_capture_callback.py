@@ -9,7 +9,6 @@ Focus:
 These tests mock:
 - audio_state singleton
 - DynamicAEC
-- DynamicAEC
 - HysteresisGate
 - Event loop injection
 
@@ -19,7 +18,8 @@ Note: The callback returns (None, paContinue) because capture does not echo audi
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock, patch
+import sys
+from unittest.mock import MagicMock, Mock, patch
 
 import numpy as np
 import pytest
@@ -38,9 +38,6 @@ patcher = patch.dict(
     },
 )
 patcher.start()
-
-import sys
-from unittest.mock import Mock
 
 sys.modules["pyaudio"] = Mock()
 from core.audio.capture import AudioCapture, SmoothMuter  # noqa: E402
@@ -64,7 +61,9 @@ def mock_dependencies():
         patch("core.audio.capture.DynamicAEC") as MockDynamicAEC,
         patch("core.audio.capture.SmoothMuter") as MockSmoothMuter,
         patch("core.audio.capture.HysteresisGate") as MockHysteresis,
+        patch("core.audio.capture.AECBridge"),
     ):
+
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
         mock_aec_state = MagicMock()

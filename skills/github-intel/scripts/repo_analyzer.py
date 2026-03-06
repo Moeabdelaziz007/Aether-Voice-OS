@@ -126,7 +126,7 @@ def analyze_repo(url, depth=2):
             text=True,
         )
         print(git_log)
-    except:
+    except Exception:
         print("Failed to fetch log.")
 
     subprocess.run(["rm", "-rf", temp_dir])

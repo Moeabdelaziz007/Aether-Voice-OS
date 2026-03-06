@@ -83,7 +83,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
         setStatus("connecting");
 
-        // Initialize keypair (persisted in sessionStorage)
+        // Initialize keypair (persisted in local storage)
         if (!keyPairRef.current) {
             keyPairRef.current = getOrCreateKeypair();
         }
@@ -167,9 +167,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
 
                     // ── Audio Telemetry (Thalamic Gate VAD/RMS/Gain) ──
                     else if (msg.type === "audio_telemetry") {
-                        // We use getState() to prevent React re-render loops if components subscribe directly.
-                        // However, updating Zustand will cause re-renders for direct subscribers,
-                        // so AetherOrb is updated to read it transitively.
+                        // Directly update store for high-frequency updates
                         useAetherStore.getState().setAudioLevels(msg.payload.rms || 0, msg.payload.gain || 0);
                     }
 

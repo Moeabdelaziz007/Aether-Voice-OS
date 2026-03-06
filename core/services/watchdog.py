@@ -74,6 +74,7 @@ class SREWatchdog:
             r"timeout.*error": self._heal_system_failure,
             r"connection.*error": self._heal_system_failure,
             r"Audio device.*disconnected": self._recover_audio_device,
+            r"Audio.*capture.*error": self._recover_audio_device,
             r"AEC.*diverged": self._reset_aec,
             r"Queue.*overflow.*100": self._throttle_audio,
         })
@@ -198,13 +199,13 @@ class SREWatchdog:
 
     async def _recover_audio_device(self, error_msg: str = ""):
         """Recover from audio device disconnection"""
-        logger.warning("Audio device lost, attempting recovery...")
+        logger.warning("Audio device issue detected, attempting recovery...")
 
         # 1. Notify frontend
         if self._gateway:
-            await self._gateway.broadcast("system_failure", {
-                "event": "audio_device_lost",
-                "state": "diagnosing",
+            await self._gateway.broadcast("repair_state", {
+                "status": "diagnosing",
+                "message": "Audio device failure detected. Restarting audio driver...",
             })
 
         # 2. Try to reinitialize
@@ -212,16 +213,15 @@ class SREWatchdog:
             if self._audio_manager:
                 await self._audio_manager.restart()
                 if self._gateway:
-                    await self._gateway.broadcast("system_failure", {
-                        "event": "audio_device_lost",
-                        "state": "applied",
+                    await self._gateway.broadcast("repair_state", {
+                        "status": "applied",
+                        "message": "Audio driver reinitialized successfully.",
                     })
         except Exception as e:
             if self._gateway:
-                await self._gateway.broadcast("system_failure", {
-                    "event": "audio_device_lost",
-                    "state": "failed",
-                    "message": str(e),
+                await self._gateway.broadcast("repair_state", {
+                    "status": "failed",
+                    "message": f"Audio recovery failed: {e}",
                 })
 
     async def _reset_aec(self, error_msg: str = ""):
@@ -235,9 +235,9 @@ class SREWatchdog:
         """Throttle audio when queue overflows"""
         logger.warning("Queue overflow detected, throttling audio...")
         if self._gateway:
-            await self._gateway.broadcast("system_failure", {
-                "event": "queue_overflow",
-                "state": "throttling",
+            await self._gateway.broadcast("repair_state", {
+                "status": "applied",
+                "message": "Audio buffer overflow detected. Throttling capture stream.",
             })
 
     async def _heal_bus_failure(self):

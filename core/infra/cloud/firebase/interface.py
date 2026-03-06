@@ -177,12 +177,16 @@ class FirebaseConnector:
                 "status": status,
                 "timestamp": datetime.now(timezone.utc),
             }
-            (
-                self._db.collection("sessions")
-                .document(self._session_id)
-                .collection("repairs")
-                .add(data)
-            )
+
+            def _write():
+                (
+                    self._db.collection("sessions")
+                    .document(self._session_id)
+                    .collection("repairs")
+                    .add(data)
+                )
+
+            await asyncio.to_thread(_write)
             logger.info(f"🔥 Firebase: Repair logged for {filepath}")
         except Exception as e:
             logger.error(f"Failed to log repair: {e}")
@@ -194,13 +198,17 @@ class FirebaseConnector:
 
         try:
             doc_ref = self._db.collection("sessions").document(self._session_id)
-            doc_ref.update(
-                {
-                    "status": "completed",
-                    "ended_at": datetime.now(timezone.utc),
-                    "summary": summary,
-                }
-            )
+
+            def _update():
+                doc_ref.update(
+                    {
+                        "status": "completed",
+                        "ended_at": datetime.now(timezone.utc),
+                        "summary": summary,
+                    }
+                )
+
+            await asyncio.to_thread(_update)
         except Exception as e:
             logger.error(f"Failed to end session: {e}")
 
@@ -213,12 +221,16 @@ class FirebaseConnector:
             return {"status": "error", "message": "Firebase disconnected"}
 
         try:
-            metrics_ref = (
-                self._db.collection("sessions")
-                .document(session_id)
-                .collection("metrics")
-            )
-            docs = metrics_ref.stream()
+
+            def _stream():
+                metrics_ref = (
+                    self._db.collection("sessions")
+                    .document(session_id)
+                    .collection("metrics")
+                )
+                return list(metrics_ref.stream())
+
+            docs = await asyncio.to_thread(_stream)
 
             valence_sum = 0.0
             arousal_sum = 0.0
@@ -256,6 +268,10 @@ class FirebaseConnector:
 
         try:
             data["timestamp"] = datetime.now(timezone.utc)
-            self._db.collection("events").add({"type": event_type, "payload": data})
+
+            def _write():
+                self._db.collection("events").add({"type": event_type, "payload": data})
+
+            await asyncio.to_thread(_write)
         except Exception as e:
             logger.error(f"Failed to log event {event_type}: {e}")
