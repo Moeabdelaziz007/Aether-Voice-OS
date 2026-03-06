@@ -1,6 +1,6 @@
 import asyncio
 import json
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import websockets
@@ -195,3 +195,65 @@ async def test_broadcast(gateway, gateway_config):
         msg2 = json.loads(msg2raw)
         assert msg2["type"] == "audio_level"
         assert msg2["payload"]["level"] == 0.8
+
+
+@pytest.mark.asyncio
+async def test_intent_level1_uses_fast_path_when_command_available(gateway):
+    gateway.send_text = AsyncMock(return_value=True)
+    gateway._tool_router.names = ["get_current_time"]
+    gateway._tool_router.dispatch = AsyncMock(return_value={"result": {"ok": True}})
+
+    captured_updates = []
+
+    async def _capture_broadcast(msg_type, payload):
+        if msg_type == "intent_update":
+            captured_updates.append(payload)
+
+    gateway.broadcast = _capture_broadcast
+
+    await gateway._handle_intent(
+        "client-1",
+        {
+            "intent_id": "intent-fast-1",
+            "level": 1,
+            "payload": {
+                "raw_input": "what time is it",
+                "direct_command": {"name": "get_current_time", "args": {}},
+            },
+        },
+    )
+
+    gateway._tool_router.dispatch.assert_called_once()
+    gateway.send_text.assert_not_called()
+    assert captured_updates[-1]["status"] == "FAST_PATH_EXECUTED"
+
+
+@pytest.mark.asyncio
+async def test_intent_non_level1_forwards_to_hive_path(gateway):
+    gateway.send_text = AsyncMock(return_value=True)
+    gateway._tool_router.names = ["get_current_time"]
+    gateway._tool_router.dispatch = AsyncMock(return_value={"result": {"ok": True}})
+
+    captured_updates = []
+
+    async def _capture_broadcast(msg_type, payload):
+        if msg_type == "intent_update":
+            captured_updates.append(payload)
+
+    gateway.broadcast = _capture_broadcast
+
+    await gateway._handle_intent(
+        "client-1",
+        {
+            "intent_id": "intent-hive-1",
+            "level": 2,
+            "payload": {
+                "raw_input": "investigate this architecture issue",
+                "direct_command": {"name": "get_current_time", "args": {}},
+            },
+        },
+    )
+
+    gateway._tool_router.dispatch.assert_not_called()
+    gateway.send_text.assert_called_once_with("investigate this architecture issue")
+    assert captured_updates[-1]["status"] == "FORWARDED_TO_HIVE"

@@ -96,6 +96,18 @@ Client sends raw **16kHz 16-bit Mono PCM** as binary WebSocket frames. Server br
 
 ### JSON Control Plane
 
+
+### Structured Intent Routing (Schema V1.1)
+
+`INTENT` messages route by `level`:
+
+- `level == 1`: gateway attempts direct fast-path execution when `payload.direct_command.name`
+  (or `payload.command` / `payload.tool_name`) matches a registered `ToolRouter` tool.
+  On success, the lifecycle event reports `intent_update.status = "FAST_PATH_EXECUTED"`.
+- Any other case (including non-level-1 intents or missing command mapping): intent text is forwarded
+  to the existing Hive cognitive path (currently proxied through Gemini text input), with
+  `intent_update.status = "FORWARDED_TO_HIVE"`.
+
 | Type | Direction | Payload Example |
 | :--- | :--- | :--- |
 | `tick` | S → C | `{"timestamp": 1740...}` |

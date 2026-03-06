@@ -721,28 +721,58 @@ class AetherGateway:
         # 4. Phase D: Intent Memory & Prediction
         prediction = self._predict_next_goal(payload.get("raw_input", ""))
         
-        # 5. Broadcast Intent Lifecycle Update (Contract V1.1)
-        await self.broadcast("intent_update", {
-            "intent_id": intent_id,
-            "status": "PROCESSED",
-            "memory_update": {
-                "predicted_next_goal": prediction,
-                "user_preference_delta": {"last_used_level": level}
-            }
-        })
+        status = await self._route_structured_intent(level=level, payload=payload)
 
+        # 5. Broadcast Intent Lifecycle Update (Contract V1.1)
+        await self.broadcast(
+            "intent_update",
+            {
+                "intent_id": intent_id,
+                "status": status,
+                "memory_update": {
+                    "predicted_next_goal": prediction,
+                    "user_preference_delta": {"last_used_level": level},
+                },
+            },
+        )
+
+    async def _route_structured_intent(self, level: int, payload: dict[str, Any]) -> str:
+        """Route structured intents either via level-1 fast path or Hive forwarding."""
         # 2. Level-based Routing
         if level == 1:
-            # Fast-path: Direct command execution
-            # TODO: Implement fast-path registry
-            pass
-        
+            # Fast-path: Direct command execution via ToolRouter registry.
+            direct_command = payload.get("direct_command") or {}
+            command_name = (
+                direct_command.get("name")
+                or payload.get("command")
+                or payload.get("tool_name")
+            )
+
+            if command_name and command_name in self._tool_router.names:
+                command_args = (
+                    direct_command.get("args")
+                    or payload.get("command_args")
+                    or payload.get("tool_args")
+                    or {}
+                )
+
+                # ToolRouter only requires `.name` and `.args` attributes.
+                function_call = type(
+                    "GatewayFunctionCall",
+                    (),
+                    {"name": command_name, "args": command_args},
+                )()
+                await self._tool_router.dispatch(function_call)
+                return "FAST_PATH_EXECUTED"
+
         # 3. Forward to Hive for cognitive processing
-        # This will eventually trigger the MultiAgentOrchestrator
-        # For now, we proxy text to Gemini session as usual
+        # This will eventually trigger the MultiAgentOrchestrator.
+        # For now, we proxy text to Gemini session as the Hive forwarding path.
         raw_text = payload.get("raw_input", "")
         if raw_text:
             await self.send_text(raw_text)
+
+        return "FORWARDED_TO_HIVE"
 
     def _predict_next_goal(self, raw_input: str) -> str | None:
         """
