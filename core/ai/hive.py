@@ -489,6 +489,56 @@ class HiveCoordinator:
         logger.debug("Negotiation initiated for handover %s", context.handover_id)
         return negotiation
 
+    def _handle_negotiation_counter(
+        self, negotiation: HandoverNegotiation, **kwargs: Any
+    ) -> None:
+        msg = negotiation.counter_terms(
+            scope=kwargs.get("scope"),
+            deliverables=kwargs.get("deliverables"),
+            deadline=kwargs.get("deadline"),
+        )
+        logger.debug("Counter offer sent: %s", msg.message_id)
+
+    def _handle_negotiation_accept(
+        self, handover_id: str, context: HandoverContext
+    ) -> None:
+        if not context.negotiation:
+            raise ValueError("No active negotiation found in context")
+        context.negotiation.accept_terms()
+        context.update_status(HandoverStatus.PREPARING)
+        logger.info("Negotiation accepted for handover %s", handover_id)
+
+    def _handle_negotiation_reject(
+        self, handover_id: str, context: HandoverContext, **kwargs: Any
+    ) -> None:
+        if not context.negotiation:
+            raise ValueError("No active negotiation found in context")
+        reason = kwargs.get("reason", "Terms rejected")
+        context.negotiation.reject_terms(reason)
+        context.update_status(HandoverStatus.FAILED)
+        logger.info("Negotiation rejected for handover %s", handover_id)
+
+        if self._telemetry:
+            record_handover_end(
+                handover_id=handover_id,
+                outcome=HandoverOutcome.REJECTED,
+                failure_category=FailureCategory.NEGOTIATION_FAILED,
+                failure_reason=reason,
+            )
+
+    def _handle_negotiation_clarify(
+        self, context: HandoverContext, **kwargs: Any
+    ) -> None:
+        if not context.negotiation:
+            raise ValueError("No active negotiation found in context")
+        question = kwargs.get("question", "Please clarify")
+        context.negotiation.send_message(
+            from_agent=kwargs.get("from_agent", context.target_agent),
+            to_agent=kwargs.get("to_agent", context.source_agent),
+            message_type="clarify",
+            content=question,
+        )
+
     def negotiate_handover(
         self,
         handover_id: str,
@@ -513,46 +563,22 @@ class HiveCoordinator:
         negotiation = context.negotiation
 
         try:
-            if action == "counter":
-                msg = negotiation.counter_terms(
-                    scope=kwargs.get("scope"),
-                    deliverables=kwargs.get("deliverables"),
-                    deadline=kwargs.get("deadline"),
-                )
-                logger.debug("Counter offer sent: %s", msg.message_id)
+            dispatcher = {
+                "counter": lambda: self._handle_negotiation_counter(
+                    negotiation, **kwargs
+                ),
+                "accept": lambda: self._handle_negotiation_accept(handover_id, context),
+                "reject": lambda: self._handle_negotiation_reject(
+                    handover_id, context, **kwargs
+                ),
+                "clarify": lambda: self._handle_negotiation_clarify(context, **kwargs),
+            }
 
-            elif action == "accept":
-                msg = negotiation.accept_terms()
-                context.update_status(HandoverStatus.PREPARING)
-                logger.info("Negotiation accepted for handover %s", handover_id)
-
-            elif action == "reject":
-                reason = kwargs.get("reason", "Terms rejected")
-                msg = negotiation.reject_terms(reason)
-                context.update_status(HandoverStatus.FAILED)
-                logger.info("Negotiation rejected for handover %s", handover_id)
-
-                # Record failure
-                if self._telemetry:
-                    record_handover_end(
-                        handover_id=handover_id,
-                        outcome=HandoverOutcome.REJECTED,
-                        failure_category=FailureCategory.NEGOTIATION_FAILED,
-                        failure_reason=reason,
-                    )
-
-            elif action == "clarify":
-                question = kwargs.get("question", "Please clarify")
-                negotiation.send_message(
-                    from_agent=kwargs.get("from_agent", context.target_agent),
-                    to_agent=kwargs.get("to_agent", context.source_agent),
-                    message_type="clarify",
-                    content=question,
-                )
-
-            else:
+            handler = dispatcher.get(action)
+            if not handler:
                 return False, None, f"Unknown action: {action}"
 
+            handler()
             return True, negotiation, f"Action '{action}' executed"
 
         except Exception as e:
