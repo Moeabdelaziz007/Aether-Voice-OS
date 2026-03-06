@@ -109,6 +109,92 @@ class AccuracyBench:
         }
         print(f"  Integrity: {'✅' if integrity_success else '❌'}", flush=True)
 
+    async def run_zero_shot_recovery_bench(self):
+        print(
+            "💥 [ACCURACY] Testing Zero-Shot Recovery Audit (MTTR)...", flush=True
+        )
+
+        # Simulate websocket termination and measure MTTR via healing_tool
+        start_time = time.time()
+
+        # Random delay to simulate termination chaos
+        await asyncio.sleep(random.uniform(0.1, 0.5))
+
+        log_dir = ".aether/logs"
+        os.makedirs(log_dir, exist_ok=True)
+        log_path = os.path.join(log_dir, "session.log")
+
+        with open(log_path, "w") as f:
+            f.write(
+                "WebSocket connection randomly terminated.\n"
+                "Error: Connection closed unexpectedly."
+            )
+
+        diagnosis = await diagnose_and_repair(
+            context="WebSocket connection dropped unexpectedly"
+        )
+
+        recovery_time = time.time() - start_time
+        success = "Connection closed unexpectedly" in diagnosis.get(
+            "terminal_output", ""
+        )
+
+        self.results["zero_shot_recovery"] = {
+            "mttr_seconds": recovery_time,
+            "success": success
+        }
+        print(
+            f"  Result: {'✅' if success else '❌'} (MTTR: {recovery_time:.2f}s)",
+            flush=True,
+        )
+
+    async def run_dispatch_ambiguity_bench(self):
+        print(
+            "🤔 [ACCURACY] Testing Tool Dispatch Ambiguity...", flush=True
+        )
+
+        from core.ai.handover.manager import MultiAgentOrchestrator
+        orchestrator = MultiAgentOrchestrator()
+        # Mock an agent just to test routing
+        class MockAgent:
+            def process(self, context): return "Done"
+        orchestrator.register_agent("Specialist_1", MockAgent())
+
+        test_cases = [
+            ("Deploy the thing to the cloud", True),
+            ("Delete the stuff", True),
+            ("Remove it", True),
+            ("Deploy the backend service", False),
+            ("Delete user 123", False),
+        ]
+
+        results = []
+        all_passed = True
+        for prompt, should_clarify in test_cases:
+            result = orchestrator.collaborate(prompt, "Specialist_1")
+            did_clarify = "clarification_request" in result
+            passed = did_clarify == should_clarify
+            if not passed:
+                all_passed = False
+            results.append({
+                "prompt": prompt,
+                "should_clarify": should_clarify,
+                "did_clarify": did_clarify,
+                "passed": passed
+            })
+            print(
+                f"  Testing prompt: '{prompt}' -> {'✅' if passed else '❌'}",
+                flush=True,
+            )
+
+        self.results["dispatch_ambiguity"] = {
+            "success": all_passed,
+            "cases": results
+        }
+        print(
+            f"  Overall Dispatch Ambiguity: {'✅' if all_passed else '❌'}",
+            flush=True,
+        )
     async def execute(self):
         await self.run_healing_bench()
         await self.run_handover_bench()
