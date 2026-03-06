@@ -37,6 +37,7 @@ from core.infra.telemetry import (
 )  # Import record_usage from telemetry module
 from core.ai.thalamic import ThalamicGate
 from core.demo.fallback import DemoFallback
+from core.ai.agents.proactive import VisionPulseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,10 @@ class GeminiLiveSession:
         ] = []  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
         self._active_handoffs: dict[str, dict] = {}  # A2A V3 Handoff Tracking
+
+        # Vision Pulse Agent (Phase 6)
+        self._vision_pulse = VisionPulseAgent()
+        self._vision_task: Optional[asyncio.Task] = None
 
         # Deep Handover Protocol integration
         self._injected_handover_context: Optional[HandoverContext] = None
@@ -210,7 +215,7 @@ class GeminiLiveSession:
                     # Periodic screenshots injected into the stream
                     # for real-time visual context.
                     if self._config.enable_proactive_vision:
-                        tg.create_task(self._vision_pulse_loop(session))
+                        tg.create_task(self._proactive_vision_loop(session))
 
                     # ── Architecture of Silence (Backchanneling) ────
                     tg.create_task(self._backchannel_loop(session))
@@ -261,82 +266,6 @@ class GeminiLiveSession:
                 if "closed" in str(exc).lower():
                     break
 
-    async def _vision_pulse_loop(self, session) -> None:
-        """
-        Maintains a rolling buffer of screen frames (1s resolution) for Indexical Sync.
-        Also sends proactive pulses every 10s or on Hard-Interrupt (Camera Pulse).
-        """
-        logger.info("Vision Pulse loop started (Reflex-Triggered Camera active)")
-        import time
-
-        from core.audio.state import audio_state
-        from core.tools.camera_tool import camera_instance
-        from core.tools.vision_tool import take_screenshot
-
-        last_proactive_pulse = 0
-        while self._running:
-            try:
-                # 1 second resolution for the rolling buffer
-                await asyncio.sleep(1.0)
-
-                now = time.time()
-                is_hard = audio_state.is_hard
-
-                # ── Pulse 1: Screen Capture (Rolling Buffer) ──
-                res = await take_screenshot()
-                if res.get("status") == "success":
-                    image_b64 = res["data"]
-                    image_bytes = base64.b64decode(image_b64)
-
-                    self._frame_buffer.append((now, image_bytes))
-                    if len(self._frame_buffer) > self._max_frames:
-                        self._frame_buffer.pop(0)
-
-                    # Proactive Pulse (10s)
-                    if now - last_proactive_pulse > 10.0:
-                        logger.debug("Proactive Vision: Sending screenshot to Gemini")
-                        # Pulse with Temporal Grounding
-                        await session.send_realtime_input(
-                            parts=[
-                                types.Part.from_bytes(
-                                    data=image_bytes, mime_type="image/png"
-                                ),
-                                types.Part.from_text(
-                                    text=f"[Temporal Grounding: T+{int(now - self._start_time.timestamp())}s]"
-                                ),
-                            ]
-                        )
-                        # Broadcast vision pulse to UI for explicit feedback
-                        asyncio.create_task(
-                            self._gateway.broadcast(
-                                "vision_pulse",
-                                {
-                                    "status": "active",
-                                    "timestamp": datetime.now().isoformat(),
-                                },
-                            )
-                        )
-                        last_proactive_pulse = now
-
-                # ── Pulse 2: Camera Capture (Hard Interrupt Grounding) ──
-                if is_hard:
-                    logger.info(
-                        "📸 Camera Pulse: Capturing user reaction to hard-interrupt."
-                    )
-                    cam_bytes = camera_instance.capture_frame()
-                    if cam_bytes:
-                        await session.send_realtime_input(
-                            parts=[
-                                types.Part.from_bytes(
-                                    data=cam_bytes, mime_type="image/jpeg"
-                                )
-                            ]
-                        )
-
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                logger.debug("Vision pulse failed: %s", e)
 
     async def _backchannel_loop(self, session) -> None:
         """

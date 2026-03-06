@@ -19,8 +19,10 @@ build/
 .eggs/
 
 # --- Rust (cortex) ---
-cortex/target/
-cortex/Cargo.lock
+core/audio/cortex/target/
+core/audio/cortex/Cargo.lock
+core/audio/cortex/.cargo/
+core/audio/cortex/.cargo_home/
 apps/portal/src-tauri/target/
 apps/portal/src-tauri/Cargo.lock
 
@@ -43,8 +45,13 @@ Thumbs.db
 
 # --- Node / Frontend (for Phase 3) ---
 node_modules/
+**/node_modules/
 .next/
 out/
+target/
+**/target/
+Cargo.lock
+**/Cargo.lock
 
 # --- Logs ---
 *.log

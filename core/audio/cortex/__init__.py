@@ -27,6 +27,8 @@ except ImportError as e:
         f"✧ Aether Cortex: Rust acceleration not found ({e}). "
         "Falling back to NumPy (Performance degraded)."
     )
+    import traceback
+    logger.debug(traceback.format_exc())
 
 
 class CochlearBuffer:
