@@ -13,16 +13,49 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type PipelineState = "idle" | "starting" | "active" | "error";
 
+export type AudioChunkPreset =
+    | "ultra_low_latency"
+    | "low_latency"
+    | "balanced"
+    | "bandwidth_saver";
+
+export type AudioPipelineMode = "conversational" | "bandwidth-saver";
+
+interface AudioPipelineStartConfig {
+    mode?: AudioPipelineMode;
+    chunkPreset?: AudioChunkPreset;
+}
+
 interface AudioPipelineReturn {
     state: PipelineState;
     micLevel: number;
     speakerLevel: number;
-    start: () => Promise<void>;
+    start: (config?: AudioPipelineStartConfig) => Promise<void>;
     stop: () => void;
     playPCM: (pcmData: ArrayBuffer, sampleRate?: number) => void;
     stopPlayback: () => void;
+    reportOutboundQueuePressure: (bufferedBytes: number) => void;
     onPCMChunk: React.MutableRefObject<((pcm: ArrayBuffer) => void) | null>;
 }
+
+const CHUNK_PRESET_CAPACITY: Record<AudioChunkPreset, number> = {
+    ultra_low_latency: 512,
+    low_latency: 1024,
+    balanced: 2048,
+    bandwidth_saver: 4096,
+};
+
+const MODE_DEFAULT_PRESET: Record<AudioPipelineMode, AudioChunkPreset> = {
+    conversational: "low_latency",
+    "bandwidth-saver": "bandwidth_saver",
+};
+
+const ADAPTIVE_PRESET_ORDER: AudioChunkPreset[] = [
+    "ultra_low_latency",
+    "low_latency",
+    "balanced",
+    "bandwidth_saver",
+];
 
 export function useAudioPipeline(): AudioPipelineReturn {
     const [state, setState] = useState<PipelineState>("idle");
@@ -44,10 +77,77 @@ export function useAudioPipeline(): AudioPipelineReturn {
     const nextPlayTimeRef = useRef(0);
     const activeSourcesRef = useRef<AudioBufferSourceNode[]>([]);
     const playbackCtxRef = useRef<AudioContext | null>(null);
+    const currentPresetRef = useRef<AudioChunkPreset>("low_latency");
+    const currentModeRef = useRef<AudioPipelineMode>("conversational");
+    const queuePressureHighStreakRef = useRef(0);
+    const queuePressureLowStreakRef = useRef(0);
 
-    const start = useCallback(async () => {
+    const postProcessorConfig = useCallback((preset: AudioChunkPreset) => {
+        const worklet = workletRef.current;
+        if (!worklet) return;
+
+        currentPresetRef.current = preset;
+        worklet.port.postMessage({
+            type: "configure",
+            preset,
+            capacity: CHUNK_PRESET_CAPACITY[preset],
+        });
+    }, []);
+
+    const reportOutboundQueuePressure = useCallback(
+        (bufferedBytes: number) => {
+            // Keep manual bandwidth-saver mode fixed at 4096 to preserve lower WS overhead.
+            if (currentModeRef.current === "bandwidth-saver") return;
+
+            const HIGH_WATERMARK_BYTES = 192 * 1024;
+            const LOW_WATERMARK_BYTES = 48 * 1024;
+            const STEPS_TO_SCALE_UP = 3;
+            const STEPS_TO_SCALE_DOWN = 6;
+
+            const currentIndex = ADAPTIVE_PRESET_ORDER.indexOf(currentPresetRef.current);
+
+            if (bufferedBytes >= HIGH_WATERMARK_BYTES) {
+                queuePressureHighStreakRef.current += 1;
+                queuePressureLowStreakRef.current = 0;
+
+                if (
+                    queuePressureHighStreakRef.current >= STEPS_TO_SCALE_UP &&
+                    currentIndex < ADAPTIVE_PRESET_ORDER.length - 1
+                ) {
+                    const nextPreset = ADAPTIVE_PRESET_ORDER[currentIndex + 1];
+                    postProcessorConfig(nextPreset);
+                    queuePressureHighStreakRef.current = 0;
+                }
+                return;
+            }
+
+            if (bufferedBytes <= LOW_WATERMARK_BYTES) {
+                queuePressureLowStreakRef.current += 1;
+                queuePressureHighStreakRef.current = 0;
+
+                if (
+                    queuePressureLowStreakRef.current >= STEPS_TO_SCALE_DOWN &&
+                    currentIndex > 0
+                ) {
+                    const nextPreset = ADAPTIVE_PRESET_ORDER[currentIndex - 1];
+                    postProcessorConfig(nextPreset);
+                    queuePressureLowStreakRef.current = 0;
+                }
+                return;
+            }
+
+            queuePressureHighStreakRef.current = 0;
+            queuePressureLowStreakRef.current = 0;
+        },
+        [postProcessorConfig]
+    );
+
+    const start = useCallback(async (config?: AudioPipelineStartConfig) => {
         if (state === "active") return;
         setState("starting");
+
+        const mode = config?.mode ?? "conversational";
+        const initialPreset = config?.chunkPreset ?? MODE_DEFAULT_PRESET[mode];
 
         try {
             // Mic capture context at 16kHz
@@ -100,14 +200,25 @@ export function useAudioPipeline(): AudioPipelineReturn {
             workletRef.current = worklet;
             source.connect(worklet);
 
+            currentModeRef.current = mode;
+            queuePressureHighStreakRef.current = 0;
+            queuePressureLowStreakRef.current = 0;
+
             // Handle PCM chunks from worklet
             worklet.port.onmessage = (e: MessageEvent) => {
+                if (e.data?.type === "configured") {
+                    return;
+                }
+
                 const { pcm, rms } = e.data;
                 setMicLevel(Math.min(1, rms * 5)); // Amplify for visibility
                 if (onPCMChunk.current) {
                     onPCMChunk.current(pcm);
                 }
             };
+
+            // Handshake: set initial processor mode/profile at session start.
+            postProcessorConfig(initialPreset);
 
             // Level monitoring animation loop
             const monitorLevels = () => {
@@ -131,7 +242,7 @@ export function useAudioPipeline(): AudioPipelineReturn {
             console.error("Audio pipeline error:", err);
             setState("error");
         }
-    }, [state]);
+    }, [postProcessorConfig, state]);
 
     const stop = useCallback(() => {
         streamRef.current?.getTracks().forEach((t) => t.stop());
@@ -157,6 +268,8 @@ export function useAudioPipeline(): AudioPipelineReturn {
 
         setMicLevel(0);
         setSpeakerLevel(0);
+        queuePressureHighStreakRef.current = 0;
+        queuePressureLowStreakRef.current = 0;
         setState("idle");
     }, []);
 
@@ -242,6 +355,7 @@ export function useAudioPipeline(): AudioPipelineReturn {
         stop,
         playPCM,
         stopPlayback,
+        reportOutboundQueuePressure,
         onPCMChunk,
     };
 }

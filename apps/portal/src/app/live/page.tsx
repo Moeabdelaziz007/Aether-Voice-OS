@@ -50,7 +50,7 @@ export default function LivePage() {
         const init = async () => {
             try {
                 // Start audio pipeline (requests mic)
-                await audio.start();
+                await audio.start({ mode: "conversational" });
                 // Connect to Gemini Live
                 await gemini.connect();
                 setInitialized(true);
@@ -68,6 +68,7 @@ export default function LivePage() {
     useEffect(() => {
         audio.onPCMChunk.current = (pcm: ArrayBuffer) => {
             gemini.sendAudio(pcm);
+            audio.reportOutboundQueuePressure(gemini.getOutboundQueueBytes());
         };
     }, [audio, gemini]);
 

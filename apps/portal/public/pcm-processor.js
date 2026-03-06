@@ -3,25 +3,63 @@
  *
  * Runs on the audio rendering thread (no main-thread blocking).
  * Converts Float32 mic samples to Int16 PCM and posts chunks
- * every ~256ms (4096 samples @ 16kHz) to the main thread.
+ * at a configurable capacity controlled by the main thread.
  *
  * Performance optimizations:
  *   - Pre-allocated ring buffer (no GC-triggering allocations)
  *   - Zero-copy transfer via Transferable ArrayBuffer
- *   - Larger chunks (256ms) reduce WS message overhead by 2.5x
- *
- * Usage:
- *   audioContext.audioWorklet.addModule('/pcm-processor.js');
- *   const node = new AudioWorkletNode(ctx, 'pcm-encoder');
- *   node.port.onmessage = (e) => sendToGemini(e.data.pcm);
+ *   - Configurable chunk presets for conversational vs bandwidth-saver modes
  */
 class PCMEncoderProcessor extends AudioWorkletProcessor {
+    static PRESET_CAPACITIES = {
+        ultra_low_latency: 512,
+        low_latency: 1024,
+        balanced: 2048,
+        bandwidth_saver: 4096,
+    };
+
     constructor() {
         super();
-        // Pre-allocated ring buffer — avoids GC pressure from Float32Array concat
-        this._capacity = 4096; // 256ms @ 16kHz — optimal for Gemini Live
+
+        this._capacity = PCMEncoderProcessor.PRESET_CAPACITIES.low_latency;
         this._ring = new Float32Array(this._capacity);
         this._writePos = 0;
+
+        this.port.onmessage = (event) => {
+            const data = event.data;
+            if (!data || data.type !== "configure") return;
+            this._configureCapacity(data);
+        };
+    }
+
+    _configureCapacity(data) {
+        const presets = PCMEncoderProcessor.PRESET_CAPACITIES;
+        const presetKey = typeof data.preset === "string" ? data.preset : "";
+        const presetCapacity = presets[presetKey];
+
+        const requestedCapacity = Number.isInteger(data.capacity)
+            ? data.capacity
+            : presetCapacity;
+
+        const allowedCapacities = [512, 1024, 2048, 4096];
+        if (!allowedCapacities.includes(requestedCapacity)) return;
+
+        if (requestedCapacity === this._capacity) return;
+
+        // Flush existing buffered samples before changing capacity to avoid data loss.
+        if (this._writePos > 0) {
+            this._flushPartial(this._writePos);
+        }
+
+        this._capacity = requestedCapacity;
+        this._ring = new Float32Array(this._capacity);
+        this._writePos = 0;
+
+        this.port.postMessage({
+            type: "configured",
+            capacity: this._capacity,
+            chunkMs: (this._capacity / 16000) * 1000,
+        });
     }
 
     process(inputs) {
@@ -31,50 +69,55 @@ class PCMEncoderProcessor extends AudioWorkletProcessor {
         const channelData = input[0]; // mono channel
         const len = channelData.length;
 
-        // Fast copy into ring buffer
         if (this._writePos + len <= this._capacity) {
             this._ring.set(channelData, this._writePos);
+            this._writePos += len;
         } else {
-            // Should not happen with 128-sample frames, but handle gracefully
-            for (let i = 0; i < len; i++) {
-                this._ring[(this._writePos + i) % this._capacity] = channelData[i];
+            let srcPos = 0;
+            while (srcPos < len) {
+                const writable = this._capacity - this._writePos;
+                const toCopy = Math.min(writable, len - srcPos);
+                this._ring.set(channelData.subarray(srcPos, srcPos + toCopy), this._writePos);
+                this._writePos += toCopy;
+                srcPos += toCopy;
+
+                if (this._writePos >= this._capacity) {
+                    this._flush();
+                }
             }
         }
-        this._writePos += len;
 
-        // Flush when ring is full
         if (this._writePos >= this._capacity) {
             this._flush();
         }
 
-        return true; // Keep processor alive
+        return true;
     }
 
     _flush() {
-        const n = this._capacity;
+        this._flushPartial(this._capacity);
+        this._writePos = 0;
+    }
 
-        // 1. Calculate RMS energy (on Float32 for precision)
+    _flushPartial(sampleCount) {
+        if (sampleCount <= 0) return;
+
         let sumSq = 0;
-        for (let i = 0; i < n; i++) {
+        for (let i = 0; i < sampleCount; i++) {
             sumSq += this._ring[i] * this._ring[i];
         }
-        const rms = Math.sqrt(sumSq / n);
+        const rms = Math.sqrt(sumSq / sampleCount);
 
-        // 2. Convert Float32 [-1.0, 1.0] → Int16 [-32768, 32767]
-        const pcm = new Int16Array(n);
-        for (let i = 0; i < n; i++) {
+        const pcm = new Int16Array(sampleCount);
+        for (let i = 0; i < sampleCount; i++) {
             const s = Math.max(-1, Math.min(1, this._ring[i]));
             pcm[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
         }
 
-        // 3. Post to main thread (transfer ownership — zero-copy)
         this.port.postMessage(
-            { pcm: pcm.buffer, rms },
+            { pcm: pcm.buffer, rms, capacity: this._capacity },
             [pcm.buffer]
         );
-
-        // 4. Reset write position (reuse ring buffer — no allocation)
-        this._writePos = 0;
     }
 }
 

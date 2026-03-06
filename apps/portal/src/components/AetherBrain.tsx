@@ -53,7 +53,7 @@ export default function AetherBrain() {
     useEffect(() => {
         if (store.status === "connecting") {
             const boot = async () => {
-                await pipeline.start();
+                await pipeline.start({ mode: "conversational" });
                 await gateway.connect();
                 store.setConnectionMode("gateway");
                 store.setSessionStartTime(Date.now());
@@ -106,6 +106,7 @@ export default function AetherBrain() {
                 isSpeakingRef.current = true;
                 silenceStartRef.current = 0;
                 gateway.sendAudio(pcm);
+                pipeline.reportOutboundQueuePressure(gateway.getOutboundQueueBytes());
             } else {
                 // Silence detected
                 if (isSpeakingRef.current) {
@@ -120,6 +121,7 @@ export default function AetherBrain() {
                     if (silenceDuration < SILENCE_TIMEOUT_MS) {
                         // Still within grace period — send (may be trailing speech)
                         gateway.sendAudio(pcm);
+                        pipeline.reportOutboundQueuePressure(gateway.getOutboundQueueBytes());
                     } else {
                         // Silence exceeded threshold — stop sending
                         isSpeakingRef.current = false;
@@ -128,7 +130,7 @@ export default function AetherBrain() {
                 // If user was NOT speaking, don't send silence → saves API quota
             }
         },
-        [gateway]
+        [gateway, pipeline]
     );
 
     // Wire the PCM callback

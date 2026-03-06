@@ -40,6 +40,7 @@ interface GeminiLiveReturn {
     sendAudio: (pcm: ArrayBuffer) => void;
     sendVisionFrame: (b64Jpeg: string) => void;
     sendToolResponse: (callId: string, result: Record<string, unknown>) => void;
+    getOutboundQueueBytes: () => number;
     onAudioResponse: React.MutableRefObject<
         ((audio: ArrayBuffer) => void) | null
     >;
@@ -404,6 +405,11 @@ export function useGeminiLive(): GeminiLiveReturn {
         []
     );
 
+    const getOutboundQueueBytes = useCallback(() => {
+        const ws = wsRef.current;
+        return ws ? ws.bufferedAmount : 0;
+    }, []);
+
     /** Calculate RTT and update rolling average */
     const measureLatency = useCallback(() => {
         if (
@@ -481,5 +487,6 @@ export function useGeminiLive(): GeminiLiveReturn {
         onInterrupt,
         onTranscript,
         onToolCall,
+        getOutboundQueueBytes,
     };
 }
