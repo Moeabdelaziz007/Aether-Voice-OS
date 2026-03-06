@@ -104,8 +104,10 @@ class AudioPlayback:
 
             # 3. Feed AEC reference buffer (24kHz -> 16kHz resampling)
             if len(pcm) > 0:
+                # Correct downsampling: 24kHz -> 16kHz (ratio = 16/24 = 0.667)
+                target_len = int(len(pcm) * 16 / 24)
                 t_old = np.arange(len(pcm))
-                t_new = np.arange(0, len(pcm), 1.5)  # 24/16 = 1.5 ratio
+                t_new = np.linspace(0, len(pcm) - 1, target_len)
                 pcm_16k = np.interp(t_new, t_old, pcm).astype(np.int16)
                 audio_state.far_end_pcm.write(pcm_16k)
                 # Capture AI spectrum for legacy monitoring
@@ -126,6 +128,11 @@ class AudioPlayback:
                 f"Speaker disconnected: {e}",
                 device_name="speaker",
             )
+        except Exception as e:
+            # Catch-all for unexpected errors in hot path
+            logger.error(f"Playback callback error: {e}", exc_info=True)
+            audio_state.set_playing(False)
+            return (b"\x00" * (frame_count * 2), pyaudio.paContinue)
 
     async def start(self) -> None:
         """Open the speaker output stream with callback."""

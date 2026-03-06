@@ -572,7 +572,6 @@ class DynamicAEC:
         )
 
         self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
-        self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
 
         # Frame accumulation for block processing
         self.block_size = filter_length  # Process in filter-length blocks
@@ -748,13 +747,13 @@ class DynamicAEC:
 
         return result
 
-    async def pre_train(
+    def pre_train(
         self,
         far_end_signal: np.ndarray,
         near_end_signal: np.ndarray,
         iterations: int = 3,
     ) -> float:
-        """Pre-train filter before live session.
+        """Pre-train filter before live session (synchronous).
 
         Call this during session initialization with a short
         audio burst to accelerate convergence.
@@ -930,9 +929,9 @@ class DynamicAEC:
         self.double_talk_detector.reset()
         self.spectral_analyzer.reset()
         self.far_end_ring_buffer.clear()
-        self.accumulated_far_end = BoundedBuffer(max_samples=self.sample_rate * 5)
-        self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
-        self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
+        self.accumulated_far_end.clear()
+        self.near_end_accumulator.clear()
+        self.far_end_accumulator.clear()
         self.accumulated_samples = 0
         self.state = AECState()
         self.erle_history.clear()

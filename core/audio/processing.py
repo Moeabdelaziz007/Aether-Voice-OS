@@ -460,8 +460,13 @@ def _compute_spectral_centroid_numba(spectrum: np.ndarray, freqs: np.ndarray) ->
 
 def calculate_zcr(pcm_data: np.ndarray) -> float:
     """Calculate Zero-Crossing Rate using Rust if available."""
-    if _RUST_BACKEND and hasattr(aether_cortex, "calculate_zcr"):
-        return aether_cortex.calculate_zcr(pcm_data)
+    if _RUST_BACKEND:
+        try:
+            if hasattr(aether_cortex, "calculate_zcr"):
+                return aether_cortex.calculate_zcr(pcm_data)
+        except (AttributeError, TypeError) as e:
+            logger.debug(f"Rust ZCR calculation failed: {e}")
+            # Fall through to NumPy implementation
 
     if len(pcm_data) < 2:
         return 0.0

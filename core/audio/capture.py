@@ -284,7 +284,7 @@ class AudioCapture:
         # Update jitter buffer parameters
         # Note: Jitter buffer recreation would be needed for target/max changes
         # For now, we'll just log the change
-        logger.info(
+        logging.getLogger(__name__).info(
             f"Audio config updated: jitter_target={config.jitter_buffer_target_ms}ms"
         )
 
@@ -362,8 +362,12 @@ class AudioCapture:
         if HAS_RUST_CORTEX:
             # Apply Rust-accelerated spectral denoising for cleaner output
             # spectral_denoise expects int16 and returns dict with 'samples'
-            result = spectral_denoise(cleaned_chunk, noise_floor=0.02)
-            cleaned_chunk = np.array(result["samples"], dtype=np.int16)
+            try:
+                result = spectral_denoise(cleaned_chunk, noise_floor=0.02)
+                cleaned_chunk = np.array(result["samples"], dtype=np.int16)
+            except Exception as e:
+                logger.warning(f"Rust cortex denoise failed: {e}")
+                # Continue with AEC-cleaned chunk as fallback
 
         # Update global AEC state for monitoring
         audio_state.update_aec_state(

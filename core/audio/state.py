@@ -69,7 +69,6 @@ class AudioState:
                 cls._instance.is_soft = False
                 cls._instance.is_hard = False
                 cls._instance.silence_type = "void"
-                cls._instance.capture_queue_drops = 0
                 # AEC (Acoustic Echo Cancellation) state
                 cls._instance.aec_converged = False
                 cls._instance.aec_convergence_progress = 0.0  # 0.0 to 1.0
