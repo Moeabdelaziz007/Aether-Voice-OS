@@ -8,12 +8,14 @@
 - [tests/benchmarks/bench_firebase_queries.py](file://tests/benchmarks/bench_firebase_queries.py)
 - [tests/benchmarks/test_thalamic_gate_benchmark.py](file://tests/benchmarks/test_thalamic_gate_benchmark.py)
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py)
+- [tests/benchmarks/voice_benchmark_report.json](file://tests/benchmarks/voice_benchmark_report.json)
 - [tests/reports/benchmark_report.json](file://tests/reports/benchmark_report.json)
 - [tests/reports/latency_report.json](file://tests/reports/latency_report.json)
 - [tests/reports/stress_report.json](file://tests/reports/stress_report.json)
 - [tests/reports/dna_report.json](file://tests/reports/dna_report.json)
 - [tests/reports/cortex_report.json](file://tests/reports/cortex_report.json)
 - [tests/reports/stability_report.json](file://tests/reports/stability_report.json)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json)
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py)
 - [tools/dashboard_generator.py](file://tools/dashboard_generator.py)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py)
@@ -21,6 +23,14 @@
 - [core/audio/telemetry.py](file://core/audio/telemetry.py)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive voice quality benchmark reporting system with new metrics
+- Enhanced AEC ERLE measurement capabilities and cross-talk detection accuracy
+- Integrated emotion detection F1-scores and VAD classification accuracy
+- Updated thalamic gate latency measurement protocols
+- Added new benchmark report formats and visualization capabilities
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -37,10 +47,13 @@
 ## Introduction
 This document describes the performance benchmarking system in Aether Voice OS. It explains how the platform measures audio processing performance, latency metrics, and system throughput; documents the specific benchmarks (Thalamic Gate performance, DSP algorithm efficiency, Firebase query optimization); and outlines benchmark execution, statistical analysis, regression detection, and reporting. It also covers voice quality benchmarking, latency measurement techniques, real-time processing evaluation, result visualization, trend analysis, profiling tools, memory usage tracking, CPU/GPU utilization monitoring, and guidance for performance optimization and maintaining standards.
 
+**Updated** Enhanced with comprehensive voice quality benchmark reporting system including AEC ERLE measurements, cross-talk detection accuracy, emotion detection F1-scores, VAD classification accuracy, and thalamic gate latency measurements.
+
 ## Project Structure
 The performance benchmarking system spans several directories and files:
 - tests/benchmarks: Automated micro-benchmarks for DSP, latency, Firebase query optimization, and Thalamic Gate performance, plus a comprehensive voice quality benchmark suite.
 - tests/reports: Consolidated benchmark reports produced by the expert benchmark runner.
+- benchmark_reports: Dedicated voice quality benchmark reports with detailed performance metrics.
 - tools: Orchestration scripts to run multiple benchmarks and generate dashboards.
 - core/audio/telemetry.py: Real-time audio telemetry and frame/session metrics collection.
 - core/analytics/latency.py: Latency tracking and percentile computation.
@@ -67,6 +80,7 @@ RPT_STRESS["tests/reports/stress_report.json"]
 RPT_DNA["tests/reports/dna_report.json"]
 RPT_CORTEX["tests/reports/cortex_report.json"]
 RPT_STABILITY["tests/reports/stability_report.json"]
+VQR["benchmark_reports/voice_quality_report.json"]
 end
 subgraph "Telemetry & Analytics"
 AUDTELE["core/audio/telemetry.py"]
@@ -89,14 +103,15 @@ REAL_AUDIT --> LATANALYTICS
 
 **Diagram sources**
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L1-L88)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
 - [tests/benchmarks/bench_dsp.py](file://tests/benchmarks/bench_dsp.py#L1-L135)
 - [tests/benchmarks/bench_latency.py](file://tests/benchmarks/bench_latency.py#L1-L88)
 - [tests/benchmarks/bench_firebase_queries.py](file://tests/benchmarks/bench_firebase_queries.py#L1-L110)
 - [tests/benchmarks/test_thalamic_gate_benchmark.py](file://tests/benchmarks/test_thalamic_gate_benchmark.py#L1-L116)
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L1-L906)
 - [tests/reports/benchmark_report.json](file://tests/reports/benchmark_report.json#L1-L297)
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L441)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L495)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L1-L40)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L1-L130)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L1-L205)
@@ -104,8 +119,8 @@ REAL_AUDIT --> LATANALYTICS
 **Section sources**
 - [tests/benchmarks/README.md](file://tests/benchmarks/README.md#L1-L55)
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L1-L88)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L441)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L495)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L1-L40)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L1-L130)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L1-L205)
@@ -118,12 +133,14 @@ REAL_AUDIT --> LATANALYTICS
   - Thalamic Gate performance benchmark evaluates callback processing time.
 - Voice quality benchmark suite:
   - Round-trip latency via Gemini Live.
-  - AEC effectiveness (ERLE) under various noise conditions.
+  - AEC effectiveness (ERLE) under various noise conditions with SNR measurements.
+  - Cross-talk detection accuracy for double-talk scenarios.
   - Emotion detection F1-score and VAD accuracy.
   - Thalamic Gate latency measurement.
 - Reporting and visualization:
   - Expert benchmark runner consolidates multiple reports into a single benchmark_report.json.
   - Dashboard generator produces an HTML dashboard from the consolidated report.
+  - Dedicated voice quality report format with comprehensive metrics and pass/fail criteria.
 - Real-world auditing:
   - End-to-end latency audit with network RTT measurement and concurrent Firebase load test.
   - Memory profiling via tracemalloc snapshots.
@@ -132,16 +149,19 @@ REAL_AUDIT --> LATANALYTICS
   - LatencyOptimizer computes p50/p95/p99 and logs performance.
   - OpenTelemetry sink exports traces and usage metrics.
 
+**Updated** Enhanced voice quality benchmark suite now includes comprehensive AEC ERLE measurements, cross-talk detection accuracy, emotion detection F1-scores, VAD classification accuracy, and thalamic gate latency measurements with detailed pass/fail criteria.
+
 **Section sources**
 - [tests/benchmarks/bench_dsp.py](file://tests/benchmarks/bench_dsp.py#L1-L135)
 - [tests/benchmarks/bench_latency.py](file://tests/benchmarks/bench_latency.py#L1-L88)
 - [tests/benchmarks/bench_firebase_queries.py](file://tests/benchmarks/bench_firebase_queries.py#L1-L110)
 - [tests/benchmarks/test_thalamic_gate_benchmark.py](file://tests/benchmarks/test_thalamic_gate_benchmark.py#L1-L116)
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L1-L906)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L1-L88)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L1-L205)
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L441)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L495)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L1-L40)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L1-L130)
 
@@ -158,10 +178,11 @@ M4["Thalamic Gate Benchmark"]
 end
 subgraph "Voice Quality Suite"
 V1["Round-Trip Latency"]
-V2["AEC ERLE"]
-V3["Emotion Detection F1"]
-V4["VAD Accuracy"]
-V5["Thalamic Gate Latency"]
+V2["AEC ERLE (Multiple SNR)"]
+V3["Cross-Talk Detection"]
+V4["Emotion Detection F1"]
+V5["VAD Accuracy"]
+V6["Thalamic Gate Latency"]
 end
 subgraph "Orchestration"
 ORCH["Expert Benchmark Runner"]
@@ -185,6 +206,7 @@ V2 --> ORCH
 V3 --> ORCH
 V4 --> ORCH
 V5 --> ORCH
+V6 --> ORCH
 ORCH --> DASH
 ORCH --> AUDIT
 AUDIT --> MEM
@@ -200,9 +222,9 @@ LTOPT --> TELE
 - [tests/benchmarks/test_thalamic_gate_benchmark.py](file://tests/benchmarks/test_thalamic_gate_benchmark.py#L1-L116)
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L1-L906)
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L1-L88)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L1-L205)
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L441)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L495)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L1-L40)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L1-L130)
 
@@ -315,14 +337,18 @@ Test->>Test : Assert target threshold
 - [tests/benchmarks/test_thalamic_gate_benchmark.py](file://tests/benchmarks/test_thalamic_gate_benchmark.py#L1-L116)
 
 ### Voice Quality Benchmark Suite
-- Scope: Real-time voice quality tests using Gemini Live API.
+- Scope: Real-time voice quality tests using Gemini Live API with comprehensive metrics.
 - Tests:
   - Round-Trip Latency: Measures first-audio chunk latency.
-  - AEC ERLE: Echo Return Loss Enhancement under café and keyboard noise at multiple SNRs.
+  - AEC ERLE: Echo Return Loss Enhancement under café and keyboard noise at multiple SNRs (5.0dB, 10.0dB, 15.0dB).
+  - Cross-Talk Detection: Double-talk detection accuracy and RMS energy retention.
   - Emotion Detection F1: Macro-averaged F1 across calm/alert/frustrated/flow_state.
   - VAD Accuracy: Classification accuracy on silence and speech-like signals.
   - Thalamic Gate Latency: Per-frame processing latency.
 - Reporting: Produces a structured report with results, thresholds, and suggestions.
+- Pass/Fail Criteria: Each test includes specific thresholds and pass/fail determination.
+
+**Updated** Enhanced with comprehensive AEC ERLE measurements across multiple SNR conditions, cross-talk detection accuracy, emotion detection F1-scores, VAD classification accuracy, and thalamic gate latency measurements with detailed pass/fail criteria.
 
 ```mermaid
 sequenceDiagram
@@ -347,6 +373,7 @@ Runner->>Runner : Aggregate metrics and produce report
 
 **Section sources**
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L1-L906)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
 
 ### Expert Benchmark Runner and Reporting
 - Purpose: Orchestrates multiple benchmark suites, consolidates results, and generates a unified report and dashboard.
@@ -369,7 +396,7 @@ DashGen --> End(["Done"])
 
 **Section sources**
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L1-L88)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
 - [tests/reports/benchmark_report.json](file://tests/reports/benchmark_report.json#L1-L297)
 
 ### Real-World End-to-End Audit
@@ -441,12 +468,12 @@ AudioTelemetryLogger --> TelemetryManager : "publishes metrics"
 ```
 
 **Diagram sources**
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L151-L441)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L151-L495)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L7-L40)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L14-L130)
 
 **Section sources**
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L441)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L1-L495)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L1-L40)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L1-L130)
 
@@ -480,7 +507,7 @@ REAL --> LATANALYTICS["core.analytics.latency"]
 - [tests/benchmarks/test_thalamic_gate_benchmark.py](file://tests/benchmarks/test_thalamic_gate_benchmark.py#L1-L116)
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L1-L906)
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L1-L88)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L1-L205)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L1-L130)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L1-L40)
@@ -488,7 +515,7 @@ REAL --> LATANALYTICS["core.analytics.latency"]
 **Section sources**
 - [tests/benchmarks/README.md](file://tests/benchmarks/README.md#L1-L55)
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L1-L88)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L1-L205)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L1-L130)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L1-L40)
@@ -507,8 +534,13 @@ REAL --> LATANALYTICS["core.analytics.latency"]
 - Telemetry-driven optimization:
   - Monitor p50/p95/p99 latencies and jitter; use AudioTelemetryLogger to capture frame-level regressions.
   - Export traces via OpenTelemetry for cross-service latency analysis.
+- Voice quality metrics:
+  - AEC ERLE targets above 12dB for optimal echo cancellation performance.
+  - Cross-talk detection accuracy should exceed 80% with RMS energy retention above 60%.
+  - Emotion detection F1-scores should maintain macro-averaged scores above 0.75.
+  - VAD accuracy targets above 85% for reliable speech detection.
 
-[No sources needed since this section provides general guidance]
+**Updated** Enhanced voice quality performance targets with specific thresholds for AEC ERLE, cross-talk detection, emotion detection, and VAD accuracy metrics.
 
 ## Troubleshooting Guide
 - Missing API key for voice quality benchmarks:
@@ -521,17 +553,24 @@ REAL --> LATANALYTICS["core.analytics.latency"]
   - If Firebase is not connected, the concurrent load test is skipped; verify credentials and connection status.
 - Insufficient memory profiling:
   - tracemalloc snapshots must be enabled; ensure the audit runs with tracemalloc.start() and take snapshots before and after workload.
+- Voice quality benchmark failures:
+  - Check AEC ERLE values for SNR conditions; ensure adequate convergence before measuring ERLE.
+  - Verify cross-talk detection accuracy meets minimum thresholds for double-talk scenarios.
+  - Review emotion detection confusion matrices for class-specific performance issues.
+
+**Updated** Added troubleshooting guidance for voice quality benchmark failures and specific metric thresholds.
 
 **Section sources**
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L774-L780)
 - [tests/benchmarks/test_thalamic_gate_benchmark.py](file://tests/benchmarks/test_thalamic_gate_benchmark.py#L69-L71)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L52-L82)
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L112-L134)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
 
 ## Conclusion
-Aether Voice OS provides a comprehensive performance benchmarking system spanning micro-benchmarks, voice quality validation, real-world auditing, and telemetry-driven analytics. By leveraging unit-level DSP and latency benchmarks, Firebase optimization comparisons, and the voice quality suite, teams can establish baselines, detect regressions, and maintain sub-200 ms real-time performance. The expert runner and dashboard streamline reporting and visualization, while OpenTelemetry and memory profiling support deep diagnostics and optimization.
+Aether Voice OS provides a comprehensive performance benchmarking system spanning micro-benchmarks, voice quality validation, real-world auditing, and telemetry-driven analytics. By leveraging unit-level DSP and latency benchmarks, Firebase optimization comparisons, and the voice quality suite with comprehensive metrics (AEC ERLE, cross-talk detection, emotion detection, VAD accuracy, and thalamic gate latency), teams can establish baselines, detect regressions, and maintain sub-200 ms real-time performance. The expert runner and dashboard streamline reporting and visualization, while OpenTelemetry and memory profiling support deep diagnostics and optimization.
 
-[No sources needed since this section summarizes without analyzing specific files]
+**Updated** Enhanced conclusion reflecting the comprehensive voice quality benchmarking capabilities and detailed performance metrics.
 
 ## Appendices
 
@@ -546,10 +585,13 @@ Aether Voice OS provides a comprehensive performance benchmarking system spannin
   - Install pytest-benchmark for automatic measurements; otherwise, the manual benchmark runs.
 - Voice Quality Benchmark Suite:
   - Ensure API key is configured; run the script to execute all voice quality tests and produce a report.
+  - The new voice quality report includes comprehensive metrics with pass/fail criteria for each test.
 - Expert Benchmark Runner:
   - Execute the runner to orchestrate multiple tests and consolidate reports.
 - Dashboard Generation:
   - Generate an HTML dashboard from the consolidated benchmark report.
+
+**Updated** Added information about the new voice quality report format and comprehensive metrics.
 
 **Section sources**
 - [tests/benchmarks/README.md](file://tests/benchmarks/README.md#L15-L43)
@@ -568,12 +610,17 @@ Aether Voice OS provides a comprehensive performance benchmarking system spannin
   - AudioTelemetryLogger stores per-frame metrics enabling detection of spikes and jitter.
 - Consolidated reporting:
   - Expert benchmark runner merges multiple reports; trends can be tracked across runs.
+  - Voice quality reports include detailed pass/fail criteria and threshold comparisons.
 - Threshold-based pass/fail:
   - Many benchmarks define explicit thresholds; pass/fail flags indicate regressions.
+  - Voice quality metrics include specific target values for AEC ERLE, cross-talk detection, emotion detection, and VAD accuracy.
+
+**Updated** Enhanced statistical analysis to include voice quality benchmark thresholds and pass/fail criteria.
 
 **Section sources**
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L280-L320)
 - [tests/reports/benchmark_report.json](file://tests/reports/benchmark_report.json#L1-L297)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
 
 ### Writing Custom Benchmarks
 - Follow the existing patterns:
@@ -582,6 +629,13 @@ Aether Voice OS provides a comprehensive performance benchmarking system spannin
   - Integrate with pytest-benchmark for automatic statistics when available.
 - Reporting:
   - Emit structured results similar to voice_quality_benchmark.py and consolidated reports.
+  - Include pass/fail criteria and threshold comparisons for comprehensive evaluation.
+- Voice quality metrics:
+  - Include AEC ERLE measurements with SNR conditions.
+  - Add cross-talk detection accuracy and RMS energy retention metrics.
+  - Incorporate emotion detection F1-scores and VAD classification accuracy.
+
+**Updated** Added guidance for writing custom benchmarks with voice quality metrics and comprehensive evaluation criteria.
 
 **Section sources**
 - [tests/benchmarks/bench_dsp.py](file://tests/benchmarks/bench_dsp.py#L62-L74)
@@ -596,22 +650,38 @@ Aether Voice OS provides a comprehensive performance benchmarking system spannin
 - Firebase:
   - Favor batch retrieval with offloaded parsing to reduce latency.
 - Voice Quality:
-  - Evaluate round-trip latency, AEC ERLE, emotion detection F1, VAD accuracy, and Thalamic Gate latency against defined thresholds.
+  - Evaluate round-trip latency, AEC ERLE (targets >12dB), emotion detection F1 (targets >0.75), VAD accuracy (targets >85%), and Thalamic Gate latency (targets <2ms) against defined thresholds.
+  - Review cross-talk detection accuracy and RMS energy retention for double-talk scenarios.
+- Pass/Fail Criteria:
+  - Use the comprehensive pass/fail indicators from voice quality reports to identify performance issues.
+  - Monitor trend changes across multiple benchmark runs to detect regressions.
+
+**Updated** Enhanced interpretation guidelines for voice quality metrics with specific target thresholds and performance indicators.
 
 **Section sources**
 - [tests/benchmarks/bench_dsp.py](file://tests/benchmarks/bench_dsp.py#L107-L108)
 - [tests/benchmarks/bench_latency.py](file://tests/benchmarks/bench_latency.py#L75-L83)
 - [tests/benchmarks/bench_firebase_queries.py](file://tests/benchmarks/bench_firebase_queries.py#L104-L105)
 - [tests/benchmarks/voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L273-L281)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
 
 ### Establishing Performance Baselines
 - Define targets for each benchmark category (e.g., internal latency, Thalamic Gate latency, AEC ERLE).
 - Use consolidated reports to track progress over time and detect regressions.
 - Maintain separate baselines for development, staging, and production environments.
+- Voice quality baselines:
+  - AEC ERLE targets: >12dB across all SNR conditions.
+  - Cross-talk detection: >80% accuracy with >60% RMS energy retention.
+  - Emotion detection: >0.75 macro-averaged F1-score.
+  - VAD accuracy: >85% classification accuracy.
+  - Thalamic Gate latency: <2ms average processing time.
+
+**Updated** Added comprehensive voice quality performance baselines with specific target thresholds.
 
 **Section sources**
 - [tests/benchmarks/README.md](file://tests/benchmarks/README.md#L7-L13)
 - [tests/reports/benchmark_report.json](file://tests/reports/benchmark_report.json#L1-L297)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
 
 ### Benchmark Reporting, Visualization, and Trend Analysis
 - Consolidated report:
@@ -620,11 +690,18 @@ Aether Voice OS provides a comprehensive performance benchmarking system spannin
   - HTML dashboard visualizes key metrics and trends.
 - Trend analysis:
   - Compare successive runs of benchmark_report.json to identify drifts in latency, memory growth, or stability.
+  - Voice quality reports provide detailed performance tracking across multiple metrics and test scenarios.
+- Real-time monitoring:
+  - AudioTelemetryLogger provides real-time metrics for active sessions.
+  - Telemetry events enable live performance monitoring and alerting.
+
+**Updated** Enhanced reporting capabilities with comprehensive voice quality metrics and real-time monitoring.
 
 **Section sources**
 - [tools/benchmark_runner.py](file://tools/benchmark_runner.py#L42-L84)
-- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L166)
+- [tools/dashboard_generator.py](file://tools/dashboard_generator.py#L1-L167)
 - [tests/reports/benchmark_report.json](file://tests/reports/benchmark_report.json#L1-L297)
+- [benchmark_reports/voice_quality_report.json](file://benchmark_reports/voice_quality_report.json#L1-L87)
 
 ### Performance Profiling Tools, Memory Tracking, and CPU/GPU Monitoring
 - Memory profiling:
@@ -633,6 +710,11 @@ Aether Voice OS provides a comprehensive performance benchmarking system spannin
   - Use system-level profilers (e.g., perf, Instruments) alongside Python memory profiling to identify hotspots.
 - Telemetry export:
   - OpenTelemetry sink exports traces for cross-service latency analysis and cost tracking.
+- Voice quality profiling:
+  - Monitor AEC convergence rates and ERLE values during real-time testing.
+  - Track emotion detection accuracy and VAD performance under various acoustic conditions.
+
+**Updated** Added voice quality profiling capabilities and monitoring of AEC, emotion detection, and VAD performance metrics.
 
 **Section sources**
 - [infra/scripts/benchmark.py](file://infra/scripts/benchmark.py#L42-L44)
@@ -648,8 +730,14 @@ Aether Voice OS provides a comprehensive performance benchmarking system spannin
   - Batch reads/writes and minimize parsing overhead in the main thread.
 - Voice quality:
   - Improve AEC convergence and ERLE; refine VAD thresholds; enhance emotion detection features.
+  - Optimize cross-talk detection algorithms for better double-talk handling.
+  - Monitor and adjust thalamic gate latency to meet sub-2ms targets.
 - Real-time processing:
   - Monitor p99 latencies and jitter; apply backpressure controls when necessary.
+  - Use AudioTelemetryLogger to identify performance bottlenecks in real-time.
+  - Implement threshold-based alerts for critical performance degradation.
+
+**Updated** Enhanced optimization guidance with specific voice quality metrics and performance targets.
 
 **Section sources**
 - [tests/benchmarks/bench_dsp.py](file://tests/benchmarks/bench_dsp.py#L107-L108)

@@ -11,6 +11,13 @@
 - [test_cybernetic_core.py](file://tests/unit/test_cybernetic_core.py)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated calibration process documentation to reflect streamlined biometric calibration
+- Clarified that redundant pitch validation code has been removed from calibrate_admin_voice function
+- Enhanced troubleshooting guidance for calibration failures
+- Updated implementation examples to reflect simplified calibration workflow
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -25,6 +32,8 @@
 ## Introduction
 This document explains the voice authentication system in Aether Voice OS. It focuses on the VoiceAuthGuard class that performs biometric verification using audio state metrics, the audio feature extraction pipeline using RMS energy and Zero Crossing Rate (ZCR) to estimate fundamental frequency (F0), and the authorization logic that validates pitch range and presence. It also documents the integration with audio_state for real-time biometric verification during tool execution, and provides guidance for extending the system with custom algorithms, tuning sensitivity thresholds, and optimizing performance across different voice types and recording conditions.
 
+**Updated** The calibration process has been streamlined by removing redundant pitch validation code, simplifying the biometric calibration workflow while maintaining core functionality and security.
+
 ## Project Structure
 The voice authentication system spans several modules:
 - Tools: voice authentication tool definition and middleware integration
@@ -37,15 +46,17 @@ graph TB
 subgraph "Tools"
 VA["VoiceAuthGuard<br/>verify_admin<br/>get_tools"]
 ROUTER["Biometric Middleware<br/>ToolRouter.verify"]
-end
+CAL["Calibration Process<br/>calibrate_admin_voice"]
+END
 subgraph "Audio Pipeline"
 CAP["AudioCapture<br/>callback"]
 PROC["Processing<br/>VAD, ZCR, RMS"]
 STATE["AudioState<br/>last_rms, last_zcr"]
 PL["Paralinguistics<br/>Pitch Estimation"]
-end
+END
 VA --> STATE
 ROUTER --> VA
+CAL --> VA
 CAP --> PROC
 CAP --> STATE
 PL --> CAP
@@ -60,7 +71,7 @@ PL --> CAP
 - [paralinguistics.py](file://core/audio/paralinguistics.py#L31-L214)
 
 **Section sources**
-- [voice_auth.py](file://core/tools/voice_auth.py#L1-L82)
+- [voice_auth.py](file://core/tools/voice_auth.py#L1-L112)
 - [state.py](file://core/audio/state.py#L1-L129)
 - [capture.py](file://core/audio/capture.py#L1-L575)
 - [processing.py](file://core/audio/processing.py#L1-L508)
@@ -68,7 +79,7 @@ PL --> CAP
 - [router.py](file://core/tools/router.py#L52-L92)
 
 ## Core Components
-- VoiceAuthGuard: Stateless class that evaluates the current speaker’s biometric signature using RMS and ZCR from audio_state. It estimates F0 via a ZCR heuristic and enforces a pitch-range check along with a presence threshold.
+- VoiceAuthGuard: Stateless class that evaluates the current speaker's biometric signature using RMS and ZCR from audio_state. It estimates F0 via a ZCR heuristic and enforces a pitch-range check along with a presence threshold.
 - AudioState: Thread-safe singleton holding live audio metrics (RMS, ZCR, AEC state, silence classification) updated by the capture callback.
 - AudioCapture: PyAudio callback that computes RMS, ZCR, and silence type, and updates audio_state for downstream consumers.
 - Processing: Provides VAD utilities and multi-feature fusion used by capture and paralinguistics.
@@ -88,6 +99,7 @@ The voice authentication pipeline operates in real time:
 - AudioCapture runs a high-priority callback that computes RMS and ZCR, updates audio_state, and classifies silence.
 - VoiceAuthGuard reads audio_state to estimate F0 from ZCR and applies presence and pitch-range checks.
 - ToolRouter enforces biometric verification for sensitive tools by inspecting a session context flag set by the audio capture layer.
+- Calibration process captures the administrator's voice signature and stores it for future authentication.
 
 ```mermaid
 sequenceDiagram
@@ -192,6 +204,29 @@ CheckRange --> |False| Deny
 - [voice_auth.py](file://core/tools/voice_auth.py#L14-L16)
 - [voice_auth.py](file://core/tools/voice_auth.py#L45-L51)
 
+### Streamlined Calibration Process: Simplified Biometric Fingerprint Capture
+**Updated** The calibration process has been streamlined by removing redundant pitch validation code, creating a more efficient biometric fingerprint capture workflow.
+
+- Input validation: checks for audio presence using RMS threshold
+- F0 estimation: calculates pitch from ZCR using heuristic formula
+- Calibration storage: saves the authenticated pitch as the administrator's biometric fingerprint
+- Success response: confirms successful calibration with stored fingerprint value
+
+```mermaid
+flowchart TD
+Start(["Entry: calibrate_admin_voice()"]) --> CheckRMS["Check RMS >= 0.01"]
+CheckRMS --> |No| FailNoAudio["Return failure: No audio detected"]
+CheckRMS --> |Yes| CalcPitch["Calculate pitch = ZCR * 8000"]
+CalcPitch --> StoreFingerprint["Store as administrator fingerprint"]
+StoreFingerprint --> Success["Return success: Calibration complete"]
+```
+
+**Diagram sources**
+- [voice_auth.py](file://core/tools/voice_auth.py#L67-L94)
+
+**Section sources**
+- [voice_auth.py](file://core/tools/voice_auth.py#L67-L94)
+
 ### Integration with audio_state for Real-Time Biometric Verification
 - AudioCapture updates audio_state with last_rms and last_zcr on every callback.
 - VoiceAuthGuard reads these values synchronously from the audio_state singleton.
@@ -280,6 +315,7 @@ CAP["AudioCapture"] --> PR["Processing (VAD/ZCR)"]
 CAP --> ST
 PL["Paralinguistics"] --> CAP
 RT["ToolRouter"] --> VA
+CAL["Calibration"] --> VA
 ```
 
 **Diagram sources**
@@ -303,14 +339,15 @@ RT["ToolRouter"] --> VA
 - Adaptive thresholds: Using AdaptiveVAD reduces false positives in varying environments.
 - Latency targets: The system aims for end-to-end latency under 200 ms; ensure AEC and VAD parameters are tuned accordingly.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Authentication fails due to low presence: Increase the presence threshold or improve microphone placement and recording conditions.
 - Frequent false positives: Narrow the authorized pitch range or add additional checks (e.g., RMS variance).
 - Noisy environments: Enable or tune AdaptiveVAD thresholds; consider increasing AEC convergence parameters.
+- Calibration failures: Ensure clear speech during calibration, check microphone functionality, and verify audio levels meet minimum requirements.
 - Testing voice biometrics: Use unit tests to simulate authorized and unauthorized ZCR/RMS combinations.
+
+**Updated** Calibration troubleshooting: The streamlined calibration process removes redundant pitch validation checks, making the system more responsive but potentially less tolerant of extreme audio conditions. Users should ensure optimal recording conditions during calibration.
 
 Validation references:
 - Unit test verifying pitch-based signature detection
@@ -321,4 +358,4 @@ Validation references:
 - [test_cybernetic_core.py](file://tests/unit/test_cybernetic_core.py#L18-L31)
 
 ## Conclusion
-The voice authentication system in Aether Voice OS leverages real-time audio metrics (RMS and ZCR) to perform efficient, low-latency biometric verification. VoiceAuthGuard integrates seamlessly with audio_state and ToolRouter to protect sensitive tools. By tuning thresholds, adopting robust F0 estimation, and incorporating adaptive mechanisms, the system can be optimized for diverse voice types and recording conditions while maintaining strong security posture.
+The voice authentication system in Aether Voice OS leverages real-time audio metrics (RMS and ZCR) to perform efficient, low-latency biometric verification. VoiceAuthGuard integrates seamlessly with audio_state and ToolRouter to protect sensitive tools. The recent optimization has streamlined the calibration process while maintaining core functionality, reducing redundant validation steps and improving system responsiveness. By tuning thresholds, adopting robust F0 estimation, and incorporating adaptive mechanisms, the system can be optimized for diverse voice types and recording conditions while maintaining strong security posture.

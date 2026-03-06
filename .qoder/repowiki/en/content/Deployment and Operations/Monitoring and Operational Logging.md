@@ -21,7 +21,16 @@
 - [core/ai/handover_telemetry.py](file://core/ai/handover_telemetry.py)
 - [core/services/watchdog.py](file://core/services/watchdog.py)
 - [tools/dashboard_generator.py](file://tools/dashboard_generator.py)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for structlog integration replacing previous logging configuration
+- Updated logging architecture section to cover structured console and JSON file logging
+- Added new section on structured logging configuration and benefits
+- Updated troubleshooting guide to include structlog-specific guidance
+- Enhanced monitoring setup with structlog best practices
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -29,14 +38,15 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
-10. [Appendices](#appendices)
+6. [Structured Logging with structlog](#structured-logging-with-structlog)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
+11. [Appendices](#appendices)
 
 ## Introduction
-This document describes the monitoring and operational logging architecture of Aether Voice OS. It covers telemetry collection for performance metrics, audio processing statistics, and system health indicators; the logging architecture with structured logging, log levels, and retention; the analytics framework for latency measurement, system performance tracking, and user behavior analysis; and the frontend HUD analytics display and real-time monitoring interfaces. It also provides practical guidance for setting up monitoring dashboards, alerting configurations, performance baselines, log aggregation and correlation, troubleshooting workflows, and extending the telemetry system.
+This document describes the monitoring and operational logging architecture of Aether Voice OS. It covers telemetry collection for performance metrics, audio processing statistics, and system health indicators; the modernized logging architecture with structlog integration for structured console and JSON file logging; the analytics framework for latency measurement, system performance tracking, and user behavior analysis; and the frontend HUD analytics display and real-time monitoring interfaces. It also provides practical guidance for setting up monitoring dashboards, alerting configurations, performance baselines, log aggregation and correlation, troubleshooting workflows, and extending the telemetry system.
 
 ## Project Structure
 Aether Voice OS separates observability concerns across:
@@ -44,6 +54,7 @@ Aether Voice OS separates observability concerns across:
 - Frontend HUD and dashboard components under apps/portal/ that visualize telemetry and system state.
 - A centralized event bus that routes telemetry and system events with strict latency budgets.
 - A watchdog service that monitors logs and orchestrates autonomous healing.
+- **Updated**: Structured logging configuration using structlog for both console and file outputs.
 
 ```mermaid
 graph TB
@@ -62,6 +73,7 @@ BE_DemoMetrics["Demo Metrics<br/>analytics/demo_metrics.py"]
 BE_HandoverTel["Handover Telemetry<br/>ai/handover_telemetry.py"]
 BE_OTel["Telemetry Manager<br/>infra/telemetry.py"]
 BE_Watchdog["Watchdog (services/watchdog.py)"]
+BE_Structlog["Structured Logging<br/>infra/logging_config.py"]
 end
 FE_Store --> FE_HUD
 FE_Store --> FE_Dash
@@ -73,6 +85,7 @@ BE_DemoMetrics --> BE_Bus
 BE_HandoverTel --> BE_OTel
 BE_HandoverTel --> BE_Bus
 BE_Watchdog --> BE_Bus
+BE_Structlog --> BE_AudioTel
 ```
 
 **Diagram sources**
@@ -90,6 +103,7 @@ BE_Watchdog --> BE_Bus
 - [core/ai/handover_telemetry.py](file://core/ai/handover_telemetry.py#L295-L314)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L14-L130)
 - [core/services/watchdog.py](file://core/services/watchdog.py#L39-L105)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L9-L73)
 
 **Section sources**
 - [core/infra/event_bus.py](file://core/infra/event_bus.py#L69-L152)
@@ -106,6 +120,7 @@ BE_Watchdog --> BE_Bus
 - [apps/portal/src/hooks/useEngineTelemetry.ts](file://apps/portal/src/hooks/useEngineTelemetry.ts#L1-L33)
 - [apps/portal/src/components/TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L1-L40)
 - [core/services/watchdog.py](file://core/services/watchdog.py#L39-L105)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L9-L73)
 
 ## Core Components
 - Telemetry ingestion and routing via a tiered event bus with strict deadlines.
@@ -114,6 +129,7 @@ BE_Watchdog --> BE_Bus
 - OpenTelemetry integration exporting traces to Arize/Phoenix via OTLP.
 - Frontend telemetry UI and HUD analytics for real-time diagnostics.
 - Watchdog service for log-based failure detection and autonomous healing.
+- **Updated**: Structured logging with structlog for both human-readable console output and machine-readable JSON file logging.
 
 **Section sources**
 - [core/infra/event_bus.py](file://core/infra/event_bus.py#L69-L152)
@@ -124,16 +140,21 @@ BE_Watchdog --> BE_Bus
 - [apps/portal/src/components/TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L1-L40)
 - [apps/portal/src/components/HUD/SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx#L36-L67)
 - [core/services/watchdog.py](file://core/services/watchdog.py#L39-L105)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L9-L73)
 
 ## Architecture Overview
-The monitoring architecture integrates backend telemetry producers, a central event bus, and frontend consumers. Telemetry producers emit structured events with latency budgets; the event bus enforces priority lanes and expiration; frontend components subscribe to state and telemetry to render HUD analytics and dashboards.
+The monitoring architecture integrates backend telemetry producers, a central event bus, and frontend consumers. Telemetry producers emit structured events with latency budgets; the event bus enforces priority lanes and expiration; frontend components subscribe to state and telemetry to render HUD analytics and dashboards. The system now uses structlog for consistent, structured logging across all components.
 
 ```mermaid
 sequenceDiagram
 participant Producer as "Telemetry Producer<br/>audio/telemetry.py"
+participant Structlog as "structlog Logger<br/>logging_config.py"
 participant Bus as "EventBus<br/>event_bus.py"
 participant Consumer as "Frontend Consumers<br/>HUD, Dashboard"
 participant Store as "useAetherStore.ts"
+Producer->>Structlog : "Structured log with context"
+Structlog->>Structlog : "Apply processors and formatters"
+Structlog-->>Producer : "Formatted log output"
 Producer->>Bus : "TelemetryEvent(metric_name, value, metadata)"
 Bus->>Bus : "Route to Telemetry lane"
 Bus-->>Consumer : "Deliver event (non-expired)"
@@ -142,7 +163,8 @@ Store-->>Consumer : "Re-render HUD/Dashboard"
 ```
 
 **Diagram sources**
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L77-L88)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L16-L34)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L30-L37)
 - [core/infra/event_bus.py](file://core/infra/event_bus.py#L90-L101)
 - [apps/portal/src/store/useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L336-L342)
 - [apps/portal/src/components/HUD/SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx#L36-L67)
@@ -191,13 +213,15 @@ EventBus --> SystemEvent : "routes"
 ### Audio Telemetry and Performance Logging
 - AudioTelemetry periodically computes RMS, pitch, and spectral centroid from PCM buffers and publishes TelemetryEvent.
 - AudioTelemetryLogger tracks frame-level latency, AEC ERLE, convergence, VAD states, and queue sizes; aggregates session metrics and exposes real-time stats.
+- **Updated**: Uses structlog.get_logger() for structured logging with consistent formatting and context preservation.
 - Benchmarks and detailed CSV logs are supported for performance evaluation.
 
 ```mermaid
 flowchart TD
 Start(["Audio frame received"]) --> Convert["Convert bytes to float32 PCM"]
 Convert --> Features["Compute RMS, pitch, spectral centroid"]
-Features --> Publish["Publish TelemetryEvent"]
+Features --> Structlog["Structured logging with context"]
+Structlog --> Publish["Publish TelemetryEvent"]
 Publish --> End(["Loop until stop"])
 subgraph "Frame Metrics"
 FStart["start_frame()"] --> Capture["record_capture()"]
@@ -211,10 +235,12 @@ end
 **Diagram sources**
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L53-L93)
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L203-L277)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L16-L34)
 
 **Section sources**
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L21-L93)
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L151-L394)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L16-L34)
 
 ### Latency Analytics and Demo Metrics
 - LatencyOptimizer maintains a sliding window of latency samples and computes p50/p95/p99 and average.
@@ -311,7 +337,7 @@ HandoverTelemetry --> HandoverAnalytics : "aggregates"
 
 ### Frontend HUD Analytics and Telemetry UI
 - useAetherStore holds telemetry-derived state (latency, valence, arousal, engagement, pitch, spectral centroid) and system logs.
-- SystemAnalytics renders “Neural Flux” and “Temporal Sync” visualizations using store state.
+- SystemAnalytics renders "Neural Flux" and "Temporal Sync" visualizations using store state.
 - TelemetryFeed displays a capped list of system logs with timestamps and optional sources.
 - HUDContainer provides the visual overlay for HUD elements.
 - The dashboard page composes visualizers and displays system logs and engine state.
@@ -420,15 +446,64 @@ int queue_size_out
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L121-L149)
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L280-L320)
 
+## Structured Logging with structlog
+
+### structlog Integration Overview
+Aether Voice OS has been modernized with comprehensive structlog integration for structured logging. The new logging system provides both human-readable console output and machine-readable JSON file logging, enabling better observability and log analysis.
+
+### Configuration Architecture
+The logging system is configured through a centralized `configure_logging()` function that sets up:
+- Shared processors for context management, log levels, stack info, exception handling, and timestamping
+- Console renderer with color support and plain traceback formatting
+- JSON renderer for machine-readable file logging
+- Structlog configuration with ProcessorFormatter wrappers
+
+```mermaid
+flowchart TD
+Config["configure_logging()"] --> Processors["Shared Processors<br/>merge_contextvars, add_log_level,<br/>StackInfoRenderer, set_exc_info,<br/>TimeStamper"]
+Config --> ConsoleRenderer["ConsoleRenderer<br/>colors=True,<br/>plain_traceback"]
+Config --> JSONRenderer["JSONRenderer"]
+Config --> StructlogConfig["structlog.configure()<br/>with processors,<br/>Factory, Wrapper, Cache"]
+Config --> Handlers["Handlers Setup<br/>Console + Optional File"]
+Config --> RootLogger["Root Logger<br/>Level + Handler Management"]
+```
+
+**Diagram sources**
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L15-L37)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L39-L73)
+
+### Console Logging Features
+- Human-readable output with color support for different log levels
+- Structured context display with consistent formatting
+- Exception-friendly tracebacks with plain text formatting
+- ISO timestamp formatting for precise log correlation
+
+### File Logging Features
+- Machine-readable JSON output for log aggregation systems
+- Complete structured context preserved in JSON format
+- Consistent field naming across all log entries
+- Support for external log analysis and monitoring tools
+
+### Logger Usage Patterns
+Components throughout the system use structlog for consistent logging:
+- Audio telemetry uses `structlog.get_logger("AetherOS.Telemetry")` for named loggers
+- Structured logging with contextual information for metrics and events
+- Consistent formatting across all logging calls
+
+**Section sources**
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L9-L73)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L16-L34)
+
 ## Dependency Analysis
 - Event-driven architecture: Producers emit TelemetryEvent; EventBus routes and dispatches; consumers update store and render UI.
 - OpenTelemetry: TelemetryManager encapsulates provider and exporter configuration; record_usage enriches current spans.
 - Handover telemetry: Uses Pydantic models and enums; integrates OTLP spans for tracing.
 - Frontend state: useAetherStore centralizes telemetry-derived state; HUD and dashboard components depend on it.
+- **Updated**: Structlog integration provides consistent logging across all components with structured context preservation.
 
 ```mermaid
 graph LR
-AudioTel["audio/telemetry.py"] --> Bus["event_bus.py"]
+AudioTel["audio/telemetry.py<br/>uses structlog"] --> Bus["event_bus.py"]
 Latency["analytics/latency.py"] --> Bus
 Demo["analytics/demo_metrics.py"] --> Bus
 Handover["ai/handover_telemetry.py"] --> Otel["infra/telemetry.py"]
@@ -437,10 +512,11 @@ FE_Store["useAetherStore.ts"] --> FE_HUD["HUD components"]
 FE_Store --> FE_Dash["Dashboard page.tsx"]
 FE_TelemUI["TelemetryFeed.tsx"] --> FE_Store
 Watchdog["services/watchdog.py"] --> Bus
+Structlog["infra/logging_config.py"] --> AudioTel
 ```
 
 **Diagram sources**
-- [core/audio/telemetry.py](file://core/audio/telemetry.py#L77-L88)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L16-L34)
 - [core/infra/event_bus.py](file://core/infra/event_bus.py#L90-L101)
 - [core/analytics/latency.py](file://core/analytics/latency.py#L16-L40)
 - [core/analytics/demo_metrics.py](file://core/analytics/demo_metrics.py#L23-L50)
@@ -451,37 +527,38 @@ Watchdog["services/watchdog.py"] --> Bus
 - [apps/portal/src/dashboard/app/page.tsx](file://apps/portal/src/dashboard/app/page.tsx#L15-L18)
 - [apps/portal/src/components/TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L13-L40)
 - [core/services/watchdog.py](file://core/services/watchdog.py#L74-L86)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L30-L37)
 
 **Section sources**
 - [core/infra/event_bus.py](file://core/infra/event_bus.py#L69-L152)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L14-L130)
 - [core/ai/handover_telemetry.py](file://core/ai/handover_telemetry.py#L295-L314)
 - [apps/portal/src/store/useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L200-L440)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L9-L73)
 
 ## Performance Considerations
 - Latency budgets: SystemEvent enforces deadlines; EventBus workers drop expired events in higher-priority lanes to prevent starvation.
 - Audio telemetry cadence: AudioTelemetry runs at approximately 15 Hz to balance CPU and responsiveness.
 - Real-time vs. batch: TelemetryEvent is designed to be droppable; critical metrics are prioritized in separate lanes.
 - Export throughput: TelemetryManager uses BatchSpanProcessor in production and SimpleSpanProcessor in debug mode to tune overhead.
-
-[No sources needed since this section provides general guidance]
+- **Updated**: structlog processors add minimal overhead while providing structured context; console rendering is optimized for readability, JSON rendering for machine parsing efficiency.
 
 ## Troubleshooting Guide
 - Log-based detection: Watchdog intercepts ERROR logs from non-watchdog modules and publishes alerts; review logs and system state to identify recurring issues.
 - Telemetry UI: Use TelemetryFeed to inspect recent system logs and HUD diagnostics to confirm latency and affective states.
 - Autonomic healing: SystemFailure HUD indicates autonomous healing status; successful repairs clear automatically after a delay.
 - Deprecated telemetry hook: useEngineTelemetry is deprecated; telemetry now flows through the main gateway hook; remove imports and rely on useAetherStore for state.
+- **Updated**: structlog troubleshooting: Check log level configuration, verify processor chain order, ensure proper formatter setup for both console and file handlers, and validate JSON formatting for machine-readable logs.
 
 **Section sources**
 - [core/services/watchdog.py](file://core/services/watchdog.py#L21-L37)
 - [apps/portal/src/components/TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L13-L40)
 - [apps/portal/src/components/HUD/SystemFailure.tsx](file://apps/portal/src/components/HUD/SystemFailure.tsx#L15-L23)
 - [apps/portal/src/hooks/useEngineTelemetry.ts](file://apps/portal/src/hooks/useEngineTelemetry.ts#L1-L33)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L9-L73)
 
 ## Conclusion
-Aether Voice OS employs a robust, event-driven monitoring stack combining backend telemetry producers, a tiered event bus with strict latency enforcement, OpenTelemetry tracing, and a rich frontend HUD and dashboard for real-time diagnostics. The architecture supports audio-centric metrics, latency analytics, handover performance tracking, and autonomous log-based failure detection. Operators can leverage the provided components to build dashboards, configure alerting, establish baselines, and extend telemetry with new endpoints and integrations.
-
-[No sources needed since this section summarizes without analyzing specific files]
+Aether Voice OS employs a robust, event-driven monitoring stack combining backend telemetry producers, a tiered event bus with strict latency enforcement, OpenTelemetry tracing, and a rich frontend HUD and dashboard for real-time diagnostics. **Updated**: The system has been modernized with comprehensive structlog integration providing structured console and JSON file logging for improved observability. The architecture supports audio-centric metrics, latency analytics, handover performance tracking, and autonomous log-based failure detection. Operators can leverage the provided components to build dashboards, configure alerting, establish baselines, and extend telemetry with new endpoints and integrations while benefiting from consistent, structured logging across all system components.
 
 ## Appendices
 
@@ -495,11 +572,13 @@ Aether Voice OS employs a robust, event-driven monitoring stack combining backen
 
 ### Alerting Configurations
 - Configure environment variables for TelemetryManager to route to Arize/Phoenix.
-- Use Watchdog’s log handler to trigger alerts on ERROR-level logs; adjust throttling and alert intervals as needed.
+- Use Watchdog's log handler to trigger alerts on ERROR-level logs; adjust throttling and alert intervals as needed.
+- **Updated**: structlog configuration supports both console and file handlers for comprehensive alerting and log aggregation.
 
 **Section sources**
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L28-L61)
 - [core/services/watchdog.py](file://core/services/watchdog.py#L21-L37)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L49-L60)
 
 ### Performance Baselines
 - Target sub-200 ms real-time audio guarantees; monitor p50/p95/p99 latency percentiles from AudioTelemetryLogger.
@@ -511,27 +590,33 @@ Aether Voice OS employs a robust, event-driven monitoring stack combining backen
 ### Log Aggregation and Correlation
 - Use TelemetryFeed to correlate recent logs with HUD analytics.
 - Export session reports and frame logs from AudioTelemetryLogger for offline correlation and regression analysis.
+- **Updated**: structlog JSON output enables seamless integration with log aggregation systems like ELK stack, Splunk, or cloud logging platforms.
 
 **Section sources**
 - [apps/portal/src/components/TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L13-L40)
 - [core/audio/telemetry.py](file://core/audio/telemetry.py#L355-L394)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L28-L28)
 
 ### Customizing Monitoring Metrics and Adding New Telemetry Endpoints
 - Define new TelemetryEvent payloads in the backend and publish via EventBus.
 - Extend useAetherStore to expose new state fields and render them in HUD components or dashboards.
 - Integrate new metrics with OpenTelemetry spans using TelemetryManager for centralized export.
+- **Updated**: Use structlog.get_logger() with appropriate logger names for new components to maintain consistent logging patterns.
 
 **Section sources**
 - [core/infra/event_bus.py](file://core/infra/event_bus.py#L46-L56)
 - [apps/portal/src/store/useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L216-L226)
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L109-L112)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L72-L73)
 
 ### Integrating with External Monitoring Systems
 - Configure TelemetryManager endpoint and credentials for Arize/Phoenix.
 - Use OTLP exporter headers and processor selection to match your backend observability stack.
+- **Updated**: structlog JSON output integrates seamlessly with external monitoring systems for automated log processing and alerting.
 
 **Section sources**
 - [core/infra/telemetry.py](file://core/infra/telemetry.py#L28-L61)
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L28-L28)
 
 ### Frontend Telemetry UI Controls
 - Enable/disable telemetry display via user preferences in useAetherStore.
@@ -548,3 +633,14 @@ Aether Voice OS employs a robust, event-driven monitoring stack combining backen
 **Section sources**
 - [apps/portal/src-tauri/gen/schemas/desktop-schema.json](file://apps/portal/src-tauri/gen/schemas/desktop-schema.json#L2218-L2231)
 - [apps/portal/src-tauri/gen/schemas/macOS-schema.json](file://apps/portal/src-tauri/gen/schemas/macOS-schema.json#L2218-L2231)
+
+### structlog Configuration Best Practices
+- Use named loggers for different subsystems (e.g., "AetherOS.Telemetry")
+- Leverage context variables for request-scoped information
+- Maintain consistent processor order for predictable log formatting
+- Configure appropriate log levels for development vs production environments
+- Use JSON renderer for machine-readable logs in production deployments
+
+**Section sources**
+- [core/infra/logging_config.py](file://core/infra/logging_config.py#L9-L73)
+- [core/audio/telemetry.py](file://core/audio/telemetry.py#L16-L16)

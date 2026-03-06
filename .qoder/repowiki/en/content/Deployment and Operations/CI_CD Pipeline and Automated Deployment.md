@@ -4,26 +4,20 @@
 **Referenced Files in This Document**
 - [.github/workflows/aether_pipeline.yml](file://.github/workflows/aether_pipeline.yml)
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml)
-- [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md)
 - [cloudbuild.yaml](file://cloudbuild.yaml)
 - [scripts/deploy.sh](file://scripts/deploy.sh)
 - [infra/scripts/tools/deploy.sh](file://infra/scripts/tools/deploy.sh)
 - [Dockerfile](file://Dockerfile)
 - [apps/portal/Dockerfile](file://apps/portal/Dockerfile)
 - [docker-compose.yml](file://docker-compose.yml)
-- [.firebaserc](file://.firebaserc)
-- [firebase.json](file://firebase.json)
-- [requirements.txt](file://requirements.txt)
-- [conftest.py](file://conftest.py)
-- [README.md](file://README.md)
 </cite>
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation for the new README statistics update workflow
-- Enhanced CI/CD pipeline documentation to include automated maintenance processes
-- Updated workflow architecture to reflect dual pipeline approach (development + maintenance)
-- Added new section on automated project maintenance and documentation updates
+- Updated documentation to reflect the removal of comprehensive workflow documentation files (README_WORKFLOW.md and README_IMPROVEMENTS.md) that were deleted from the codebase
+- Revised automated maintenance workflows section to remove references to external workflow documentation files
+- Updated workflow architecture to reflect the current dual pipeline approach without the removed documentation files
+- Enhanced troubleshooting section to address the current workflow state
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -39,7 +33,7 @@
 11. [Appendices](#appendices)
 
 ## Introduction
-This document explains the CI/CD pipeline and automated deployment processes for Aether Voice OS. It covers GitHub Actions workflow configuration, Google Cloud Build automation, deployment scripts, and supporting infrastructure. The pipeline now includes comprehensive automated maintenance workflows for README statistics updates, ensuring project documentation stays current without manual intervention. It also documents testing integration, quality gates, environment-specific deployment targets, rollback procedures, monitoring, failure handling, and guidance for extending the pipeline.
+This document explains the CI/CD pipeline and automated deployment processes for Aether Voice OS. It covers GitHub Actions workflow configuration, Google Cloud Build automation, deployment scripts, and supporting infrastructure. The pipeline includes comprehensive automated maintenance workflows for README statistics updates, ensuring project documentation stays current without manual intervention. It also documents testing integration, quality gates, environment-specific deployment targets, rollback procedures, monitoring, failure handling, and guidance for extending the pipeline.
 
 ## Project Structure
 The repository includes:
@@ -49,7 +43,6 @@ The repository includes:
 - Local deployment scripts for containerized environments
 - Dockerfiles for the kernel and portal services
 - Compose orchestration for local development
-- Firebase configuration for hosting and Firestore
 
 ```mermaid
 graph TB
@@ -67,7 +60,6 @@ DS1 --> KERN["Kernel Service"]
 DS1 --> PORTAL["Portal Service"]
 IDS["infra/scripts/tools/deploy.sh"] --> DOCKER
 IDS --> CR
-FB[".firebaserc"] --> FH["firebase.json"]
 ```
 
 **Diagram sources**
@@ -77,8 +69,6 @@ FB[".firebaserc"] --> FH["firebase.json"]
 - [Dockerfile](file://Dockerfile#L1-L76)
 - [apps/portal/Dockerfile](file://apps/portal/Dockerfile#L1-L43)
 - [docker-compose.yml](file://docker-compose.yml#L1-L37)
-- [.firebaserc](file://.firebaserc#L1-L8)
-- [firebase.json](file://firebase.json#L1-L16)
 - [scripts/deploy.sh](file://scripts/deploy.sh#L1-L37)
 - [infra/scripts/tools/deploy.sh](file://infra/scripts/tools/deploy.sh#L1-L44)
 
@@ -89,8 +79,6 @@ FB[".firebaserc"] --> FH["firebase.json"]
 - [Dockerfile](file://Dockerfile#L1-L76)
 - [apps/portal/Dockerfile](file://apps/portal/Dockerfile#L1-L43)
 - [docker-compose.yml](file://docker-compose.yml#L1-L37)
-- [.firebaserc](file://.firebaserc#L1-L8)
-- [firebase.json](file://firebase.json#L1-L16)
 - [scripts/deploy.sh](file://scripts/deploy.sh#L1-L37)
 - [infra/scripts/tools/deploy.sh](file://infra/scripts/tools/deploy.sh#L1-L44)
 
@@ -123,7 +111,6 @@ Quality gates:
 - [scripts/deploy.sh](file://scripts/deploy.sh#L1-L37)
 - [Dockerfile](file://Dockerfile#L1-L76)
 - [apps/portal/Dockerfile](file://apps/portal/Dockerfile#L1-L43)
-- [requirements.txt](file://requirements.txt#L21-L24)
 
 ## Architecture Overview
 The CI/CD architecture integrates GitHub Actions for pre-deployment validation and production deployment, while a separate maintenance pipeline handles automated documentation updates. Local development leverages Docker Compose to simulate the production environment.
@@ -275,25 +262,6 @@ PPORT --- NET
 - [apps/portal/Dockerfile](file://apps/portal/Dockerfile#L1-L43)
 - [docker-compose.yml](file://docker-compose.yml#L1-L37)
 
-### Firebase Hosting and Firestore Configuration
-- .firebaserc defines the default project identifier.
-- firebase.json configures Firestore database, location, rules, and indexes, and sets the portal hosting public directory.
-
-```mermaid
-graph TB
-FR[".firebaserc"] --> FPJ["firebase.json"]
-FPJ --> FS["Firestore Rules/Index"]
-FPJ --> HOST["Portal Hosting (apps/portal/out)"]
-```
-
-**Diagram sources**
-- [.firebaserc](file://.firebaserc#L1-L8)
-- [firebase.json](file://firebase.json#L1-L16)
-
-**Section sources**
-- [.firebaserc](file://.firebaserc#L1-L8)
-- [firebase.json](file://firebase.json#L1-L16)
-
 ## Automated Maintenance Workflows
 
 ### README Statistics Update Workflow (.github/workflows/update_readme_stats.yml)
@@ -324,7 +292,6 @@ CONTRIB --> END["Workflow Complete"]
 
 **Section sources**
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L1-L62)
-- [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md#L1-L122)
 
 ### External Service Integration
 The maintenance workflow integrates with several external services for automated updates:
@@ -337,7 +304,6 @@ These services update independently, with some (visitor counter, GitHub stats) u
 
 **Section sources**
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L18-L32)
-- [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md#L88-L94)
 
 ### Workflow Configuration and Customization
 The maintenance workflow provides flexible scheduling and customization options:
@@ -357,7 +323,7 @@ The maintenance workflow provides flexible scheduling and customization options:
 5. Execute workflow
 
 **Section sources**
-- [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md#L37-L58)
+- [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L3-L9)
 
 ## Dependency Analysis
 - GitHub Actions CI pipeline depends on repository checkout, language toolchains, and test coverage reporting.
@@ -438,7 +404,6 @@ Common issues and resolutions:
 - [cloudbuild.yaml](file://cloudbuild.yaml#L30-L47)
 - [docker-compose.yml](file://docker-compose.yml#L11-L28)
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L34-L42)
-- [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md#L73-L87)
 
 ## Conclusion
 The CI/CD pipeline for Aether Voice OS combines GitHub Actions for pre-deployment validation with Google Cloud Build for production deployment. The addition of automated maintenance workflows ensures project documentation stays current without manual intervention. Local development is streamlined via Docker Compose. Quality gates include linting, import verification, coverage thresholds, and security scanning. The architecture supports environment-specific deployments and can be extended to additional environments and deployment strategies. The dual pipeline approach (development + maintenance) enhances project sustainability and reduces administrative overhead.
@@ -483,5 +448,4 @@ The maintenance workflow relies on several external services that require minima
 These services provide reliable, low-maintenance solutions for keeping project documentation current.
 
 **Section sources**
-- [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md#L88-L94)
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L18-L32)

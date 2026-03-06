@@ -10,6 +10,7 @@
 - [echo_guard.py](file://core/audio/echo_guard.py)
 - [state.py](file://core/audio/state.py)
 - [jitter_buffer.py](file://core/audio/jitter_buffer.py)
+- [playback.py](file://core/audio/playback.py)
 - [lib.rs](file://cortex/src/lib.rs)
 - [synapse.rs](file://cortex/src/synapse.rs)
 - [axon.rs](file://cortex/src/axon.rs)
@@ -18,7 +19,16 @@
 - [voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py)
 - [latency.py](file://core/analytics/latency.py)
 - [thalamic.py](file://core/ai/thalamic.py)
+- [config.py](file://core/infra/config.py)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Enhanced Adaptive Jitter Buffer with new AudioJitterBuffer class replacing the previous implementation
+- Added SmoothMuter functionality for graceful gain ramping to prevent clicks and pops
+- Improved audio callback integration with asyncio queues for zero-latency direct injection
+- Updated AudioCapture architecture to use direct event-loop injection eliminating thread-hopping latency
+- Added comprehensive jitter buffer testing and smooth muter validation
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -33,25 +43,34 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the Thalamic Gate V2 algorithm, the core audio processing engine of Aether Voice OS. It details the software-defined Acoustic Echo Cancellation (AEC) implementation that replaces hardware DSP with advanced adaptive filtering, including the dual-path LMS algorithm with convergence monitoring, step-size adaptation, and double-talk detection. It documents the hysteresis gating mechanism that prevents false triggering during AI playback, including AI state tracking and user speech detection logic. It also covers the RMS energy detection system, zero-crossing rate analysis, and multi-feature VAD implementation, along with the adaptive jitter buffer for smoothing bursty audio arrivals and preventing AEC convergence loss. Finally, it provides technical specifications, integration with the Rust-based Cortex acceleration layer, configuration parameters, troubleshooting guidance, and real-world latency measurements.
+This document describes the Thalamic Gate V2 algorithm, the core audio processing engine of Aether Voice OS. It details the software-defined Acoustic Echo Cancellation (AEC) implementation that replaces hardware DSP with advanced adaptive filtering, including the dual-path LMS algorithm with convergence monitoring, step-size adaptation, and double-talk detection. It documents the hysteresis gating mechanism that prevents false triggering during AI playback, including AI state tracking and user speech detection logic. It also covers the RMS energy detection system, zero-crossing rate analysis, and multi-feature VAD implementation, along with the enhanced adaptive jitter buffer for smoothing bursty audio arrivals and preventing AEC convergence loss. The algorithm now features sophisticated smooth muting to eliminate audio artifacts and improved asyncio integration for optimal real-time performance. Finally, it provides technical specifications, integration with the Rust-based Cortex acceleration layer, configuration parameters, troubleshooting guidance, and real-world latency measurements.
 
 ## Project Structure
-The Thalamic Gate V2 spans several modules:
-- Audio processing and AEC: dynamic_aec.py, spectral.py, processing.py, vad.py, echo_guard.py, state.py, jitter_buffer.py
+The Thalamic Gate V2 spans several modules with enhanced real-time audio processing capabilities:
+- Audio processing and AEC: dynamic_aec.py, spectral.py, processing.py, vad.py, echo_guard.py, state.py
+- Enhanced jitter buffer: AudioJitterBuffer class with adaptive buffering
+- Smooth muting: SmoothMuter for graceful gain transitions
+- Audio capture and playback: capture.py, playback.py
 - Cortex acceleration layer: lib.rs, synapse.rs, axon.rs, thalamus.rs
 - Pipeline orchestration: capture.py
 - Benchmarks and latency tracking: bench_dsp.py, voice_quality_benchmark.py, latency.py
 - AI-driven gating: thalamic.py
+- Configuration management: config.py
 
 ```mermaid
 graph TB
-subgraph "Audio Pipeline"
+subgraph "Enhanced Audio Pipeline"
 CAP["AudioCapture<br/>capture.py"]
 AEC["DynamicAEC<br/>dynamic_aec.py"]
 VAD["AetherVAD<br/>vad.py"]
 EG["EchoGuard<br/>echo_guard.py"]
-JT["JitterBuffer<br/>jitter_buffer.py"]
+AJB["AudioJitterBuffer<br/>capture.py"]
+SM["SmoothMuter<br/>capture.py"]
 ST["AudioState<br/>state.py"]
+end
+subgraph "Playback & Queue Management"
+AP["AudioPlayback<br/>playback.py"]
+AQ["Async Queue<br/>asyncio.Queue"]
 end
 subgraph "Cortex Acceleration"
 CT["aether_cortex<br/>lib.rs"]
@@ -61,87 +80,161 @@ THM["thalamus.rs<br/>spectral_denoise"]
 end
 CAP --> AEC
 CAP --> VAD
-CAP --> JT
+CAP --> AJB
+CAP --> SM
 CAP --> ST
 AEC --> ST
 VAD --> ST
 EG --> ST
+AP --> AQ
+AP --> ST
 CT --> SYN
 CT --> AXN
 CT --> THM
 ```
 
 **Diagram sources**
-- [capture.py](file://core/audio/capture.py#L193-L550)
+- [capture.py](file://core/audio/capture.py#L195-L584)
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L448-L776)
 - [vad.py](file://core/audio/vad.py#L14-L82)
 - [echo_guard.py](file://core/audio/echo_guard.py#L14-L98)
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L13-L63)
-- [state.py](file://core/audio/state.py#L36-L129)
+- [playback.py](file://core/audio/playback.py#L30-L200)
+- [state.py](file://core/audio/state.py#L36-L159)
 - [lib.rs](file://cortex/src/lib.rs#L1-L34)
 - [synapse.rs](file://cortex/src/synapse.rs#L1-L117)
 - [axon.rs](file://cortex/src/axon.rs#L1-L121)
 - [thalamus.rs](file://cortex/src/thalamus.rs#L1-L154)
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L193-L550)
+- [capture.py](file://core/audio/capture.py#L195-L584)
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L448-L776)
 - [processing.py](file://core/audio/processing.py#L37-L96)
 - [lib.rs](file://cortex/src/lib.rs#L1-L34)
 
 ## Core Components
 - Dynamic Acoustic Echo Cancellation (AEC): Frequency-domain NLMS adaptive filter with GCC-PHAT delay estimation, double-talk detection, and ERLE computation.
+- Enhanced Adaptive Jitter Buffer: AudioJitterBuffer class with circular buffering, nominal depth control, and burst smoothing for AEC reference signals.
+- Smooth Muter: Graceful gain ramping system that eliminates clicks/pops during mute/unmute transitions with deterministic ramping.
 - Hysteresis Gate: Prevents false triggering during AI playback using AI state tracking and gating logic.
 - Voice Activity Detection (VAD): RMS-based with hysteresis and multi-feature enhancements (ZCR, spectral centroid).
-- Echo Guard: Spectral identity matching to suppress echo by distinguishing “Self” vs “User.”
-- Adaptive Jitter Buffer: Smoothes bursty far-end arrivals to stabilize AEC convergence.
+- Echo Guard: Spectral identity matching to suppress echo by distinguishing "Self" vs "User."
 - Cortex Acceleration: Rust-backed primitives for VAD, zero-crossing detection, and spectral denoise.
+- Async Queue Integration: Zero-latency direct injection into asyncio event loop eliminates thread-hopping overhead.
 
 **Section sources**
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L100-L210)
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L211-L330)
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L332-L446)
+- [capture.py](file://core/audio/capture.py#L37-L106)
+- [capture.py](file://core/audio/capture.py#L108-L193)
 - [state.py](file://core/audio/state.py#L13-L34)
 - [vad.py](file://core/audio/vad.py#L14-L82)
 - [echo_guard.py](file://core/audio/echo_guard.py#L14-L98)
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L13-L63)
+- [playback.py](file://core/audio/playback.py#L30-L53)
 - [processing.py](file://core/audio/processing.py#L37-L96)
 
 ## Architecture Overview
-The Thalamic Gate V2 integrates real-time audio capture, AEC, VAD, gating, and Cortex acceleration into a cohesive pipeline. The Cortex layer provides high-performance primitives that replace NumPy implementations when available.
+The Thalamic Gate V2 integrates real-time audio capture, enhanced AEC, VAD, gating, and Cortex acceleration into a cohesive pipeline with improved asyncio integration. The new AudioJitterBuffer provides adaptive buffering for bursty far-end arrivals, while SmoothMuter ensures seamless mute/unmute transitions. The architecture uses direct event-loop injection to minimize latency and eliminate thread-hopping overhead.
 
 ```mermaid
 sequenceDiagram
 participant Mic as "Microphone"
 participant Cap as "AudioCapture<br/>capture.py"
+participant AJB as "AudioJitterBuffer<br/>capture.py"
 participant AEC as "DynamicAEC<br/>dynamic_aec.py"
+participant SM as "SmoothMuter<br/>capture.py"
 participant VAD as "AetherVAD<br/>vad.py"
 participant Gate as "HysteresisGate<br/>state.py"
 participant EG as "EchoGuard<br/>echo_guard.py"
-participant JB as "JitterBuffer<br/>jitter_buffer.py"
 participant CT as "aether_cortex<br/>lib.rs"
 Mic->>Cap : PCM16 chunks
+Cap->>AJB : Write far-end reference
+AJB-->>Cap : Buffered reference
 Cap->>CT : energy_vad(), find_zero_crossing() (accelerated)
-Cap->>AEC : near-end, far-end frames
+Cap->>AEC : near-end, buffered far-end frames
 AEC-->>Cap : cleaned error signal
+Cap->>SM : Apply smooth gain ramping
+SM-->>Cap : artifact-free processed audio
 Cap->>EG : user speech gating
 Cap->>VAD : dual-threshold detection
 Cap->>Gate : AI state gating
-Cap->>JB : jitter buffer smoothing
-Cap-->>Mic : processed output
+Cap-->>Mic : processed output (direct async injection)
 ```
 
 **Diagram sources**
-- [capture.py](file://core/audio/capture.py#L193-L550)
+- [capture.py](file://core/audio/capture.py#L331-L518)
+- [capture.py](file://core/audio/capture.py#L37-L106)
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L448-L776)
 - [processing.py](file://core/audio/processing.py#L37-L96)
 - [vad.py](file://core/audio/vad.py#L14-L82)
 - [state.py](file://core/audio/state.py#L13-L34)
 - [echo_guard.py](file://core/audio/echo_guard.py#L14-L98)
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L13-L63)
 - [lib.rs](file://cortex/src/lib.rs#L1-L34)
 
 ## Detailed Component Analysis
+
+### Enhanced Adaptive Jitter Buffer
+The new AudioJitterBuffer provides sophisticated adaptive buffering for AEC reference signals, replacing the previous implementation with improved burst handling and latency control.
+
+- **Circular Buffer Architecture**: Uses collections.deque with configurable capacity and nominal depth
+- **Burst Smoothing**: Maintains smooth far-end reference signal despite network jitter and bursty arrivals
+- **Latency Control**: Balances sub-200ms latency requirements with playback smoothness
+- **Underflow Handling**: Automatic re-buffering when buffer becomes empty
+
+```mermaid
+flowchart TD
+Start(["Far-End Audio Arrives"]) --> Write["Write to Buffer"]
+Write --> CheckDepth{"Buffer >= Nominal?"}
+CheckDepth --> |Yes| BufferingOff["Set Buffering=False"]
+CheckDepth --> |No| Continue["Continue Buffering"]
+Pop["Pop Next Packet"] --> IsBuffering{"Buffering Mode?"}
+IsBuffering --> |Yes| ReturnNone["Return None (Buffering)"]
+IsBuffering --> |No| HasData{"Has Data?"}
+HasData --> |No| Underflow["Set Buffering=True<br/>Log Underflow"]
+HasData --> |Yes| ReturnData["Return Popped Data"]
+Underflow --> ReturnNone
+```
+
+**Diagram sources**
+- [capture.py](file://core/audio/capture.py#L37-L106)
+
+**Section sources**
+- [capture.py](file://core/audio/capture.py#L37-L106)
+- [tests/unit/test_jitter_buffer.py](file://tests/unit/test_jitter_buffer.py#L1-L56)
+
+### Smooth Muter for Artifact-Free Transitions
+The SmoothMuter eliminates audio artifacts during mute/unmute transitions by applying deterministic gain ramps over configurable sample durations.
+
+- **Deterministic Ramping**: Linear ramps with exact target landing to prevent discontinuities
+- **Click Prevention**: Smooth sample-to-sample transitions with controlled maximum differences
+- **Memory Optimization**: Minimal allocations and branching for real-time performance
+- **Multi-Chunk Support**: Handles ramp completion across multiple audio chunks seamlessly
+
+```mermaid
+flowchart TD
+Input["Audio Chunk"] --> CheckGain{"Current Gain == Target Gain?"}
+CheckGain --> |Yes| FastPath{"Gain == 0.0 or 1.0?"}
+FastPath --> |Yes| PassThrough["Direct Copy/Zero Output"]
+FastPath --> |No| Scale["Scale by Current Gain"]
+CheckGain --> |No| CalcDelta["Calculate Delta & Remaining Samples"]
+CalcDelta --> RampLen["Determine Ramp Length"]
+RampLen --> CreateRamp["Generate Linear Ramp"]
+CreateRamp --> ApplyRamp["Apply Gain Ramp"]
+ApplyRamp --> CheckComplete{"Ramp Complete?"}
+CheckComplete --> |Yes| HoldTarget["Hold at Target Gain"]
+CheckComplete --> |No| HoldPartial["Hold at Last Sample Value"]
+PassThrough --> Output["Processed Audio"]
+Scale --> Output
+HoldTarget --> Output
+HoldPartial --> Output
+```
+
+**Diagram sources**
+- [capture.py](file://core/audio/capture.py#L108-L193)
+
+**Section sources**
+- [capture.py](file://core/audio/capture.py#L108-L193)
+- [tests/unit/test_smooth_muter.py](file://tests/unit/test_smooth_muter.py#L1-L193)
 
 ### Dynamic Acoustic Echo Cancellation (AEC)
 - Dual-path LMS (frequency-domain NLMS): Overlap-save FFT processing, normalized step-size, leakage factor, and power-normalized adaptation.
@@ -215,12 +308,12 @@ AC->>AC : apply mute/unmute delays
 
 **Diagram sources**
 - [state.py](file://core/audio/state.py#L13-L34)
-- [state.py](file://core/audio/state.py#L36-L129)
+- [state.py](file://core/audio/state.py#L36-L159)
 - [capture.py](file://core/audio/capture.py#L338-L372)
 
 **Section sources**
 - [state.py](file://core/audio/state.py#L13-L34)
-- [state.py](file://core/audio/state.py#L36-L129)
+- [state.py](file://core/audio/state.py#L36-L159)
 - [capture.py](file://core/audio/capture.py#L338-L372)
 
 ### Voice Activity Detection (VAD)
@@ -284,31 +377,6 @@ ReturnFalse --> End
 **Section sources**
 - [echo_guard.py](file://core/audio/echo_guard.py#L14-L98)
 
-### Adaptive Jitter Buffer
-- Purpose: Smooth bursty far-end arrivals to prevent AEC convergence loss while meeting sub-200ms latency targets.
-- Operation: Circular buffer with nominal depth and underflow handling.
-
-```mermaid
-flowchart TD
-Push["push(pcm_chunk)"] --> Enqueue["Append to deque"]
-Enqueue --> Nominal{"Reached Nominal Depth?"}
-Nominal --> |Yes| StopBuffering["Stop Buffering State"]
-Nominal --> |No| Continue["Continue Buffering"]
-Pop["pop()"] --> IsBuffering{"Buffering?"}
-IsBuffering --> |Yes| ReturnNone["Return None"]
-IsBuffering --> |No| HasData{"Has Data?"}
-HasData --> |No| ReenterBuffering["Re-enter Buffering (Underflow)"]
-HasData --> |Yes| Dequeue["popleft()"]
-Flush["flush()"] --> Clear["Clear Buffer"]
-Clear --> ReenterBuffering
-```
-
-**Diagram sources**
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L13-L63)
-
-**Section sources**
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L13-L63)
-
 ### Cortex Acceleration Layer
 - aether_cortex module exposes optimized primitives:
   - energy_vad: RMS-based VAD
@@ -339,9 +407,40 @@ PY --> |Fallback| NUMPY["NumPy Baselines"]
 - [thalamus.rs](file://cortex/src/thalamus.rs#L1-L154)
 - [processing.py](file://core/audio/processing.py#L37-L96)
 
+### Async Queue Integration and Zero-Latency Architecture
+The enhanced AudioCapture now uses direct event-loop injection to eliminate thread-hopping latency and improve real-time performance.
+
+- **Direct Async Injection**: Eliminates intermediate queue.Queue, reducing latency by ~2-5ms
+- **Thread-Safe Operations**: Uses call_soon_threadsafe for safe cross-thread communication
+- **Overflow Protection**: Implements queue dropping strategy to maintain bounded latency
+- **Telemetry Integration**: Comprehensive performance tracking with throttled updates
+
+```mermaid
+sequenceDiagram
+participant PyAudio as "PyAudio Callback"
+participant AC as "AudioCapture"
+participant EQ as "Event Loop"
+participant DL as "Downstream"
+PyAudio->>AC : _callback(in_data, ...)
+AC->>AC : Process AEC, VAD, Gating
+AC->>EQ : call_soon_threadsafe(_push_to_async_queue, msg)
+EQ->>DL : Deliver audio frame
+Note over AC : Zero-latency direct injection
+```
+
+**Diagram sources**
+- [capture.py](file://core/audio/capture.py#L331-L518)
+
+**Section sources**
+- [capture.py](file://core/audio/capture.py#L302-L330)
+- [capture.py](file://core/audio/capture.py#L500-L518)
+
 ## Dependency Analysis
 - DynamicAEC depends on SpectralAnalyzer for coherence and ERLE computations.
-- AudioCapture orchestrates AEC, VAD, EchoGuard, JitterBuffer, and Cortex acceleration.
+- AudioCapture orchestrates AEC, VAD, EchoGuard, Enhanced JitterBuffer, SmoothMuter, and Cortex acceleration.
+- Enhanced jitter buffer provides stable far-end reference for AEC convergence.
+- SmoothMuter ensures artifact-free audio transitions during AI playback.
+- Async queue integration eliminates thread-hopping overhead.
 - Cortex backend is conditionally loaded with automatic fallback.
 
 ```mermaid
@@ -350,8 +449,11 @@ DA["DynamicAEC<br/>dynamic_aec.py"] --> SA["SpectralAnalyzer<br/>spectral.py"]
 AC["AudioCapture<br/>capture.py"] --> DA
 AC --> AV["AetherVAD<br/>vad.py"]
 AC --> EG["EchoGuard<br/>echo_guard.py"]
-AC --> JB["JitterBuffer<br/>jitter_buffer.py"]
+AC --> AJB["AudioJitterBuffer<br/>capture.py"]
+AC --> SM["SmoothMuter<br/>capture.py"]
 AC --> CT["aether_cortex<br/>lib.rs"]
+AJB --> ST["AudioState<br/>state.py"]
+SM --> ST
 CT --> SYN["synapse.rs"]
 CT --> AXN["axon.rs"]
 CT --> THM["thalamus.rs"]
@@ -360,104 +462,137 @@ CT --> THM["thalamus.rs"]
 **Diagram sources**
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L448-L776)
 - [spectral.py](file://core/audio/spectral.py#L250-L385)
-- [capture.py](file://core/audio/capture.py#L193-L550)
+- [capture.py](file://core/audio/capture.py#L195-L584)
 - [vad.py](file://core/audio/vad.py#L14-L82)
 - [echo_guard.py](file://core/audio/echo_guard.py#L14-L98)
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L13-L63)
+- [state.py](file://core/audio/state.py#L36-L159)
 - [lib.rs](file://cortex/src/lib.rs#L1-L34)
 
 **Section sources**
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L448-L776)
 - [spectral.py](file://core/audio/spectral.py#L250-L385)
-- [capture.py](file://core/audio/capture.py#L193-L550)
+- [capture.py](file://core/audio/capture.py#L195-L584)
 - [processing.py](file://core/audio/processing.py#L37-L96)
 
 ## Performance Considerations
-- Latency targets: Sub-200ms end-to-end; measured Thalamic Gate latency benchmark targets < 2 ms per frame.
-- Cortex acceleration: Up to 10–50x speedup for VAD and zero-crossing detection versus NumPy.
-- Buffering and jitter: Jitter buffer balances smoothness and latency; underflow triggers re-buffering.
-- Convergence: ERLE thresholds and sustained progress ensure stable AEC performance.
+- **Enhanced Latency Targets**: Sub-200ms end-to-end; measured Thalamic Gate latency benchmark targets < 2 ms per frame with zero-latency direct injection.
+- **Cortex Acceleration**: Up to 10–50x speedup for VAD and zero-crossing detection versus NumPy.
+- **Improved Buffering**: Enhanced jitter buffer balances smoothness and latency with burst handling; underflow triggers re-buffering.
+- **Artifact-Free Transitions**: SmoothMuter eliminates clicks/pops during mute/unmute with deterministic ramping.
+- **Convergence**: ERLE thresholds and sustained progress ensure stable AEC performance with enhanced jitter buffer stability.
+- **Async Optimization**: Direct event-loop injection reduces thread-hopping overhead by 2-5ms compared to traditional queue-based approaches.
 
 **Section sources**
 - [voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L717-L766)
 - [bench_dsp.py](file://tests/benchmarks/bench_dsp.py#L1-L134)
 - [latency.py](file://core/analytics/latency.py#L7-L39)
+- [capture.py](file://core/audio/capture.py#L302-L330)
 
 ## Troubleshooting Guide
-Common audio quality issues and remedies:
-- Echo persists or unstable convergence
+Common audio quality issues and remedies with enhanced components:
+- **Echo persists or unstable convergence**
   - Verify ERLE tracking and convergence thresholds; ensure adequate filter length and step size.
   - Confirm double-talk detection is functioning to suspend adaptation during user speech.
-- Clicks or pops during AI playback
-  - Use SmoothMuter and HysteresisGate to avoid abrupt gain changes.
+  - Check AudioJitterBuffer latency settings; ensure target latency matches network conditions.
+- **Clicks or pops during AI playback**
+  - Use SmoothMuter for graceful transitions; verify ramp_samples parameter is appropriate.
   - Ensure zero-crossing detection is used for clean cuts during barge-in.
-- False gating during AI playback
+  - Check that smooth muting is enabled in AudioCapture configuration.
+- **False gating during AI playback**
   - Review AI state flags and hysteresis timing; confirm delay compensation on start/stop.
-- Noisy background or low SNR
+  - Verify AudioJitterBuffer is properly buffering far-end reference.
+- **Noisy background or low SNR**
   - Enable Cortex acceleration for VAD and spectral denoise; adjust thresholds and windows.
-  - Use EchoGuard’s identity matching to suppress residual echo.
+  - Use EchoGuard's identity matching to suppress residual echo.
+  - Monitor SmoothMuter performance during transitions.
+- **Audio artifacts or distortion**
+  - Check SmoothMuter ramp_samples setting; ensure it matches chunk size.
+  - Verify AudioJitterBuffer capacity and nominal settings.
+  - Monitor async queue overflow indicators in telemetry.
 
 **Section sources**
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L670-L733)
 - [capture.py](file://core/audio/capture.py#L338-L372)
+- [capture.py](file://core/audio/capture.py#L108-L193)
+- [capture.py](file://core/audio/capture.py#L37-L106)
 - [processing.py](file://core/audio/processing.py#L107-L202)
 - [echo_guard.py](file://core/audio/echo_guard.py#L52-L98)
 
 ## Conclusion
-Thalamic Gate V2 delivers a software-defined AEC pipeline that leverages adaptive filtering, double-talk detection, and convergence monitoring to replace hardware DSP. It integrates hysteresis gating, multi-feature VAD, and spectral identity matching to prevent false triggering and echo leakage. The Cortex acceleration layer ensures sub-200ms latency targets, while the adaptive jitter buffer stabilizes AEC performance under bursty conditions. Together, these components form a robust, real-time audio processing engine suitable for live voice applications.
+Thalamic Gate V2 delivers a significantly enhanced software-defined AEC pipeline that leverages adaptive filtering, double-talk detection, and convergence monitoring to replace hardware DSP. The new AudioJitterBuffer provides robust burst handling for AEC reference signals, while SmoothMuter ensures artifact-free mute/unmute transitions. The improved asyncio integration with direct event-loop injection eliminates thread-hopping latency, achieving sub-200ms end-to-end performance. The architecture integrates hysteresis gating, multi-feature VAD, and spectral identity matching to prevent false triggering and echo leakage. The Cortex acceleration layer ensures optimal performance, while the adaptive jitter buffer and smooth muter functionality provide superior audio quality and reliability for real-time voice applications.
 
 ## Appendices
 
 ### Technical Specifications
-- Sampling rate: 16 kHz
-- Frame size: 256–1600 samples (configurable)
-- Filter length: 100 ms (rounded to power-of-two, minimum 512 samples)
-- Step size: 0.5 (adjustable)
-- Convergence threshold: >15 dB ERLE (configurable)
-- Double-talk hangover: 10 frames
-- Delay estimation: up to 200 ms with smoothing
-- Jitter buffer: 500 ms capacity, 100 ms nominal, 20 ms packet size
-- Latency target: < 200 ms end-to-end; < 2 ms Thalamic Gate per frame
+- **Sampling Rate**: 16 kHz capture, 24 kHz playback
+- **Frame Size**: 256–1600 samples (configurable)
+- **Filter Length**: 100 ms (rounded to power-of-two, minimum 512 samples)
+- **Step Size**: 0.5 (adjustable)
+- **Convergence Threshold**: >15 dB ERLE (configurable)
+- **Double-talk Hangover**: 10 frames
+- **Delay Estimation**: up to 200 ms with smoothing
+- **Enhanced Jitter Buffer**: 500 ms capacity, 100 ms nominal, 20 ms packet size
+- **Smooth Muter**: 256-sample ramp duration (configurable)
+- **Latency Target**: < 200 ms end-to-end; < 2 ms Thalamic Gate per frame with async optimization
+- **Async Integration**: Zero-latency direct injection architecture
 
 **Section sources**
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L458-L536)
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L19-L26)
+- [capture.py](file://core/audio/capture.py#L37-L106)
+- [capture.py](file://core/audio/capture.py#L108-L193)
 - [voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L717-L766)
 
 ### Configuration Parameters
-- DynamicAEC
+- **DynamicAEC**
   - sample_rate: 16000
   - frame_size: 256
   - filter_length_ms: 100
   - step_size: 0.5
   - convergence_threshold_db: 15
-- AetherVAD
+- **Enhanced Jitter Buffer**
+  - jitter_buffer_target_ms: 60.0
+  - jitter_buffer_max_ms: 200.0
+- **Smooth Muter**
+  - ramp_samples: 256
+- **AetherVAD**
   - sample_rate: 16000
   - frame_duration_ms: 20
-- EchoGuard
+- **EchoGuard**
   - window_size_sec: 3.0
   - sample_rate: 16000
-- JitterBuffer
-  - capacity_ms: 500
-  - nominal_ms: 100
-  - packet_size_ms: 20
+- **Async Integration**
+  - Direct event-loop injection enabled
 
 **Section sources**
 - [dynamic_aec.py](file://core/audio/dynamic_aec.py#L458-L536)
+- [capture.py](file://core/audio/capture.py#L37-L106)
+- [capture.py](file://core/audio/capture.py#L108-L193)
 - [vad.py](file://core/audio/vad.py#L20-L22)
 - [echo_guard.py](file://core/audio/echo_guard.py#L20-L23)
-- [jitter_buffer.py](file://core/audio/jitter_buffer.py#L19-L26)
+- [config.py](file://core/infra/config.py#L41-L48)
 
 ### Real-World Latency Measurements
-- Thalamic Gate latency benchmark: < 2 ms average per frame
-- Latency optimizer: Tracks p50, p95, p99 metrics for system-wide latency
+- **Thalamic Gate latency benchmark**: < 2 ms average per frame
+- **Enhanced Async Performance**: Zero-latency direct injection reduces thread-hopping by 2-5ms
+- **Latency Optimizer**: Tracks p50, p95, p99 metrics for system-wide latency
+- **Jitter Buffer Performance**: Maintains < 200ms latency with burst handling
 
 **Section sources**
 - [voice_quality_benchmark.py](file://tests/benchmarks/voice_quality_benchmark.py#L717-L766)
 - [latency.py](file://core/analytics/latency.py#L19-L39)
+- [capture.py](file://core/audio/capture.py#L302-L330)
 
 ### AI-Driven Gating
 - ThalamicGate monitors audio state and emotional indices to trigger proactive interventions when user frustration is detected.
 
 **Section sources**
 - [thalamic.py](file://core/ai/thalamic.py#L11-L121)
+
+### Enhanced Testing and Validation
+- **Jitter Buffer Testing**: Comprehensive burst handling, underrun scenarios, and overflow protection
+- **Smooth Muter Validation**: Click prevention, ramp smoothness, and multi-chunk ramp completion
+- **Async Integration Verification**: Zero-latency injection and queue overflow handling
+
+**Section sources**
+- [tests/unit/test_jitter_buffer.py](file://tests/unit/test_jitter_buffer.py#L1-L56)
+- [tests/unit/test_smooth_muter.py](file://tests/unit/test_smooth_muter.py#L1-L193)

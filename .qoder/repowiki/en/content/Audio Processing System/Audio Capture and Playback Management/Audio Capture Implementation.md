@@ -11,7 +11,16 @@
 - [paralinguistics.py](file://core/audio/paralinguistics.py)
 - [echo_guard.py](file://core/audio/echo_guard.py)
 - [__init__.py](file://core/audio/cortex/__init__.py)
+- [test_capture_callback.py](file://tests/unit/test_capture_callback.py)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated to reflect new PyAudio C-callback architecture with direct asyncio queue injection
+- Enhanced documentation of zero-latency direct injection pattern
+- Added detailed coverage of Thalamic Gate callback implementation
+- Improved queue overflow handling documentation with message dropping strategies
+- Updated troubleshooting guidance for callback-related issues
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -25,7 +34,7 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the audio capture implementation centered on a PyAudio-based microphone capture system with high-performance C-callbacks and a direct asyncio queue injection architecture. It details the Thalamic Gate callback that analyzes energy and gates microphone input based on AI state and echo detection, the zero-latency direct injection pattern that bypasses intermediate queues, and the callback’s roles in AEC processing, VAD analysis, and audio state updates. It also covers hardware latency compensation, echo fade-out/grace period calculations, queue overflow handling with message dropping strategies, configuration options for sample rates, chunk sizes, and channel configurations, and troubleshooting guidance for callback-related issues, buffer underruns, and performance optimization.
+This document explains the audio capture implementation centered on a PyAudio-based microphone capture system with high-performance C-callbacks and a direct asyncio queue injection architecture. It details the Thalamic Gate callback that analyzes energy and gates microphone input based on AI state and echo detection, the zero-latency direct injection pattern that bypasses intermediate queues, and the callback's roles in AEC processing, VAD analysis, and audio state updates. It also covers hardware latency compensation, echo fade-out/grace period calculations, queue overflow handling with message dropping strategies, configuration options for sample rates, chunk sizes, and channel configurations, and troubleshooting guidance for callback-related issues, buffer underruns, and performance optimization.
 
 ## Project Structure
 The audio capture system spans several modules:
@@ -73,23 +82,23 @@ CAP --> PAL
 ```
 
 **Diagram sources**
-- [capture.py](file://core/audio/capture.py#L193-L575)
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L490-L855)
-- [processing.py](file://core/audio/processing.py#L107-L508)
-- [state.py](file://core/audio/state.py#L36-L129)
-- [telemetry.py](file://core/audio/telemetry.py#L151-L394)
+- [capture.py](file://core/audio/capture.py#L195-L584)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L499-L800)
+- [processing.py](file://core/audio/processing.py#L108-L537)
+- [state.py](file://core/audio/state.py#L36-L159)
+- [telemetry.py](file://core/audio/telemetry.py#L193-L495)
 - [paralinguistics.py](file://core/audio/paralinguistics.py#L31-L214)
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L1-L575)
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L1-L855)
-- [processing.py](file://core/audio/processing.py#L1-L508)
-- [state.py](file://core/audio/state.py#L1-L129)
-- [config.py](file://core/infra/config.py#L11-L44)
-- [telemetry.py](file://core/audio/telemetry.py#L1-L441)
+- [capture.py](file://core/audio/capture.py#L1-L584)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L1-L964)
+- [processing.py](file://core/audio/processing.py#L1-L537)
+- [state.py](file://core/audio/state.py#L1-L159)
+- [config.py](file://core/infra/config.py#L14-L138)
+- [telemetry.py](file://core/audio/telemetry.py#L1-L495)
 - [paralinguistics.py](file://core/audio/paralinguistics.py#L1-L214)
-- [echo_guard.py](file://core/audio/echo_guard.py#L1-L98)
-- [__init__.py](file://core/audio/cortex/__init__.py#L1-L133)
+- [echo_guard.py](file://core/audio/echo_guard.py#L1-L116)
+- [__init__.py](file://core/audio/cortex/__init__.py#L1-L138)
 
 ## Core Components
 - AudioCapture: Manages PyAudio stream, runs the Thalamic Gate callback, performs AEC, VAD, and state updates, and injects PCM into an asyncio queue with bounded latency.
@@ -104,13 +113,13 @@ CAP --> PAL
 - Cortex acceleration: Optional Rust-backed primitives for VAD, zero-crossing, and spectral denoise.
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L193-L575)
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L490-L855)
-- [processing.py](file://core/audio/processing.py#L256-L508)
-- [state.py](file://core/audio/state.py#L13-L129)
-- [telemetry.py](file://core/audio/telemetry.py#L151-L394)
+- [capture.py](file://core/audio/capture.py#L195-L584)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L499-L800)
+- [processing.py](file://core/audio/processing.py#L257-L537)
+- [state.py](file://core/audio/state.py#L36-L159)
+- [telemetry.py](file://core/audio/telemetry.py#L193-L495)
 - [paralinguistics.py](file://core/audio/paralinguistics.py#L31-L214)
-- [__init__.py](file://core/audio/cortex/__init__.py#L1-L133)
+- [__init__.py](file://core/audio/cortex/__init__.py#L1-L138)
 
 ## Architecture Overview
 The capture system operates in a zero-latency callback-driven pipeline:
@@ -156,16 +165,16 @@ AC-->>PA : "return (None, paContinue)"
 ```
 
 **Diagram sources**
-- [capture.py](file://core/audio/capture.py#L329-L509)
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L579-L668)
-- [processing.py](file://core/audio/processing.py#L389-L508)
-- [state.py](file://core/audio/state.py#L76-L125)
+- [capture.py](file://core/audio/capture.py#L331-L518)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L610-L707)
+- [processing.py](file://core/audio/processing.py#L390-L537)
+- [state.py](file://core/audio/state.py#L106-L159)
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L329-L509)
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L579-L668)
-- [processing.py](file://core/audio/processing.py#L389-L508)
-- [state.py](file://core/audio/state.py#L76-L125)
+- [capture.py](file://core/audio/capture.py#L331-L518)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L610-L707)
+- [processing.py](file://core/audio/processing.py#L390-L537)
+- [state.py](file://core/audio/state.py#L106-L159)
 
 ## Detailed Component Analysis
 
@@ -189,8 +198,8 @@ Key behaviors:
 - Queue overflow handling: On overflow, drops the oldest message to keep latency bounded, then retries insertion.
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L193-L575)
-- [state.py](file://core/audio/state.py#L36-L129)
+- [capture.py](file://core/audio/capture.py#L195-L584)
+- [state.py](file://core/audio/state.py#L36-L159)
 
 ### DynamicAEC: Adaptive Echo Cancellation
 - Frequency-domain NLMS filter with overlap-save processing.
@@ -239,10 +248,10 @@ DynamicAEC --> AECState : "updates"
 ```
 
 **Diagram sources**
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L490-L855)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L499-L800)
 
 **Section sources**
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L490-L855)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L499-L800)
 
 ### VAD Engines and Silence Classification
 - AdaptiveVAD: Tracks mean and standard deviation of RMS energy over a window to compute soft/hard thresholds.
@@ -250,42 +259,42 @@ DynamicAEC --> AECState : "updates"
 - SilentAnalyzer: Classifies silence into void, breathing, or thinking based on RMS variance and ZCR.
 
 **Section sources**
-- [processing.py](file://core/audio/processing.py#L256-L508)
-- [state.py](file://core/audio/state.py#L36-L129)
+- [processing.py](file://core/audio/processing.py#L257-L537)
+- [state.py](file://core/audio/state.py#L36-L159)
 
 ### Global Audio State and Hysteresis Gate
 - AudioState: Thread-safe singleton storing playback state, transition flags, AEC metrics, and telemetry counters. Includes a shared far-end ring buffer for AEC reference.
 - HysteresisGate: Prevents rapid toggling of mute decisions by maintaining confidence and applying thresholding.
 
 **Section sources**
-- [state.py](file://core/audio/state.py#L36-L129)
+- [state.py](file://core/audio/state.py#L36-L159)
 
 ### Smooth Muter and Adaptive Jitter Buffer
 - SmoothMuter: Applies graceful gain ramps to avoid pops/clicks with minimal allocations and deterministic ramp landing.
 - AdaptiveJitterBuffer: Circular buffer that smooths bursty far-end arrivals to provide a stable AEC reference.
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L38-L197)
+- [capture.py](file://core/audio/capture.py#L37-L197)
 
 ### Telemetry and Affective Features
 - AudioTelemetryLogger: Records per-frame latency, AEC performance, VAD outcomes, and publishes metrics to the event bus; supports session summaries and CSV logs.
-- ParalinguisticAnalyzer: Extracts pitch, speech rate, RMS variance, spectral centroid, and engagement score; detects “Zen mode” typing cadence.
+- ParalinguisticAnalyzer: Extracts pitch, speech rate, RMS variance, spectral centroid, and engagement score; detects "Zen mode" typing cadence.
 
 **Section sources**
-- [telemetry.py](file://core/audio/telemetry.py#L151-L394)
+- [telemetry.py](file://core/audio/telemetry.py#L193-L495)
 - [paralinguistics.py](file://core/audio/paralinguistics.py#L31-L214)
 
 ### Cortex Acceleration
 - Optional Rust-backed primitives for VAD, zero-crossing detection, and spectral denoise; falls back to NumPy when unavailable.
 
 **Section sources**
-- [__init__.py](file://core/audio/cortex/__init__.py#L1-L133)
+- [__init__.py](file://core/audio/cortex/__init__.py#L1-L138)
 
 ### Echo Guard (Alternative Gate)
 - EchoGuard: Spectral identity-based echo gating using cached MFCC-like fingerprints and cosine similarity to suppress echo during AI playback.
 
 **Section sources**
-- [echo_guard.py](file://core/audio/echo_guard.py#L14-L98)
+- [echo_guard.py](file://core/audio/echo_guard.py#L16-L116)
 
 ## Dependency Analysis
 The capture system exhibits tight coupling between the callback and processing modules, with loose coupling to external telemetry and affective analyzers. The design minimizes cross-thread contention by keeping heavy processing in the callback and injecting results via the event loop.
@@ -314,19 +323,19 @@ CAP --> PA
 ```
 
 **Diagram sources**
-- [capture.py](file://core/audio/capture.py#L193-L575)
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L490-L855)
-- [processing.py](file://core/audio/processing.py#L256-L508)
-- [state.py](file://core/audio/state.py#L36-L129)
-- [telemetry.py](file://core/audio/telemetry.py#L151-L394)
+- [capture.py](file://core/audio/capture.py#L195-L584)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L499-L800)
+- [processing.py](file://core/audio/processing.py#L257-L537)
+- [state.py](file://core/audio/state.py#L36-L159)
+- [telemetry.py](file://core/audio/telemetry.py#L193-L495)
 - [paralinguistics.py](file://core/audio/paralinguistics.py#L31-L214)
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L193-L575)
-- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L490-L855)
-- [processing.py](file://core/audio/processing.py#L256-L508)
-- [state.py](file://core/audio/state.py#L36-L129)
-- [telemetry.py](file://core/audio/telemetry.py#L151-L394)
+- [capture.py](file://core/audio/capture.py#L195-L584)
+- [dynamic_aec.py](file://core/audio/dynamic_aec.py#L499-L800)
+- [processing.py](file://core/audio/processing.py#L257-L537)
+- [state.py](file://core/audio/state.py#L36-L159)
+- [telemetry.py](file://core/audio/telemetry.py#L193-L495)
 - [paralinguistics.py](file://core/audio/paralinguistics.py#L31-L214)
 
 ## Performance Considerations
@@ -335,8 +344,6 @@ CAP --> PA
 - Efficient buffers: Preallocated ring buffers and jitter buffers eliminate per-frame allocations and reduce GC pressure.
 - Rust acceleration: Optional DSP primitives provide significant speedups when available.
 - Tunable parameters: Chunk size, sample rates, and AEC parameters can be tuned for latency and quality trade-offs.
-
-[No sources needed since this section provides general guidance]
 
 ## Troubleshooting Guide
 Common issues and remedies:
@@ -359,9 +366,9 @@ Common issues and remedies:
   - Reduce downstream processing load or increase queue capacity cautiously.
 
 **Section sources**
-- [capture.py](file://core/audio/capture.py#L511-L575)
-- [telemetry.py](file://core/audio/telemetry.py#L151-L394)
-- [state.py](file://core/audio/state.py#L59-L65)
+- [capture.py](file://core/audio/capture.py#L520-L584)
+- [telemetry.py](file://core/audio/telemetry.py#L193-L495)
+- [state.py](file://core/audio/state.py#L106-L159)
 
 ## Conclusion
 The audio capture implementation achieves sub-200ms latency through a tightly integrated PyAudio callback, Rust-accelerated DSP, and zero-latency asyncio injection. The Thalamic Gate callback performs AEC, VAD, and audio state updates in lockstep with hardware latency compensation and smooth gating to prevent echo leakage and barge-in. Robust telemetry and queue overflow handling ensure predictable performance under load, while configuration options allow tuning for diverse environments.

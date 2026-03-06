@@ -4,6 +4,7 @@
 **Referenced Files in This Document**
 - [package.json](file://apps/portal/package.json)
 - [next.config.ts](file://apps/portal/next.config.ts)
+- [next-env.d.ts](file://apps/portal/next-env.d.ts)
 - [tailwind.config.ts](file://apps/portal/tailwind.config.ts)
 - [useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts)
 - [useAetherGateway.ts](file://apps/portal/src/hooks/useAetherGateway.ts)
@@ -17,10 +18,17 @@
 - [GlassPanel.tsx](file://apps/portal/src/components/shared/GlassPanel.tsx)
 - [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx)
 - [HUDCards.tsx](file://apps/portal/src/components/HUDCards.tsx)
+- [SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx)
 - [TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx)
 - [StatusIndicator.tsx](file://apps/portal/src/components/StatusIndicator.tsx)
 - [tauri.conf.json](file://apps/portal/src-tauri/tauri.conf.json)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated Next.js development environment configuration section to reflect corrected next-env.d.ts setup
+- Enhanced HUD latency display formatting documentation to show both static and dynamic implementations
+- Added SystemAnalytics component latency display details for comprehensive coverage
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -35,7 +43,7 @@
 10. [Appendices](#appendices)
 
 ## Introduction
-This document describes the Aether Voice OS frontend built with Next.js and Tauri. It explains the application’s architecture, state management with Zustand, the central Aether Brain orchestrator, real-time audio and vision pipelines, and the glassmorphism UI ecosystem. It also covers desktop integration via Tauri, custom hooks for audio processing and telemetry, and guidance for customization, responsiveness, accessibility, and performance.
+This document describes the Aether Voice OS frontend built with Next.js and Tauri. It explains the application's architecture, state management with Zustand, the central Aether Brain orchestrator, real-time audio and vision pipelines, and the glassmorphism UI ecosystem. It also covers desktop integration via Tauri, custom hooks for audio processing and telemetry, and guidance for customization, responsiveness, accessibility, and performance.
 
 ## Project Structure
 The frontend is organized as a Next.js application under apps/portal with:
@@ -50,6 +58,7 @@ graph TB
 subgraph "Next.js App"
 Pkg["package.json"]
 NextCfg["next.config.ts"]
+NextEnv["next-env.d.ts"]
 Tailwind["tailwind.config.ts"]
 Store["useAetherStore.ts"]
 Brain["AetherBrain.tsx"]
@@ -57,6 +66,7 @@ Orb["AetherOrb.tsx"]
 Transcript["AmbientTranscript.tsx"]
 Neural["NeuralWeb.tsx"]
 HUD["HUDContainer.tsx"]
+SystemAnalytics["SystemAnalytics.tsx"]
 Cards["HUDCards.tsx"]
 Panel["GlassPanel.tsx"]
 Telemetry["TelemetryFeed.tsx"]
@@ -77,17 +87,20 @@ Telemetry --> Store
 HUD --> Orb
 HUD --> Cards
 HUD --> Telemetry
+SystemAnalytics --> Store
 Panel --> HUD
 Status --> Store
 Pkg --> NextCfg
 Pkg --> Tailwind
 NextCfg --> Brain
+NextEnv --> NextCfg
 Conf --> Brain
 ```
 
 **Diagram sources**
-- [package.json](file://apps/portal/package.json#L1-L53)
-- [next.config.ts](file://apps/portal/next.config.ts#L1-L16)
+- [package.json](file://apps/portal/package.json#L1-L56)
+- [next.config.ts](file://apps/portal/next.config.ts#L1-L71)
+- [next-env.d.ts](file://apps/portal/next-env.d.ts#L1-L7)
 - [tailwind.config.ts](file://apps/portal/tailwind.config.ts#L1-L26)
 - [useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L1-L440)
 - [useAetherGateway.ts](file://apps/portal/src/hooks/useAetherGateway.ts#L1-L299)
@@ -98,7 +111,8 @@ Conf --> Brain
 - [AetherOrb.tsx](file://apps/portal/src/components/core/AetherOrb.tsx#L1-L75)
 - [AmbientTranscript.tsx](file://apps/portal/src/components/AmbientTranscript.tsx#L1-L88)
 - [NeuralWeb.tsx](file://apps/portal/src/components/NeuralWeb.tsx#L1-L229)
-- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L1-L79)
+- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L1-L86)
+- [SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx#L1-L88)
 - [HUDCards.tsx](file://apps/portal/src/components/HUDCards.tsx#L1-L168)
 - [GlassPanel.tsx](file://apps/portal/src/components/shared/GlassPanel.tsx#L1-L32)
 - [TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L1-L58)
@@ -106,8 +120,9 @@ Conf --> Brain
 - [tauri.conf.json](file://apps/portal/src-tauri/tauri.conf.json#L1-L41)
 
 **Section sources**
-- [package.json](file://apps/portal/package.json#L1-L53)
-- [next.config.ts](file://apps/portal/next.config.ts#L1-L16)
+- [package.json](file://apps/portal/package.json#L1-L56)
+- [next.config.ts](file://apps/portal/next.config.ts#L1-L71)
+- [next-env.d.ts](file://apps/portal/next-env.d.ts#L1-L7)
 - [tailwind.config.ts](file://apps/portal/tailwind.config.ts#L1-L26)
 
 ## Core Components
@@ -116,6 +131,7 @@ Conf --> Brain
 - Ambient Transcript: Floating captions for user and agent speech with layered fade animations.
 - Neural Web: Dynamic 3D network visualization of agent handoffs and cognitive mesh activity.
 - HUD Container: CRT-style overlay with scanning lines, corner markers, and grid textures.
+- System Analytics: Left-aligned holographic diagnostics displaying neural flux, signal integrity, and latency metrics.
 - HUD Cards: Floating telemetry cards (latency, session timer, mode, engine state, vision) and silent hints.
 - Glass Panel: Reusable glassmorphism panel component.
 - Telemetry Feed: Monospace log stream overlay.
@@ -127,7 +143,8 @@ Conf --> Brain
 - [AetherOrb.tsx](file://apps/portal/src/components/core/AetherOrb.tsx#L1-L75)
 - [AmbientTranscript.tsx](file://apps/portal/src/components/AmbientTranscript.tsx#L1-L88)
 - [NeuralWeb.tsx](file://apps/portal/src/components/NeuralWeb.tsx#L1-L229)
-- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L1-L79)
+- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L1-L86)
+- [SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx#L1-L88)
 - [HUDCards.tsx](file://apps/portal/src/components/HUDCards.tsx#L1-L168)
 - [GlassPanel.tsx](file://apps/portal/src/components/shared/GlassPanel.tsx#L1-L32)
 - [TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L1-L58)
@@ -174,6 +191,18 @@ Gemini-->>Store : setLatencyMs/onTranscript/onToolCall
 - [useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L202-L440)
 
 ## Detailed Component Analysis
+
+### Next.js Development Environment Configuration
+The Next.js development environment is configured with proper TypeScript support and route type generation:
+
+- **TypeScript Integration**: The `next-env.d.ts` file includes references to Next.js core types and imports the generated routes type definition for development environments.
+- **Route Type Generation**: The configuration ensures proper type checking for Next.js app router patterns and dynamic routes.
+- **Development Workflow**: This setup enables seamless development with proper IntelliSense and type safety for Next.js applications.
+
+**Updated** Enhanced TypeScript configuration for improved development experience and type safety.
+
+**Section sources**
+- [next-env.d.ts](file://apps/portal/next-env.d.ts#L1-L7)
 
 ### Aether Brain (Central Orchestrator)
 AetherBrain wires the entire pipeline:
@@ -425,10 +454,13 @@ class AetherState {
 - Ambient Transcript: Floating captions with spring animations and fade effects.
 - Neural Web: 3D network visualization with pulsing nodes, synapses, and scanline overlays.
 - HUD Container: CRT-style overlay with scanning lines, corner markers, vignette, and grid.
+- System Analytics: Left-aligned holographic diagnostics displaying neural flux, signal integrity, and latency metrics with dynamic formatting.
 - HUD Cards: Floating cards for latency, session timer, mode, engine state, vision, and silent hints.
 - Glass Panel: Reusable glassmorphism panel with optional hover glow.
 - Telemetry Feed: Monospace log stream overlay with fading entries.
 - Status Indicator: Glowing dot with labels for online/offline/connecting.
+
+**Updated** Enhanced HUD latency display with both static and dynamic formatting implementations.
 
 ```mermaid
 graph LR
@@ -440,6 +472,7 @@ Telemetry["TelemetryFeed.tsx"] --> Store
 HUD["HUDContainer.tsx"] --> Orb
 HUD --> Cards
 HUD --> Telemetry
+SystemAnalytics["SystemAnalytics.tsx"] --> Store
 Panel["GlassPanel.tsx"] --> HUD
 Status["StatusIndicator.tsx"] --> Store
 ```
@@ -448,7 +481,8 @@ Status["StatusIndicator.tsx"] --> Store
 - [AetherOrb.tsx](file://apps/portal/src/components/core/AetherOrb.tsx#L20-L75)
 - [AmbientTranscript.tsx](file://apps/portal/src/components/AmbientTranscript.tsx#L16-L88)
 - [NeuralWeb.tsx](file://apps/portal/src/components/NeuralWeb.tsx#L147-L229)
-- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L39-L79)
+- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L39-L86)
+- [SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx#L36-L88)
 - [HUDCards.tsx](file://apps/portal/src/components/HUDCards.tsx#L27-L168)
 - [GlassPanel.tsx](file://apps/portal/src/components/shared/GlassPanel.tsx#L13-L32)
 - [TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L13-L58)
@@ -459,7 +493,8 @@ Status["StatusIndicator.tsx"] --> Store
 - [AetherOrb.tsx](file://apps/portal/src/components/core/AetherOrb.tsx#L20-L75)
 - [AmbientTranscript.tsx](file://apps/portal/src/components/AmbientTranscript.tsx#L16-L88)
 - [NeuralWeb.tsx](file://apps/portal/src/components/NeuralWeb.tsx#L147-L229)
-- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L39-L79)
+- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L39-L86)
+- [SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx#L36-L88)
 - [HUDCards.tsx](file://apps/portal/src/components/HUDCards.tsx#L27-L168)
 - [GlassPanel.tsx](file://apps/portal/src/components/shared/GlassPanel.tsx#L13-L32)
 - [TelemetryFeed.tsx](file://apps/portal/src/components/TelemetryFeed.tsx#L13-L58)
@@ -517,12 +552,12 @@ Next --> Tauri
 ```
 
 **Diagram sources**
-- [package.json](file://apps/portal/package.json#L16-L33)
-- [next.config.ts](file://apps/portal/next.config.ts#L1-L16)
+- [package.json](file://apps/portal/package.json#L16-L36)
+- [next.config.ts](file://apps/portal/next.config.ts#L1-L71)
 - [tailwind.config.ts](file://apps/portal/tailwind.config.ts#L1-L26)
 
 **Section sources**
-- [package.json](file://apps/portal/package.json#L1-L53)
+- [package.json](file://apps/portal/package.json#L1-L56)
 
 ## Performance Considerations
 - Audio
@@ -543,8 +578,6 @@ Next --> Tauri
   - Persist only essential preferences to localStorage to reduce store size.
   - Slice arrays (transcript, logs, tool calls) to bounded sizes.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 - Audio pipeline fails to start
   - Ensure microphone permissions are granted.
@@ -557,7 +590,7 @@ Next --> Tauri
 - Vision capture blocked
   - Confirm screen sharing permission prompt was accepted.
   - Ensure getDisplayMedia constraints are supported by the platform.
-  - Watch for “ended” events indicating user termination.
+  - Watch for "ended" events indicating user termination.
 - Telemetry not updating
   - Verify gateway tick messages and latencyMs propagation.
   - Check telemetry broadcasts for paralinguistics and noise floor metrics.
@@ -565,17 +598,20 @@ Next --> Tauri
   - Confirm transparency and always-on-top flags are enabled.
   - Validate window size and decoration settings.
   - Rebuild with tauri build after configuration changes.
+- Next.js development environment issues
+  - Ensure next-env.d.ts includes proper TypeScript references.
+  - Verify route type generation for app router patterns.
+  - Check for conflicts between Next.js versions and TypeScript configurations.
 
 **Section sources**
 - [useAudioPipeline.ts](file://apps/portal/src/hooks/useAudioPipeline.ts#L48-L134)
 - [useAetherGateway.ts](file://apps/portal/src/hooks/useAetherGateway.ts#L251-L265)
 - [useVisionPulse.ts](file://apps/portal/src/hooks/useVisionPulse.ts#L169-L174)
+- [next-env.d.ts](file://apps/portal/next-env.d.ts#L1-L7)
 - [tauri.conf.json](file://apps/portal/src-tauri/tauri.conf.json#L21-L23)
 
 ## Conclusion
-The Aether Voice OS frontend composes a robust, real-time audio-visual experience with a clear separation of concerns. AetherBrain orchestrates the audio and vision pipelines while delegating backend communication to dedicated hooks. Zustand centralizes state with persistence, and the glassmorphism UI delivers an immersive, low-impacting overlay. Tauri enables a transparent, always-on-top desktop presence. The modular architecture supports customization, performance tuning, and cross-platform deployment.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The Aether Voice OS frontend composes a robust, real-time audio-visual experience with a clear separation of concerns. AetherBrain orchestrates the audio and vision pipelines while delegating backend communication to dedicated hooks. Zustand centralizes state with persistence, and the glassmorphism UI delivers an immersive, low-impact overlay. Tauri enables a transparent, always-on-top desktop presence. The modular architecture supports customization, performance tuning, and cross-platform deployment.
 
 ## Appendices
 
@@ -590,11 +626,16 @@ The Aether Voice OS frontend composes a robust, real-time audio-visual experienc
   - Add new card entries with label/value/icon and position them in the curved arc.
 - Extend 3D visuals
   - Adjust NeuralWeb node count, thresholds, and materials for different aesthetic or performance profiles.
+- Enhance latency display formatting
+  - Use dynamic formatting with toFixed() for precise decimal places in SystemAnalytics.
+  - Implement static threshold displays in HUDContainer for quick status assessment.
 
 **Section sources**
 - [useAetherStore.ts](file://apps/portal/src/store/useAetherStore.ts#L82-L104)
 - [HUDCards.tsx](file://apps/portal/src/components/HUDCards.tsx#L56-L96)
 - [NeuralWeb.tsx](file://apps/portal/src/components/NeuralWeb.tsx#L21-L145)
+- [SystemAnalytics.tsx](file://apps/portal/src/components/HUD/SystemAnalytics.tsx#L80-L84)
+- [HUDContainer.tsx](file://apps/portal/src/components/HUD/HUDContainer.tsx#L60-L71)
 
 ### Responsive Design and Accessibility
 - Responsive breakpoints
@@ -603,5 +644,6 @@ The Aether Voice OS frontend composes a robust, real-time audio-visual experienc
   - Provide sufficient contrast for neon accents against dark backgrounds.
   - Avoid relying solely on color for status; pair with icons and labels.
   - Ensure interactive elements (settings, cards) are keyboard focusable and operable.
-
-[No sources needed since this section provides general guidance]
+- Latency display accessibility
+  - Both static threshold displays and dynamic formatted values should be announced by screen readers.
+  - Maintain consistent formatting patterns for easy comparison of latency metrics.

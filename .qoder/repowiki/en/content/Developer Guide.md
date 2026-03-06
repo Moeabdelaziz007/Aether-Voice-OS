@@ -7,12 +7,17 @@
 - [docs/architecture.md](file://docs/architecture.md)
 - [docs/sdk_guide.md](file://docs/sdk_guide.md)
 - [docs/ath_package_spec.md](file://docs/ath_package_spec.md)
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py)
+- [tools/ast_extractor.py](file://tools/ast_extractor.py)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py)
+- [tools/test_ast.py](file://tools/test_ast.py)
+- [docs/generated/dependency_stats.md](file://docs/generated/dependency_stats.md)
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml)
 - [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md)
 - [Dockerfile](file://Dockerfile)
 - [docker-compose.yml](file://docker-compose.yml)
-- [pyproject.toml](file://pyproject.toml)
 - [requirements.txt](file://requirements.txt)
+- [pyproject.toml](file://pyproject.toml)
 - [core/server.py](file://core/server.py)
 - [core/engine.py](file://core/engine.py)
 - [core/audio/capture.py](file://core/audio/capture.py)
@@ -26,11 +31,11 @@
 
 ## Update Summary
 **Changes Made**
-- Added comprehensive documentation improvements section covering new README enhancements
-- Updated workflow automation documentation with detailed GitHub Actions workflow
-- Enhanced project statistics tracking system documentation
-- Expanded development workflow section with new automation features
-- Added new section on README improvement automation and maintenance procedures
+- Added comprehensive documentation for new development tools: dependency analyzer, AST extractor, and enhanced code indexing capabilities
+- Updated development workflow section with new automated code analysis tools
+- Enhanced project statistics tracking system documentation with new dependency visualization
+- Expanded architecture overview to include semantic code indexing capabilities
+- Added new section on automated code analysis and dependency management
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -38,21 +43,22 @@
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Development Workflow](#development-workflow)
-10. [README Documentation Improvements](#readme-documentation-improvements)
-11. [Workflow Automation System](#workflow-automation-system)
-12. [SDK Guide](#sdk-guide)
-13. [Aether Pack (.ath) Specification](#aether-pack-ath-specification)
-14. [Coding Standards and Contribution Guidelines](#coding-standards-and-contribution-guidelines)
-15. [Testing Requirements](#testing-requirements)
-16. [Deployment and Operations](#deployment-and-operations)
-17. [Conclusion](#conclusion)
+6. [Enhanced Code Analysis Tools](#enhanced-code-analysis-tools)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Development Workflow](#development-workflow)
+11. [README Documentation Improvements](#readme-documentation-improvements)
+12. [Workflow Automation System](#workflow-automation-system)
+13. [SDK Guide](#sdk-guide)
+14. [Aether Pack (.ath) Specification](#aether-pack-ath-specification)
+15. [Coding Standards and Contribution Guidelines](#coding-standards-and-contribution-guidelines)
+16. [Testing Requirements](#testing-requirements)
+17. [Deployment and Operations](#deployment-and-operations)
+18. [Conclusion](#conclusion)
 
 ## Introduction
-Aether Voice OS is a real-time, voice-first AI operating system designed to minimize friction in human-AI interaction. It integrates a custom-built Thalamic Gate audio pipeline, Gemini Live native audio, and a modular tool ecosystem to deliver sub-200ms latency, empathetic affective computing, and proactive assistance. This guide covers development environment setup, architecture, SDK extension, .ath packaging, coding standards, testing, operational practices, and comprehensive documentation improvements including automated README statistics tracking.
+Aether Voice OS is a real-time, voice-first AI operating system designed to minimize friction in human-AI interaction. It integrates a custom-built Thalamic Gate audio pipeline, Gemini Live native audio, and a modular tool ecosystem to deliver sub-200ms latency, empathetic affective computing, and proactive assistance. This guide covers development environment setup, architecture, SDK extension, .ath packaging, coding standards, testing, operational practices, and comprehensive documentation improvements including automated README statistics tracking, enhanced code analysis tools, and semantic code indexing capabilities.
 
 ## Project Structure
 The repository follows a monorepo layout:
@@ -64,6 +70,7 @@ The repository follows a monorepo layout:
 - tests/: Pytest suites for unit, integration, and end-to-end scenarios
 - infra/: CI/CD, scripts, and operational helpers
 - skills/: Example skills and integrations
+- tools/: Development utilities including dependency analyzer, AST extractor, and code indexer
 - .github/workflows/: Automated documentation and statistics tracking
 
 ```mermaid
@@ -76,6 +83,7 @@ STATE["core/audio/state.py"]
 ROUTER["core/tools/router.py"]
 ADMIN["core/services/admin_api.py"]
 ENDPOINT["core/server.py"]
+CODEINDEX["core/tools/code_indexer.py"]
 end
 subgraph "Frontend"
 PORTAL["apps/portal/"]
@@ -86,6 +94,11 @@ end
 subgraph "Docs & Specs"
 DOCS["docs/"]
 IMPROV["docs/README_IMPROVEMENTS.md"]
+end
+subgraph "Development Tools"
+TOOLS["tools/"]
+DEPANALYZER["tools/dependency_analyzer.py"]
+ASTEXTRACTOR["tools/ast_extractor.py"]
 end
 subgraph "Automation"
 WORKFLOW[".github/workflows/"]
@@ -100,6 +113,9 @@ AUDIO --> STATE
 PORTAL --> ADMIN
 DOCS --> ROUTER
 CORTEX --> AUDIO
+TOOLS --> DEPANALYZER
+TOOLS --> ASTEXTRACTOR
+CODEINDEX --> ROUTER
 WORKFLOW --> STATS
 WORKFLOW --> README_DOC
 IMPROV --> STATS
@@ -112,6 +128,9 @@ IMPROV --> STATS
 - [core/audio/state.py](file://core/audio/state.py#L36-L75)
 - [core/tools/router.py](file://core/tools/router.py#L120-L140)
 - [core/services/admin_api.py](file://core/services/admin_api.py#L88-L117)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L1-L220)
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py#L1-L179)
+- [tools/ast_extractor.py](file://tools/ast_extractor.py#L1-L237)
 - [apps/portal/package.json](file://apps/portal/package.json#L1-L53)
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L1-L62)
 - [.github/workflows/README_WORKFLOW.md](file://.github/workflows/README_WORKFLOW.md#L1-L122)
@@ -127,6 +146,7 @@ IMPROV --> STATS
 - AdminAPIServer: Local dashboard REST API for telemetry and system state.
 - Config loader: Pydantic settings for audio, AI, and gateway parameters.
 - .ath Package Loader: Validates manifests, computes checksums, and loads agent identities.
+- **Enhanced**: Code Indexer: Semantic codebase indexing with vector embeddings for AI-assisted development.
 - **Updated**: README Statistics Automation: GitHub Actions workflow for automatic README updates.
 
 **Section sources**
@@ -136,6 +156,7 @@ IMPROV --> STATS
 - [core/services/admin_api.py](file://core/services/admin_api.py#L88-L117)
 - [core/infra/config.py](file://core/infra/config.py#L85-L111)
 - [core/identity/package.py](file://core/identity/package.py#L72-L139)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L1-L220)
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L1-L62)
 
 ## Architecture Overview
@@ -362,11 +383,133 @@ Checksum --> |No| Done
 **Section sources**
 - [core/identity/package.py](file://core/identity/package.py#L72-L166)
 
+## Enhanced Code Analysis Tools
+
+**New** Aether Voice OS now includes comprehensive code analysis tools designed to enhance development workflow, maintain code quality, and provide insights into the codebase structure.
+
+### Dependency Analyzer
+The dependency analyzer builds a directed graph of Python dependencies, detects circular imports, and generates interactive HTML visualizations:
+
+- **AST-based Import Analysis**: Parses Python files to extract import statements and module relationships
+- **Circular Dependency Detection**: Uses NetworkX to identify circular import chains that could cause runtime issues
+- **Interactive Visualization**: Generates HTML graphs with color-coded nodes by subsystem (audio, AI, infrastructure)
+- **Comprehensive Reporting**: Creates JSON and Markdown reports with dependency statistics
+
+```mermaid
+flowchart TD
+Start(["Run Dependency Analyzer"]) --> ParseFiles["Parse All Python Files"]
+ParseFiles --> ExtractImports["Extract Import Statements"]
+ExtractImports --> BuildGraph["Build Directed Graph"]
+BuildGraph --> DetectCycles["Detect Circular Dependencies"]
+DetectCycles --> GenerateHTML["Generate Interactive HTML"]
+GenerateHTML --> CreateReports["Create JSON & Markdown Reports"]
+CreateReports --> End(["Analysis Complete"])
+```
+
+**Diagram sources**
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py#L43-L88)
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py#L91-L100)
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py#L102-L132)
+
+### AST Extractor
+The AST extractor provides comprehensive metadata extraction from Python files:
+
+- **Function Metadata**: Captures function names, line numbers, arguments, return types, decorators, and docstrings
+- **Class Information**: Extracts class definitions, inheritance hierarchies, methods, and attributes
+- **Import Analysis**: Documents both regular and from-import statements
+- **Type Hint Extraction**: Parses and stores type annotations for better IDE support and static analysis
+- **Async Function Detection**: Identifies coroutine functions for proper async handling
+
+```mermaid
+classDiagram
+class PythonASTExtractor {
++extract(file_path) ModuleInfo
+-_extract_class(node) ClassInfo
+-_extract_function(node, is_method) FunctionInfo
+-_get_annotation(node) string
+-_get_decorator_string(node) string
+-_find_parent(tree, target_node) Node
+}
+class ModuleInfo {
++string file_path
++string docstring
++string[] imports
++dict~string, string[]~ from_imports
++ClassInfo[] classes
++FunctionInfo[] functions
++string[] global_variables
++dict~string, string~ type_hints
+}
+class ClassInfo {
++string name
++int lineno
++int end_lineno
++string docstring
++string[] decorators
++string[] bases
++FunctionInfo[] methods
++string[] attributes
+}
+class FunctionInfo {
++string name
++int lineno
++int end_lineno
++string[] args
++string returns
++string docstring
++string[] decorators
++bool is_async
++bool is_method
+}
+PythonASTExtractor --> ModuleInfo : "creates"
+ModuleInfo --> ClassInfo : "contains"
+ModuleInfo --> FunctionInfo : "contains"
+```
+
+**Diagram sources**
+- [tools/ast_extractor.py](file://tools/ast_extractor.py#L50-L122)
+- [tools/ast_extractor.py](file://tools/ast_extractor.py#L123-L159)
+- [tools/ast_extractor.py](file://tools/ast_extractor.py#L160-L191)
+
+### Enhanced Code Indexer
+The code indexer extends the basic AST extraction with semantic indexing capabilities:
+
+- **Multi-language Support**: Processes Python, Rust, TypeScript, and Markdown files
+- **Semantic Chunking**: Splits code into overlapping chunks for better vector search
+- **Vector Embeddings**: Generates embeddings using Firestore Vector Store for AI-assisted development
+- **Backup System**: Creates local backups of indexed content for offline access
+- **Parallel Processing**: Uses asyncio and semaphores for efficient concurrent processing
+
+```mermaid
+sequenceDiagram
+participant DEV as "Developer"
+participant CI as "Code Indexer"
+participant AST as "AST Extractor"
+participant VS as "Vector Store"
+DEV->>CI : Run index_codebase()
+CI->>AST : Extract Python metadata
+AST-->>CI : ModuleInfo
+CI->>VS : Add text chunks with metadata
+VS-->>CI : Embedding stored
+CI-->>DEV : Indexing complete
+```
+
+**Diagram sources**
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L90-L120)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L122-L205)
+
+**Section sources**
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py#L1-L179)
+- [tools/ast_extractor.py](file://tools/ast_extractor.py#L1-L237)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L1-L220)
+- [tools/test_ast.py](file://tools/test_ast.py#L1-L15)
+
 ## Dependency Analysis
 Key runtime dependencies include:
 - google-genai, pyaudio, numpy, pydantic, websockets, cryptography, watchdog
 - firebase-admin, redis, opentelemetry
 - playwright, curl_cffi, scikit-learn for tooling and orchestration
+- **New**: networkx, pyvis for dependency visualization and analysis
 
 ```mermaid
 graph LR
@@ -383,13 +526,15 @@ PY --> OT["opentelemetry-*"]
 PY --> PW["playwright"]
 PY --> CF["curl_cffi"]
 PY --> SL["scikit-learn"]
+PY --> NX["networkx"]
+PY --> PV["pyvis"]
 ```
 
 **Diagram sources**
-- [requirements.txt](file://requirements.txt#L1-L52)
+- [requirements.txt](file://requirements.txt#L1-L57)
 
 **Section sources**
-- [requirements.txt](file://requirements.txt#L1-L52)
+- [requirements.txt](file://requirements.txt#L1-L57)
 
 ## Performance Considerations
 - Real-time constraints: Callbacks must be non-blocking, low-allocation, and predictably fast
@@ -397,10 +542,13 @@ PY --> SL["scikit-learn"]
 - Structured concurrency with asyncio TaskGroups and signal-driven shutdown
 - Rust acceleration for DSP where available, with graceful Python fallbacks
 - Deterministic telemetry counters and throttled broadcasts to avoid hot-path overhead
+- **Enhanced**: Parallel processing for code analysis tools using semaphores and asyncio
+- **New**: Vector store operations optimized for batch processing and memory efficiency
 
 **Section sources**
 - [best_practices.md](file://best_practices.md#L50-L116)
 - [docs/architecture.md](file://docs/architecture.md#L62-L67)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L118-L120)
 
 ## Troubleshooting Guide
 Common issues and remedies:
@@ -409,16 +557,23 @@ Common issues and remedies:
 - No microphone on Linux: Set AETHER_AUDIO_INPUT_DEVICE to the correct index
 - Firebase unavailable: The system degrades gracefully; configure GOOGLE_APPLICATION_CREDENTIALS if persistent memory is required
 - High CPU usage: Verify PyAudio C extensions, reduce frontend visualizer FPS, and confirm Rust acceleration is enabled
+- **New**: Dependency analyzer failures: Install networkx and pyvis packages for full dependency analysis functionality
+- **New**: Code indexer errors: Ensure GOOGLE_API_KEY is set in .env file for vector store operations
 
 **Section sources**
 - [core/server.py](file://core/server.py#L62-L120)
 - [README.md](file://README.md#L244-L249)
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py#L11-L18)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L92-L98)
 
 ## Development Workflow
 Local development:
 - Backend: Create a virtual environment, install requirements, set GOOGLE_API_KEY, and run the server entrypoint
 - Frontend: From apps/portal, install dependencies and run the dev server; Tauri CLI is available for desktop builds
 - Docker: Use docker-compose to spin up kernel and portal containers; health checks expose the gateway port
+- **Enhanced**: Code Analysis: Use tools/dependency_analyzer.py to analyze dependencies and detect circular imports
+- **Enhanced**: AST Inspection: Use tools/ast_extractor.py to analyze Python code structure and metadata
+- **Enhanced**: Code Indexing: Use core/tools/code_indexer.py to create semantic indexes for AI-assisted development
 
 CI/CD pipeline:
 - Rust check for cortex
@@ -426,6 +581,7 @@ CI/CD pipeline:
 - Multi-version Python tests with coverage thresholds
 - Frontend lint and test
 - Security scans (Bandit, Safety) and Docker image build verification
+- **New**: Automated dependency analysis in CI for circular import detection
 
 **Updated**: README Statistics Automation:
 - GitHub Actions workflow runs daily at midnight UTC to update README statistics
@@ -458,6 +614,8 @@ Core->>Eng : Shutdown
 - [.github/workflows/aether_pipeline.yml](file://.github/workflows/aether_pipeline.yml#L1-L160)
 - [docker-compose.yml](file://docker-compose.yml#L1-L37)
 - [.github/workflows/update_readme_stats.yml](file://.github/workflows/update_readme_stats.yml#L1-L62)
+- [tools/dependency_analyzer.py](file://tools/dependency_analyzer.py#L134-L175)
+- [core/tools/code_indexer.py](file://core/tools/code_indexer.py#L218-L220)
 
 ## README Documentation Improvements
 
@@ -635,6 +793,7 @@ ATH_PACKAGE ||--o{ FILE_ENTRY : "contains"
 - Documentation: Module docstrings for runtime constraints; short comments for DSP logic
 - Error handling: Domain-specific exceptions; best-effort telemetry counters in hot paths
 - Common patterns: Hot-path vs cold-path separation; fallback strategy; queue overflow policy
+- **Enhanced**: Code analysis: Use AST extractor for code structure analysis; dependency analyzer for circular import detection
 
 **Section sources**
 - [best_practices.md](file://best_practices.md#L50-L116)
@@ -646,6 +805,7 @@ ATH_PACKAGE ||--o{ FILE_ENTRY : "contains"
 - Mocking: External I/O and SDKs; deterministic randomness via numpy random generators
 - Coverage: Target >80% on audio pipeline modules
 - CI: Multi-version Python tests with coverage thresholds; linting; security scans; Docker build verification
+- **New**: Code analysis testing: Include AST extractor and dependency analyzer in test suite
 
 **Section sources**
 - [best_practices.md](file://best_practices.md#L34-L49)
@@ -655,6 +815,8 @@ ATH_PACKAGE ||--o{ FILE_ENTRY : "contains"
 - Docker: Multi-stage build with Rust DSP acceleration; health checks on gateway port; non-root user
 - docker-compose: Orchestrates kernel and portal; environment variables for keys and ports
 - Frontend: Next.js with PWA and Tauri; scripts for dev, build, lint, and tests
+- **Enhanced**: Code analysis: Automated dependency analysis during build process
+- **Enhanced**: Vector store: Firestore-based semantic indexing for AI-assisted development
 
 **Section sources**
 - [Dockerfile](file://Dockerfile#L1-L76)
@@ -662,4 +824,8 @@ ATH_PACKAGE ||--o{ FILE_ENTRY : "contains"
 - [apps/portal/package.json](file://apps/portal/package.json#L5-L15)
 
 ## Conclusion
-Aether Voice OS provides a robust foundation for voice-first AI systems with real-time audio processing, multimodal AI orchestration, and extensible tooling. The comprehensive documentation improvements including automated README statistics tracking, workflow automation, and enhanced project presentation significantly improve developer experience and project discoverability. By following the development workflow, adhering to coding standards, leveraging the SDK and .ath packaging, and utilizing the automated documentation system, contributors can build reliable, performant integrations that meet the project's latency and empathy goals while maintaining professional presentation standards.
+Aether Voice OS provides a robust foundation for voice-first AI systems with real-time audio processing, multimodal AI orchestration, and extensible tooling. The comprehensive documentation improvements including automated README statistics tracking, workflow automation, enhanced project presentation, and new development tools significantly improve developer experience and project discoverability. 
+
+The addition of dependency analyzer, AST extractor, and enhanced code indexing capabilities provides developers with powerful tools for code analysis, dependency management, and semantic understanding of the codebase. These tools integrate seamlessly with the existing architecture and development workflow, supporting both automated analysis and manual inspection of the code structure.
+
+By following the development workflow, adhering to coding standards, leveraging the SDK and .ath packaging, utilizing the automated documentation system, and taking advantage of the new code analysis tools, contributors can build reliable, performant integrations that meet the project's latency and empathy goals while maintaining professional presentation standards and code quality.

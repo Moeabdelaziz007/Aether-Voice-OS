@@ -14,6 +14,12 @@
 - [interface.py](file://core/infra/cloud/firebase/interface.py)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Fixed constructor call patterns for EventBus and EngineStateManager instances
+- Corrected class name typo in state transition event creation
+- Updated documentation to reflect proper initialization sequences
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
@@ -160,6 +166,8 @@ Key behaviors:
 - Uses EventBus to broadcast state changes.
 - Maintains a list of background tasks to cancel on shutdown.
 
+**Updated** Fixed constructor call patterns for EventBus and EngineStateManager instances to ensure proper initialization order and dependency injection.
+
 ```mermaid
 flowchart TD
 Start([Boot Entry]) --> StartBus["Start EventBus"]
@@ -202,6 +210,8 @@ State machine:
 - PAUSED → IDLE, ERROR
 - NIGHT_TERRORS → IDLE
 - ERROR → BOOTING (watchdog recovery)
+
+**Updated** Fixed class name typo from `Controlevent` to `ControlEvent` in state transition event creation.
 
 ```mermaid
 stateDiagram-v2
@@ -426,8 +436,6 @@ AE --> SS
 - Snapshot persistence uses TTL to bound storage overhead and stale data retention.
 - Logging-based watchdog avoids tight loops and centralizes failure detection.
 
-[No sources needed since this section provides general guidance]
-
 ## Troubleshooting Guide
 Common issues and resolutions:
 - Stuck startup
@@ -471,8 +479,6 @@ Common issues and resolutions:
 ## Conclusion
 The lifecycle management system enforces deterministic boot and shutdown sequences, coordinates subsystems via an event-driven state machine, and integrates with external systems for persistence and monitoring. Robust error handling, snapshot-based recovery, and autonomous watchdog healing ensure resilience. Extensibility is achieved through modular components, lifecycle hooks, and standardized state transitions.
 
-[No sources needed since this section summarizes without analyzing specific files]
-
 ## Appendices
 
 ### Best Practices for Extending Lifecycle Operations
@@ -484,4 +490,11 @@ The lifecycle management system enforces deterministic boot and shutdown sequenc
 - Use SessionStateManager snapshots for crash recovery and session continuity.
 - Configure watchdog patterns for targeted healing actions.
 
-[No sources needed since this section provides general guidance]
+### Constructor Call Patterns
+**Updated** Proper initialization patterns for lifecycle components:
+
+- **EventBus Initialization**: `EventBus()` creates a new event bus instance with three tiered queues
+- **EngineStateManager Initialization**: `EngineStateManager(event_bus_instance)` requires a valid EventBus instance for event broadcasting
+- **LifecycleManager Initialization**: Creates both EventBus and EngineStateManager instances with proper dependency injection
+
+These constructor patterns ensure proper initialization order and dependency resolution across the lifecycle management system.
