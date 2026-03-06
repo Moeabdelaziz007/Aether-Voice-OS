@@ -61,22 +61,22 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = self._AudioManager(
+        self._audio = AudioManager(
             self._config,
             self._gateway,
             self._on_affective_data,
             event_bus=self._event_bus,
         )
         print("  Engine: Initializing InfraManager...", flush=True)
-        self._infra = self._InfraManager(self._gateway)
+        self._infra = InfraManager(self._gateway)
         print("  Engine: Initializing AdminAPI...", flush=True)
-        self._admin_api = self._Adminapiserver(port=18790)
+        self._admin_api = AdminAPIServer(port=18790)
 
         print("  Engine: Initializing PulseManager...", flush=True)
-        self._pulse = self._PulseManager(self._event_bus)
+        self._pulse = PulseManager(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = self._CognitiveScheduler(
+        self._cortex = CognitiveScheduler(
             self._event_bus, self._router
         )
 
@@ -98,9 +98,9 @@ class AetherEngine:
         """Initialize and load the global vector store."""
         from core.tools.vector_store import LocalVectorStore
 
-        root_dir = self._Path(__file__).resolve().parent.parent
+        root_dir = Path(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"
-        global_index = self._LocalVectorStore(
+        global_index = LocalVectorStore(
             api_key=self._config.ai.api_key
         )
         global_index.load(index_path)

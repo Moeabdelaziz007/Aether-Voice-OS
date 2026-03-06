@@ -260,3 +260,13 @@ AetherOS is now highly modular and ready for expert-level scale. **[REORG COMPLE
 - **Full-Stack Wiring**: Integrated the Cortex and Echo systems into `GeminiLiveSession`, `AetherGateway`, and the main `AetherEngine` entrypoint.
 
 AetherOS has evolved from a reactive assistant into a **Proactive Neural OS**. **[V3.1 CORTEX UPGRADE COMPLETE]**
+
+#### Phase 24: Neural Engine Restoration & Protocol Alignment [2026-03-05]
+
+- **Neural Infrastructure Recovery**: Repaired critical architectural failures in `AetherGateway` and `GeminiLiveSession`. Replaced all static class references with proper dependency-injected instances.
+- **Protocol Compliance**: Synchronized the gateway's WebSocket handshake with verified Pydantic messages (`ChallengeMessage`, `AckMessage`, `ErrorMessage`). Fixed Ed25519 signature verification flows.
+- **State Synchronization**: Stabilized `SessionStateManager` and `GlobalBus` integration, ensuring real-time session metadata persistence and broadcast across the distributed neural bus.
+- **Dependency Integrity**: Added missing imports and instantiated `ThalamicGate` and `DemoFallback` in the AI session, preventing runtime cognitive collapses.
+- **Verification**: Validated the entire core engine syntax and manager initialization. System is now structurally sound for high-fidelity interactive sessions.
+
+AetherOS core infrastructure is now restored and protocol-aligned. **[NEURAL ENGINE RECOVERY COMPLETE]**

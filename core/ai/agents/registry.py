@@ -10,7 +10,7 @@ logger = logging.getLogger("AetherOS.AgentRegistry")
 # ==========================================
 
 
-class AgentMetadata(BaseModel)):
+class AgentMetadata(BaseModel):
     """
     Electronic Identity for an Aether Agent.
     Defines the 'Soul' and 'Skills' of a Hive expert.

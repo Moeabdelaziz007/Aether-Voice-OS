@@ -12,7 +12,7 @@ logger = logging.getLogger("AetherOS.Memory")
 # ==========================================
 
 
-class MemoryBlock(BaseModel)):
+class MemoryBlock(BaseModel):
     """
     A single unit of short-term recollection.
     """

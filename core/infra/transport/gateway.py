@@ -93,10 +93,10 @@ class AetherGateway:
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
 
         # Global State Bus
-        self._bus = GlobalBus
+        self._bus = GlobalBus()
 
         # Session State Manager (Single Source of Truth)
-        self._state_manager = SessionStateManager
+        self._state_manager = SessionStateManager(broadcast_callback=self.broadcast, bus=self._bus)
 
         # Legacy session reference (now managed by state manager)
         self._server: Optional[Server] = None
@@ -289,7 +289,16 @@ class AetherGateway:
             )
             try:
                 target_soul = self._hive._registry.get(soul_name)
-                session = GeminiLiveSession
+                session = GeminiLiveSession(
+                    config=self._ai_config,
+                    audio_in_queue=self._audio_in,
+                    audio_out_queue=self._audio_out,
+                    gateway=self,
+                    on_interrupt=self._on_interrupt,
+                    on_tool_call=self._on_tool_call,
+                    tool_router=self._tool_router,
+                    soul_manifest=target_soul
+                )
 
                 # Inject handover context if available
                 pending = self._hive.get_pending_handover_for_target(soul_name)
@@ -351,7 +360,11 @@ class AetherGateway:
             soul_name = active_soul.manifest.name
 
             # Initialize session metadata
-            session_metadata = Sessionmetadata
+            session_metadata = SessionMetadata(
+                session_id=str(uuid.uuid4()),
+                soul_name=soul_name,
+                started_at=datetime.now()
+            )
 
             # Transition to INITIALIZING
             await self._state_manager.transition_to(
@@ -377,7 +390,16 @@ class AetherGateway:
                         await self._pre_warmed_session.stop()
                         self._pre_warmed_session = None
 
-                    session = GeminiLiveSession
+                    session = GeminiLiveSession(
+                        config=self._ai_config,
+                        audio_in_queue=self._audio_in,
+                        audio_out_queue=self._audio_out,
+                        gateway=self,
+                        on_interrupt=self._on_interrupt,
+                        on_tool_call=self._on_tool_call,
+                        tool_router=self._tool_router,
+                        soul_manifest=active_soul
+                    )
 
             # Inject pending handover context if available (if not already injected during pre-warming)
             pending_handover = self._hive.get_pending_handover_for_target(soul_name)
@@ -535,7 +557,7 @@ class AetherGateway:
         """
         # Generate challenge
         challenge_bytes = os.urandom(32)
-        challenge = ChallengeMessage
+        challenge = ChallengeMessage(challenge=challenge_bytes.hex())
 
         await ws.send(challenge.model_dump_json())
 
@@ -546,38 +568,42 @@ class AetherGateway:
                 timeout=self._gateway_config.handshake_timeout_s,
             )
         except asyncio.TimeoutError:
-            raise Handshaketimeouterror
+            raise HandshakeTimeoutError()
 
         try:
             resp = json.loads(raw)
         except json.JSONDecodeError:
-            raise Handshakeerror
+            raise HandshakeError()
 
         client_id = resp.get("client_id")
         if not client_id:
-            raise Handshakeerror
+            raise HandshakeError()
 
         capabilities = resp.get("capabilities", [])
 
         token = resp.get("token")
         if token:
             if not self._verify_jwt(token):
-                raise Handshakeerror
+                raise HandshakeError()
             logger.info("Client authenticated via JWT: %s", client_id)
         else:
             signature = resp.get("signature", "")
             if not self._verify_signature(challenge_bytes, signature, client_id):
-                raise Handshakeerror
+                raise HandshakeError()
             logger.info("Client authenticated via Ed25519: %s", client_id)
 
         # Create session
-        session = ClientSession
+        session = ClientSession(client_id=client_id, ws=ws, capabilities=capabilities)
 
         async with self._lock:
             self._clients[client_id] = session
 
         # Send ACK
-        ack = AckMessage
+        ack = AckMessage(
+            session_id=session.session_id,
+            granted_capabilities=capabilities,
+            tick_interval_s=self._gateway_config.tick_interval_s
+        )
         await ws.send(ack.model_dump_json())
 
         return client_id
@@ -772,7 +798,7 @@ class AetherGateway:
         fatal: bool = False,
     ) -> None:
         """Send an error message to a client."""
-        err = ErrorMessage
+        err = ErrorMessage(code=code, message=message, fatal=fatal)
         try:
             await ws.send(err.model_dump_json())
             if fatal:

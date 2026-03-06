@@ -11,7 +11,7 @@ logger = logging.getLogger("AetherOS.LongTermMemory")
 # ==========================================
 
 
-class MemoryEntry(BaseModel)):
+class MemoryEntry(BaseModel):
     id: str
     vector: List[float]
     content: str

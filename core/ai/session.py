@@ -35,8 +35,8 @@ from core.infra.config import AIConfig
 from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
-from core.utils.errors import AIConnectionError, AISessionExpiredError
-from core.infra.service_container import container
+from core.ai.thalamic import ThalamicGate
+from core.demo.fallback import DemoFallback
 
 logger = logging.getLogger(__name__)
 
@@ -196,8 +196,8 @@ class GeminiLiveSession:
 
                 # Wire in Thalamic Gate V2
                 try:
-                    self._thalamic_gate = ThalamicGate
-                    self._demo_fallback = DemoFallback
+                    self._thalamic_gate = ThalamicGate()
+                    self._demo_fallback = DemoFallback()
                     await self._thalamic_gate.start()
                 except Exception as e:
                     logger.error("Failed to wire Thalamic Gate: %s", e)

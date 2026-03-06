@@ -60,7 +60,7 @@ class PerformanceMetrics:
     total_time_ms: float = 0.0
 
     # Latency percentiles (if multiple samples)
-    latency_samples: List[float] = field(default_factory=list)
+    latency_samples: List[float] = Field(default_factory=list)
 
     def record_latency(self, latency_ms: float) -> None:
         """Record a latency sample."""

@@ -31,15 +31,13 @@ class AudioManager:
         self._event_bus = event_bus
         self._on_affective_data_callback = on_affective_data
 
-        self._paralinguistics = container.get('paralinguisticanalyzer', sample_rate=self._config.audio.send_sample_rate)
+        self._paralinguistics = ParalinguisticAnalyzer(sample_rate=self._config.audio.send_sample_rate)
 
-        self._vad = container.get('adaptivevad',
-            window_size_sec=getattr(self._config.audio, "vad_window_sec", 5.0),
+        self._vad = AdaptiveVAD(window_size_sec=getattr(self._config.audio, "vad_window_sec", 5.0),
             sample_rate=self._config.audio.send_sample_rate,
         )
 
-        self._capture = container.get('audiocapture',
-            self._config.audio,
+        self._capture = AudioCapture(self._config.audio,
             self._gateway.audio_in_queue,
             vad_engine=self._vad,
             paralinguistic_analyzer=self._paralinguistics,
@@ -47,8 +45,7 @@ class AudioManager:
         )
         self._capture._on_audio_telemetry = self._gateway.broadcast
 
-        self._playback = container.get('audioplayback',
-            self._config.audio,
+        self._playback = AudioPlayback(self._config.audio,
             self._gateway.audio_out_queue,
             on_audio_tx=self._gateway.broadcast_binary,
         )
@@ -93,8 +90,7 @@ class AudioManager:
             }
 
             for name, val in traits.items():
-                event = container.get('acoustictraitevent',
-                    timestamp=time.time(),
+                event = AcousticTraitEvent(timestamp=time.time(),
                     source="AudioManager",
                     latency_budget=100,  # Sub-100ms requirement
                     trait_name=name,

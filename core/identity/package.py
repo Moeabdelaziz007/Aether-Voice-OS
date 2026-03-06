@@ -20,33 +20,33 @@ from core.utils.errors import ManifestValidationError, PackageCorruptError
 logger = logging.getLogger(__name__)
 
 
-class SoulManifest(BaseModel)):
+class SoulManifest(BaseModel):
     """
     The soul of an Aether agent — defines identity, voice, and capabilities.
 
     Loaded from manifest.json inside a .ath package directory.
     """
 
-    name: str = field..., min_length=1, max_length=64)
-    version: str = field..., pattern=r"^\d+\.\d+\.\d+$")
-    persona: str = field..., min_length=1, description="Agent personality description")
-    voice_id: str = field"Puck", description="Gemini voice name")
-    language: str = field"ar-EG", description="Primary language (BCP-47)")
-    capabilities: list[str] = fielddefault_factory=list)
-    tools: list[str] = fielddefault_factory=list)
-    memory_tags: list[str] = field
+    name: str = Field(..., min_length=1, max_length=64)
+    version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
+    persona: str = Field(..., min_length=1, description="Agent personality description")
+    voice_id: str = Field("Puck", description="Gemini voice name")
+    language: str = Field("ar-EG", description="Primary language (BCP-47)")
+    capabilities: list[str] = Field(default_factory=list)
+    tools: list[str] = Field(default_factory=list)
+    memory_tags: list[str] = Field(
         default_factory=list,
         description="Memory namespaces this agent is optimized for",
     )
-    expertise: dict[str, float] = field
+    expertise: dict[str, float] = Field(
         default_factory=dict,
         description="Domain-specific expertise scores (0.0 to 1.0)",
     )
     author: Optional[str] = None
-    public_key: Optional[str] = field
+    public_key: Optional[str] = Field(
         None, description="Ed25519 public key (hex) for authentication"
     )
-    checksum: Optional[str] = fieldNone, description="SHA256 of the package contents")
+    checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
 
     @field_validator("capabilities")
     @classmethod
@@ -124,7 +124,7 @@ class AthPackage:
         if manifest.checksum:
             actual = package.compute_checksum()
             if actual != manifest.checksum:
-                raise Packagecorrupterror
+                raise PackageCorruptError(
                     f"Checksum mismatch for {manifest.name}: "
                     f"expected={manifest.checksum}, actual={actual}",
                     context={
