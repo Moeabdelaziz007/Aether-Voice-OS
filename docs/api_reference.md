@@ -62,8 +62,8 @@ The high-performance kernel for tool execution.
 - **`dispatch(function_call: types.FunctionCall)`** (Async)
   - **Middleware**: Executes `BiometricMiddleware` (Soul-Lock) for sensitive tools.
   - **Parallelism**: Runs independent tools concurrently via `TaskGroup`.
-- **`get_performance_report()`**
-  - Returns p50, p95, and p99 metrics for every registered tool.
+- **`profiler`**
+  - Exposes `get_stats()` for fetching p50, p95, and p99 metrics for registered tools.
 
 ---
 

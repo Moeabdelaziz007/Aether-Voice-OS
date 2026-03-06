@@ -46,7 +46,7 @@ async def test_tool_router_stress():
     assert all(r["result"]["data"] == i * 2 for i, r in enumerate(results))
 
     # 4. Verify profiling
-    stats = router.get_performance_report()["fast_tool"]
+    stats = router.profiler.get_stats("fast_tool")
     assert stats["count"] == 1000
     assert stats["p99"] > 0
     print(f"   p99 Latency: {stats['p99'] * 1000:.3f}ms")
