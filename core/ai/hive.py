@@ -100,7 +100,7 @@ class HiveCoordinator:
         self._dna_pool: Dict[str, AgentDNA] = {}
         self._genetic_optimizer = (
             GeneticOptimizer(registry.firebase, api_key)
-            if hasattr(registry, 'firebase') and registry.firebase and api_key
+            if hasattr(registry, "firebase") and registry.firebase and api_key
             else None
         )
 

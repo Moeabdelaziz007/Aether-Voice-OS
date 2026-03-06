@@ -39,8 +39,8 @@ patcher = patch.dict(
 )
 patcher.start()
 
-import sys
-from unittest.mock import Mock
+import sys  # noqa: E402
+from unittest.mock import Mock  # noqa: E402
 
 sys.modules["pyaudio"] = Mock()
 from core.audio.capture import AudioCapture, SmoothMuter  # noqa: E402
@@ -266,6 +266,7 @@ def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(
     capture_instance: AudioCapture,
 ):
     import core.audio.capture
+
     # Simulate QueueFull once, then success.
     q = capture_instance._async_queue
 

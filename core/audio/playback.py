@@ -194,7 +194,9 @@ class AudioPlayback:
                         try:
                             self._buffer.get_nowait()
                             self._buffer.put_nowait(audio_bytes)
-                            logger.debug("Playback buffer overflow, dropped oldest chunk")
+                            logger.debug(
+                                "Playback buffer overflow, dropped oldest chunk"
+                            )
                             break
                         except queue.Empty:
                             pass

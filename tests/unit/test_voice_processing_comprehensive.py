@@ -151,8 +151,8 @@ def generate_echo_signal(
     """Generate echo of original signal."""
     delay_samples = int(delay_ms * sample_rate / 1000)
     echo = np.zeros(len(original) + delay_samples, dtype=np.float64)
-    echo[delay_samples: delay_samples + len(original)] = original * attenuation
-    return echo[:len(original)].astype(np.int16)
+    echo[delay_samples : delay_samples + len(original)] = original * attenuation
+    return echo[: len(original)].astype(np.int16)
 
 
 def mix_signals(
@@ -220,7 +220,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(speech) - frame_size, frame_size):
-            frame = speech[i: i + frame_size]
+            frame = speech[i : i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -244,7 +244,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(noisy_speech) - frame_size, frame_size):
-            frame = noisy_speech[i: i + frame_size]
+            frame = noisy_speech[i : i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -450,10 +450,17 @@ class TestEchoGuard:
         echo = ai_speech * 0.5  # Attenuated
 
         # Should recognize as self (not user)
-        # Note: The original test seems broken or the similarity threshold logic doesn't align
-        # with synthetic sine waves. For testing purposes, we override output cache with a perfect match
+        # Note: The original test seems broken or the similarity threshold logic doesn't
+        # align with synthetic sine waves. For testing purposes, we override output
+        # cache with a perfect match
         import numpy as np
-        echo_np = np.frombuffer(echo.tobytes()[:len(echo.tobytes())//2*2], dtype=np.int16).astype(np.float32) / 32768.0
+
+        echo_np = (
+            np.frombuffer(
+                echo.tobytes()[: len(echo.tobytes()) // 2 * 2], dtype=np.int16
+            ).astype(np.float32)
+            / 32768.0
+        )
         input_spectrum = np.abs(np.fft.rfft(echo_np))
         splits = np.array_split(input_spectrum, 13)
         echo_fp = np.array([np.mean(s) for s in splits if len(s) > 0])
@@ -862,22 +869,26 @@ def generate_recommendations(suite: VoiceTestSuite) -> List[str]:
         if not result.passed:
             if "VAD" in result.test_name:
                 recommendations.append(
-                    "🎙️ VAD: Consider tuning noise floor threshold or hysteresis parameters"
+                    "🎙️ VAD: Consider tuning noise floor threshold "
+                    "or hysteresis parameters"
                 )
             elif "AEC" in result.test_name:
                 recommendations.append(
-                    "🔊 AEC: Increase filter length or adjust NLMS step size for better convergence"
+                    "🔊 AEC: Increase filter length or adjust NLMS step size "
+                    "for better convergence"
                 )
             elif "Latency" in result.test_name:
                 recommendations.append(
-                    "⚡ Latency: Profile hot paths, consider Rust acceleration for DSP operations"
+                    "⚡ Latency: Profile hot paths, consider Rust acceleration "
+                    "for DSP operations"
                 )
 
     # General recommendations
     recommendations.extend(
         [
             "💡 Use SIMD intrinsics (via numpy) for vectorized audio operations",
-            "💡 Consider pre-allocating buffers to avoid GC pressure in audio callbacks",
+            "💡 Consider pre-allocating buffers to avoid GC pressure "
+            "in audio callbacks",
             "💡 Implement adaptive step size for AEC based on signal characteristics",
             "💡 Use ring buffers with fixed allocation for real-time processing",
         ]
@@ -893,7 +904,8 @@ def print_test_report(suite: VoiceTestSuite):
     print("=" * 70)
     print(f"\n  Duration: {suite.total_duration_s:.2f}s")
     print(
-        f"  Tests: {len(suite.results)} | Passed: {suite.passed_count} | Failed: {suite.failed_count}"
+        f"  Tests: {len(suite.results)} | Passed: {suite.passed_count} "
+        f"| Failed: {suite.failed_count}"
     )
     print(f"  Pass Rate: {suite.pass_rate:.1f}%")
     print("\n" + "-" * 70)
@@ -904,7 +916,8 @@ def print_test_report(suite: VoiceTestSuite):
         status = "✅" if r.passed else "❌"
         print(f"  {status} {r.test_name}")
         print(
-            f"     {r.metric_name}: {r.metric_value:.2f}{r.unit} (threshold: {r.threshold}{r.unit})"
+            f"     {r.metric_name}: {r.metric_value:.2f}{r.unit} "
+            f"(threshold: {r.threshold}{r.unit})"
         )
 
     print("\n" + "-" * 70)

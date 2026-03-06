@@ -14,6 +14,7 @@ try:
 except ImportError:
     # Handle environment where packages are missing but code is being checked
     from unittest.mock import MagicMock
+
     nx = MagicMock()
     Network = MagicMock
 

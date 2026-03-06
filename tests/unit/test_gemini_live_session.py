@@ -13,9 +13,14 @@ we set rather than exact SDK classes.
 
 from __future__ import annotations
 
+import sys  # noqa: E402
+from unittest.mock import AsyncMock, MagicMock  # noqa: E402
+
+sys.modules["mss"] = MagicMock()
+sys.modules["mss.tools"] = MagicMock()
+
 import asyncio
 from types import SimpleNamespace
-from unittest.mock import AsyncMock
 
 import pytest
 

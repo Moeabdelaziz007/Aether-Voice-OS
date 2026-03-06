@@ -121,9 +121,9 @@ def main() -> None:
     # Import engine only after checks pass
     from core.engine import AetherEngine
     from core.infra.service_container import Container
-    
+
     Container()
-    
+
     DIM = "\033[2m"
     CYAN = "\033[96m"
     RESET = "\033[0m"

@@ -116,6 +116,7 @@ def test_infra_manager_end_session_disconnected(infra_manager):
 
     infra_manager._firebase.end_session.assert_not_called()
 
+
 def test_infra_manager_end_session_empty_tools(infra_manager):
     infra_manager._firebase.is_connected = True
     infra_manager._firebase.end_session = AsyncMock()
@@ -131,6 +132,7 @@ def test_infra_manager_end_session_empty_tools(infra_manager):
             "tool_count": 0,
         }
     )
+
 
 def test_infra_manager_end_session_missing_router_attributes(infra_manager):
     infra_manager._firebase.is_connected = True

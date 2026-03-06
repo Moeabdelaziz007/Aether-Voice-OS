@@ -95,9 +95,7 @@ class FormatterAgent(AgentBase):
                 msg = stderr.decode()
                 # Check if it's just syntax errors (which we can ignore)
                 if "Failed to parse" in msg:
-                    self.logger.warning(
-                        "⚠️ Some files have syntax errors, skipping..."
-                    )
+                    self.logger.warning("⚠️ Some files have syntax errors, skipping...")
                     results["syntax_errors"] = msg.count("Failed to parse")
                 else:
                     self.logger.error(f"❌ Formatting failed: {msg[:200]}")

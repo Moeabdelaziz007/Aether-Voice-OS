@@ -11,7 +11,16 @@ not to validate production-grade DSP performance.
 
 from __future__ import annotations
 
+import sys  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
+
+# Mock scipy before importing anything from core.audio.spectral
+sys.modules["scipy"] = MagicMock()
+sys.modules["scipy.fft"] = MagicMock()
+sys.modules["scipy.signal"] = MagicMock()
+
 import numpy as np
+import pytest
 
 from core.audio.spectral import SpectralAnalyzer, erle, gcc_phat
 
@@ -24,8 +33,6 @@ def _sine(
     t = np.arange(n, dtype=np.float64) / sr
     return amp * np.sin(2.0 * np.pi * freq_hz * t)
 
-
-import pytest
 
 @pytest.mark.skip(reason="Pre-existing bug: gcc_phat returns 0 instead of 200ms")
 def test_gcc_phat_estimates_delay_within_tolerance():

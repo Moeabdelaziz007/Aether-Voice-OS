@@ -46,8 +46,8 @@ def ensure_dirs():
 
 async def wait_for_server(url: str, timeout: float = 90.0) -> bool:
     """Wait for the Next.js dev server to be ready using urllib."""
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     start = time.time()
     while time.time() - start < timeout:
@@ -91,7 +91,10 @@ async def run_browser_tests():
             # Launch browser with video recording
             browser = await p.chromium.launch(
                 headless=True,
-                args=["--use-fake-ui-for-media-stream", "--use-fake-device-for-media-stream"],
+                args=[
+                    "--use-fake-ui-for-media-stream",
+                    "--use-fake-device-for-media-stream",
+                ],
             )
 
             # Create context with video recording and fake media
@@ -126,18 +129,24 @@ async def run_browser_tests():
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
-                results["tests"].append({"name": "Main Portal Load", "status": f"FAIL: {e}"})
+                results["tests"].append(
+                    {"name": "Main Portal Load", "status": f"FAIL: {e}"}
+                )
                 results["failed"] += 1
 
             # ── Test 2: Live Voice Page (/live) ──────────────────
             logger.info("TEST 2: Loading live voice page...")
             try:
-                await page.goto(f"{BASE_URL}/live", wait_until="networkidle", timeout=30000)
+                await page.goto(
+                    f"{BASE_URL}/live", wait_until="networkidle", timeout=30000
+                )
                 await page.wait_for_timeout(3000)
 
                 # Check for status elements on the live page
                 content = await page.content()
-                has_live_content = "live" in content.lower() or "aether" in content.lower()
+                has_live_content = (
+                    "live" in content.lower() or "aether" in content.lower()
+                )
                 logger.info(f"  Live page has content: {has_live_content}")
 
                 await page.screenshot(
@@ -146,17 +155,23 @@ async def run_browser_tests():
                 )
                 logger.info("  Screenshot saved: 02_live_page.png")
 
-                results["tests"].append({"name": "Live Voice Page Load", "status": "PASS"})
+                results["tests"].append(
+                    {"name": "Live Voice Page Load", "status": "PASS"}
+                )
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
-                results["tests"].append({"name": "Live Voice Page Load", "status": f"FAIL: {e}"})
+                results["tests"].append(
+                    {"name": "Live Voice Page Load", "status": f"FAIL: {e}"}
+                )
                 results["failed"] += 1
 
             # ── Test 3: Admin Dashboard (/admin) ─────────────────
             logger.info("TEST 3: Loading admin dashboard...")
             try:
-                await page.goto(f"{BASE_URL}/admin", wait_until="networkidle", timeout=30000)
+                await page.goto(
+                    f"{BASE_URL}/admin", wait_until="networkidle", timeout=30000
+                )
                 await page.wait_for_timeout(2000)
 
                 await page.screenshot(
@@ -165,17 +180,23 @@ async def run_browser_tests():
                 )
                 logger.info("  Screenshot saved: 03_admin_dashboard.png")
 
-                results["tests"].append({"name": "Admin Dashboard Load", "status": "PASS"})
+                results["tests"].append(
+                    {"name": "Admin Dashboard Load", "status": "PASS"}
+                )
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
-                results["tests"].append({"name": "Admin Dashboard Load", "status": f"FAIL: {e}"})
+                results["tests"].append(
+                    {"name": "Admin Dashboard Load", "status": f"FAIL: {e}"}
+                )
                 results["failed"] += 1
 
             # ── Test 4: Audio Pipeline Initialization ────────────
             logger.info("TEST 4: Testing audio pipeline initialization...")
             try:
-                await page.goto(f"{BASE_URL}/live", wait_until="networkidle", timeout=30000)
+                await page.goto(
+                    f"{BASE_URL}/live", wait_until="networkidle", timeout=30000
+                )
                 await page.wait_for_timeout(2000)
 
                 # Check if AudioContext can be created
@@ -205,15 +226,19 @@ async def run_browser_tests():
                     full_page=False,
                 )
 
-                results["tests"].append({
-                    "name": "Audio Pipeline Init",
-                    "status": "PASS",
-                    "details": {**audio_support, **media_support},
-                })
+                results["tests"].append(
+                    {
+                        "name": "Audio Pipeline Init",
+                        "status": "PASS",
+                        "details": {**audio_support, **media_support},
+                    }
+                )
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
-                results["tests"].append({"name": "Audio Pipeline Init", "status": f"FAIL: {e}"})
+                results["tests"].append(
+                    {"name": "Audio Pipeline Init", "status": f"FAIL: {e}"}
+                )
                 results["failed"] += 1
 
             # ── Test 5: UI Responsiveness & Interaction ──────────
@@ -236,7 +261,12 @@ async def run_browser_tests():
 
                 # Check for console errors
                 errors = []
-                page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
+                page.on(
+                    "console",
+                    lambda msg: errors.append(msg.text)
+                    if msg.type == "error"
+                    else None,
+                )
                 await page.wait_for_timeout(2000)
 
                 await page.screenshot(
@@ -244,15 +274,19 @@ async def run_browser_tests():
                     full_page=False,
                 )
 
-                results["tests"].append({
-                    "name": "UI Responsiveness",
-                    "status": "PASS",
-                    "details": perf_metrics,
-                })
+                results["tests"].append(
+                    {
+                        "name": "UI Responsiveness",
+                        "status": "PASS",
+                        "details": perf_metrics,
+                    }
+                )
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
-                results["tests"].append({"name": "UI Responsiveness", "status": f"FAIL: {e}"})
+                results["tests"].append(
+                    {"name": "UI Responsiveness", "status": f"FAIL: {e}"}
+                )
                 results["failed"] += 1
 
             # ── Test 6: Full Navigation Flow Recording ───────────
@@ -262,10 +296,14 @@ async def run_browser_tests():
                 await page.goto(BASE_URL, wait_until="networkidle", timeout=30000)
                 await page.wait_for_timeout(4000)
 
-                await page.goto(f"{BASE_URL}/live", wait_until="networkidle", timeout=30000)
+                await page.goto(
+                    f"{BASE_URL}/live", wait_until="networkidle", timeout=30000
+                )
                 await page.wait_for_timeout(4000)
 
-                await page.goto(f"{BASE_URL}/admin", wait_until="networkidle", timeout=30000)
+                await page.goto(
+                    f"{BASE_URL}/admin", wait_until="networkidle", timeout=30000
+                )
                 await page.wait_for_timeout(3000)
 
                 # Return to main
@@ -277,11 +315,15 @@ async def run_browser_tests():
                     full_page=False,
                 )
 
-                results["tests"].append({"name": "Full Navigation Flow", "status": "PASS"})
+                results["tests"].append(
+                    {"name": "Full Navigation Flow", "status": "PASS"}
+                )
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
-                results["tests"].append({"name": "Full Navigation Flow", "status": f"FAIL: {e}"})
+                results["tests"].append(
+                    {"name": "Full Navigation Flow", "status": f"FAIL: {e}"}
+                )
                 results["failed"] += 1
 
             # Close context to finalize video
@@ -303,6 +345,7 @@ async def run_browser_tests():
 
         # Save results
         import json
+
         report_path = ROOT / "test-results" / "browser_e2e_report.json"
         with open(report_path, "w") as f:
             json.dump(results, f, indent=2, default=str)

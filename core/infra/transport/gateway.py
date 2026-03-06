@@ -95,7 +95,9 @@ class AetherGateway:
         self._bus = GlobalBus()
 
         # Session State Manager (Single Source of Truth)
-        self._state_manager = SessionStateManager(broadcast_callback=self.broadcast, bus=self._bus)
+        self._state_manager = SessionStateManager(
+            broadcast_callback=self.broadcast, bus=self._bus
+        )
 
         # Legacy session reference (now managed by state manager)
         self._server: Optional[Server] = None
@@ -296,7 +298,7 @@ class AetherGateway:
                     on_interrupt=self._on_interrupt,
                     on_tool_call=self._on_tool_call,
                     tool_router=self._tool_router,
-                    soul_manifest=target_soul
+                    soul_manifest=target_soul,
                 )
 
                 # Inject handover context if available
@@ -362,7 +364,7 @@ class AetherGateway:
             session_metadata = SessionMetadata(
                 session_id=str(uuid.uuid4()),
                 soul_name=soul_name,
-                started_at=datetime.now()
+                started_at=datetime.now(),
             )
 
             # Transition to INITIALIZING
@@ -397,7 +399,7 @@ class AetherGateway:
                         on_interrupt=self._on_interrupt,
                         on_tool_call=self._on_tool_call,
                         tool_router=self._tool_router,
-                        soul_manifest=active_soul
+                        soul_manifest=active_soul,
                     )
 
             # Inject pending handover context if available (if not already injected during pre-warming)
@@ -601,7 +603,7 @@ class AetherGateway:
         ack = AckMessage(
             session_id=session.session_id,
             granted_capabilities=capabilities,
-            tick_interval_s=self._gateway_config.tick_interval_s
+            tick_interval_s=self._gateway_config.tick_interval_s,
         )
         await ws.send(ack.model_dump_json())
 

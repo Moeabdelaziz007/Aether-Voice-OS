@@ -265,7 +265,6 @@ class GeminiLiveSession:
                 if "closed" in str(exc).lower():
                     break
 
-
     async def _backchannel_loop(self, session) -> None:
         """
         Monitors Silence Architecture signals.
@@ -356,14 +355,19 @@ class GeminiLiveSession:
                                         self._output_queue_drops += 1
 
                                         # Log to telemetry
-                                        if hasattr(self._gateway, 'metrics'):
+                                        if hasattr(self._gateway, "metrics"):
                                             metrics = self._gateway.metrics
-                                            metrics["gemini_output_queue_drops"] = metrics.get("gemini_output_queue_drops", 0) + 1
+                                            metrics["gemini_output_queue_drops"] = (
+                                                metrics.get(
+                                                    "gemini_output_queue_drops", 0
+                                                )
+                                                + 1
+                                            )
 
                                         if self._output_queue_drops % 10 == 0:
                                             logger.warning(
                                                 "Output queue pressure: %d drops total",
-                                                self._output_queue_drops
+                                                self._output_queue_drops,
                                             )
                                     except asyncio.QueueEmpty:
                                         pass

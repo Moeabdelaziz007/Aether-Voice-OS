@@ -1,6 +1,14 @@
+import sys  # noqa: E402
+from unittest.mock import MagicMock  # noqa: E402
+
+sys.modules["mss"] = MagicMock()
+sys.modules["mss.tools"] = MagicMock()
+sys.modules["jwt"] = MagicMock()
+sys.modules["websockets.asyncio"] = MagicMock()
+sys.modules["websockets.asyncio.server"] = MagicMock()
+
 import asyncio
 import json
-from unittest.mock import MagicMock
 
 import pytest
 import websockets

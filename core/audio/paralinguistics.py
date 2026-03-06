@@ -11,7 +11,11 @@ import logging
 from dataclasses import dataclass
 
 import numpy as np
-from numpy.typing import NDArray
+
+try:
+    from numpy.typing import NDArray
+except ImportError:
+    NDArray = np.ndarray  # type: ignore
 
 logger = logging.getLogger(__name__)
 

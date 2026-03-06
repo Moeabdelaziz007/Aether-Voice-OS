@@ -133,9 +133,11 @@ def test_smoothness_of_ramp_to_prevent_clicks():
         "Ramp is not smooth, potential for clicks"
     )
 
+
 # ============================================
 # ADD: New tests from the requirements
 # ============================================
+
 
 def test_mute_creates_smooth_ramp():
     """Verify mute creates fade-out without clicks"""
@@ -157,6 +159,7 @@ def test_mute_creates_smooth_ramp():
     max_step = np.max(np.abs(diff))
     assert max_step < 500, f"Discontinuity detected: {max_step}"
 
+
 def test_unmute_creates_smooth_ramp():
     """Verify unmute creates fade-in without clicks"""
     muter = SmoothMuter(ramp_samples=256)
@@ -170,6 +173,7 @@ def test_unmute_creates_smooth_ramp():
     # Should ramp from 0 to full volume
     assert result[0] < result[-1]
     assert result[-1] > 9000  # Near full volume
+
 
 def test_ramp_samples_affects_speed():
     """Verify ramp_samples parameter affects ramp duration"""

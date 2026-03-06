@@ -61,8 +61,7 @@ async def test_shell_injection_prevention():
     # The output should literally contain the semicolon, not execute the second command
     stdout_text = result["stdout"].replace('"', "")
     assert (
-        "hello; echo hacked" in result["stdout"]
-        or "hello; echo hacked" in stdout_text
+        "hello; echo hacked" in result["stdout"] or "hello; echo hacked" in stdout_text
     )
     # Ensure it didn't actually run the second echo on a new line
     assert result["stdout"].count("hacked") == 1
