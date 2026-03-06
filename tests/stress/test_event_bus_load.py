@@ -1,4 +1,5 @@
 import asyncio
+import statistics
 import time
 
 import pytest
@@ -102,6 +103,72 @@ async def test_event_bus_10k_eps_stress():
     assert sum(processed_counts.values()) > total_events * 0.95, (
         f"Lost too many events: {total_events - sum(processed_counts.values())} dropped."
     )
+
+
+@pytest.mark.async_event_bus
+@pytest.mark.asyncio
+async def test_event_bus_subscriber_latency_isolation_under_slow_consumer():
+    """Ensure one slow subscriber does not poison p95 routing latency for fast subscribers."""
+    bus = EventBus(
+        max_callback_workers=8,
+        subscriber_timeout_ms=20,
+        max_subscriber_failures=3,
+        max_subscriber_degrades=2,
+        degrade_cooldown_s=0.05,
+    )
+
+    fast_latencies_ms: list[float] = []
+    fast_callbacks = 4
+    total_events = 300
+
+    async def slow_cb(event: ControlEvent):
+        await asyncio.sleep(0.06)
+
+    def mk_fast_cb():
+        async def fast_cb(event: ControlEvent):
+            fast_latencies_ms.append((time.perf_counter() - event.payload["sent_perf"]) * 1000)
+
+        return fast_cb
+
+    bus.subscribe(ControlEvent, slow_cb)
+    for _ in range(fast_callbacks):
+        bus.subscribe(ControlEvent, mk_fast_cb())
+
+    await bus.start()
+
+    for _ in range(total_events):
+        await bus.publish(
+            ControlEvent(
+                timestamp=time.time(),
+                source="load_test",
+                latency_budget=300,
+                command="PING",
+                payload={"sent_perf": time.perf_counter()},
+            )
+        )
+
+    expected_fast_callbacks = total_events * fast_callbacks
+    wait_start = time.perf_counter()
+    while len(fast_latencies_ms) < expected_fast_callbacks:
+        if time.perf_counter() - wait_start > 3.0:
+            break
+        await asyncio.sleep(0.01)
+
+    telemetry = bus.get_subscriber_telemetry()
+    await bus.stop()
+
+    assert len(fast_latencies_ms) >= expected_fast_callbacks * 0.95
+
+    p95_latency_ms = statistics.quantiles(fast_latencies_ms, n=100)[94]
+    assert p95_latency_ms < 35.0
+
+    slow_stats = next(stats for name, stats in telemetry.items() if "slow_cb" in name)
+    assert slow_stats["timed_out"] > 0 or slow_stats["evicted"]
+    assert slow_stats["dropped"] > 0
+
+    fast_stats = [stats for name, stats in telemetry.items() if "fast_cb" in name]
+    assert fast_stats
+    assert all(stats["avg_service_time_ms"] >= 0 for stats in fast_stats)
 
 
 if __name__ == "__main__":
