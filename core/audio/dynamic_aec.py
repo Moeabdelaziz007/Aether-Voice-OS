@@ -14,6 +14,7 @@ import logging
 import threading
 from collections import deque
 from dataclasses import dataclass
+from typing import Optional
 
 import numpy as np
 
@@ -131,14 +132,20 @@ class FrequencyDomainNLMS:
         self.W = np.zeros(self.n_fft // 2 + 1, dtype=np.complex128)
 
         # Input buffer for overlap-save
-        self.input_buffer = np.zeros(self.n_fft)
-        self.output_buffer = np.zeros(self.block_size)
+        self.input_buffer = np.zeros(self.n_fft, dtype=np.float64)
+        self.output_buffer = np.zeros(self.block_size, dtype=np.float64)
 
         # Power estimate for normalization
         self.power_estimate = np.ones(self.n_fft // 2 + 1) * 1e-6
 
         # Smoothing factor for power estimate
         self.alpha = 0.9
+
+        # Pre-allocated arrays to avoid allocation in hot path
+        self._X_cache = np.zeros(self.n_fft // 2 + 1, dtype=np.complex128)
+        self._Y_cache = np.zeros(self.n_fft // 2 + 1, dtype=np.complex128)
+        self._E_cache = np.zeros(self.n_fft // 2 + 1, dtype=np.complex128)
+        self._error_full = np.zeros(self.n_fft, dtype=np.float64)
 
     def process(
         self, far_end: np.ndarray, near_end: np.ndarray
@@ -161,6 +168,7 @@ class FrequencyDomainNLMS:
         self.input_buffer[self.block_size :] = far_end
 
         # FFT of input buffer
+        # Using pre-allocated scipy.fft internally or np.fft with pre-alloc
         X = np.fft.rfft(self.input_buffer)
 
         # Compute filter output (frequency-domain multiplication)
@@ -174,9 +182,9 @@ class FrequencyDomainNLMS:
         error_signal = near_end - estimated_echo
 
         # Compute error in frequency domain for adaptation
-        error_full = np.zeros(self.n_fft)
-        error_full[self.block_size :] = error_signal
-        E = np.fft.rfft(error_full)
+        self._error_full.fill(0.0)
+        self._error_full[self.block_size :] = error_signal
+        E = np.fft.rfft(self._error_full)
 
         # Update power estimate (smoothed)
         X_mag_sq = np.abs(X) ** 2
@@ -202,10 +210,11 @@ class FrequencyDomainNLMS:
 
     def reset(self) -> None:
         """Reset filter state."""
-        self.W = np.zeros(self.n_fft // 2 + 1, dtype=np.complex128)
-        self.input_buffer = np.zeros(self.n_fft)
-        self.output_buffer = np.zeros(self.block_size)
-        self.power_estimate = np.ones(self.n_fft // 2 + 1) * 1e-6
+        self.W.fill(0)
+        self.input_buffer.fill(0)
+        self.output_buffer.fill(0)
+        self.power_estimate.fill(1e-6)
+        self._error_full.fill(0)
 
     def pre_train(
         self,

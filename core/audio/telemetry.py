@@ -9,10 +9,29 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import numpy as np
+import structlog
 
 from core.infra.event_bus import EventBus, TelemetryEvent
 
-logger = logging.getLogger("AetherOS.Telemetry")
+logger = structlog.get_logger("AetherOS.Telemetry")
+
+def log_audio_metrics(
+    rms: float,
+    zcr: float,
+    aec_erle: float,
+    aec_converged: bool,
+    queue_size: int,
+):
+    """Structured logging for audio metrics"""
+    logger.info(
+        "audio_metrics",
+        rms=rms,
+        zcr=zcr,
+        aec_erle=aec_erle,
+        aec_converged=aec_converged,
+        queue_size=queue_size,
+        latency_budget_ms=32,  # target
+    )
 
 # ==========================================
 # 🌌 Audio Telemetry Engine

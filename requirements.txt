@@ -3,6 +3,8 @@ google-genai>=1.0.0
 pyaudio>=0.2.14
 numpy>=2.0.0
 pydantic>=2.10.0
+numba>=0.58.0
+scipy>=1.10.0
 pydantic-settings>=2.6.0
 python-dotenv>=1.0.0
 
@@ -45,6 +47,7 @@ opentelemetry-api>=1.25.0
 opentelemetry-sdk>=1.25.0
 opentelemetry-exporter-otlp>=1.25.0
 arize-phoenix>=4.0.0
+structlog>=24.0.0
 
 # Redis (Global State Bus)
 redis>=5.0.0

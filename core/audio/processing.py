@@ -30,6 +30,7 @@ from enum import Enum
 from typing import Optional
 
 import numpy as np
+from numba import jit, prange
 from numpy.typing import NDArray
 
 logger = logging.getLogger(__name__)
@@ -434,6 +435,39 @@ def energy_vad(
     return enhanced_vad(pcm_chunk, threshold, adaptive_engine)
 
 
+@jit(nopython=True, cache=True)
+def _compute_rms_numba(samples: np.ndarray) -> float:
+    """JIT-compiled RMS calculation."""
+    return np.sqrt(np.mean(samples ** 2))
+
+@jit(nopython=True, cache=True, parallel=True)
+def _compute_zcr_parallel(pcm_data: np.ndarray) -> int:
+    """JIT-compiled ZCR with parallel processing."""
+    crossings = 0
+    for i in prange(1, len(pcm_data)):
+        if (pcm_data[i-1] >= 0) != (pcm_data[i] >= 0):
+            crossings += 1
+    return crossings
+
+@jit(nopython=True, cache=True)
+def _compute_spectral_centroid_numba(spectrum: np.ndarray, freqs: np.ndarray) -> float:
+    """JIT-compiled spectral centroid calculation."""
+    spec_sum = np.sum(spectrum)
+    if spec_sum <= 0:
+        return 0.0
+    return np.sum(freqs * spectrum) / spec_sum
+
+
+def calculate_zcr(pcm_data: np.ndarray) -> float:
+    """Calculate Zero-Crossing Rate using Rust if available."""
+    if _RUST_BACKEND and hasattr(aether_cortex, "calculate_zcr"):
+        return aether_cortex.calculate_zcr(pcm_data)
+
+    if len(pcm_data) < 2:
+        return 0.0
+    return _compute_zcr_parallel(pcm_data) / len(pcm_data)
+
+
 def enhanced_vad(
     pcm_chunk: NDArray[np.int16],
     threshold: float = 0.02,
@@ -463,20 +497,15 @@ def enhanced_vad(
     normalized = pcm_chunk.astype(np.float32) / 32768.0
 
     # 1. RMS Energy
-    rms = float(np.sqrt(np.mean(normalized**2)))
+    rms = float(_compute_rms_numba(normalized))
 
     # 2. Zero-Crossing Rate (speech = low/medium, noise = high)
-    zero_crossings = np.where(np.diff(np.sign(pcm_chunk)))[0]
-    zcr = len(zero_crossings) / len(pcm_chunk)
+    zcr = float(calculate_zcr(pcm_chunk))
 
     # 3. Spectral Centroid
     spectrum = np.abs(np.fft.rfft(normalized))
     freqs = np.fft.rfftfreq(len(pcm_chunk), 1 / 16000)
-    spec_sum = np.sum(spectrum)
-    if spec_sum > 0:
-        centroid = np.sum(freqs * spectrum) / spec_sum
-    else:
-        centroid = 0.0
+    centroid = float(_compute_spectral_centroid_numba(spectrum, freqs))
 
     # Combine with weights
     # Energy is normalized against a typical strong speech RMS (0.1)

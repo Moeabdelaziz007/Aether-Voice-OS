@@ -19,6 +19,11 @@ import pyaudio
 
 from core.audio.cortex import HAS_RUST_CORTEX, spectral_denoise
 from core.audio.dynamic_aec import DynamicAEC
+from core.audio.exceptions import (
+    AudioDeviceNotFoundError,
+    AudioPipelineError,
+    DeviceDisconnectedError,
+)
 from core.audio.paralinguistics import ParalinguisticAnalyzer, ParalinguisticFeatures
 from core.audio.processing import (
     AdaptiveVAD,
@@ -29,7 +34,6 @@ from core.audio.processing import (
 from core.audio.state import HysteresisGate, audio_state
 from core.audio.telemetry import AudioTelemetryLogger
 from core.infra.config import AudioConfig
-from core.utils.errors import AudioDeviceNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -336,35 +340,36 @@ class AudioCapture:
         High-priority Thalamic Gate callback.
         Analyzes energy and gates microphone input based on AI state and Leakage.
         """
-        # Start telemetry frame tracking
-        if self._telemetry_logger:
-            self._telemetry_logger.start_frame()
+        try:
+            # Start telemetry frame tracking
+            if self._telemetry_logger:
+                self._telemetry_logger.start_frame()
 
-        time.perf_counter()
-        pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
+            time.perf_counter()
+            pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
-        # 1. Dynamic AEC Processing
-        # Read bit-perfect far-end (AI output) reference from shared PCM buffer
-        # Write any new data to our jitter buffer
-        new_far_end = audio_state.far_end_pcm.read_last(len(pcm_chunk))
-        if len(new_far_end) > 0:
-            self._jitter_buffer.write(new_far_end)
+            # 1. Dynamic AEC Processing
+            # Read bit-perfect far-end (AI output) reference from shared PCM buffer
+            # Write any new data to our jitter buffer
+            new_far_end = audio_state.far_end_pcm.read_last(len(pcm_chunk))
+            if len(new_far_end) > 0:
+                self._jitter_buffer.write(new_far_end)
 
-        # Read exactly chunk size from jitter buffer
-        far_end_ref = self._jitter_buffer.read(len(pcm_chunk))
+            # Read exactly chunk size from jitter buffer
+            far_end_ref = self._jitter_buffer.read(len(pcm_chunk))
 
-        aec_start = time.perf_counter()
-        cleaned_chunk, aec_state = self._dynamic_aec.process_frame(
-            pcm_chunk, far_end_ref
-        )
-        aec_latency_ms = (time.perf_counter() - aec_start) * 1000
+            aec_start = time.perf_counter()
+            cleaned_chunk, aec_state = self._dynamic_aec.process_frame(
+                pcm_chunk, far_end_ref
+            )
+            aec_latency_ms = (time.perf_counter() - aec_start) * 1000
 
-        # 1.5 ✦ Aether Cortex Acceleration (Rust Spectral Denoise)
-        if HAS_RUST_CORTEX:
-            # Apply Rust-accelerated spectral denoising for cleaner output
-            # spectral_denoise expects int16 and returns dict with 'samples'
-            result = spectral_denoise(cleaned_chunk, noise_floor=0.02)
-            cleaned_chunk = np.array(result["samples"], dtype=np.int16)
+            # 1.5 ✦ Aether Cortex Acceleration (Rust Spectral Denoise)
+            if HAS_RUST_CORTEX:
+                # Apply Rust-accelerated spectral denoising for cleaner output
+                # spectral_denoise expects int16 and returns dict with 'samples'
+                result = spectral_denoise(cleaned_chunk, noise_floor=0.02)
+                cleaned_chunk = np.array(result["samples"], dtype=np.int16)
 
         # Update global AEC state for monitoring
         audio_state.update_aec_state_safe(
@@ -380,136 +385,170 @@ class AudioCapture:
             self._telemetry_logger.record_aec(
                 latency_ms=aec_latency_ms,
                 erle_db=aec_state.erle_db,
-                converged=aec_state.converged,
-                double_talk=aec_state.double_talk_detected,
             )
 
-        # Check if user is speaking (post-AEC analysis)
-        is_user = self._dynamic_aec.is_user_speaking(cleaned_chunk)
-
-        # 2. Base Hysteresis update on AI state
-        ai_playing_base = self._hysteresis.update(audio_state.is_playing)
-
-        # 3. Delay Compensation (Hardware Latency & Echo fade-out)
-        if audio_state.just_started_playing:
-            self._mute_delay_remaining = self._latency_samples
-        if audio_state.just_stopped_playing:
-            self._unmute_delay_remaining = int(
-                self._latency_samples * 1.5
-            )  # grace period for echo to die
-
-        if self._mute_delay_remaining > 0:
-            self._mute_delay_remaining = max(
-                0, self._mute_delay_remaining - frame_count
-            )
-            ai_playing_compensated = False
-        elif self._unmute_delay_remaining > 0:
-            self._unmute_delay_remaining = max(
-                0, self._unmute_delay_remaining - frame_count
-            )
-            ai_playing_compensated = True
-        else:
-            ai_playing_compensated = ai_playing_base
-
-        # 4. Final Thalamic Mute Decision
-        # If AI is deemed playing AND we are sure it's not the user talking
-        should_mute = ai_playing_compensated and not is_user
-
-        if should_mute:
-            self._smooth_muter.mute()
-        else:
-            self._smooth_muter.unmute()
-
-        # Apply Graceful Ramp to AEC-cleaned audio
-        processed_chunk = self._smooth_muter.process(cleaned_chunk)
-
-        # Update VAD logic
-        vad_start = time.perf_counter()
-        if should_mute and self._smooth_muter._current_gain < 0.1:
-            # Force VAD to false and energy to 0 to prevent barge-in triggers
-            vad = HyperVADResult(
-                is_soft=False,
-                is_hard=False,
-                energy_rms=0.0,
-                sample_count=len(processed_chunk),
-            )
-            # Reconstruct in_data with zeros if fully muted
-            in_data = b"\x00" * len(in_data)
-        else:
-            # HyperVAD Logic: Dual-Threshold (mu + sigma) + Multi-Feature
-            vad = energy_vad(processed_chunk, adaptive_engine=self._vad)
-            in_data = processed_chunk.tobytes()
-        vad_latency_ms = (time.perf_counter() - vad_start) * 1000
-
-        # Update shared state for brain-sync
-        audio_state.last_rms = vad.energy_rms
-        audio_state.is_soft = vad.is_soft
-        audio_state.is_hard = vad.is_hard
-
-        # Low-allocation ZCR (zero-crossing rate) calculation.
-        # Count sign changes without building diff/sign/where intermediate arrays.
-        if len(processed_chunk) > 1:
-            prev = processed_chunk[:-1]
-            curr = processed_chunk[1:]
-            # Crossing when sign differs or either is zero.
-            crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
-            audio_state.last_zcr = float(
-                np.count_nonzero(crossings) / len(processed_chunk)
-            )
-        else:
-            audio_state.last_zcr = 0.0
-
-        # Architecture of Silence: Classify silence if no clear speech
-        if not vad.is_hard:
-            audio_state.silence_type = self._analyzer.classify(
-                processed_chunk, vad.energy_rms
-            ).value
-        else:
-            audio_state.silence_type = "speech"
-
-        # Telemetry Broadcast: Throttle to ~15Hz
-        now = time.monotonic()
-        if now - self._last_telemetry_time >= 1.0 / 15.0:
-            self._last_telemetry_time = now
-            if (
-                getattr(self, "_on_audio_telemetry", None)
-                and self._loop
-                and not self._loop.is_closed()
-            ):
-                payload = {
-                    "rms": vad.energy_rms,
-                    "gain": self._smooth_muter._current_gain,
-                }
-                asyncio.run_coroutine_threadsafe(
-                    self._on_audio_telemetry("audio_telemetry", payload), self._loop
+            # Record AEC metrics to telemetry
+            if self._telemetry_logger:
+                self._telemetry_logger.record_aec(
+                    latency_ms=aec_latency_ms,
+                    erle_db=aec_state.erle_db,
+                    converged=aec_state.converged,
+                    double_talk=aec_state.double_talk_detected,
                 )
 
-        if self._paralinguistic_analyzer and self._on_affective_data:
-            if vad.is_hard or vad.energy_rms < 0.05:
-                features = self._paralinguistic_analyzer.analyze(
+            # Check if user is speaking (post-AEC analysis)
+            is_user = self._dynamic_aec.is_user_speaking(cleaned_chunk)
+
+            # 2. Base Hysteresis update on AI state
+            ai_playing_base = self._hysteresis.update(audio_state.is_playing)
+
+            # 3. Delay Compensation (Hardware Latency & Echo fade-out)
+            if audio_state.just_started_playing:
+                self._mute_delay_remaining = self._latency_samples
+            if audio_state.just_stopped_playing:
+                self._unmute_delay_remaining = int(
+                    self._latency_samples * 1.5
+                )  # grace period for echo to die
+
+            if self._mute_delay_remaining > 0:
+                self._mute_delay_remaining = max(
+                    0, self._mute_delay_remaining - frame_count
+                )
+                ai_playing_compensated = False
+            elif self._unmute_delay_remaining > 0:
+                self._unmute_delay_remaining = max(
+                    0, self._unmute_delay_remaining - frame_count
+                )
+                ai_playing_compensated = True
+            else:
+                ai_playing_compensated = ai_playing_base
+
+            # 4. Final Thalamic Mute Decision
+            # If AI is deemed playing AND we are sure it's not the user talking
+            should_mute = ai_playing_compensated and not is_user
+
+            if should_mute:
+                self._smooth_muter.mute()
+            else:
+                self._smooth_muter.unmute()
+
+            # Apply Graceful Ramp to AEC-cleaned audio
+            processed_chunk = self._smooth_muter.process(cleaned_chunk)
+
+            # Update VAD logic
+            vad_start = time.perf_counter()
+            if should_mute and self._smooth_muter._current_gain < 0.1:
+                # Force VAD to false and energy to 0 to prevent barge-in triggers
+                vad = HyperVADResult(
+                    is_soft=False,
+                    is_hard=False,
+                    energy_rms=0.0,
+                    sample_count=len(processed_chunk),
+                )
+                # Reconstruct in_data with zeros if fully muted
+                in_data = b"\x00" * len(in_data)
+            else:
+                # HyperVAD Logic: Dual-Threshold (mu + sigma) + Multi-Feature
+                vad = energy_vad(processed_chunk, adaptive_engine=self._vad)
+                in_data = processed_chunk.tobytes()
+            vad_latency_ms = (time.perf_counter() - vad_start) * 1000
+
+            # Update shared state for brain-sync
+            audio_state.last_rms = vad.energy_rms
+            audio_state.is_soft = vad.is_soft
+            audio_state.is_hard = vad.is_hard
+
+            # Low-allocation ZCR (zero-crossing rate) calculation.
+            # Count sign changes without building diff/sign/where intermediate arrays.
+            if len(processed_chunk) > 1:
+                prev = processed_chunk[:-1]
+                curr = processed_chunk[1:]
+                # Crossing when sign differs or either is zero.
+                crossings = ((prev >= 0) != (curr >= 0)) | (prev == 0) | (curr == 0)
+                audio_state.last_zcr = float(
+                    np.count_nonzero(crossings) / len(processed_chunk)
+                )
+            else:
+                audio_state.last_zcr = 0.0
+
+            # Architecture of Silence: Classify silence if no clear speech
+            if not vad.is_hard:
+                audio_state.silence_type = self._analyzer.classify(
                     processed_chunk, vad.energy_rms
-                )
+                ).value
+            else:
+                audio_state.silence_type = "speech"
+
+            # Telemetry Broadcast: Throttle to ~15Hz
+            now = time.monotonic()
+            if now - self._last_telemetry_time >= 1.0 / 15.0:
+                self._last_telemetry_time = now
+                if (
+                    getattr(self, "_on_audio_telemetry", None)
+                    and self._loop
+                    and not self._loop.is_closed()
+                ):
+                    payload = {
+                        "rms": vad.energy_rms,
+                        "gain": self._smooth_muter._current_gain,
+                    }
+                    asyncio.run_coroutine_threadsafe(
+                        self._on_audio_telemetry("audio_telemetry", payload), self._loop
+                    )
+
+            if self._paralinguistic_analyzer and self._on_affective_data:
+                if vad.is_hard or vad.energy_rms < 0.05:
+                    features = self._paralinguistic_analyzer.analyze(
+                        processed_chunk, vad.energy_rms
+                    )
+                    if self._loop and not self._loop.is_closed():
+                        self._loop.call_soon_threadsafe(
+                            self._on_affective_data, features
+                        )
+
+            # Push to queue if hard speech detected or AI is silent (ambient feed)
+            if vad.is_hard or not should_mute:
+                msg = {
+                    "data": in_data,
+                    "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",
+                }
                 if self._loop and not self._loop.is_closed():
-                    self._loop.call_soon_threadsafe(self._on_affective_data, features)
+                    self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
 
-        # Push to queue if hard speech detected or AI is silent (ambient feed)
-        if vad.is_hard or not should_mute:
-            msg = {
-                "data": in_data,
-                "mime_type": f"audio/pcm;rate={self._config.send_sample_rate}",
-            }
-            if self._loop and not self._loop.is_closed():
-                self._loop.call_soon_threadsafe(self._push_to_async_queue, msg)
+            # End telemetry frame tracking
+            if self._telemetry_logger:
+                self._telemetry_logger.record_vad(
+                    latency_ms=vad_latency_ms,
+                    is_speech=vad.is_hard,
+                    is_soft=vad.is_soft,
+                    rms_energy=vad.energy_rms,
+                )
+                self._telemetry_logger.end_frame()
 
-        # End telemetry frame tracking
-        if self._telemetry_logger:
-            self._telemetry_logger.record_vad(
-                latency_ms=vad_latency_ms,
-                is_speech=vad.is_hard,
-                is_soft=vad.is_soft,
-                rms_energy=vad.energy_rms,
-            )
-            self._telemetry_logger.end_frame()
+        except IOError as e:
+            # Device disconnected during callback
+            if "Input overflowed" in str(e) or "input" in str(e).lower():
+                logger.error("Audio device disconnected: %s", e)
+                # We do not have mic_info here easily so just use device name
+                raise DeviceDisconnectedError(
+                    f"Microphone disconnected: {e}",
+                    device_name=self._pya.get_device_info_by_index(
+                        self._stream._input_device_index
+                    ).get("name", "unknown")
+                    if self._stream
+                    else "unknown",
+                )
+            raise AudioPipelineError(f"Audio callback failed: {e}")
+
+        except MemoryError:
+            logger.critical("Memory allocation failed in audio callback")
+            # Don't raise - return silence and continue
+            return (b"\x00" * (frame_count * 2), pyaudio.paContinue)
+
+        except Exception as e:
+            logger.exception("Unexpected error in audio callback: %s", e)
+            # Return silence but don't crash
+            return (b"\x00" * (frame_count * 2), pyaudio.paContinue)
 
         return (None, pyaudio.paContinue)
 
