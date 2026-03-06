@@ -37,6 +37,7 @@ from core.infra.config import AIConfig
 from core.infra.telemetry import (
     record_usage,
 )  # Import record_usage from telemetry module
+from core.utils.errors import AIConnectionError, AISessionExpiredError
 
 logger = logging.getLogger(__name__)
 
@@ -191,8 +192,13 @@ class GeminiLiveSession:
         self._running = True
 
         try:
+            model_name = self._config.model.value if hasattr(self._config.model, 'value') else self._config.model
+            # Ensure proper prefixing for google-genai SDK
+            if isinstance(model_name, str) and not model_name.startswith("models/"):
+                model_name = f"models/{model_name}"
+
             async with self._client.aio.live.connect(
-                model=self._config.model.value,
+                model=model_name,
                 config=config,
             ) as session:
                 self._session = session
