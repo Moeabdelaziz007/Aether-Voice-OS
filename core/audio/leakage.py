@@ -18,24 +18,6 @@ class LeakageDetector:
         self._sample_rate = sample_rate
         self._ai_spectrum = None
 
-    def capture_ai_spectrum(self, ai_audio_chunk: bytes | np.ndarray) -> None:
-        """Store the frequency spectrum of the AI's currently playing audio."""
-        if len(ai_audio_chunk) == 0:
-            self._ai_spectrum = None
-            return
-
-        if isinstance(ai_audio_chunk, bytes):
-            pcm = np.frombuffer(ai_audio_chunk, dtype=np.int16)
-        else:
-            pcm = ai_audio_chunk
-
-        # Avoid FFT on pure silence
-        if np.max(np.abs(pcm)) < 10:
-            self._ai_spectrum = None
-            return
-
-        self._ai_spectrum = np.abs(np.fft.rfft(pcm))
-
     def is_user_speaking(self, mic_audio_chunk: bytes | np.ndarray) -> bool:
         """
         Determines if the microphone audio is the user or echo.
