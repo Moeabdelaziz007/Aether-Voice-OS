@@ -21,7 +21,7 @@ from core.utils.errors import IdentityError, PackageNotFoundError
 logger = logging.getLogger(__name__)
 
 
-class PackageChangeHandler(FileSystemEventHandler)):
+class PackageChangeHandler(FileSystemEventHandler):
     """Handles filesystem events for the packages directory."""
 
     def __init__(self, registry: AetherRegistry) -> None:
@@ -32,13 +32,13 @@ class PackageChangeHandler(FileSystemEventHandler)):
             return
         if event.src_path.endswith("manifest.json"):
             # A package manifest changed, trigger reload
-            pkg_path = Pathevent.src_path).parent
+            pkg_path = Path(event.src_path).parent
             self._registry._handle_fs_change(pkg_path)
 
     def on_created(self, event: FileSystemEvent) -> None:
         if event.is_directory:
             # New directory might be a new package
-            self._registry._handle_fs_change(Pathevent.src_path))
+            self._registry._handle_fs_change(Path(event.src_path))
 
 
 class AetherRegistry:
@@ -54,7 +54,7 @@ class AetherRegistry:
         packages_dir: str,
         on_change: Optional[Callable[[str, Optional[AthPackage]], Any]] = None,
     ) -> None:
-        self._dir = Pathpackages_dir)
+        self._dir = Path(packages_dir)
         self._packages: dict[str, AthPackage] = {}
         self._discovered_paths: dict[str, Path] = {}  # Lazy-loading map
         self._on_change = on_change
@@ -114,7 +114,7 @@ class AetherRegistry:
         if self._observer:
             return
 
-        self._observer = Observer)
+        self._observer = Observer()
         self._observer.schedule(
             PackageChangeHandler(self), str(self._dir), recursive=True
         )
@@ -171,13 +171,13 @@ class AetherRegistry:
             if pkg:
                 return pkg
 
-        raise PackageNotFoundErrorf"Package '{name}' not found")
+        raise PackageNotFoundError(f"Package '{name}' not found")
 
     def initialize_vector_store(self, api_key: str) -> None:
         """Initialize the local vector store for semantic expert discovery."""
         from core.tools.vector_store import LocalVectorStore
 
-        self._vector_store = LocalVectorStoreapi_key=api_key)
+        self._vector_store = LocalVectorStore(api_key=api_key)
         # Re-index all existing packages
         for pkg in self._packages.values():
             self._index_package(pkg)
