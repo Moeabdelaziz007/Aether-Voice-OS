@@ -21,6 +21,8 @@ import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
+from core.utils.errors import AIConnectionError, AISessionExpiredError
+
 if TYPE_CHECKING:
     from core.infra.transport.gateway import AetherGateway
     from core.tools.router import ToolRouter
