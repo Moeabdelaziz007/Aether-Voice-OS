@@ -17,7 +17,7 @@ class LifecycleManager:
 
     def __init__(self):
         self.event_bus = EventBus()
-        self.state_manager = EngineStateManagerself.event_bus)
+        self.state_manager = EngineStateManager(self.event_bus)
         self._shutdown_event = asyncio.Event()
         self._tasks: List[asyncio.Task] = []
 

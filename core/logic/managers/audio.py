@@ -68,7 +68,6 @@ class AudioManager:
     def flash_interrupt(self):
         """High-priority alias for barge-in events."""
         logger.info("⚡ FLASH INTERRUPT: Clearing audio pipelines.")
-        logger.info("⚡ FLASH INTERRUPT: Clearing audio pipelines.")
         self.interrupt()
 
     def _on_affective_data_bridge(self, features: Any) -> None:
