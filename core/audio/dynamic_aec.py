@@ -587,6 +587,11 @@ class DynamicAEC:
         self.convergence_frame_count = 0
         self.convergence_frames_needed = 100  # Need 100 frames above threshold
 
+        # Divergence tracking
+        self._divergence_counter = 0
+        self._divergence_threshold = 30  # frames
+        self._last_erle_values = deque(maxlen=20)
+
         logger.info(
             f"DynamicAEC initialized: sample_rate={sample_rate}, "
             f"filter_length={filter_length}, frame_size={frame_size}, "
@@ -734,26 +739,90 @@ class DynamicAEC:
 
         return result
 
-    def _update_convergence(self, current_erle: float) -> None:
-        """Update convergence status based on ERLE history.
+    async def pre_train(
+        self,
+        far_end_signal: np.ndarray,
+        near_end_signal: np.ndarray,
+        iterations: int = 3,
+    ) -> float:
+        """Pre-train filter before live session.
 
-        Args:
-            current_erle: Current frame's ERLE value
+        Call this during session initialization with a short
+        audio burst to accelerate convergence.
         """
-        # Check if current ERLE is above threshold
+        return self.adaptive_filter.pre_train(
+            far_end_signal,
+            near_end_signal,
+            iterations
+        )
+
+    def _adaptive_step_size(self, current_erle: float) -> float:
+        """Dynamically adjust NLMS step size based on convergence progress."""
+        target_erle = self.convergence_threshold_db
+
+        if current_erle < target_erle * 0.3:
+            # Early stage: aggressive learning
+            return min(0.8, self.adaptive_filter.step_size * 1.05)
+        elif current_erle > target_erle * 0.8:
+            # Near convergence: reduce for stability
+            return max(0.1, self.adaptive_filter.step_size * 0.98)
+        else:
+            return self.adaptive_filter.step_size
+
+    def _check_divergence(self, current_erle: float) -> bool:
+        """Check for filter divergence and reset if needed."""
+        self._last_erle_values.append(current_erle)
+
+        if len(self._last_erle_values) < 10:
+            return False
+
+        # Check if ERLE is trending down after convergence
+        if self.state.converged:
+            recent_avg = np.mean(list(self._last_erle_values)[-10:])
+            older_avg = np.mean(list(self._last_erle_values)[:10])
+
+            if recent_avg < older_avg * 0.5:
+                self._divergence_counter += 1
+                logger.warning(
+                    "AEC potential divergence detected: recent_erle=%.1f, older_erle=%.1f",
+                    recent_avg, older_avg
+                )
+
+                if self._divergence_counter >= self._divergence_threshold:
+                    logger.error("AEC divergence confirmed, resetting filter")
+                    self.adaptive_filter.reset()
+                    self.state.converged = False
+                    self.convergence_frame_count = 0
+                    self._divergence_counter = 0
+                    return True
+
+        return False
+
+    def _update_convergence(self, current_erle: float) -> None:
+        """Update convergence with exponential smoothing."""
+        # Check divergence first
+        self._check_divergence(current_erle)
+
+        # Apply adaptive step size
+        new_step = self._adaptive_step_size(current_erle)
+        self.adaptive_filter.step_size = new_step
+
+        # Smoothed convergence progress
         if current_erle > self.convergence_threshold_db:
             self.convergence_frame_count += 1
         else:
-            self.convergence_frame_count = max(0, self.convergence_frame_count - 2)
+            self.convergence_frame_count = max(0, self.convergence_frame_count - 1)
 
-        # Calculate progress
-        progress = min(
-            1.0, self.convergence_frame_count / self.convergence_frames_needed
+        # Exponential smoothing for progress
+        raw_progress = min(1.0, self.convergence_frame_count / self.convergence_frames_needed)
+        smoothing = 0.9  # High smoothing for stability
+        self.state.convergence_progress = (
+            smoothing * self.state.convergence_progress +
+            (1 - smoothing) * raw_progress
         )
-        self.state.convergence_progress = progress
 
-        # Mark as converged when sustained
-        if progress >= 1.0:
+        # Mark converged when sustained
+        if self.state.convergence_progress >= 0.95:
             self.state.converged = True
 
     def is_user_speaking(self, mic_audio_chunk: np.ndarray) -> bool:

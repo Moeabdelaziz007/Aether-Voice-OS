@@ -315,35 +315,19 @@ class AudioCapture:
         )
 
     def _push_to_async_queue(self, msg: dict[str, object]) -> None:
-        """Thread-safe injection into the asyncio event loop.
-
-        On overflow we drop the oldest message to keep latency bounded.
-        """
+        """Thread-safe injection with intelligent backpressure"""
         try:
             self._async_queue.put_nowait(msg)
         except asyncio.QueueFull:
-            # Telemetry: count capture queue drops.
-            try:
-                audio_state.capture_queue_drops += 1
-            except Exception:
-                # audio_state may be a mock in tests or older state object
-                pass
-
+            audio_state.capture_queue_drops += 1
             try:
                 self._async_queue.get_nowait()
-                if hasattr(audio_state, "capture_queue_drops"):
-                    audio_state.capture_queue_drops += 1
+                self._async_queue.put_nowait(msg)
+                logger.debug("Dropped oldest audio chunk for fresh data")
             except asyncio.QueueEmpty:
                 pass
-
-            try:
-                self._async_queue.put_nowait(msg)
             except asyncio.QueueFull:
-                # If we still can't enqueue, drop this message as well.
-                try:
-                    audio_state.capture_queue_drops += 1
-                except Exception:
-                    pass
+                logger.warning("Audio queue overflow, dropping incoming chunk")
 
     def _callback(
         self, in_data: bytes, frame_count: int, time_info: dict, status: int
@@ -383,7 +367,7 @@ class AudioCapture:
             cleaned_chunk = np.array(result["samples"], dtype=np.int16)
 
         # Update global AEC state for monitoring
-        audio_state.update_aec_state(
+        audio_state.update_aec_state_safe(
             converged=aec_state.converged,
             convergence_progress=aec_state.convergence_progress,
             erle_db=aec_state.erle_db,

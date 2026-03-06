@@ -7,14 +7,20 @@ from __future__ import annotations
 import asyncio
 import logging
 import signal
+from pathlib import Path
 from typing import Any, Optional
 
+from core.ai.scheduler import CognitiveScheduler
 from core.infra.config import AetherConfig, load_config
 from core.infra.event_bus import EventBus
-from core.infra.service_container import Container
 from core.infra.transport.gateway import AetherGateway
 from core.logic.managers.agents import AgentManager
+from core.logic.managers.audio import AudioManager
+from core.logic.managers.infra import InfraManager
+from core.logic.managers.pulse import PulseManager
+from core.services.admin_api import AdminAPIServer
 from core.tools.router import ToolRouter
+from core.tools.vector_store import LocalVectorStore
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +31,6 @@ class AetherEngine:
     def __init__(self, config: Optional[AetherConfig] = None) -> None:
         self._config = config or load_config()
         self._setup_logging()
-
-        # Initialize service container
-        self._container = Container()
 
         print("  Engine: Loading config...", flush=True)
         print("CONFIG:", self._config.model_dump())
@@ -56,22 +59,24 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = self._container.get("audiomanager")(
+        self._audio = AudioManager(
             self._config,
             self._gateway,
             self._on_affective_data,
             event_bus=self._event_bus,
         )
+
         print("  Engine: Initializing InfraManager...", flush=True)
-        self._infra = self._container.get("inframanager")(self._gateway)
+        self._infra = InfraManager(self._gateway)
+
         print("  Engine: Initializing AdminAPI...", flush=True)
-        self._admin_api = self._container.get("adminapiserver")(port=18790)
+        self._admin_api = AdminAPIServer(port=18790)
 
         print("  Engine: Initializing PulseManager...", flush=True)
-        self._pulse = self._container.get("pulsemanager")(self._event_bus)
+        self._pulse = PulseManager(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
-        self._cortex = self._container.get("cognitivescheduler")(
+        self._cortex = CognitiveScheduler(
             self._event_bus, self._router
         )
 
@@ -91,10 +96,9 @@ class AetherEngine:
 
     def _setup_vector_store(self) -> None:
         """Initialize and load the global vector store."""
-
-        root_dir = self._container.get("path")(__file__).resolve().parent.parent
+        root_dir = Path(__file__).resolve().parent.parent
         index_path = root_dir / ".aether_index.pkl"
-        global_index = self._container.get("localvectorstore")(
+        global_index = LocalVectorStore(
             api_key=self._config.ai.api_key
         )
         global_index.load(index_path)

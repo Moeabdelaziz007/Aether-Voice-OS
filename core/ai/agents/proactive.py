@@ -17,8 +17,6 @@ class ProactiveInterventionEngine:
     def __init__(self, cooldown_minutes: int = 5):
         self.cooldown_seconds = cooldown_minutes * 60
         self.last_intervention_time = 0
-        self.frustration_threshold = 0.70
-        self.calibrator = EmotionCalibrator()
         self.frustration_threshold = 0.70  # Lowered slightly for more responsiveness
         self.calibrator = EmotionCalibrator()
         self._message_bank = [

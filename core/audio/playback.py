@@ -171,7 +171,15 @@ class AudioPlayback:
                         self._buffer.put_nowait(audio_bytes)
                         break
                     except queue.Full:
-                        await asyncio.sleep(0.005)
+                        # Drop oldest to make room
+                        try:
+                            self._buffer.get_nowait()
+                            self._buffer.put_nowait(audio_bytes)
+                            logger.debug("Playback buffer overflow, dropped oldest chunk")
+                            break
+                        except queue.Empty:
+                            pass
+                        await asyncio.sleep(0.001)
 
             except asyncio.CancelledError:
                 break

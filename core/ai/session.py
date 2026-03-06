@@ -353,29 +353,18 @@ class GeminiLiveSession:
                                 if self._out_queue.full():
                                     try:
                                         self._out_queue.get_nowait()
-
-                                        # Telemetry: count output queue drops. This is a useful
-                                        # signal of downstream playback pressure.
                                         self._output_queue_drops += 1
-                                        try:
-                                            metrics = getattr(
-                                                self._gateway, "metrics", None
-                                            )
-                                            if not isinstance(metrics, dict):
-                                                metrics = {}
-                                                setattr(
-                                                    self._gateway, "metrics", metrics
-                                                )
-                                            metrics["gemini_output_queue_drops"] = (
-                                                metrics.get(
-                                                    "gemini_output_queue_drops", 0
-                                                )
-                                                + 1
-                                            )
-                                        except Exception:
-                                            pass
 
-                                        logger.debug("Output queue overflow")
+                                        # Log to telemetry
+                                        if hasattr(self._gateway, 'metrics'):
+                                            metrics = self._gateway.metrics
+                                            metrics["gemini_output_queue_drops"] = metrics.get("gemini_output_queue_drops", 0) + 1
+
+                                        if self._output_queue_drops % 10 == 0:
+                                            logger.warning(
+                                                "Output queue pressure: %d drops total",
+                                                self._output_queue_drops
+                                            )
                                     except asyncio.QueueEmpty:
                                         pass
                                 self._out_queue.put_nowait(part.inline_data.data)
