@@ -19,7 +19,7 @@ def generate_dashboard():
     
     # Extract data for charts
     dna_history = metrics.get("dna", {}).get("history", [])
-    stability_history = metrics.get("stability", {}).get("history", [])
+    metrics.get("stability", {}).get("history", [])
     
     html_content = f"""
 <!DOCTYPE html>

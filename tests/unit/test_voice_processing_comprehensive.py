@@ -419,7 +419,7 @@ class TestAEC:
             latencies.append(latency_ms)
 
         avg_latency = np.mean(latencies)
-        p99_latency = np.percentile(latencies, 99)
+        np.percentile(latencies, 99)
 
         # AEC should process in <5ms per 100ms frame
         assert avg_latency < 5.0, f"Average latency {avg_latency:.2f}ms exceeds 5ms"

@@ -23,7 +23,6 @@ def run_benchmarks():
     reports_dir.mkdir(parents=True, exist_ok=True)
     
     start_time = time.time()
-    results = {}
     
     for test in tests:
         print(f"📡 Running {Path(test).name}...")

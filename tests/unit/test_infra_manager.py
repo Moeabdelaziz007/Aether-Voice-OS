@@ -20,6 +20,8 @@ def setup_mocks():
         "watchdog",
         "watchdog.observers",
         "watchdog.events",
+        "mss",
+        "mss.tools",
     ]
     for module_name in mock_modules:
         if module_name not in sys.modules:
@@ -113,3 +115,37 @@ def test_infra_manager_end_session_disconnected(infra_manager):
     asyncio.run(infra_manager.end_session(mock_router))
 
     infra_manager._firebase.end_session.assert_not_called()
+
+def test_infra_manager_end_session_empty_tools(infra_manager):
+    infra_manager._firebase.is_connected = True
+    infra_manager._firebase.end_session = AsyncMock()
+    mock_router = MagicMock()
+    mock_router.names = []
+    mock_router.count = 0
+
+    asyncio.run(infra_manager.end_session(mock_router))
+
+    infra_manager._firebase.end_session.assert_called_once_with(
+        {
+            "tools_used": [],
+            "tool_count": 0,
+        }
+    )
+
+def test_infra_manager_end_session_missing_router_attributes(infra_manager):
+    infra_manager._firebase.is_connected = True
+    infra_manager._firebase.end_session = AsyncMock()
+    mock_router = MagicMock()
+    # If router doesn't have names or count, it might raise AttributeError,
+    # but let's assume it's an Any object and we mock it to return None
+    mock_router.names = None
+    mock_router.count = None
+
+    asyncio.run(infra_manager.end_session(mock_router))
+
+    infra_manager._firebase.end_session.assert_called_once_with(
+        {
+            "tools_used": None,
+            "tool_count": None,
+        }
+    )

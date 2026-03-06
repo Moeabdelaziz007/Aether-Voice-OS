@@ -10,4 +10,5 @@ sys.modules['google.cloud'] = MagicMock()
 sys.modules['google.cloud.firestore'] = MagicMock()
 
 import pytest
+
 sys.exit(pytest.main(["-v", "tests/unit/test_hive_swarm.py"]))
