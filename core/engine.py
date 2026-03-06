@@ -56,7 +56,6 @@ class AetherEngine:
         )
 
         print("  Engine: Initializing AudioManager...", flush=True)
-        self._audio = self._container.get("audiomanager")(
         self._audio = AudioManager(
             self._config,
             self._gateway,
