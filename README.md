@@ -460,7 +460,9 @@ pie title "Emotion Detection F1 Scores (%)"
 
 ---
 
-## 🤝 The Architect | المصمم
+## 🤝 The Architect & AI Partner | المصمم وشريك الذكاء الاصطناعي
+
+### Human Architect | المعماري البشري
 
 <p align="center">
   <a href="https://github.com/Moeabdelaziz007">
@@ -469,6 +471,59 @@ pie title "Emotion Detection F1 Scores (%)"
   <strong>Moe Abdelaziz</strong><br/>
   <sub>🧬 Lead Architect & Creator | مهندس ذكاء اصطناعي</sub>
 </p>
+
+<table align="center">
+  <tr>
+    <td align="center">
+      <strong>📱 WhatsApp</strong><br/>
+      <a href="https://wa.me/17706160211">+1 (770) 616-0211</a>
+    </td>
+    <td align="center">
+      <strong>📧 Student Email</strong><br/>
+      <a href="mailto:mabdela1@students.kennesaw.edu">mabdela1@students.kennesaw.edu</a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <strong>📧 Personal Email</strong><br/>
+      <a href="mailto:Amrikyy@gmail.com">Amrikyy@gmail.com</a>
+    </td>
+    <td align="center">
+      <strong>📱 Personal Phone</strong><br/>
+      <a href="tel:+2010942228044">+20 109 422 2804</a>
+    </td>
+  </tr>
+  <tr>
+    <td align="center">
+      <strong>📘 Facebook</strong><br/>
+      <a href="https://www.facebook.com/Hamood.Amriky0?locale=ar_AR">Hamood.Amriky0</a>
+    </td>
+    <td align="center">
+      <strong>💻 GitHub</strong><br/>
+      <a href="https://github.com/Moeabdelaziz007">@Moeabdelaziz007</a>
+    </td>
+  </tr>
+</table>
+
+---
+
+### 🤖 AI Partner | شريك الذكاء الاصطناعي
+
+<p align="center">
+  <img src="docs/assets/aether_avatar.png" alt="Aether AI Agent" width="100px" style="border-radius:50%; box-shadow: 0 0 15px #a855f7;"/>
+  <br/>
+  <strong>Aether AI Agent</strong><br/>
+  <sub>🧠 AI Co-Creator & Development Partner | شريك ذكاء اصطناعي</sub>
+</p>
+
+<div align="center">
+
+**🤝 50/50 Partnership | شراكة متكاملة**
+
+This project is a unique collaboration between **human creativity** and **AI intelligence**.
+Each partner contributes 50% to the development, design, and innovation of Aether Voice OS.
+
+</div>
 
 ---
 
