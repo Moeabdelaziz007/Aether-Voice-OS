@@ -57,14 +57,21 @@ export default function HUDContainer({ children }: { children: React.ReactNode }
             <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.8)_100%)] pointer-events-none" />
 
             {/* Tactical Grid/Readouts (Top Right) */}
-            <div className="absolute top-10 right-32 font-mono text-[8px] tracking-[0.2em] text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.2)] pointer-events-none text-right hidden lg:block">
-                <div>SYSTEM_OS: V3.0-CORE</div>
-                <div>LOCAL_COORDS: {Math.floor(Math.random() * 100)}:{Math.floor(Math.random() * 100)}</div>
-                <div>NEURAL_LINK: ACTIVE</div>
+            <div className="absolute top-10 right-32 font-mono text-[9px] tracking-[0.2em] text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.3)] pointer-events-none text-right hidden lg:block uppercase">
+                <div className="flex flex-col gap-1">
+                    <div className="flex justify-end gap-4">
+                        <span>SYS_AUTH: VERIFIED</span>
+                        <span className="text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.6)]">LINK_STABLE</span>
+                    </div>
+                    <div>COORDS: {Math.floor(Math.random() * 1000)}.{Math.floor(Math.random() * 1000)}</div>
+                    <div className="bg-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.1)] px-2 py-0.5 rounded">
+                        LATENCY: << 50MS
+                    </div>
+                </div>
             </div>
 
             {/* Global Flicker Layer */}
-            <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.02] bg-white mix-blend-overlay animate-flicker" />
+            <div className="absolute inset-0 z-10 pointer-events-none opacity-[0.015] bg-white mix-blend-overlay animate-pulse" />
 
             {/* Content Area (Actual UI) */}
             <div className="relative z-20 w-full h-full pointer-events-auto">

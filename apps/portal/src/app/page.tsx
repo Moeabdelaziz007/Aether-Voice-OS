@@ -23,6 +23,7 @@ import ParticleField from "@/components/shared/ParticleField";
 import SilentHintsOverlay from "@/components/shared/SilentHintsOverlay";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useAetherStore } from "@/store/useAetherStore";
+import NeuralBackground from "@/components/shared/NeuralBackground";
 
 // Dynamic import for 3D scene to improve initial load
 const UnifiedScene = dynamic(() => import("@/components/UnifiedScene"), {
@@ -85,7 +86,7 @@ export default function AetherPortal() {
     useEffect(() => {
         const root = document.documentElement;
         const rgb = ACCENT_RGB[preferences.accentColor] || ACCENT_RGB.green;
-        
+
         root.style.setProperty("--accent-r", String(rgb[0]));
         root.style.setProperty("--accent-g", String(rgb[1]));
         root.style.setProperty("--accent-b", String(rgb[2]));
@@ -97,8 +98,9 @@ export default function AetherPortal() {
 
     return (
         <LayoutGroup>
-            {/* CSS Particle Field — Lightweight background (replaces Framer Motion) */}
-            <ParticleField count={25} />
+            {/* ── Ambient Background Layers ── */}
+            <NeuralBackground />
+            <ParticleField count={20} />
 
             {/* Unified 3D Scene — Single WebGL Context */}
             <UnifiedScene
@@ -118,7 +120,7 @@ export default function AetherPortal() {
                     <motion.div
                         className="absolute top-6 left-1/2 -translate-x-1/2 z-20"
                         initial={{ opacity: 0, y: -20 }}
-                        animate={{ 
+                        animate={{
                             opacity: engineState !== "IDLE" ? 1 : 0,
                             y: engineState !== "IDLE" ? 0 : -20,
                         }}
@@ -138,7 +140,7 @@ export default function AetherPortal() {
                                     ease: "easeInOut",
                                 }}
                             />
-                            <span 
+                            <span
                                 className="text-[10px] font-mono tracking-wider uppercase"
                                 style={{ color: stateIndicatorColor, opacity: 0.9 }}
                             >

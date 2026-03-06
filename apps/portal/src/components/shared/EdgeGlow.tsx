@@ -31,13 +31,13 @@ const EdgeGlow = memo(function EdgeGlow() {
             <div className={`edge-glow-container ${stateClass}`}>
                 {/* Main glow overlay */}
                 <div className="edge-glow-main" />
-                
+
                 {/* Edge lines (CSS pseudo-elements handle corners) */}
                 <div className="edge-line edge-line-top" />
                 <div className="edge-line edge-line-bottom" />
                 <div className="edge-line edge-line-left" />
                 <div className="edge-line edge-line-right" />
-                
+
                 {/* Scan line (only when active) */}
                 {(engineState === "SPEAKING" || engineState === "THINKING") && (
                     <div className="scan-line" />
@@ -46,7 +46,7 @@ const EdgeGlow = memo(function EdgeGlow() {
 
             <style jsx>{`
                 .edge-glow-container {
-                    --glow-color: 26, 92, 26;
+                    --glow-color: var(--accent-r), var(--accent-g), var(--accent-b);
                     --glow-intensity: 0.5;
                     --glow-opacity: 0.15;
                     --pulse-speed: 0s;
@@ -57,29 +57,25 @@ const EdgeGlow = memo(function EdgeGlow() {
                 }
 
                 .edge-glow-container.state-idle {
-                    --glow-color: 26, 92, 26;
-                    --glow-intensity: 0.5;
-                    --glow-opacity: 0.15;
+                    --glow-intensity: 0.3;
+                    --glow-opacity: 0.1;
                 }
 
                 .edge-glow-container.state-listening {
-                    --glow-color: 57, 255, 20;
-                    --glow-intensity: 1.0;
-                    --glow-opacity: 0.5;
+                    --glow-intensity: 1.2;
+                    --glow-opacity: 0.4;
                     --pulse-speed: 2s;
                 }
 
                 .edge-glow-container.state-speaking {
-                    --glow-color: 39, 255, 20;
                     --glow-intensity: 1.5;
-                    --glow-opacity: 0.8;
-                    --pulse-speed: 1.5s;
+                    --glow-opacity: 0.7;
+                    --pulse-speed: 1s;
                 }
 
                 .edge-glow-container.state-thinking {
-                    --glow-color: 255, 215, 0;
-                    --glow-intensity: 1.2;
-                    --glow-opacity: 0.6;
+                    --glow-intensity: 1.0;
+                    --glow-opacity: 0.5;
                     --pulse-speed: 0.8s;
                 }
 
