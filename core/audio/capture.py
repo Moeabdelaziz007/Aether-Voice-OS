@@ -316,8 +316,6 @@ class AudioCapture:
 
             try:
                 self._async_queue.get_nowait()
-                if hasattr(audio_state, "capture_queue_drops"):
-                    audio_state.capture_queue_drops += 1
             except asyncio.QueueEmpty:
                 pass
 
@@ -478,8 +476,13 @@ class AudioCapture:
                 and not self._loop.is_closed()
             ):
                 payload = {
-                    "rms": vad.energy_rms,
-                    "gain": self._smooth_muter._current_gain,
+                    "rms": float(vad.energy_rms),
+                    "gain": float(self._smooth_muter._current_gain),
+                    "aec_converged": audio_state.aec_converged,
+                    "aec_erle": round(audio_state.aec_erle_db, 1),
+                    "aec_delay_ms": round(audio_state.aec_delay_ms, 1),
+                    "silence_type": audio_state.silence_type,
+                    "zcr": round(audio_state.last_zcr, 3),
                 }
                 asyncio.run_coroutine_threadsafe(
                     self._on_audio_telemetry("audio_telemetry", payload), self._loop

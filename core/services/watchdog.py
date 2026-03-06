@@ -11,6 +11,7 @@ import re
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 
+from core.audio.state import audio_state
 from core.infra.cloud.firebase.interface import FirebaseConnector
 from core.infra.transport.bus import GlobalBus
 from core.tools.healing_tool import diagnose_and_repair
@@ -49,23 +50,33 @@ class SREWatchdog:
         node_id: str,
         bus: Optional[GlobalBus] = None,
         gateway: Optional[Any] = None,
+        firebase_connector: Optional[Any] = None,
+        audio_manager: Optional[Any] = None,
     ):
         self._node_id = node_id
         self._bus = bus
         self._gateway = gateway
+        self._firebase = firebase_connector or FirebaseConnector()
+        self._audio_manager = audio_manager
+
         self._is_running = False
         self._loop_task: Optional[asyncio.Task] = None
         self._log_handler = WatchdogLogHandler(self._on_log_error)
 
-        # Internal Firebase Connector for logging
-        self._firebase = FirebaseConnector()
-
         # Healing Registry: Pattern -> Action
-        self._healing_registry: Dict[str, Callable] = {
+        self._healing_registry: Dict[str, Callable] = {}
+        self._register_default_patterns()
+
+    def _register_default_patterns(self):
+        """Register default failure patterns."""
+        self._healing_registry.update({
             r"Redis.*connection.*failed": self._heal_bus_failure,
             r"timeout.*error": self._heal_system_failure,
             r"connection.*error": self._heal_system_failure,
-        }
+            r"Audio device.*disconnected": self._recover_audio_device,
+            r"AEC.*diverged": self._reset_aec,
+            r"Queue.*overflow.*100": self._throttle_audio,
+        })
 
         # Failure counts for throttling
         self._failure_counts: Dict[str, int] = {}
@@ -167,7 +178,67 @@ class SREWatchdog:
                     )
                 return
 
+    async def log_audio_metrics(self, metrics: dict):
+        """Log audio metrics to Firebase for analysis"""
+        if not self._firebase.is_connected:
+            return
+
+        try:
+            await self._firebase.log_event("audio_telemetry", {
+                "timestamp": datetime.now().isoformat(),
+                "rms": metrics.get("rms"),
+                "aec_erle": metrics.get("aec_erle"),
+                "aec_converged": metrics.get("aec_converged"),
+                "queue_drops": getattr(audio_state, "capture_queue_drops", 0),
+            })
+        except Exception as e:
+            logger.error("Failed to log audio metrics: %s", e)
+
     # --- Healing Protocols ---
+
+    async def _recover_audio_device(self, error_msg: str = ""):
+        """Recover from audio device disconnection"""
+        logger.warning("Audio device lost, attempting recovery...")
+
+        # 1. Notify frontend
+        if self._gateway:
+            await self._gateway.broadcast("system_failure", {
+                "event": "audio_device_lost",
+                "state": "diagnosing",
+            })
+
+        # 2. Try to reinitialize
+        try:
+            if self._audio_manager:
+                await self._audio_manager.restart()
+                if self._gateway:
+                    await self._gateway.broadcast("system_failure", {
+                        "event": "audio_device_lost",
+                        "state": "applied",
+                    })
+        except Exception as e:
+            if self._gateway:
+                await self._gateway.broadcast("system_failure", {
+                    "event": "audio_device_lost",
+                    "state": "failed",
+                    "message": str(e),
+                })
+
+    async def _reset_aec(self, error_msg: str = ""):
+        """Reset AEC when it diverges"""
+        logger.warning("AEC divergence detected, resetting filter...")
+
+        if self._audio_manager:
+            self._audio_manager.reset_aec()
+
+    async def _throttle_audio(self, error_msg: str = ""):
+        """Throttle audio when queue overflows"""
+        logger.warning("Queue overflow detected, throttling audio...")
+        if self._gateway:
+            await self._gateway.broadcast("system_failure", {
+                "event": "queue_overflow",
+                "state": "throttling",
+            })
 
     async def _heal_bus_failure(self):
         """Protocol: Redis/Bus connection recovery."""
@@ -178,13 +249,13 @@ class SREWatchdog:
             await self._bus.connect()
 
     async def _heal_system_failure(self):
-        """Protocol: Timeout or generic connection error recovery via autonomous diagnosis."""
+        """Protocol: Timeout/connection error recovery via autonomous diagnosis."""
         logger.info("🛠️ [HEAL] Initiating autonomous diagnosis for system failure...")
 
         # Log diagnosing state
         await self._firebase.log_repair_event(
             filepath="system",
-            diagnosis="Timeout/Connection error detected. Initiating autonomous repair.",
+            diagnosis="Timeout/Connection error detected. Initiating repair.",
             status="diagnosing",
         )
 

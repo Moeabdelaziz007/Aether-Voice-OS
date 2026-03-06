@@ -9,7 +9,7 @@ Focus:
 These tests mock:
 - audio_state singleton
 - DynamicAEC
-- AECBridge
+- DynamicAEC
 - HysteresisGate
 - Event loop injection
 
@@ -64,7 +64,6 @@ def mock_dependencies():
         patch("core.audio.capture.DynamicAEC") as MockDynamicAEC,
         patch("core.audio.capture.SmoothMuter") as MockSmoothMuter,
         patch("core.audio.capture.HysteresisGate") as MockHysteresis,
-        patch("core.audio.capture.AECBridge"),
     ):
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
@@ -165,7 +164,6 @@ def capture_instance():
 
     with (
         patch("core.audio.capture.DynamicAEC") as MockAEC,
-        patch("core.audio.capture.AECBridge") as MockBridge,
         patch("core.audio.capture.HysteresisGate") as MockHyst,
     ):
         # Configure AEC mock
@@ -182,26 +180,12 @@ def capture_instance():
         )
         MockAEC.return_value.is_user_speaking.return_value = True
 
-        # Bridge off
-        MockBridge.return_value.use_rust = False
-
         # Hysteresis gate just mirrors is_playing
         MockHyst.return_value.update.side_effect = lambda x: x
 
         inst = AudioCapture(config=config, output_queue=q)
         inst._loop = MagicMock()
         return inst
-
-    instance = AudioCapture(
-        config=mock_dependencies["config"],
-        output_queue=mock_dependencies["queue"],
-        vad_engine=mock_dependencies["vad"],
-        analyzer=mock_dependencies["analyzer"],
-        paralinguistic_analyzer=mock_dependencies["paralinguistic"],
-    )
-    # Mock the event loop for thread-safe calls
-    instance._loop = MagicMock()
-    return instance
 
 
 def test_callback_when_ai_is_silent_and_user_speaks(
@@ -281,6 +265,7 @@ def test_callback_thalamic_gate_allows_barge_in(capture_instance, mock_dependenc
 def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(
     capture_instance: AudioCapture,
 ):
+    import core.audio.capture
     # Simulate QueueFull once, then success.
     q = capture_instance._async_queue
 
@@ -293,6 +278,6 @@ def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(
 
     capture_instance._push_to_async_queue({"data": b"x", "mime_type": "audio/pcm"})
 
-    assert mock_audio_state.capture_queue_drops >= 1
+    assert core.audio.capture.audio_state.capture_queue_drops >= 1
     assert q.get_nowait.call_count == 1
     assert q.put_nowait.call_count == 2

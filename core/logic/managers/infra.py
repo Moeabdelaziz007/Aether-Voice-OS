@@ -11,11 +11,14 @@ logger = logging.getLogger(__name__)
 class InfraManager:
     """Manages infrastructure services: Firebase and Watchdog."""
 
-    def __init__(self, gateway: Any):
+    def __init__(self, gateway: Any, audio_manager: Any = None):
         self._firebase = FirebaseConnector()
-        self._watchdog = SREWatchdog(node_id=f"aether-node-{os.getpid()}",
+        self._watchdog = SREWatchdog(
+            node_id=f"aether-node-{os.getpid()}",
             bus=gateway._bus,
             gateway=gateway,
+            firebase_connector=self._firebase,
+            audio_manager=audio_manager,
         )
 
     async def initialize(self):
