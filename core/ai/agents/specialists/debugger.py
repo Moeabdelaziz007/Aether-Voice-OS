@@ -206,7 +206,7 @@ class DebuggerAgent(VoiceAgent):
             return "Cannot request rework - no orchestrator available"
 
         # Add intent confidence for rework handover
-        context.intent_confidence = IntentConfidence
+        context.intent_confidence = IntentConfidence(
             source_agent="Debugger",
             target_agent="Architect",
             confidence_score=0.9,
