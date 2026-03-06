@@ -57,7 +57,28 @@ jobs:
         run: ruff format --check core/engine.py core/audio/capture.py core/audio/jitter_buffer.py core/ai/adk_agents.py core/infra/telemetry.py core/services/registry.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
 
       - name: Run Python syntax check
-        run: python -m compileall core/engine.py core/ai/adk_agents.py core/ai/session.py core/audio/capture.py core/audio/jitter_buffer.py core/audio/playback.py core/infra/telemetry.py core/infra/transport/gateway.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
+        run: python -m compileall core/engine.py core/ai/adk_agents.py core/ai/session core/audio/capture.py core/audio/jitter_buffer.py core/audio/playback.py core/infra/telemetry.py core/infra/transport/gateway.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
+
+      - name: File size guard (warn on new files > 400 LOC)
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          if [ -z "$BASE_SHA" ] || [ "$BASE_SHA" = "null" ]; then
+            BASE_SHA="HEAD~1"
+          fi
+
+          mapfile -t NEW_FILES < <(git diff --name-only --diff-filter=A "$BASE_SHA"...HEAD)
+          if [ ${#NEW_FILES[@]} -eq 0 ]; then
+            echo "No new files in diff."
+            exit 0
+          fi
+
+          for file in "${NEW_FILES[@]}"; do
+            [ -f "$file" ] || continue
+            lines=$(wc -l < "$file")
+            if [ "$lines" -gt 400 ]; then
+              echo "::warning file=$file::New file is $lines LOC (>400). Consider splitting this module."
+            fi
+          done
 
   # ─────────────────────────────────────────────────────────────────
   # Stage 2: Comprehensive Testing
