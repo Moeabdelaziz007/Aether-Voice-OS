@@ -200,7 +200,7 @@ class GeminiLiveSession:
 
                 # Wire in Thalamic Gate V2
                 try:
-                    self._thalamic_gate = ThalamicGate()
+                    self._thalamic_gate = ThalamicGate(session)
                     self._demo_fallback = DemoFallback()
                     await self._thalamic_gate.start()
                 except Exception as e:

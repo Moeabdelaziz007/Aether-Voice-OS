@@ -65,7 +65,7 @@ export default function HUDContainer({ children }: { children: React.ReactNode }
                     </div>
                     <div>COORDS: {Math.floor(Math.random() * 1000)}.{Math.floor(Math.random() * 1000)}</div>
                     <div className="bg-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.1)] px-2 py-0.5 rounded">
-                        LATENCY: << 50MS
+                        LATENCY: {"<"} 50MS
                     </div>
                 </div>
             </div>

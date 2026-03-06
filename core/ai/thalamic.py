@@ -21,9 +21,6 @@ class ThalamicGate:
         self._calibrator = EmotionCalibrator()
         self._metrics = DemoMetrics()
 
-        self._calibrator = EmotionCalibrator()
-        self._metrics = DemoMetrics()
-
         self._frustration_streak = 0
         self._running = False
 

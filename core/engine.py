@@ -150,27 +150,45 @@ class AetherEngine:
     def _register_tools(self) -> None:
         # Tool registration remains centralized here or moved to a tool registry later
         from core.tools import (
+            camera_tool,
             context_scraper,
             discovery_tool,
+            hive_memory,
             hive_tool,
             memory_tool,
             rag_tool,
             system_tool,
             tasks_tool,
             vision_tool,
+            voice_auth,
             voice_tool,
         )
 
         # Inject Firebase into tools
         tasks_tool.set_firebase_connector(self._infra._firebase)
         memory_tool.set_firebase_connector(self._infra._firebase)
+        hive_memory.set_firebase_connector(self._infra._firebase)
+
+        # Inject Hive Coordinator
+        hive_tool.set_hive_coordinator(self._agents._hive)
+
+        # Inject discovery references
+        discovery_tool.set_references(hive=self._agents._hive)
+
+        # Create and inject VoiceTool singleton
+        from core.tools.voice_tool import VoiceTool
+        vt = VoiceTool(config=self._config)
+        voice_tool.set_voice_tool(vt)
 
         self._router.register_module(system_tool)
         self._router.register_module(tasks_tool)
         self._router.register_module(memory_tool)
         self._router.register_module(voice_tool)
+        self._router.register_module(voice_auth)
         self._router.register_module(vision_tool)
+        self._router.register_module(camera_tool)
         self._router.register_module(hive_tool)
+        self._router.register_module(hive_memory)
         self._router.register_module(rag_tool)
         self._router.register_module(discovery_tool)
         self._router.register_module(context_scraper)

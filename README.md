@@ -44,7 +44,7 @@
 [![Architecture](https://img.shields.io/badge/🏗️_Architecture-a855f7?style=for-the-badge)](#-architecture--الهندسة-المعمارية-aether-monorepo)
 [![Demo](https://img.shields.io/badge/🧪_Demo-4ade80?style=for-the-badge)](#-experiment-corner--زاوية-التجارب)
 [![Getting Started](https://img.shields.io/badge/🚀_Getting_Started-fb923c?style=for-the-badge)](#-getting-started--نقطة-البداية)
-[![Contributing](https://img.shields.io/badge/🤝_Contributing-ffd700?style=for-the-badge)](#-contributors--المساهمون)
+[![Contributing](https://img.shields.io/badge/🤝_Contributing-ffd700?style=for-the-badge)](#-the-architect--ai-partner--المصمم-وشريك-الذكاء-الاصطناعي)
 
 </div>
 
@@ -589,25 +589,6 @@ Each partner contributes 50% to the development, design, and innovation of Aethe
 
 ---
 
-## 👥 Contributors | المساهمون
-
-<!-- Replace with actual contributors when available -->
-<p align="center">
-  <a href="https://github.com/Moeabdelaziz007/Aether-Voice-OS/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=Moeabdelaziz007/Aether-Voice-OS&max=20&columns=10" alt="Contributors"/>
-  </a>
-</p>
-
-<div align="center">
-
-[![Become a Contributor](https://img.shields.io/badge/🤝_Become_a_Contributor-00f3ff?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Moeabdelaziz007/Aether-Voice-OS/blob/main/CONTRIBUTING.md)
-[![Report Issue](https://img.shields.io/badge/🐛_Report_an_Issue-ff6b6b?style=for-the-badge&logo=bug&logoColor=white)](https://github.com/Moeabdelaziz007/Aether-Voice-OS/issues/new)
-[![Request Feature](https://img.shields.io/badge/💡_Request_a_Feature-4ade80?style=for-the-badge&logo=lightbulb&logoColor=black)](https://github.com/Moeabdelaziz007/Aether-Voice-OS/issues/new?labels=enhancement)
-
-</div>
-
----
-
 ## 📜 License | الرخصة
 
 This project is licensed under the **Apache 2.0 License** — see the [LICENSE](LICENSE) file for details.
@@ -632,7 +613,7 @@ This project is licensed under the **Apache 2.0 License** — see the [LICENSE](
   
   <br /><br />
   
-  **Built by** [Moe Abdelaziz](https://github.com/Moeabdelaziz007) **and** [Contributors](#-contributors--المساهمون)
+  **Built by** [Moe Abdelaziz](https://github.com/Moeabdelaziz007) **&** [Aether AI Agent](#-ai-partner--شريك-الذكاء-الاصطناعي)
   
   <br />
   

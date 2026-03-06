@@ -1,0 +1,43 @@
+{
+  "passed": 6,
+  "failed": 0,
+  "tests": [
+    {
+      "name": "Main Portal Load",
+      "status": "PASS"
+    },
+    {
+      "name": "Live Voice Page Load",
+      "status": "PASS"
+    },
+    {
+      "name": "Admin Dashboard Load",
+      "status": "PASS"
+    },
+    {
+      "name": "Audio Pipeline Init",
+      "status": "PASS",
+      "details": {
+        "supported": true,
+        "sampleRate": 48000,
+        "mediaDevices": true,
+        "getUserMedia": true,
+        "enumerateDevices": true
+      }
+    },
+    {
+      "name": "UI Responsiveness",
+      "status": "PASS",
+      "details": {
+        "domContentLoaded": 1645.9000000059605,
+        "loadComplete": 2798.7999999970198,
+        "domInteractive": 1645.5,
+        "transferSize": 12900
+      }
+    },
+    {
+      "name": "Full Navigation Flow",
+      "status": "PASS"
+    }
+  ]
+}
