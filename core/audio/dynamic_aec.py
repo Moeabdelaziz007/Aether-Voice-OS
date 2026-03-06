@@ -548,6 +548,7 @@ class DynamicAEC:
         )
 
         self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
+        self.spectral_analyzer = SpectralAnalyzer(sample_rate=sample_rate, n_fft=512)
 
         # Frame accumulation for block processing
         self.block_size = filter_length  # Process in filter-length blocks
@@ -564,6 +565,7 @@ class DynamicAEC:
 
         # State
         self.state = AECState()
+
         self.erle_history: deque[float] = deque(maxlen=50)
 
         # Convergence tracking

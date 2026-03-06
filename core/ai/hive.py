@@ -63,6 +63,8 @@ class HiveCoordinator:
         on_handover: Optional[Callable] = None,
         event_bus: Optional[Any] = None,
         api_key: Optional[str] = None,
+        enable_deep_handover: bool = True,
+        ai_config: Optional[Any] = None,
     ) -> None:
         self._registry = registry
         self._router = router
@@ -97,8 +99,8 @@ class HiveCoordinator:
         # Genetic DNA Repository
         self._dna_pool: Dict[str, AgentDNA] = {}
         self._genetic_optimizer = (
-            GeneticOptimizer(registry.firebase, api_key)
-            if registry.firebase and api_key
+            GeneticOptimizer(getattr(registry, "firebase", None), api_key)
+            if getattr(registry, "firebase", None) and api_key
             else None
         )
 

@@ -53,7 +53,7 @@ async def test_cortex_neural_lead_time():
         # Simulate time between words (~300ms)
         await asyncio.sleep(0.01)  # Sped up for testing, but we capture the 'word' pos
 
-    end_time = time.perf_counter()
+    time.perf_counter()
 
     # Lead time is basically: (Duration for full sentence) - (Time until pre-warm trigger)
     # We estimate based on word count/position.

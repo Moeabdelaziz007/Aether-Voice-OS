@@ -44,7 +44,6 @@ from core.infra.transport.session_state import (
     SessionStateManager,
 )
 from core.utils.errors import HandshakeError, HandshakeTimeoutError
-from core.infra.service_container import container
 
 logger = logging.getLogger(__name__)
 
@@ -357,7 +356,7 @@ class AetherGateway:
             self._session_restart_event.clear()
 
             active_soul = self._hive.active_soul
-            soul_name = active_soul.manifest.name
+            soul_name = active_soul.manifest.name if active_soul else "UnknownSoul"
 
             # Initialize session metadata
             session_metadata = SessionMetadata(

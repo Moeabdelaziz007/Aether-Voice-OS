@@ -23,7 +23,6 @@ from enum import Enum, auto
 from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
 
 from pydantic import BaseModel, Field
-from core.infra.service_container import container
 
 logger = logging.getLogger(__name__)
 

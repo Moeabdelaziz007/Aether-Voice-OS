@@ -90,3 +90,16 @@ def test_on_package_change_unload(agent_manager, caplog):
     asyncio.run(agent_manager._on_package_change("test_pkg", None))
 
     assert "Unloading package: test_pkg" in caplog.text
+
+
+def test_scan_registry(agent_manager):
+    agent_manager.scan_registry()
+
+    agent_manager._registry.scan.assert_called_once()
+    agent_manager._registry.start_watcher.assert_called_once()
+
+
+def test_stop_watcher(agent_manager):
+    agent_manager.stop_watcher()
+
+    agent_manager._registry.stop_watcher.assert_called_once()

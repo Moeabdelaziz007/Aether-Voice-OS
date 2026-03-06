@@ -71,6 +71,7 @@ async def calibrate_admin_voice(**kwargs) -> dict:
     """
     rms = audio_state.last_rms
     zcr = audio_state.last_zcr
+    
 
     if rms < 0.01:
         return {
@@ -85,6 +86,19 @@ async def calibrate_admin_voice(**kwargs) -> dict:
             "message": f"Detected pitch ({pitch:.1f}Hz) is outside human range. Noise detected?",
         }
     
+    VoiceAuthGuard.calibrate(pitch)
+    return {
+        "status": "success",
+        "message": f"Biometric calibration complete. Saved fingerprint at {pitch:.1f}Hz.",
+    }
+
+    pitch = zcr * 8000
+    if not (50 <= pitch <= 500):
+        return {
+            "status": "failure",
+            "message": f"Detected pitch ({pitch:.1f}Hz) is outside human range. Noise detected?",
+        }
+
     VoiceAuthGuard.calibrate(pitch)
     return {
         "status": "success",

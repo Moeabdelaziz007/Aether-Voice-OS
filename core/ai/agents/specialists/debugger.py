@@ -47,7 +47,7 @@ class DebuggerAgent(VoiceAgent):
         context.add_history("Debugger began verification", agent="Debugger")
 
         # Create output container
-        self._output = DebuggerOutput
+        self._output = DebuggerOutput(
             handover_id=context.handover_id,
         )
 
@@ -206,7 +206,7 @@ class DebuggerAgent(VoiceAgent):
             return "Cannot request rework - no orchestrator available"
 
         # Add intent confidence for rework handover
-        context.intent_confidence = IntentConfidence
+        context.intent_confidence = IntentConfidence(
             source_agent="Debugger",
             target_agent="Architect",
             confidence_score=0.9,

@@ -472,7 +472,7 @@ class GeminiLiveInteractiveBenchmark:
             # Start monitoring task in parallel with session.run()
             async with asyncio.TaskGroup() as tg:
                 # Run the session (it has its own send/receive loops)
-                session_task = tg.create_task(session.run())
+                tg.create_task(session.run())
 
                 # Monitor audio processing for metrics
                 _ = tg.create_task(self._monitor_audio_processing(scenario))

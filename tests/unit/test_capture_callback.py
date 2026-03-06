@@ -64,7 +64,7 @@ def mock_dependencies():
         patch("core.audio.capture.DynamicAEC") as MockDynamicAEC,
         patch("core.audio.capture.SmoothMuter") as MockSmoothMuter,
         patch("core.audio.capture.HysteresisGate") as MockHysteresis,
-        patch("core.audio.capture.AECBridge") as MockAECBridge,
+        patch("core.audio.capture.AECBridge"),
     ):
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
