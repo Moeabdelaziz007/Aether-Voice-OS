@@ -79,6 +79,7 @@ class AetherEngine:
         self._pulse = PulseManager(self._event_bus)
 
         print("  Engine: Initializing CognitiveScheduler...", flush=True)
+        from core.ai.hive import HiveCoordinator
         class CognitiveScheduler:
             def __init__(self, *args, **kwargs):
                 pass

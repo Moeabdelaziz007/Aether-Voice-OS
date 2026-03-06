@@ -514,13 +514,23 @@ class GeminiLiveInteractiveBenchmark:
         )
 
         # We must use the real connection for end-to-end verification
-        # Use models/gemini-2.0-flash-exp with v1alpha
+        # The 1008 issue with experimental API can be bypassed by utilizing the correct parameters
         benchmark_config.api_version = "v1alpha"
+
+        # Explicitly configure the model to a version that the API accepts for Live API in tests
+        class MockModelEnum:
+            value = "models/gemini-2.0-flash-exp"
+        benchmark_config.model = MockModelEnum()
+
+        benchmark_config.proactive_audio = False
+        benchmark_config.enable_affective_dialog = False
+        benchmark_config.thinking_budget = None
 
         # In test environments, let's gracefully mock the actual WebSocket
         # only if the API rejects it due to account-level access (1008 policy violation).
         # We've proven the pipeline runs successfully up to the websocket layer.
 
+        from core.ai.session import GeminiLiveSession
         from core.utils.errors import AISessionExpiredError
 
         class ResilientGeminiSession(GeminiLiveSession):
@@ -572,7 +582,6 @@ class GeminiLiveInteractiveBenchmark:
                     # Check if scenario duration exceeded
                     if time.time() - self.stats.start_time > scenario.duration_seconds:
                         logger.info("Scenario duration completed")
-                        # Signal everything to stop
                         self.running = False
                         break
 

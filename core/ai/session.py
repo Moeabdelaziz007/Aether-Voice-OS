@@ -230,7 +230,7 @@ class GeminiLiveSession:
                 if isinstance(exc, asyncio.CancelledError):
                     logger.info("Session cancelled (shutdown)")
                 else:
-                    logger.error("Session error: %s", exc, exc_info=True)
+                    logger.error("Session error: %s", exc)
                     raise AISessionExpiredError(
                         f"Gemini session terminated: {exc}",
                         cause=exc,
