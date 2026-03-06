@@ -22,6 +22,7 @@ Supports ADK-style tool registration for modular extensibility.
 from __future__ import annotations
 
 import asyncio
+import importlib
 import logging
 import signal
 import sys
@@ -173,6 +174,7 @@ class AetherEngine:
 
         # ADK Tool Registry (legacy — kept for backward compat)
         self._tools: dict[str, Any] = {}
+        self._package_tools: dict[str, set[str]] = {}
 
         self._shutdown_event = asyncio.Event()
         self._session_restart = asyncio.Event()
@@ -400,18 +402,64 @@ class AetherEngine:
         self, name: str, package: Optional[AthPackage]
     ) -> None:
         """Handle dynamic package loading/unloading."""
+        existing_tools = self._package_tools.get(name, set())
+
         if package:
             logger.info("Hot-Reloading package: %s", name)
-            # 1. Un-register old tools first if they exist
-            # Note: In a production version, we'd track which tools belong to
-            # which package.
-            # For now, we assume tool names are unique.
-            # 2. Register tools from package
-            # TODO: Implement dynamic module import for .ath packages
-            pass
+
+            for tool_name in sorted(existing_tools):
+                self._router.un_register(tool_name)
+                logger.info(
+                    "Package tool removed: package=%s tool=%s",
+                    name,
+                    tool_name,
+                )
+
+            loaded_tools: set[str] = set()
+            for module_name in package.manifest.tools:
+                module_import = (
+                    module_name
+                    if "." in module_name
+                    else f"core.tools.{module_name}"
+                )
+
+                try:
+                    module = importlib.import_module(module_import)
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to import package tool module: package=%s module=%s error=%s",
+                        name,
+                        module_import,
+                        exc,
+                    )
+                    continue
+
+                before = set(self._router.names)
+                self._router.register_module(module)
+                added_names = set(self._router.names) - before
+
+                for tool_name in sorted(added_names):
+                    loaded_tools.add(tool_name)
+                    logger.info(
+                        "Package tool added: package=%s tool=%s module=%s",
+                        name,
+                        tool_name,
+                        module_import,
+                    )
+
+            self._package_tools[name] = loaded_tools
         else:
             logger.info("Unloading package: %s", name)
-            # TODO: Clean up tools associated with this package
+
+            for tool_name in sorted(existing_tools):
+                self._router.un_register(tool_name)
+                logger.info(
+                    "Package tool removed: package=%s tool=%s",
+                    name,
+                    tool_name,
+                )
+
+            self._package_tools.pop(name, None)
 
     def register_tool(self, name: str, tool: Any) -> None:
         """Register an ADK-compatible tool with the engine."""
