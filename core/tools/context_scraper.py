@@ -2,7 +2,10 @@ import asyncio
 import urllib.parse
 from typing import Dict, List
 
-from scrapling import Fetcher
+try:
+    from scrapling import Fetcher
+except Exception:
+    Fetcher = None
 
 
 class AetherContextScraper:
@@ -13,8 +16,7 @@ class AetherContextScraper:
     """
 
     def __init__(self):
-        # We use a persistent fetcher for better fingerprinting
-        self.fetcher = Fetcher(auto_match=True)
+        self.fetcher = Fetcher(auto_match=True) if Fetcher else None
 
     async def search_solution(
         self, query: str, platform: str = "stackoverflow"
@@ -35,6 +37,9 @@ class AetherContextScraper:
             selector = ".titleline > a"
 
         print(f"[Scraper] Searching {platform} for: {query}")
+
+        if self.fetcher is None:
+            return [{"error": "Scraper backend unavailable"}]
 
         try:
             # Scrapling.get is blocking, run in executor for async safety
@@ -62,6 +67,8 @@ class AetherContextScraper:
     async def get_trending_context(self) -> List[Dict]:
         """Scrapes trending tech news for broader situational awareness."""
         url = "https://news.ycombinator.com/"
+        if self.fetcher is None:
+            return []
         try:
             response = await asyncio.to_thread(self.fetcher.get, url)
             titles = response.css(".titleline > a")
