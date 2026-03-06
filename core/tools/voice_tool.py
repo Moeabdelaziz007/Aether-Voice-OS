@@ -128,15 +128,15 @@ class VoiceTool:
         self._audio_out = asyncio.Queue()
 
         # Components
-        self._capture = AudioCapture(self._config.audio, self._audio_in)
-        self._playback = AudioPlayback(self._config.audio, self._audio_out)
+        self._capture = AudioCaptureself._config.audio, self._audio_in)
+        self._playback = AudioPlaybackself._config.audio, self._audio_out)
 
         # In standalone mode, we use a mock gateway for broadcasting
         # To avoid strictly requiring a full AetherGateway instance
-        mock_gateway = MagicMock()
+        mock_gateway = MagicMock)
         mock_gateway.broadcast = lambda *a, **k: None
 
-        self._session = GeminiLiveSession(
+        self._session = GeminiLiveSession
             self._config.ai,
             self._audio_in,
             self._audio_out,
@@ -155,7 +155,7 @@ class VoiceTool:
         Blocks until shutdown is requested.
         """
         if not self._capture or not self._session or not self._playback:
-            raise RuntimeError("Call setup() before execute()")
+            raise RuntimeError"Call setup() before execute()")
 
         # Register signal handlers for clean shutdown
         loop = asyncio.get_running_loop()

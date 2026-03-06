@@ -1,6 +1,6 @@
 import React from 'react';
 import { render } from '@testing-library/react';
-import QuantumNeuralAvatar from '../components/QuantumNeuralAvatar';
+import AetherOrb from '../components/AetherOrb';
 import { useAetherStore } from '../store/useAetherStore';
 import { describe, it, expect, vi } from 'vitest';
 
@@ -25,7 +25,7 @@ beforeAll(() => {
         // Create a wrapper component to track renders
         const TrackedOrb = () => {
             renderCount++;
-            return <QuantumNeuralAvatar size={100} />;
+            return <AetherOrb size={100} />;
         };
 
         const { unmount } = render(<TrackedOrb />);

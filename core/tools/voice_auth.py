@@ -75,6 +75,11 @@ async def calibrate_admin_voice(**kwargs) -> dict:
     """
     rms = audio_state.last_rms
     zcr = audio_state.last_zcr
+<<<<<<< HEAD
+
+=======
+
+>>>>>>> origin/jules-3466090822907057400-4af64808
     if rms < 0.01:
         return {
             "status": "failure",
