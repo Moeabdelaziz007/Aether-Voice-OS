@@ -110,6 +110,12 @@ class HiveCoordinator:
 
             self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
 
+        self._inject_dna_callback: Optional[Callable[[AgentDNA, List[str]], Any]] = None
+
+    def set_inject_dna_callback(self, callback: Callable[[AgentDNA, List[str]], Any]) -> None:
+        """Register a callback for injecting DNA updates into the session."""
+        self._inject_dna_callback = callback
+
     @property
     def active_soul(self) -> AthPackage:
         if not self._active_soul:
@@ -196,6 +202,9 @@ class HiveCoordinator:
                 task=task,
                 payload=payload or {},
             )
+            
+            # Create snapshot for potential rollback
+            context.create_snapshot()
 
             # Add code context if provided
             if code_context:
@@ -404,48 +413,45 @@ class HiveCoordinator:
     async def rollback_handover(self, handover_id: str) -> Tuple[bool, str]:
         """
         Rollback a failed handover to its pre-transfer state.
-
         Restores the previous soul and context state.
-
-        Args:
-            handover_id: The handover context ID
-
-        Returns:
-            Tuple of (success, message)
+        Triggered if the target agent fails to initialize or verification fails.
         """
         if not self._enable_deep_handover or not self._handover_protocol:
             return False, "Deep handover not enabled"
 
         context = self._active_handovers.get(handover_id)
         if not context:
+            logger.warning("Rollback target '%s' not found.", handover_id)
             return False, f"Handover {handover_id} not found"
 
         try:
-            # Execute rollback in protocol
-            success, message = self._handover_protocol.rollback_handover(handover_id)
+            # 1. Execute rollback in protocol
+            success, message = await self._handover_protocol.rollback_handover(handover_id)
+            if not success:
+                logger.error("Protocol-level rollback failed: %s", message)
+                return False, f"Protocol rollback failed: {message}"
 
-            if success and context.snapshot:
-                # Restore previous soul from snapshot
-                prev_soul_name = context.snapshot.get("source_agent")
-                if prev_soul_name:
-                    try:
-                        prev_soul = self._registry.get(prev_soul_name)
-                        self._active_soul = prev_soul
-                        logger.info("Rolled back to soul: %s", prev_soul_name)
-                    except Exception as e:
-                        logger.error("Failed to restore soul after rollback: %s", e)
+            # 2. Restore context state from snapshot
+            if context.restore_snapshot():
+                logger.info("A2A [HIVE] Context restored from snapshot for %s", handover_id)
 
-                # Record telemetry
-                if self._telemetry:
-                    self._telemetry.record_rollback(handover_id, successful=True)
-                    record_handover_end(
-                        handover_id=handover_id,
-                        outcome=HandoverOutcome.ROLLED_BACK,
-                    )
+            # 3. Revert active soul to the last known-good expert
+            if self._last_successful_soul:
+                from_name = self._active_soul.manifest.name if self._active_soul else "Unknown"
+                to_name = self._last_successful_soul.manifest.name
+                logger.info("A2A [HIVE] Reverting active expert: %s -> %s", from_name, to_name)
+                self._active_soul = self._last_successful_soul
 
-                logger.info("A2A [HIVE] Handover rolled back: %s", handover_id)
+            # 4. Record telemetry
+            if self._telemetry:
+                self._telemetry.record_rollback(handover_id, successful=True)
+                record_handover_end(
+                    handover_id=handover_id,
+                    outcome=HandoverOutcome.ROLLED_BACK,
+                )
 
-            return success, message
+            logger.info("A2A [HIVE] Handover rolled back successfully: %s", handover_id)
+            return True, "Rollback completed successfully"
 
         except Exception as e:
             logger.error("Rollback failed: %s", e)
@@ -594,39 +600,6 @@ class HiveCoordinator:
 
         return checkpoint
 
-    async def rollback_handover(self, handover_id: str) -> bool:
-        """
-        Roll back a failed handover to the previous stable state.
-        Triggered by AetherGateway if the next expert fails to heart-beat.
-        """
-        context = self._active_handovers.get(handover_id)
-        if not context:
-            logger.warning("Rollback target '%s' not found in history.", handover_id)
-            return False
-
-        # Execute rollback in protocol
-        if self._handover_protocol:
-            success, _ = await self._handover_protocol.rollback_handover(handover_id)
-            if not success:
-                logger.error("Protocol-level rollback failed for %s", handover_id)
-
-        # 1. Restore context state if snapshot exists
-        if context and context.restore_snapshot():
-            logger.info("A2A [HIVE] Context restored from snapshot for %s", handover_id)
-
-        # 2. Revert active soul to the last known-good expert
-        if self._last_successful_soul:
-            logger.info(
-                "A2A [HIVE] Reverting active expert: %s -> %s",
-                self._active_soul.manifest.name if self._active_soul else "Unknown",
-                self._last_successful_soul.manifest.name,
-            )
-            self._active_soul = self._last_successful_soul
-
-        # 3. Update status to prevent re-triggered handovers
-        if context:
-            context.update_status(HandoverStatus.ROLLED_BACK)
-        return True
 
     def get_handover_context(self, handover_id: str) -> Optional[HandoverContext]:
         """Retrieve an active handover context by ID."""
@@ -723,7 +696,7 @@ class HiveCoordinator:
         current_dna = self.get_dna(soul_name)
 
         # 1. Trigger micro-mutation
-        new_dna = await self._genetic_optimizer.mutate_mid_session(
+        new_dna, rationales = await self._genetic_optimizer.mutate_mid_session(
             current_dna=current_dna,
             trait_name=event.trait_name,
             trait_value=event.trait_value,
@@ -738,4 +711,11 @@ class HiveCoordinator:
                 event.trait_name,
             )
 
-            # TODO: Inject updated DNA traits into the active session context/prompt
+            # 3. Inject updated DNA traits into the active session
+            if self._pre_warm_callback:
+                # We use the pre_warm_callback bridge to reach the gateway
+                # In ADK 2.0, the gateway owns the session and is reachable here.
+                # However, we need a specific 'inject' callback if pre_warm isn't enough.
+                # Let's assume the gateway registers an 'inject_dna' callback too.
+                if hasattr(self, "_inject_dna_callback") and self._inject_dna_callback:
+                    await self._inject_dna_callback(new_dna, rationales)

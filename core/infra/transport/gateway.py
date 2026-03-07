@@ -93,6 +93,7 @@ class AetherGateway:
         self._tool_router = tool_router
         self._hive = hive
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
+        self._hive.set_inject_dna_callback(self.inject_dna_update)
 
         # Global State Bus
         self._bus = GlobalBus()
@@ -130,6 +131,7 @@ class AetherGateway:
 
         # Speculative Pre-warming Lock
         self._pre_warm_lock = asyncio.Lock()
+        self._pre_warmed_session: Optional[GeminiLiveSession] = None
 
     @property
     def audio_in_queue(self) -> asyncio.Queue[dict[str, object]]:
@@ -284,8 +286,48 @@ class AetherGateway:
         return False
 
     async def pre_warm_soul(self, soul_name: str) -> None:
-        """Speculatively initialize a session for the next soul."""
-        await self._session_manager.pre_warm_soul(soul_name)
+        """
+        Speculatively initialize a session for the next soul.
+        This runs in the background to reduce latency during handoff.
+        """
+        async with self._pre_warm_lock:
+            if self._pre_warmed_session:
+                if self._pre_warmed_session._soul.name == soul_name:
+                    logger.debug(f"✦ Pre-warm: Soul {soul_name} already pre-warmed.")
+                    return
+                # Stop the existing one if it's the wrong soul
+                await self._pre_warmed_session.stop()
+                self._pre_warmed_session = None
+
+            logger.info(f"🚀 Gateway: Speculatively pre-warming Soul '{soul_name}'...")
+            try:
+                target_soul = self._hive._registry.get(soul_name)
+                session = GeminiLiveSession(
+                    config=self._ai_config,
+                    audio_in_queue=self._audio_in,
+                    audio_out_queue=self._audio_out,
+                    gateway=self,
+                    on_interrupt=self._on_interrupt,
+                    on_tool_call=self._on_tool_call,
+                    tool_router=self._tool_router,
+                    soul_manifest=target_soul
+                )
+                await session.connect()
+                # We don't call session.run() yet, just connect()
+                self._pre_warmed_session = session
+                logger.info(f"✦ Pre-warm: Soul {soul_name} is CONNECTED and ready.")
+            except Exception as e:
+                logger.error(f"✦ Pre-warm failed for {soul_name}: {e}")
+                self._pre_warmed_session = None
+
+    async def inject_dna_update(self, dna: AgentDNA, rationales: List[str]) -> None:
+        """
+        Push a mid-session behavioral update to the active Gemini Live session.
+        This provides zero-latency neural mutation by injecting instructions mid-stream.
+        """
+        session = self.get_session()
+        if session:
+            await session.inject_dna_update(dna, rationales)
 
     async def run(self) -> None:
         """Start the WebSocket server and the main session management loop."""

@@ -152,12 +152,14 @@ class GeneticOptimizer:
 
     async def mutate_mid_session(
         self, current_dna: AgentDNA, trait_name: str, trait_value: float
-    ) -> AgentDNA:
+    ) -> Tuple[AgentDNA, List[str]]:
         """
         Performs high-speed, incremental mutation based on real-time paralinguistic triggers.
         This enables 'Hot-Mutation' for the Affective Soul.
+        Returns a tuple of (New DNA, List of rationale strings).
         """
         new_dna_dict = current_dna.to_dict()
+        rationales = []
 
         # Adaptive Logic:
         # 1. Stress/Arousal -> Decrease Verbosity, increase Empathy
@@ -171,9 +173,9 @@ class GeneticOptimizer:
             new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict[
                 "empathy"
             ] + (self._ema_alpha * target_empathy)
-            logger.info(
-                "🔥 Hot-Mutation (EMA): High Arousal detected. Context switching to 'Calm Operator'."
-            )
+            msg = "High Arousal detected. Transitioning to 'Calm Operator' state (Concise + High Empathy)."
+            logger.info("🔥 Hot-Mutation (EMA): %s", msg)
+            rationales.append(msg)
 
         # 2. Valence (Positive/Negative) -> Adjust Empathy
         if trait_name == "valence" and trait_value < 0.4:
@@ -181,15 +183,16 @@ class GeneticOptimizer:
             new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict[
                 "empathy"
             ] + (self._ema_alpha * target_empathy)
-            logger.info(
-                "🔥 Hot-Mutation (EMA): Negative Valence detected. Boosting Empathy."
-            )
+            msg = "Negative Valence detected. Boosting Empathy level."
+            logger.info("🔥 Hot-Mutation (EMA): %s", msg)
+            rationales.append(msg)
 
         # 3. Energy -> Adjust Proactivity
         if trait_name == "energy" and trait_value > 0.8:
             new_dna_dict["proactivity"] = min(1.0, new_dna_dict["proactivity"] + 0.05)
+            rationales.append("High user energy detected. Increasing proactivity bias.")
 
-        return AgentDNA.from_dict(new_dna_dict)
+        return AgentDNA.from_dict(new_dna_dict), rationales
 
     def _calculate_delta(self, dna1: AgentDNA, dna2: AgentDNA) -> float:
         """Calculates L2 norm of the difference between float traits."""

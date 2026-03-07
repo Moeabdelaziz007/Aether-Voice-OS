@@ -33,6 +33,17 @@ class IntentBroker:
             if intent_type == "UI_INTERACTION":
                 await gateway.broadcast({"type": "STATE_UPDATE", "source": "broker", "intent": intent_type})
                 return True
+            
+            elif intent_type == "SOUL_SHIFT":
+                target = payload.get("target_soul")
+                prob = payload.get("probability", 0.0)
+                
+                if target and prob > 0.8:
+                    logger.info(f"🚀 IntentBroker: High probability ({prob}) for soul shift to {target}. Triggering Pre-Warm.")
+                    # AetherGateway v2 includes pre_warm_soul method
+                    if hasattr(gateway, "pre_warm_soul"):
+                        asyncio.create_task(gateway.pre_warm_soul(target))
+                return True
                 
             return False
         except json.JSONDecodeError:

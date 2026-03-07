@@ -22,6 +22,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
 
 if TYPE_CHECKING:
+    from core.ai.genetic import AgentDNA
     from core.infra.transport.gateway import AetherGateway
     from core.tools.router import ToolRouter
 
@@ -241,6 +242,31 @@ class GeminiLiveSession:
         """Signal the session to stop."""
         self._running = False
         logger.info("Gemini session stop requested")
+
+    async def inject_dna_update(self, dna: AgentDNA, rationales: List[str]) -> None:
+        """
+        Injects a behavior-modifying system instruction into the live session.
+        This enables mid-session 'Hot-DNA' mutation without a restart.
+        """
+        if not self._session or not self._running:
+            return
+
+        # Build a concise instruction based on the DNA delta
+        dna_dict = dna.to_dict()
+        instr = (
+            f"[SYSTEM: DNA MUTATION ACTIVE. Behavioral traits updated: "
+            f"Verbosity={dna_dict['verbosity']:.2f}, Empathy={dna_dict['empathy']:.2f}, "
+            f"Proactivity={dna_dict['proactivity']:.2f}. "
+            f"Rationale: {'; '.join(rationales)}. Adapt your tone immediately.]"
+        )
+
+        try:
+            await self._session.send_realtime_input(
+                parts=[types.Part.from_text(text=instr)]
+            )
+            logger.info("⚡ Session: Injected Hot-DNA update instruction.")
+        except Exception as e:
+            logger.error("Failed to inject DNA update: %s", e)
 
     async def send_text(self, text: str) -> bool:
         """

@@ -7,6 +7,12 @@
 **Current Pipeline**: 100% operational with Gemini 2.5 Flash Native Audio.
 **Last Test Run**: 145/145 Passing.
 
+## ADK 2.0 Phase 1 (Handover Codex) Update [Recent]
+
+- **Deep Handover Integration:** Specialist agents (Architect, Debugger) now use the `HandoverProtocol` for high-fidelity context preservation across turns.
+- **Neural Summary Gateway:** Implemented Semantic Seed injection in the `VoiceAgent` base class to maintain low-latency context awareness during A2A handovers.
+- **Failure Integrity:** Added robust `rollback_handover` capability in `HiveCoordinator` with context snapshotting for zero-friction error recovery.
+
 ## Phase 3 & 4 Update [2026-02-26]
 
 ### Architecture Evolution
