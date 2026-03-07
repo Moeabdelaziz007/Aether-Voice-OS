@@ -106,3 +106,19 @@ if [ "$DEPLOY_LOCAL" = true ]; then
 fi
 
 echo -e "\n${BOLD}Speak anytime — The Aether is listening.${RESET}"
+
+# 5. CI/CD Information
+print_header "AUTOMATED DEPLOYMENTS"
+
+echo -e "${CYAN}ℹ️  Automated Firebase Deployment is configured!${RESET}"
+echo ""
+echo "Every push to ${BOLD}main${RESET} branch will automatically:"
+echo "  ✅ Build Next.js portal"
+echo "  ✅ Run type checking"
+echo "  ✅ Deploy to Firebase Hosting"
+echo "  ✅ Validate deployment"
+echo "  ✅ Send Discord notification"
+echo ""
+echo "View deployments: https://github.com/${GITHUB_REPOSITORY:-your-repo}/actions"
+echo "Rollback anytime: ${BOLD}bash scripts/firebase_rollback.sh${RESET}"
+echo ""

@@ -37,12 +37,10 @@ export default function AmbientTranscript() {
                     {agentMessages.slice(-3).map((msg, idx) => (
                         <motion.p
                             key={msg.id}
-                            className="ambient-text ambient-text--agent"
-                            initial={{ opacity: 0, y: -20, scale: 0.95 }}
+                            className="ambient-text ambient-text--agent neural-text zero-g-text"
+                            initial={{ opacity: 0 }}
                             animate={{
                                 opacity: 1 - idx * 0.25,
-                                y: 0,
-                                scale: 1,
                             }}
                             exit={{ opacity: 0, y: 20, scale: 0.9 }}
                             transition={{
@@ -63,12 +61,10 @@ export default function AmbientTranscript() {
                     {userMessages.slice(-2).map((msg, idx) => (
                         <motion.p
                             key={msg.id}
-                            className="ambient-text ambient-text--user"
-                            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                            className="ambient-text ambient-text--user neural-text zero-g-text"
+                            initial={{ opacity: 0 }}
                             animate={{
                                 opacity: 0.8 - idx * 0.3,
-                                y: 0,
-                                scale: 1,
                             }}
                             exit={{ opacity: 0, y: -20, scale: 0.9 }}
                             transition={{

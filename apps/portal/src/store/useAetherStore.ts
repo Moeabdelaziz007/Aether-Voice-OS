@@ -56,9 +56,11 @@ export interface PersonaConfig {
 
 // ─── Theme Configuration State ─────────────────────────────
 export type ThemeType = 'matrix-core' | 'quantum-cyan' | 'cyber-amber' | 'ghost-white';
+export type ThemeMode = 'dark-state' | 'white-hole'; // Adaptive Theme Engine
 
 export interface ThemeConfig {
     currentTheme: ThemeType;
+    themeMode: ThemeMode; // NEW: Adaptive Theme Engine
     accentColor: string;
     glowIntensity: number; // 0 - 1
     blurIntensity: number; // 3 - 24px
@@ -387,6 +389,7 @@ interface AetherState {
     // Actions — Theme Configuration
     setThemeConfig: (config: Partial<ThemeConfig>) => void;
     setVisualSettings: (settings: Partial<VisualSettings>) => void;
+    toggleThemeMode: () => void; // NEW: Toggle between dark-state and white-hole
 }
 
 // ─── Optimized Selectors for Performance ────────────────────
@@ -472,6 +475,7 @@ export const useAetherStore = create<AetherState>()(
             // Theme configuration initial state
             themeConfig: {
                 currentTheme: 'matrix-core',
+                themeMode: 'dark-state', // NEW: Default to dark-state
                 accentColor: '#00FF41',
                 glowIntensity: 1,
                 blurIntensity: 12,
@@ -645,6 +649,14 @@ export const useAetherStore = create<AetherState>()(
 
             setVisualSettings: (updates) => set((state) => ({
                 visualSettings: { ...state.visualSettings, ...updates },
+            })),
+
+            // NEW: Toggle between dark-state and white-hole modes
+            toggleThemeMode: () => set((state) => ({
+                themeConfig: {
+                    ...state.themeConfig,
+                    themeMode: state.themeConfig.themeMode === 'dark-state' ? 'white-hole' : 'dark-state',
+                },
             })),
         }),
         {

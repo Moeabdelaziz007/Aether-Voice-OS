@@ -2,7 +2,7 @@
 
 import React, { useEffect } from 'react';
 import { useAetherStore } from '@/store/useAetherStore';
-import type { ThemeType } from '@/store/useAetherStore';
+import type { ThemeType, ThemeMode } from '@/store/useAetherStore';
 
 /**
  * ThemeProvider — Manages CSS variable updates for theme switching
@@ -24,6 +24,10 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
         const themeClass = `theme-${themeConfig.currentTheme}`;
         root.className = themeClass;
 
+        // NEW: Apply theme mode (dark-state / white-hole)
+        const themeModeClass = themeConfig.themeMode === 'white-hole' ? 'theme-white-hole' : 'theme-dark-state';
+        root.setAttribute('data-theme-mode', themeModeClass);
+
         // Update dynamic CSS variables for glow and blur effects
         root.style.setProperty('--glow-intensity', String(themeConfig.glowIntensity));
         root.style.setProperty('--blur-light', `${themeConfig.blurIntensity}px`);
@@ -38,7 +42,7 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
         // Log theme change
         useAetherStore.getState().addTerminalLog(
             'THEME',
-            `Applied ${themeConfig.currentTheme.replace(/-/g, ' ').toUpperCase()} theme`
+            `Applied ${themeConfig.currentTheme.replace(/-/g, ' ').toUpperCase()} theme • ${themeConfig.themeMode === 'white-hole' ? 'WHITE HOLE' : 'DARK STATE'} mode`
         );
     }, [themeConfig, visualSettings]);
 
@@ -53,9 +57,11 @@ export function useTheme() {
     const themeConfig = useAetherStore((s) => s.themeConfig);
     const setThemeConfig = useAetherStore((s) => s.setThemeConfig);
     const setVisualSettings = useAetherStore((s) => s.setVisualSettings);
+    const toggleThemeMode = useAetherStore((s) => s.toggleThemeMode);
 
     return {
         currentTheme: themeConfig.currentTheme,
+        themeMode: themeConfig.themeMode, // NEW: Adaptive Theme Engine
         accentColor: themeConfig.accentColor,
         glowIntensity: themeConfig.glowIntensity,
         blurIntensity: themeConfig.blurIntensity,
@@ -65,6 +71,7 @@ export function useTheme() {
 
         // Methods
         setTheme: (theme: ThemeType) => setThemeConfig({ currentTheme: theme }),
+        toggleThemeMode, // NEW: Toggle dark-state ↔ white-hole
         setAccentColor: (color: string) => setThemeConfig({ accentColor: color }),
         setGlowIntensity: (intensity: number) => setThemeConfig({ glowIntensity: Math.max(0, Math.min(1, intensity)) }),
         setBlurIntensity: (blur: number) => setThemeConfig({ blurIntensity: Math.max(3, Math.min(40, blur)) }),

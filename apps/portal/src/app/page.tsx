@@ -98,7 +98,33 @@ export default function AetherPortal() {
             "--glow-intensity",
             String(STATE_INTENSITY[engineState] ?? 0.2)
         );
+        
+        // Drive audio-reactive CSS variables for bioluminescent glow
+        // These will be read by the glow animations in globals.css
     }, [preferences.accentColor, engineState]);
+    
+    // ── Drive audio level CSS variables ───────────────────────
+    useEffect(() => {
+        const root = document.documentElement;
+        // Audio levels are already in store, map them to CSS vars
+        const updateAudioLevels = () => {
+            root.style.setProperty("--speaker-level", String(useAetherStore.getState().speakerLevel));
+            root.style.setProperty("--mic-level", String(useAetherStore.getState().micLevel));
+        };
+        
+        // Initial update
+        updateAudioLevels();
+        
+        // Update on animation frame for smooth reactivity
+        let rafId: number;
+        const loop = () => {
+            updateAudioLevels();
+            rafId = requestAnimationFrame(loop);
+        };
+        rafId = requestAnimationFrame(loop);
+        
+        return () => cancelAnimationFrame(rafId);
+    }, []);
 
     return (
         <ThemeProvider>
@@ -109,6 +135,9 @@ export default function AetherPortal() {
                 {/* ── Ambient Background Layers ── */}
                 <NeuralBackground />
                 <ParticleField count={20} />
+                
+                {/* ── Carbon Fiber Texture Overlay (Industrial Luxury) ── */}
+                <div className="carbon-fiber-overlay" />
 
                 {/* Unified 3D Scene — Single WebGL Context */}
                 <UnifiedScene

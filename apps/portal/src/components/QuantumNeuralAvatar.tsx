@@ -262,15 +262,26 @@ function QuantumConsciousnessCore({
     }
 
     if (innerRef.current) {
-      // Inner core pulsation synchronized with audio
-      const basePulse = 1.0 + Math.sin(t * 3) * 0.08;
-      const audioPulse = audioLevel * 0.4 * Math.sin(t * 12);
-      innerRef.current.scale.setScalar(basePulse + audioPulse);
+      // QUANTUM BREATHING — Non-linear organic pulsation
+      // Base breath: 0.98 → 1.02 range with complex sine layering
+      const baseBreath = 1.0 + Math.sin(t * 0.8) * 0.02;
+      const secondaryPulse = Math.sin(t * 1.3 + 1) * 0.01;
+      const tertiaryRipple = Math.sin(t * 0.5 + 2) * 0.005;
+      
+      // Audio-synced pulse
+      const audioPulse = audioLevel * 0.15 * Math.sin(t * 8);
+      
+      // Combined quantum breathing effect
+      const totalScale = baseBreath + secondaryPulse + tertiaryRipple + audioPulse;
+      innerRef.current.scale.setScalar(totalScale);
     }
 
     if (quantumShellRef.current) {
-      // Outer quantum shell breathing
-      const breathe = 1.0 + Math.sin(t * 1.5) * 0.06 + audioLevel * 0.25;
+      // Outer quantum shell breathing with enhanced non-linearity
+      const breathe = 1.0 + 
+                      Math.sin(t * 0.6) * 0.04 + 
+                      Math.sin(t * 1.1) * 0.02 +
+                      audioLevel * 0.2;
       quantumShellRef.current.scale.setScalar(breathe);
       quantumShellRef.current.rotation.x += 0.003;
       quantumShellRef.current.rotation.z -= 0.002;
