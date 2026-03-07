@@ -583,9 +583,17 @@ class AetherGateway:
 
         client_id = resp.get("client_id")
         token = resp.get("token")
+        id_token = resp.get("id_token")
         signature = resp.get("signature")
 
-        if token:
+        if id_token:
+            decoded = self._auth.verify_firebase_token(id_token)
+            if not decoded:
+                raise HandshakeError("Invalid Firebase ID Token")
+            # If client_id not provided, use Firebase UID
+            if not client_id:
+                client_id = decoded.get("uid")
+        elif token:
             if not self._auth.verify_jwt(token):
                 raise HandshakeError("Invalid JWT")
         elif signature:

@@ -22,6 +22,7 @@ import { useAudioPipeline } from "@/hooks/useAudioPipeline";
 import { useVisionPulse } from "@/hooks/useVisionPulse";
 import { useAetherStore } from "@/store/useAetherStore";
 import { useTelemetry } from "@/hooks/useTelemetry";
+import { useAuth } from "@/hooks/useAuth";
 
 // Client-side VAD threshold — below this, audio is silence
 const VAD_RMS_THRESHOLD = 0.008;
@@ -36,6 +37,7 @@ export default function AetherBrain() {
     const store = useAetherStore();
     const pipeline = useAudioPipeline();
     // Use the local Aether Gateway instead of direct Gemini connection
+    const { getToken } = useAuth();
     const gateway = useAetherGateway();
     const vision = useVisionPulse();
     const { addLog } = useTelemetry();
@@ -54,7 +56,8 @@ export default function AetherBrain() {
         if (store.status === "connecting") {
             const boot = async () => {
                 await pipeline.start();
-                await gateway.connect();
+                const idToken = await getToken();
+                await gateway.connect(idToken || undefined);
                 store.setConnectionMode("gateway");
                 store.setSessionStartTime(Date.now());
                 store.addSystemLog("[Brain] Aether Gateway session booting...");
@@ -77,7 +80,7 @@ export default function AetherBrain() {
                 store.addSystemLog(`[Brain] Boot failed: ${err}`);
             });
         }
-    }, [store.status]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [store, pipeline, gateway, vision, getToken, addLog]);
 
     // ─── 2. Sync Gateway status → store ─────────────────────────────
     useEffect(() => {
@@ -94,7 +97,7 @@ export default function AetherBrain() {
             store.setStatus(mapped.status);
             store.setEngineState(mapped.engine);
         }
-    }, [gateway.status]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [gateway.status, store]);
 
     // ─── 3. Pipe audio PCM → Gateway (with client-side VAD gate) ────
     const handlePCMChunk = useCallback(
@@ -162,7 +165,7 @@ export default function AetherBrain() {
         if (vision.latestFrame && gateway.status === "connected") {
             gateway.sendVisionFrame(vision.latestFrame);
         }
-    }, [vision.latestFrame, gateway]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [vision.latestFrame, gateway]);
 
     // ─── 7. Real-time audio levels → store ─────────────────────────
     useEffect(() => {
@@ -220,7 +223,7 @@ export default function AetherBrain() {
             store.setVisionActive(false);
             store.setSessionStartTime(null);
         }
-    }, [store.status]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [store, pipeline, gateway, vision]);
 
     return null; // Invisible component — the brain renders nothing
 }

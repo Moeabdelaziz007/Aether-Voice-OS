@@ -47,5 +47,14 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "auth": {
+    "providers": {
+      "emailPassword": true,
+      "googleSignIn": {
+        "oAuthBrandDisplayName": "AetherOS",
+        "supportEmail": "amrikyy@gmail.com"
+      }
+    }
   }
 }

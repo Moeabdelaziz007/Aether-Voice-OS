@@ -53,11 +53,12 @@ class ChallengeMessage(BaseModel):
 
 
 class ResponseMessage(BaseModel):
-    """Client → Server: Signed challenge response."""
+    """Client → Server: Signed challenge response or Firebase ID Token."""
 
     type: MessageType = MessageType.CONNECT_RESPONSE
     client_id: str
-    signature: str  # hex-encoded Ed25519 signature
+    signature: Optional[str] = None  # hex-encoded Ed25519 signature
+    id_token: Optional[str] = None   # Firebase ID Token
     capabilities: list[str] = Field(default_factory=list)
 
 

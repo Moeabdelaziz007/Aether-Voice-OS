@@ -3,6 +3,7 @@ from typing import Any, Dict, Optional
 
 import jwt
 
+from firebase_admin import auth as firebase_auth
 from core.services.registry import AetherRegistry
 from core.utils.security import verify_signature
 
@@ -30,6 +31,16 @@ class AuthService:
         except Exception as e:
             logger.error(f"AuthService: JWT verification error: {e}")
         return None
+
+    def verify_firebase_token(self, id_token: str) -> Optional[Dict[str, Any]]:
+        """Verify a Firebase ID Token using the Admin SDK."""
+        try:
+            # Re-use the existing firebase-admin app
+            decoded_token = firebase_auth.verify_id_token(id_token)
+            return decoded_token
+        except Exception as e:
+            logger.warning(f"AuthService: Firebase token verification failed: {e}")
+            return None
 
     def verify_signature(self, challenge: str, signature: str, client_id: str) -> bool:
         """

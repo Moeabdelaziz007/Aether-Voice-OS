@@ -27,7 +27,7 @@ export type GatewayStatus =
 interface AetherGatewayReturn {
     status: GatewayStatus;
     latencyMs: number;
-    connect: () => Promise<void>;
+    connect: (idToken?: string) => Promise<void>;
     disconnect: () => void;
     sendAudio: (pcm: ArrayBuffer) => void;
     sendVisionFrame: (base64: string) => void;
@@ -79,7 +79,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
     const onAudioResponse = useRef<((audio: ArrayBuffer) => void) | null>(null);
     const keyPairRef = useRef<nacl.SignKeyPair | null>(null);
 
-    const connect = useCallback(async () => {
+    const connect = useCallback(async (idToken?: string) => {
         if (wsRef.current?.readyState === WebSocket.OPEN) return;
         setStatus("connecting");
 
@@ -111,6 +111,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                             type: "connect.response",
                             client_id: toHex(kp.publicKey),
                             signature: toHex(signatureBytes),
+                            id_token: idToken, // Inject Firebase ID Token
                             capabilities: ["audio_streaming", "telemetry", "vision"]
                         }));
                     }
