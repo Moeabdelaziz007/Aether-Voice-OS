@@ -14,6 +14,10 @@
         "test:watch": "vitest",
         "test:bench": "vitest run src/__tests__/benchmark.test.ts",
         "test:integration": "vitest run src/__tests__/geminiLive.integration.test.ts",
+        "test:e2e": "playwright test",
+        "test:e2e:ui": "playwright test --ui",
+        "test:e2e:headed": "playwright test --headed",
+        "test:e2e:debug": "playwright test --debug",
         "tauri": "tauri"
     },
     "dependencies": {
@@ -41,6 +45,7 @@
         "zustand": "^5.0.11"
     },
     "devDependencies": {
+        "@playwright/test": "^1.58.2",
         "@tailwindcss/postcss": "^4",
         "@tauri-apps/api": "^2.0.1",
         "@tauri-apps/cli": "^2.0.0-rc.18",
