@@ -33,21 +33,6 @@ class CognitiveScheduler:
         self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
         self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
 
-    def _on_vision_pulse(self, event: VisionPulseEvent):
-        """Ground the agent's spatial awareness using proactive pulses."""
-        # Speculative: If we see an error on screen, pre-warm the healing tool
-        # (This is where 'Predictive Tool Graph' starts)
-        self._temporal_memory.append(
-            {
-                "type": "vision",
-                "timestamp": event.timestamp,
-                "summary": "Proactive screen catch recorded.",  # In a real impl, we'd use a small VLM or OCR here
-            }
-        )
-        # Trim memory to last 5 pulses to avoid context drift
-        if len(self._temporal_memory) > 5:
-            self._temporal_memory.pop(0)
-
     def _on_acoustic_trait(self, event: AcousticTraitEvent):
         """Adjust cognitive load based on user emotional state."""
         if event.trait_name == "arousal" and event.trait_value > 0.8:

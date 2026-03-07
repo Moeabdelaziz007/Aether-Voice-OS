@@ -1,7 +1,0 @@
-{
-    "GOOGLE_API_KEY": "YOUR_GOOGLE_API_KEY",
-    "NEXT_PUBLIC_GEMINI_KEY": "YOUR_GOOGLE_API_KEY",
-    "AETHER_AI_MODEL": "gemini-2.5-flash-native-audio-preview-12-2025",
-    "AETHER_AI_API_VERSION": "v1alpha",
-    "AETHER_GW_PORT": 18789
-}

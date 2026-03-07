@@ -1,3 +1,0 @@
-timestamp,frame_id,capture_latency_ms,aec_latency_ms,vad_latency_ms,total_latency_ms,rms_energy,erle_db,aec_converged,vad_is_speech,vad_is_soft,double_talk,frame_dropped,queue_size_in,queue_size_out
-1772736981.700126,1,0.0,0.19867900027747964,1.7475859999649401,2.8165230000922747,7.008046395640122e-06,0.0,False,False,False,False,False,0,0
-1772736981.732108,2,0.0,0.15454200001840945,0.30270999968706747,0.848415999826102,1.2287234312680084e-05,0.0,False,False,False,False,False,0,0
