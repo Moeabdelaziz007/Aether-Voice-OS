@@ -23,9 +23,6 @@ import { ParticleSceneContent } from "./FluidThoughtParticlesScene";
 // Simple Selectors (optimized with React.memo on components)
 // ═══════════════════════════════════════════════════════════════════
 
-const useMicLevel = () => useAetherStore((s) => s.micLevel);
-const useSpeakerLevel = () => useAetherStore((s) => s.speakerLevel);
-
 const useEngineState = () => useAetherStore((s) => s.engineState);
 const useCurrentRealm = () => useAetherStore((s) => s.currentRealm);
 const useTranscript = () => useAetherStore((s) => s.transcript);
@@ -34,33 +31,40 @@ const useTranscript = () => useAetherStore((s) => s.transcript);
 // Shared Post-Processing (Single Pipeline)
 // ═══════════════════════════════════════════════════════════════════
 
-const SharedPostProcessing = memo(function SharedPostProcessing({ 
-  audioLevel, 
-  state 
-}: { 
-  audioLevel: number; 
+const SharedPostProcessing = memo(function SharedPostProcessing({
+  state
+}: {
   state: EngineState;
 }) {
-  const bloomIntensity = useMemo(() => {
-    switch (state) {
-      case "SPEAKING": return 1.2 + audioLevel * 0.3;
-      case "LISTENING": return 0.8 + audioLevel * 0.2;
-      case "THINKING": return 1.0;
-      case "INTERRUPTING": return 1.5;
-      default: return 0.5;
+  const bloomRef = useRef<any>(null);
+
+  useFrame(() => {
+    const { micLevel, speakerLevel, engineState } = useAetherStore.getState();
+    const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
+
+    if (bloomRef.current) {
+      let intensity = 0.5;
+      switch (engineState) {
+        case "SPEAKING": intensity = 1.2 + audioLevel * 0.3; break;
+        case "LISTENING": intensity = 0.8 + audioLevel * 0.2; break;
+        case "THINKING": intensity = 1.0; break;
+        case "INTERRUPTING": intensity = 1.5; break;
+      }
+      bloomRef.current.intensity = intensity;
     }
-  }, [state, audioLevel]);
+  });
 
   return (
     <EffectComposer>
       <Bloom
-        intensity={bloomIntensity}
+        ref={bloomRef}
+        intensity={1.0}
         luminanceThreshold={0.3}  // Raised from 0.2 for better performance
         luminanceSmoothing={0.9}
         kernelSize={KernelSize.MEDIUM}  // Changed from LARGE for performance
       />
       <ChromaticAberration
-        offset={new THREE.Vector2(0.0015 + audioLevel * 0.0005, 0.0015 + audioLevel * 0.0005)}
+        offset={new THREE.Vector2(0.0015, 0.0015)}
         blendFunction={BlendFunction.NORMAL}
       />
       <Vignette
@@ -68,8 +72,8 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
         darkness={0.7}
         blendFunction={BlendFunction.NORMAL}
       />
-      <Noise 
-        opacity={0.015} 
+      <Noise
+        opacity={0.015}
         blendFunction={BlendFunction.OVERLAY}
       />
     </EffectComposer>
@@ -119,19 +123,14 @@ interface UnifiedSceneProps {
   showConnections?: boolean;
 }
 
-function UnifiedSceneContent({ 
+function UnifiedSceneContent({
   avatarConfig = { size: "medium", variant: "detailed" },
   showAvatar = true,
   showParticles = true,
   showConnections = true,
 }: UnifiedSceneProps) {
-  const micLevel = useMicLevel();
-  const speakerLevel = useSpeakerLevel();
   const engineState = useEngineState();
   const transcript = useTranscript();
-  
-  // Determine audio level based on state
-  const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
   const cameraZ = SIZE_MAP[avatarConfig.size];
 
   return (
@@ -144,7 +143,6 @@ function UnifiedSceneContent({
         <AvatarSceneContent
           size={cameraZ}
           showConnections={showConnections && avatarConfig.variant !== "minimal"}
-          audioLevel={audioLevel}
           state={engineState}
           variant={avatarConfig.variant}
         />
@@ -153,14 +151,13 @@ function UnifiedSceneContent({
       {/* Fluid Thought Particles Scene */}
       {showParticles && (
         <ParticleSceneContent
-          audioLevel={audioLevel}
           engineState={engineState}
           transcript={transcript}
         />
       )}
 
       {/* Shared Post-Processing (Single Pipeline) */}
-      <SharedPostProcessing audioLevel={audioLevel} state={engineState} />
+      <SharedPostProcessing state={engineState} />
     </>
   );
 }

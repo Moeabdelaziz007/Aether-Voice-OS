@@ -9,9 +9,9 @@
 import React, { useRef, useMemo, memo } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
-import { 
-  Float, 
-  MeshDistortMaterial, 
+import {
+  Float,
+  MeshDistortMaterial,
   Sparkles,
   Trail,
 } from "@react-three/drei";
@@ -124,12 +124,60 @@ const quantumFieldFragmentShader = `
 // Quantum Consciousness Core
 // ═══════════════════════════════════════════════════════════════════
 
-const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({ 
-  audioLevel, 
-  state 
-}: { 
-  audioLevel: number; 
-  state: EngineState 
+interface AvatarSceneProps {
+  size: number;
+  showConnections: boolean;
+  state: EngineState; // Kept for high-level logic, but actual levels are fetched in frame
+  variant: string;
+}
+
+export const AvatarSceneContent = memo(function AvatarSceneContent({
+  size,
+  showConnections,
+  state,
+  variant
+}: AvatarSceneProps) {
+  const { camera } = useThree();
+
+  // Update camera position based on size
+  React.useEffect(() => {
+    camera.position.z = size;
+  }, [camera, size]);
+
+  return (
+    <group>
+      {/* Main Consciousness Core */}
+      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
+        <QuantumConsciousnessCore state={state} />
+      </Float>
+
+      {/* Holographic Voice Rings */}
+      <HolographicVoiceRings state={state} />
+
+      {/* Neural Synaptic Mesh */}
+      {showConnections && (
+        <NeuralSynapticMesh
+          state={state}
+          nodeCount={variant === "immersive" ? 35 : 20}
+        />
+      )}
+
+      {/* Quantum Particles */}
+      <QuantumParticleField state={state} />
+
+      {/* Orbiting Energy Trails */}
+      {variant !== "minimal" && (
+        <OrbitingEnergyTrails state={state} />
+      )}
+    </group>
+  );
+});
+
+// Implementation for QuantumConsciousnessCore with direct state access
+const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
+  state
+}: {
+  state: EngineState
 }) {
   const coreRef = useRef<THREE.Group>(null);
   const innerRef = useRef<THREE.Mesh>(null);
@@ -144,7 +192,7 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
       SPEAKING: { primary: QUANTUM_COLORS.neonGreen.glow, secondary: QUANTUM_COLORS.neonGreen.plasma, intensity: 1.5 },
       INTERRUPTING: { primary: QUANTUM_COLORS.accent.crimson, secondary: QUANTUM_COLORS.accent.amber, intensity: 2.0 },
     };
-    return stateColors[state] || stateColors.IDLE;
+    return (stateColors[state as keyof typeof stateColors] || stateColors.IDLE) as any;
   }, [state]);
 
   const shaderUniforms = useMemo(() => ({
@@ -157,6 +205,8 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
 
   useFrame((frameState) => {
     const t = frameState.clock.elapsedTime;
+    const { micLevel, speakerLevel, engineState } = useAetherStore.getState();
+    const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
 
     if (materialRef.current) {
       materialRef.current.uniforms.uTime.value = t;
@@ -189,7 +239,7 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
           color={colors.primary}
           wireframe
           transparent
-          opacity={0.2 + audioLevel * 0.15}
+          opacity={0.2} // Opacity also updated in frame if needed, but fixed is fine for wireframe
         />
       </mesh>
 
@@ -219,17 +269,17 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
         <sphereGeometry args={[0.4, 24, 24]} />
         <MeshDistortMaterial
           color={colors.primary}
-          speed={4 + audioLevel * 8}
-          distort={0.35 + audioLevel * 0.25}
+          speed={4}
+          distort={0.35}
           radius={1}
           emissive={colors.primary}
-          emissiveIntensity={1.2 + audioLevel * 1.5}
+          emissiveIntensity={1.2}
         />
       </mesh>
 
       <pointLight
         color={colors.primary}
-        intensity={1.5 + audioLevel * 4}
+        intensity={1.5}
         distance={6}
         decay={2}
       />
@@ -238,18 +288,16 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// Holographic Voice Rings (Simplified)
+// Holographic Voice Rings (Optimized)
 // ═══════════════════════════════════════════════════════════════════
 
-const HolographicVoiceRings = memo(function HolographicVoiceRings({ 
-  audioLevel, 
-  state 
-}: { 
-  audioLevel: number; 
-  state: EngineState 
+const HolographicVoiceRings = memo(function HolographicVoiceRings({
+  state
+}: {
+  state: EngineState
 }) {
   const ringsRef = useRef<THREE.Group>(null);
-  const ringCount = 4; // Reduced from 5
+  const ringCount = 4;
 
   const ringColor = useMemo(() => {
     switch (state) {
@@ -264,7 +312,9 @@ const HolographicVoiceRings = memo(function HolographicVoiceRings({
   useFrame((frameState) => {
     if (!ringsRef.current) return;
     const t = frameState.clock.elapsedTime;
-    
+    const { micLevel, speakerLevel, engineState } = useAetherStore.getState();
+    const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
+
     ringsRef.current.children.forEach((ring, i) => {
       const mesh = ring as THREE.Mesh;
       const phase = (t * 2 + i * 0.3) % (Math.PI * 2);
@@ -300,12 +350,10 @@ const HolographicVoiceRings = memo(function HolographicVoiceRings({
 // Neural Synaptic Mesh (Optimized)
 // ═══════════════════════════════════════════════════════════════════
 
-const NeuralSynapticMesh = memo(function NeuralSynapticMesh({ 
-  audioLevel, 
+const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
   state,
-  nodeCount = 30  // Reduced from 40
-}: { 
-  audioLevel: number; 
+  nodeCount = 30
+}: {
   state: EngineState;
   nodeCount?: number;
 }) {
@@ -315,19 +363,19 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
   const { nodePositions, connectionGeometry } = useMemo(() => {
     const positions: THREE.Vector3[] = [];
     const conns: [number, number][] = [];
-    
+
     for (let i = 0; i < nodeCount; i++) {
       const theta = Math.random() * Math.PI * 2;
       const phi = Math.acos(2 * Math.random() - 1);
       const r = 2.5 + Math.random() * 1.2;
-      
+
       positions.push(new THREE.Vector3(
         r * Math.sin(phi) * Math.cos(theta),
         r * Math.sin(phi) * Math.sin(theta),
         r * Math.cos(phi)
       ));
     }
-    
+
     for (let i = 0; i < positions.length; i++) {
       for (let j = i + 1; j < positions.length; j++) {
         const dist = positions[i].distanceTo(positions[j]);
@@ -336,15 +384,15 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
         }
       }
     }
-    
+
     const posArr: number[] = [];
     conns.forEach(([i, j]) => {
       posArr.push(positions[i].x, positions[i].y, positions[i].z, positions[j].x, positions[j].y, positions[j].z);
     });
-    
+
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(posArr, 3));
-    
+
     return { nodePositions: positions, connectionGeometry: geo };
   }, [nodeCount]);
 
@@ -360,6 +408,8 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
 
   useFrame((frameState) => {
     const t = frameState.clock.elapsedTime;
+    const { micLevel, speakerLevel, engineState } = useAetherStore.getState();
+    const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
 
     if (networkRef.current) {
       networkRef.current.rotation.y += 0.0015;
@@ -389,14 +439,14 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
     <group ref={networkRef}>
       <instancedMesh ref={nodesRef} args={[undefined, undefined, nodeCount]}>
         <sphereGeometry args={[1, 6, 6]} />
-        <meshBasicMaterial color={nodeColor} transparent opacity={0.7 + audioLevel * 0.2} />
+        <meshBasicMaterial color={nodeColor} transparent opacity={0.7} />
       </instancedMesh>
 
       <lineSegments geometry={connectionGeometry}>
         <lineBasicMaterial
           color={nodeColor}
           transparent
-          opacity={0.15 + audioLevel * 0.25}
+          opacity={0.15}
           blending={THREE.AdditiveBlending}
         />
       </lineSegments>
@@ -408,13 +458,18 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
 // Quantum Particle Field (Uses drei Sparkles)
 // ═══════════════════════════════════════════════════════════════════
 
-const QuantumParticleField = memo(function QuantumParticleField({ 
-  audioLevel, 
-  state 
-}: { 
-  audioLevel: number; 
-  state: EngineState 
+const QuantumParticleField = memo(function QuantumParticleField({
+  state
+}: {
+  state: EngineState
 }) {
+  const [audioLevel, setAudioLevel] = React.useState(0);
+
+  useFrame(() => {
+    const { micLevel, speakerLevel, engineState } = useAetherStore.getState();
+    setAudioLevel(engineState === "SPEAKING" ? speakerLevel : micLevel);
+  });
+
   const particleColor = useMemo(() => {
     switch (state) {
       case "SPEAKING": return "#00ff88";
@@ -427,7 +482,7 @@ const QuantumParticleField = memo(function QuantumParticleField({
 
   return (
     <Sparkles
-      count={150}  // Reduced from 200
+      count={150}
       scale={7}
       size={2.5 + audioLevel * 4}
       speed={0.4 + audioLevel * 1.5}
@@ -441,15 +496,13 @@ const QuantumParticleField = memo(function QuantumParticleField({
 // Orbiting Energy Trails (Reduced count)
 // ═══════════════════════════════════════════════════════════════════
 
-const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({ 
-  audioLevel, 
-  state 
-}: { 
-  audioLevel: number; 
-  state: EngineState 
+const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
+  state
+}: {
+  state: EngineState
 }) {
   const orbitersRef = useRef<THREE.Group>(null);
-  const orbiterCount = 2; // Reduced from 3
+  const orbiterCount = 2;
 
   const trailColor = useMemo(() => {
     switch (state) {
@@ -463,6 +516,8 @@ const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
   useFrame((frameState) => {
     if (!orbitersRef.current) return;
     const t = frameState.clock.elapsedTime;
+    const { micLevel, speakerLevel, engineState } = useAetherStore.getState();
+    const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
 
     orbitersRef.current.children.forEach((orbiter, i) => {
       const speed = 0.4 + i * 0.25 + audioLevel * 0.4;
@@ -480,7 +535,7 @@ const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
       {Array.from({ length: orbiterCount }).map((_, i) => (
         <Trail
           key={i}
-          width={0.12 + audioLevel * 0.08}
+          width={0.12}
           length={6}
           color={trailColor}
           attenuation={(width) => width}
@@ -495,58 +550,4 @@ const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
   );
 });
 
-// ═══════════════════════════════════════════════════════════════════
-// Main Avatar Scene Content Export
-// ═══════════════════════════════════════════════════════════════════
-
-interface AvatarSceneProps {
-  size: number;
-  showConnections: boolean;
-  audioLevel: number;
-  state: EngineState;
-  variant: string;
-}
-
-export const AvatarSceneContent = memo(function AvatarSceneContent({ 
-  size, 
-  showConnections, 
-  audioLevel, 
-  state,
-  variant 
-}: AvatarSceneProps) {
-  const { camera } = useThree();
-
-  // Update camera position based on size
-  React.useEffect(() => {
-    camera.position.z = size;
-  }, [camera, size]);
-
-  return (
-    <group>
-      {/* Main Consciousness Core */}
-      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
-        <QuantumConsciousnessCore audioLevel={audioLevel} state={state} />
-      </Float>
-
-      {/* Holographic Voice Rings */}
-      <HolographicVoiceRings audioLevel={audioLevel} state={state} />
-
-      {/* Neural Synaptic Mesh */}
-      {showConnections && (
-        <NeuralSynapticMesh 
-          audioLevel={audioLevel} 
-          state={state} 
-          nodeCount={variant === "immersive" ? 40 : 25}
-        />
-      )}
-
-      {/* Quantum Particles */}
-      <QuantumParticleField audioLevel={audioLevel} state={state} />
-
-      {/* Orbiting Energy Trails */}
-      {variant !== "minimal" && (
-        <OrbitingEnergyTrails audioLevel={audioLevel} state={state} />
-      )}
-    </group>
-  );
-});
+import { useAetherStore } from "@/store/useAetherStore";

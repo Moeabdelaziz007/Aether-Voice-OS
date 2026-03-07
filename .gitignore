@@ -48,6 +48,9 @@ node_modules/
 **/node_modules/
 .next/
 out/
+out\ 2/
+.npm-cache/
+*.tsbuildinfo
 target/
 **/target/
 Cargo.lock
@@ -60,4 +63,5 @@ logs/
 # --- Aether Internal ---
 brain/packages/*/secrets/
 .git_stuck_backup/
-\ndump.rdb\n.coverage
+dump.rdb
+.coverage
