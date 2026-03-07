@@ -8,8 +8,8 @@
  * Performance Impact: 30-40% GPU reduction, 15-20 FPS gain
  */
 
-import React, { memo, useMemo } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { memo, useMemo, useRef } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { EffectComposer, Bloom, ChromaticAberration, Vignette, Noise } from "@react-three/postprocessing";
 import { BlendFunction, KernelSize } from "postprocessing";

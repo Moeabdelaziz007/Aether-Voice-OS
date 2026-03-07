@@ -12,7 +12,7 @@
  * Performance Impact: 50% CPU reduction vs Framer Motion
  */
 
-import { useMemo, memo } from "react";
+import { useMemo, memo, useState, useEffect } from "react";
 import { useAetherStore } from "@/store/useAetherStore";
 
 interface Particle {
@@ -44,6 +44,12 @@ function generateParticles(count: number): Particle[] {
 }
 
 const ParticleField = memo(function ParticleField({ count = 25 }: { count?: number }) {
+    const [hasMounted, setHasMounted] = useState(false);
+
+    useEffect(() => {
+        setHasMounted(true);
+    }, []);
+
     const particles = useMemo(() => generateParticles(count), [count]);
     const engineState = useAetherStore((s) => s.engineState);
 
@@ -57,6 +63,8 @@ const ParticleField = memo(function ParticleField({ count = 25 }: { count?: numb
             default: return "intensity-low";
         }
     }, [engineState]);
+
+    if (!hasMounted) return <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden particle-field intensity-low" aria-hidden="true" />;
 
     return (
         <div
@@ -93,7 +101,7 @@ const ParticleField = memo(function ParticleField({ count = 25 }: { count?: numb
                         <stop offset="100%" stopColor="rgba(var(--accent-r), var(--accent-g), var(--accent-b), 0.4)" />
                     </linearGradient>
                 </defs>
-                
+
                 {particles.slice(0, 12).map((p, i) => {
                     const next = particles[(i + 3) % particles.length];
                     return (
