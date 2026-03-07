@@ -2,6 +2,9 @@
 
 import React from "react";
 import { Activity, Shield, Cpu, Network } from "lucide-react";
+import { SkillsManagerWidget } from "./SkillsManagerWidget";
+import { PersonaConfigWidget } from "./PersonaConfigWidget";
+import { ThemeSettingsWidget } from "./ThemeSettingsWidget";
 
 /**
  * SystemStatusWidget — Real-time health metrics.
@@ -57,8 +60,17 @@ function PortStatusWidget({ ports }: { ports: { port: number; status: string }[]
     );
 }
 
-// Registry mapping
+/**
+ * Widget Registry — Maps widget IDs to React components
+ * Registers both legacy system widgets and new generative UI widgets
+ */
 export const WIDGET_REGISTRY: Record<string, React.FC<any>> = {
+    // Legacy system widgets
     "system_status": SystemStatusWidget,
     "port_registry": PortStatusWidget,
+    
+    // New generative UI widgets
+    "skills_manager": SkillsManagerWidget,
+    "persona_config": PersonaConfigWidget,
+    "theme_settings": ThemeSettingsWidget,
 };

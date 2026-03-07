@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Command, Zap, MessageSquare, Bot, Cpu } from "lucide-react";
 import { useAetherGateway } from "@/hooks/useAetherGateway";
 import { useAetherStore } from "@/store/useAetherStore";
+import { processIntent } from "@/app/actions/terminalActions";
+import { WIDGET_REGISTRY } from "@/components/generative/WidgetRegistry";
 
 /**
  * Omnibar — The 3-Level Intent Entry Point.
@@ -53,14 +55,48 @@ export default function Omnibar() {
     const handleExecute = async () => {
         if (!inputValue.trim()) return;
 
+        const input = inputValue.toLowerCase();
+        
+        // Intent parsing logic — detect which widget to inject
+        const skillsKeywords = ["manage skills", "toggle skill", "skills", "sync skills", "what skills"];
+        const personaKeywords = ["persona", "set tone", "change formality", "change verbosity", "preset", "analytical", "mentor", "assistant"];
+        const themeKeywords = ["theme", "display settings", "change theme", "glow", "blur", "scanlines", "grain"];
+        
+        let widgetToInject: string | null = null;
+        
+        if (skillsKeywords.some(kw => input.includes(kw))) {
+            widgetToInject = "skills_manager";
+        } else if (personaKeywords.some(kw => input.includes(kw))) {
+            widgetToInject = "persona_config";
+        } else if (themeKeywords.some(kw => input.includes(kw))) {
+            widgetToInject = "theme_settings";
+        }
+
         // Level detection logic (Quick heuristics)
         let targetLevel: 1 | 2 | 3 = level;
-        if (inputValue.toLowerCase().startsWith("why") || inputValue.endsWith("?")) {
+        if (input.startsWith("why") || inputValue.endsWith("?")) {
             targetLevel = 2;
-        } else if (inputValue.toLowerCase().includes("fix") || inputValue.toLowerCase().includes("deploy")) {
+        } else if (input.includes("fix") || input.includes("deploy")) {
             targetLevel = 3;
         }
 
+        // Process intent with terminal logging
+        try {
+            const personaConfig = useAetherStore.getState().personaConfig;
+            const activeSkills = useAetherStore.getState().activeSkills;
+            await processIntent(inputValue, personaConfig, activeSkills);
+        } catch (error) {
+            console.error("[v0] Intent processing error:", error);
+            useAetherStore.getState().addTerminalLog('ERROR', `Failed to process intent: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+
+        // Inject widget if detected
+        if (widgetToInject && WIDGET_REGISTRY[widgetToInject]) {
+            useAetherStore.getState().addWidget(widgetToInject, {});
+            useAetherStore.getState().addTerminalLog('SYS', `[OK] ${widgetToInject.replace(/_/g, ' ')} widget injected.`);
+        }
+
+        // Legacy sendIntent call
         await sendIntent(inputValue, targetLevel);
 
         // Feedback & Cleanup

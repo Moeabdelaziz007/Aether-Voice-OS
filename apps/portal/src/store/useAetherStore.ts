@@ -28,6 +28,52 @@ export interface RepairState {
     timestamp: number;
 }
 
+// ─── Terminal Feed State ───────────────────────────────────
+export interface TerminalLog {
+    id: string;
+    level: 'SYS' | 'VOICE' | 'AGENT' | 'SUCCESS' | 'ERROR' | 'SKILLS' | 'PERSONA' | 'THEME';
+    message: string;
+    timestamp: number;
+    widgetId?: string; // Optional reference to inline widget
+}
+
+// ─── Skills & Persona State ───────────────────────────────
+export type SkillsSyncStatus = 'idle' | 'syncing' | 'success' | 'cached' | 'failed';
+
+export interface Skill {
+    id: string;
+    name: string;
+    enabled: boolean;
+    description: string;
+}
+
+export interface PersonaConfig {
+    tone: 'analytical' | 'creative' | 'neutral';
+    formality: 'formal' | 'casual' | 'technical';
+    verbosity: 'concise' | 'balanced' | 'verbose';
+    customPrompt?: string;
+}
+
+// ─── Theme Configuration State ─────────────────────────────
+export type ThemeType = 'matrix-core' | 'quantum-cyan' | 'cyber-amber' | 'ghost-white';
+
+export interface ThemeConfig {
+    currentTheme: ThemeType;
+    accentColor: string;
+    glowIntensity: number; // 0 - 1
+    blurIntensity: number; // 3 - 24px
+    grainEnabled: boolean;
+    scanlinesEnabled: boolean;
+    typography: 'monospace' | 'sans-serif';
+}
+
+export interface VisualSettings {
+    blurLight: number;
+    blurHeavy: number;
+    glowColor: string;
+    backgroundColor: string;
+}
+
 // ─── Data Interfaces ───────────────────────────────────────
 export interface TranscriptMessage {
     id: string;
@@ -258,6 +304,24 @@ interface AetherState {
     preferences: UserPreferences;
     settingsOpen: boolean;
 
+    // Terminal Feed State
+    terminalLogs: TerminalLog[];
+    isInterrupted: boolean;
+    scrollPaused: boolean;
+    streamingBuffer: string;
+
+    // Skills Management
+    activeSkills: Skill[];
+    cachedSkills: Skill[];
+    skillsSyncStatus: SkillsSyncStatus;
+
+    // Persona Configuration
+    personaConfig: PersonaConfig;
+
+    // Theme Configuration
+    themeConfig: ThemeConfig;
+    visualSettings: VisualSettings;
+
     // Actions — Realm
     setRealm: (realm: RealmType) => void;
 
@@ -303,6 +367,26 @@ interface AetherState {
     toggleSkillFocus: (skill: SkillFocus) => void;
     toggleSettings: () => void;
     resetPreferences: () => void;
+
+    // Actions — Terminal Feed
+    addTerminalLog: (level: TerminalLog['level'], message: string, widgetId?: string) => void;
+    clearTerminalLogs: () => void;
+    setInterrupted: (interrupted: boolean) => void;
+    setScrollPaused: (paused: boolean) => void;
+    setStreamingBuffer: (buffer: string) => void;
+
+    // Actions — Skills Management
+    setActiveSkills: (skills: Skill[]) => void;
+    setCachedSkills: (skills: Skill[]) => void;
+    toggleSkill: (skillId: string) => void;
+    setSkillsSyncStatus: (status: SkillsSyncStatus) => void;
+
+    // Actions — Persona Configuration
+    setPersonaConfig: (config: Partial<PersonaConfig>) => void;
+
+    // Actions — Theme Configuration
+    setThemeConfig: (config: Partial<ThemeConfig>) => void;
+    setVisualSettings: (settings: Partial<VisualSettings>) => void;
 }
 
 // ─── Optimized Selectors for Performance ────────────────────
@@ -366,6 +450,42 @@ export const useAetherStore = create<AetherState>()(
             persona: DEFAULT_PERSONA,
             preferences: DEFAULT_PREFERENCES,
             settingsOpen: false,
+
+            // Terminal Feed initial state
+            terminalLogs: [],
+            isInterrupted: false,
+            scrollPaused: false,
+            streamingBuffer: '',
+
+            // Skills initial state
+            activeSkills: [],
+            cachedSkills: [],
+            skillsSyncStatus: 'idle',
+
+            // Persona configuration initial state
+            personaConfig: {
+                tone: 'analytical',
+                formality: 'formal',
+                verbosity: 'balanced',
+            },
+
+            // Theme configuration initial state
+            themeConfig: {
+                currentTheme: 'matrix-core',
+                accentColor: '#00FF41',
+                glowIntensity: 1,
+                blurIntensity: 12,
+                grainEnabled: true,
+                scanlinesEnabled: false,
+                typography: 'monospace',
+            },
+
+            visualSettings: {
+                blurLight: 12,
+                blurHeavy: 24,
+                glowColor: '#00FF41',
+                backgroundColor: '#0B0B0C',
+            },
 
             // Realm actions
             setRealm: (currentRealm) => set({ currentRealm }),
@@ -484,11 +604,57 @@ export const useAetherStore = create<AetherState>()(
                 preferences: DEFAULT_PREFERENCES,
                 persona: DEFAULT_PERSONA,
             }),
+
+            // Terminal Feed actions
+            addTerminalLog: (level, message, widgetId) => set((state) => ({
+                terminalLogs: [...state.terminalLogs, {
+                    id: crypto.randomUUID(),
+                    level,
+                    message,
+                    timestamp: Date.now(),
+                    widgetId,
+                }].slice(-50), // Keep max 50 logs
+            })),
+
+            clearTerminalLogs: () => set({ terminalLogs: [] }),
+            setInterrupted: (isInterrupted) => set({ isInterrupted }),
+            setScrollPaused: (scrollPaused) => set({ scrollPaused }),
+            setStreamingBuffer: (streamingBuffer) => set({ streamingBuffer }),
+
+            // Skills Management actions
+            setActiveSkills: (activeSkills) => set({ activeSkills }),
+            setCachedSkills: (cachedSkills) => set({ cachedSkills }),
+
+            toggleSkill: (skillId) => set((state) => ({
+                activeSkills: state.activeSkills.map(skill =>
+                    skill.id === skillId ? { ...skill, enabled: !skill.enabled } : skill
+                ),
+            })),
+
+            setSkillsSyncStatus: (skillsSyncStatus) => set({ skillsSyncStatus }),
+
+            // Persona Configuration actions
+            setPersonaConfig: (updates) => set((state) => ({
+                personaConfig: { ...state.personaConfig, ...updates },
+            })),
+
+            // Theme Configuration actions
+            setThemeConfig: (updates) => set((state) => ({
+                themeConfig: { ...state.themeConfig, ...updates },
+            })),
+
+            setVisualSettings: (updates) => set((state) => ({
+                visualSettings: { ...state.visualSettings, ...updates },
+            })),
         }),
         {
             name: 'aether-preferences',
             partialize: (state) => ({
                 preferences: state.preferences,
+                personaConfig: state.personaConfig,
+                themeConfig: state.themeConfig,
+                visualSettings: state.visualSettings,
+                cachedSkills: state.cachedSkills,
             }),
         }
     )

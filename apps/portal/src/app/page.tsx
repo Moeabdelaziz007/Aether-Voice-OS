@@ -25,6 +25,9 @@ import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useAetherStore } from "@/store/useAetherStore";
 import NeuralBackground from "@/components/shared/NeuralBackground";
 import GenerativePortal from "@/components/generative/GenerativePortal";
+import ThemeProvider from "@/components/ThemeProvider";
+import BackgroundEngine from "@/components/utility/BackgroundEngine";
+import TerminalFeed from "@/components/TerminalFeed";
 
 // Dynamic import for 3D scene to improve initial load
 const UnifiedScene = dynamic(() => import("@/components/UnifiedScene"), {
@@ -98,18 +101,22 @@ export default function AetherPortal() {
     }, [preferences.accentColor, engineState]);
 
     return (
-        <LayoutGroup>
-            {/* ── Ambient Background Layers ── */}
-            <NeuralBackground />
-            <ParticleField count={20} />
+        <ThemeProvider>
+            <LayoutGroup>
+                {/* ── Theme & Visual System ── */}
+                <BackgroundEngine />
+                
+                {/* ── Ambient Background Layers ── */}
+                <NeuralBackground />
+                <ParticleField count={20} />
 
-            {/* Unified 3D Scene — Single WebGL Context */}
-            <UnifiedScene
-                avatarConfig={avatarConfig}
-                showAvatar={true}
-                showParticles={true}
-                showConnections={true}
-            />
+                {/* Unified 3D Scene — Single WebGL Context */}
+                <UnifiedScene
+                    avatarConfig={avatarConfig}
+                    showAvatar={true}
+                    showParticles={true}
+                    showConnections={true}
+                />
 
             {/* Chromatic Edge Glow — State-responsive border */}
             <EdgeGlow />
@@ -167,8 +174,12 @@ export default function AetherPortal() {
             {/* Generative UI Widgets Overlay */}
             <GenerativePortal />
 
-            {/* Command bar — always visible at bottom */}
-            <Omnibar />
-        </LayoutGroup>
+                {/* Terminal Feed — Central command log display */}
+                <TerminalFeed />
+
+                {/* Command bar — always visible at bottom */}
+                <Omnibar />
+            </LayoutGroup>
+        </ThemeProvider>
     );
 }

@@ -64,6 +64,89 @@
   --c-code: 245, 158, 11; /* neon-orange */
   --c-success: 74, 222, 128;
   --c-error: 244, 63, 94;
+
+  /* ─── THEME ENGINE VARIABLES (Updated by ThemeProvider) ─── */
+  /* Terminal Feed Log Level Colors */
+  --log-sys: #00F3FF;      /* [SYS] = cyan */
+  --log-voice: #FFD700;    /* [VOICE] = gold */
+  --log-agent: #00FF41;    /* [AGENT] = neon green */
+  --log-success: #10B981;  /* [SUCCESS] = emerald */
+  --log-error: #EF4444;    /* [ERROR] = red */
+  --log-skills: #A78BFA;   /* [SKILLS] = purple */
+  --log-persona: #FB7185;  /* [PERSONA] = pink */
+  --log-theme: #06B6D4;    /* [THEME] = cyan-600 */
+
+  /* Glassmorphism */
+  --blur-light: 12px;
+  --blur-heavy: 24px;
+  --glass-opacity: rgba(255, 255, 255, 0.1);
+
+  /* Glow Effects */
+  --glow-color-primary: #00FF41;
+  --glow-color-secondary: #00F3FF;
+
+  /* Transition for theme switching */
+  transition: all 0.3s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CYBERPUNK SUB-THEMES (Dynamic, updated by JS)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* [1] Matrix Core (Default) — Deep carbon fiber + Acid Neon Green */
+:root.theme-matrix-core {
+  --bg-primary: #0B0B0C;
+  --bg-secondary: #1a1a1b;
+  --bg-tertiary: #2a2a2b;
+  --accent-r: 0;
+  --accent-g: 255;
+  --accent-b: 65;
+  --glow-intensity: 1;
+  --glow-color: #00FF41;
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+}
+
+/* [2] Quantum Cyan (Analytical Mode) — Obsidian glass + Electric Cyan */
+:root.theme-quantum-cyan {
+  --bg-primary: #050914;
+  --bg-secondary: #0a1428;
+  --bg-tertiary: #14213d;
+  --accent-r: 0;
+  --accent-g: 229;
+  --accent-b: 255;
+  --glow-intensity: 0.6;
+  --glow-color: #00E5FF;
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.65);
+}
+
+/* [3] Cyber Amber (Focus/Alert Mode) — Dark charcoal + Terminal Amber */
+:root.theme-cyber-amber {
+  --bg-primary: #110F0A;
+  --bg-secondary: #2a2416;
+  --bg-tertiary: #3d3220;
+  --accent-r: 255;
+  --accent-g: 176;
+  --accent-b: 0;
+  --glow-intensity: 0.8;
+  --glow-color: #FFB000;
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.6);
+}
+
+/* [4] Ghost White (Minimalist) — Pure black + Monochrome white */
+:root.theme-ghost-white {
+  --bg-primary: #000000;
+  --bg-secondary: #1a1a1a;
+  --bg-tertiary: #2d2d2d;
+  --accent-r: 255;
+  --accent-g: 255;
+  --accent-b: 255;
+  --glow-intensity: 0;
+  --glow-color: #FFFFFF;
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.6);
 }
 
 /* ────────────────────────────── GLOBAL RESET ─────────────────────────────── */
@@ -186,6 +269,39 @@ body::after {
 @keyframes realm-enter {
   0% { opacity: 0; transform: scale(0.97) translateY(8px); filter: blur(4px); }
   100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+
+/* Terminal Feed Animations */
+@keyframes typewriter {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@keyframes terminal-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes widget-fade-out {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes neon-glow-pulse {
+  0%, 100% { text-shadow: 0 0 10px currentColor; }
+  50% { text-shadow: 0 0 20px currentColor, 0 0 30px currentColor; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
