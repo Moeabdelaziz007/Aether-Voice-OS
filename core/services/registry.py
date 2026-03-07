@@ -253,3 +253,11 @@ class AetherRegistry:
     @property
     def count(self) -> int:
         return len(self._packages)
+
+    def get_package_by_client_id(self, client_id: str) -> Optional[AthPackage]:
+        for pkg in self._packages.values():
+            if hasattr(pkg.manifest, "client_id") and pkg.manifest.client_id == client_id:
+                return pkg
+            if hasattr(pkg.manifest, "public_key") and pkg.manifest.public_key == client_id:
+                return pkg
+        return None

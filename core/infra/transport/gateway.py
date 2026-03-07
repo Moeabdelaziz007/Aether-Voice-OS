@@ -90,6 +90,7 @@ class AetherGateway:
         self._gateway_config = gateway_config
         self._ai_config = ai_config
         self._audio_config = audio_config
+        self._pre_warmed_session = None
         self._tool_router = tool_router
         self._hive = hive
         self._hive.set_pre_warm_callback(self.pre_warm_soul)

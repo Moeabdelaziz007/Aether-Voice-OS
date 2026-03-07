@@ -15,6 +15,7 @@ Architecture:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
@@ -100,7 +101,7 @@ class HiveCoordinator:
         self._dna_pool: Dict[str, AgentDNA] = {}
         self._genetic_optimizer = (
             GeneticOptimizer(registry.firebase, api_key)
-            if hasattr(registry, 'firebase') and registry.firebase and api_key
+            if hasattr(registry, "firebase") and registry.firebase and api_key
             else None
         )
 
@@ -109,6 +110,10 @@ class HiveCoordinator:
             from core.infra.event_bus import AcousticTraitEvent
 
             self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
+
+    def set_pre_warm_callback(self, callback: Callable[[str], Any]) -> None:
+        """Sets the callback to trigger soul pre-warming during handoff."""
+        self._pre_warm_callback = callback
 
     @property
     def active_soul(self) -> AthPackage:
@@ -190,11 +195,13 @@ class HiveCoordinator:
             )
 
             # Create handover context
-            context = await self._handover_protocol.create_handover( # Await protocol call
-                source_agent=source_name,
-                target_agent=target_name,
-                task=task,
-                payload=payload or {},
+            context = (
+                await self._handover_protocol.create_handover(  # Await protocol call
+                    source_agent=source_name,
+                    target_agent=target_name,
+                    task=task,
+                    payload=payload or {},
+                )
             )
 
             # Add code context if provided
@@ -213,7 +220,10 @@ class HiveCoordinator:
                 )
 
             # Pre-transfer validation
-            success, message = await self._handover_protocol.prepare_handoff( # Await protocol call
+            (
+                success,
+                message,
+            ) = await self._handover_protocol.prepare_handoff(  # Await protocol call
                 context.handover_id
             )
             if not success:
@@ -247,7 +257,9 @@ class HiveCoordinator:
                 context.negotiation = negotiation
             else:
                 # Speculative pre-warming for zero-friction handovers
-                await self._handover_protocol.pre_warm_target(context.handover_id) # Await protocol call
+                await self._handover_protocol.pre_warm_target(
+                    context.handover_id
+                )  # Await protocol call
                 if self._pre_warm_callback:
                     # Non-blocking trigger of gateway pre-warm
                     if asyncio.iscoroutinefunction(self._pre_warm_callback):
@@ -256,7 +268,9 @@ class HiveCoordinator:
                         self._pre_warm_callback(target_name)
 
                 if self._on_handover:
-                    if asyncio.iscoroutinefunction(self._on_handover): # Await callback if async
+                    if asyncio.iscoroutinefunction(
+                        self._on_handover
+                    ):  # Await callback if async
                         await self._on_handover(source_name, target_name, "PRE_WARMING")
                     else:
                         self._on_handover(source_name, target_name, "PRE_WARMING")
@@ -327,7 +341,7 @@ class HiveCoordinator:
         try:
             # Add validation checkpoint if provided
             if validation_results:
-                checkpoint = await self._handover_protocol.create_checkpoint( # Await protocol call
+                checkpoint = await self._handover_protocol.create_checkpoint(  # Await protocol call
                     handover_id=handover_id,
                     stage="post_transfer",
                     partial_output={"validation_results": validation_results},
@@ -343,7 +357,9 @@ class HiveCoordinator:
                     logger.warning("Handover %s has validation issues", handover_id)
 
             # Complete the handover
-            success, message = await self._handover_protocol.complete_handoff(handover_id) # Await protocol call
+            success, message = await self._handover_protocol.complete_handoff(
+                handover_id
+            )  # Await protocol call
 
             if success:
                 # Save checkpoints for potential future rollbacks (Safety Net)
@@ -363,10 +379,16 @@ class HiveCoordinator:
                 # Trigger UI notification
                 if self._on_handover:
                     try:
-                        if asyncio.iscoroutinefunction(self._on_handover): # Await callback if async
-                            await self._on_handover(from_name, context.target_agent, context.task)
+                        if asyncio.iscoroutinefunction(
+                            self._on_handover
+                        ):  # Await callback if async
+                            await self._on_handover(
+                                from_name, context.target_agent, context.task
+                            )
                         else:
-                            self._on_handover(from_name, context.target_agent, context.task)
+                            self._on_handover(
+                                from_name, context.target_agent, context.task
+                            )
                     except Exception as e:
                         logger.error("Failed to trigger handover callback: %s", e)
 
@@ -593,40 +615,6 @@ class HiveCoordinator:
         )
 
         return checkpoint
-
-    async def rollback_handover(self, handover_id: str) -> bool:
-        """
-        Roll back a failed handover to the previous stable state.
-        Triggered by AetherGateway if the next expert fails to heart-beat.
-        """
-        context = self._active_handovers.get(handover_id)
-        if not context:
-            logger.warning("Rollback target '%s' not found in history.", handover_id)
-            return False
-
-        # Execute rollback in protocol
-        if self._handover_protocol:
-            success, _ = await self._handover_protocol.rollback_handover(handover_id)
-            if not success:
-                logger.error("Protocol-level rollback failed for %s", handover_id)
-
-        # 1. Restore context state if snapshot exists
-        if context and context.restore_snapshot():
-            logger.info("A2A [HIVE] Context restored from snapshot for %s", handover_id)
-
-        # 2. Revert active soul to the last known-good expert
-        if self._last_successful_soul:
-            logger.info(
-                "A2A [HIVE] Reverting active expert: %s -> %s",
-                self._active_soul.manifest.name if self._active_soul else "Unknown",
-                self._last_successful_soul.manifest.name,
-            )
-            self._active_soul = self._last_successful_soul
-
-        # 3. Update status to prevent re-triggered handovers
-        if context:
-            context.update_status(HandoverStatus.ROLLED_BACK)
-        return True
 
     def get_handover_context(self, handover_id: str) -> Optional[HandoverContext]:
         """Retrieve an active handover context by ID."""
