@@ -48,6 +48,7 @@ import TerminalFeed from "@/components/TerminalFeed";
 import HUDContainer from "@/components/HUD/HUDContainer";
 import MissionControlHUD from "@/components/HUD/MissionControlHUD";
 import OrbitalWorkspaceOverlay from "@/components/HUD/OrbitalWorkspaceOverlay";
+import MirrorInteractionOverlay from "@/components/HUD/MirrorInteractionOverlay";
 import SystemFailure from "@/components/HUD/SystemFailure";
 import RealmController from "@/components/realms/RealmController";
 
@@ -84,6 +85,10 @@ export default function AetherPortal() {
     const preferences = useAetherStore((s) => s.preferences);
     const engineState = useAetherStore((s) => s.engineState);
     const currentRealm = useAetherStore((s) => s.currentRealm);
+    const orbitRegistry = useAetherStore((s) => s.orbitRegistry);
+    const activeWidgets = useAetherStore((s) => s.activeWidgets);
+    const applyWorkspaceState = useAetherStore((s) => s.applyWorkspaceState);
+    const addWidget = useAetherStore((s) => s.addWidget);
 
     const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -134,6 +139,23 @@ export default function AetherPortal() {
     const showDashboard = activePanel === 'dashboard';
     const showManagementPanel = ['memory', 'skills', 'persona'].includes(activePanel || '');
     const showTerminal = activePanel === 'terminal';
+
+    useEffect(() => {
+        if (!showVoiceView) return;
+        if (!orbitRegistry['planet-notes']) {
+            applyWorkspaceState({
+                action: 'materialize_app',
+                app_id: 'planet-notes',
+                x: 140,
+                y: 10,
+                orbit_lane: 'inner',
+            });
+        }
+        const hasNotesWidget = activeWidgets.some((widget) => widget.type === 'notes_planet');
+        if (!hasNotesWidget) {
+            addWidget('notes_planet', { appId: 'planet-notes' });
+        }
+    }, [showVoiceView, orbitRegistry, activeWidgets, applyWorkspaceState, addWidget]);
 
     return (
         <ThemeProvider>
@@ -201,6 +223,7 @@ export default function AetherPortal() {
                                     <HUDContainer>
                                         <div className="relative w-full h-screen overflow-hidden">
                                             <OrbitalWorkspaceOverlay />
+                                            <MirrorInteractionOverlay />
                                             <SystemFailure />
                                             <RealmController />
                                             <MissionControlHUD />

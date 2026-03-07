@@ -133,6 +133,37 @@ export interface MissionLogEntry {
     timestamp: number;
 }
 
+export interface NotesPlanetEntry {
+    id: string;
+    content: string;
+    taskId?: string;
+    sessionId?: string;
+    tag: string;
+    createdAt: number;
+    updatedAt: number;
+}
+
+export interface MirrorFrameEvent {
+    id: string;
+    action: string;
+    eventKind: 'navigation' | 'click' | 'typing' | 'scroll' | 'capture';
+    selector?: string;
+    text?: string;
+    url?: string;
+    x?: number;
+    y?: number;
+    latencyMs?: number;
+    timestamp: number;
+}
+
+export interface VoyagerLatencyRow {
+    id: string;
+    label: string;
+    latencyMs: number;
+    status: 'ok' | 'error';
+    timestamp: number;
+}
+
 export type OrbitLane = 'inner' | 'mid' | 'outer';
 export type OrbitalLayoutPreset = 'inner' | 'mid' | 'outer';
 
@@ -381,6 +412,9 @@ interface AetherState {
     avatarCinematicState: AvatarCinematicState;
     taskPulse: TaskPulse | null;
     missionLog: MissionLogEntry[];
+    notesPlanet: NotesPlanetEntry[];
+    mirrorFrames: MirrorFrameEvent[];
+    voyagerLatencyRows: VoyagerLatencyRow[];
     orbitRegistry: Record<string, OrbitPlanet>;
     focusedPlanetId: string | null;
     orbitalLayoutPreset: OrbitalLayoutPreset;
@@ -456,6 +490,14 @@ interface AetherState {
     setTaskPulse: (pulse: TaskPulse | null) => void;
     pushMissionLog: (entry: Omit<MissionLogEntry, 'id' | 'timestamp'>) => void;
     clearMissionLog: () => void;
+    createPlanetNote: (entry: { content: string; tag?: string; taskId?: string; sessionId?: string }) => string;
+    updatePlanetNote: (id: string, updates: Partial<Pick<NotesPlanetEntry, 'content' | 'tag' | 'taskId' | 'sessionId'>>) => void;
+    deletePlanetNote: (id: string) => void;
+    clearPlanetNotes: () => void;
+    addMirrorFrameEvent: (event: Omit<MirrorFrameEvent, 'id' | 'timestamp'>) => void;
+    clearMirrorFrameEvents: () => void;
+    pushVoyagerLatencyRow: (row: Omit<VoyagerLatencyRow, 'id' | 'timestamp'>) => void;
+    clearVoyagerLatencyRows: () => void;
     setOrbitalLayoutPreset: (preset: OrbitalLayoutPreset) => void;
     setFocusModeEnvironment: (enabled: boolean) => void;
     upsertOrbitPlanet: (planet: OrbitPlanet) => void;
@@ -581,6 +623,9 @@ export const useAetherStore = create<AetherState>()(
             avatarCinematicState: "IDLE",
             taskPulse: null,
             missionLog: [],
+            notesPlanet: [],
+            mirrorFrames: [],
+            voyagerLatencyRows: [],
             orbitRegistry: {},
             focusedPlanetId: null,
             orbitalLayoutPreset: 'mid',
@@ -723,6 +768,53 @@ export const useAetherStore = create<AetherState>()(
                 }].slice(-120),
             })),
             clearMissionLog: () => set({ missionLog: [] }),
+            createPlanetNote: ({ content, tag = 'general', taskId, sessionId }) => {
+                const noteId = crypto.randomUUID();
+                const now = Date.now();
+                set((state) => ({
+                    notesPlanet: [...state.notesPlanet, {
+                        id: noteId,
+                        content,
+                        tag,
+                        taskId,
+                        sessionId,
+                        createdAt: now,
+                        updatedAt: now,
+                    }].slice(-500),
+                }));
+                return noteId;
+            },
+            updatePlanetNote: (id, updates) => set((state) => ({
+                notesPlanet: state.notesPlanet.map((note) =>
+                    note.id === id
+                        ? {
+                            ...note,
+                            ...updates,
+                            updatedAt: Date.now(),
+                        }
+                        : note
+                ),
+            })),
+            deletePlanetNote: (id) => set((state) => ({
+                notesPlanet: state.notesPlanet.filter((note) => note.id !== id),
+            })),
+            clearPlanetNotes: () => set({ notesPlanet: [] }),
+            addMirrorFrameEvent: (event) => set((state) => ({
+                mirrorFrames: [...state.mirrorFrames, {
+                    ...event,
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                }].slice(-40),
+            })),
+            clearMirrorFrameEvents: () => set({ mirrorFrames: [] }),
+            pushVoyagerLatencyRow: (row) => set((state) => ({
+                voyagerLatencyRows: [...state.voyagerLatencyRows, {
+                    ...row,
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                }].slice(-20),
+            })),
+            clearVoyagerLatencyRows: () => set({ voyagerLatencyRows: [] }),
             setOrbitalLayoutPreset: (orbitalLayoutPreset) => set({ orbitalLayoutPreset }),
             setFocusModeEnvironment: (focusModeEnvironment) => set({ focusModeEnvironment }),
             upsertOrbitPlanet: (planet) => set((state) => ({
@@ -930,6 +1022,7 @@ export const useAetherStore = create<AetherState>()(
                 visualSettings: state.visualSettings,
                 cachedSkills: state.cachedSkills,
                 workspaceGalaxy: state.workspaceGalaxy,
+                notesPlanet: state.notesPlanet,
             }),
         }
     )

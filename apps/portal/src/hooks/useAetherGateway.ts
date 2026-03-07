@@ -278,6 +278,40 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                         const payload = getCinematicPayload();
                         if (!payload) return;
                         store.applyWorkspaceState(payload);
+                        const appId = String(payload.app_id || payload.appId || "").toLowerCase();
+                        if (appId.includes("notes")) {
+                            const latestState = useAetherStore.getState();
+                            const notesWidget = latestState.activeWidgets.find((widget) => widget.type === "notes_planet");
+                            if ((payload.action === "materialize_app" || payload.action === "focus_app") && !notesWidget) {
+                                store.addWidget("notes_planet", { appId });
+                            }
+                            if (payload.action === "collapse_app" && notesWidget) {
+                                store.removeWidget(notesWidget.id);
+                            }
+                        }
+                    }
+
+                    else if (msg.type === "mirror_frame") {
+                        const payload = getCinematicPayload();
+                        if (!payload) return;
+                        const eventKind = payload.event_kind || payload.eventKind || "capture";
+                        store.addMirrorFrameEvent({
+                            action: payload.action || "capture_frame",
+                            eventKind,
+                            selector: payload.selector || undefined,
+                            text: payload.text || undefined,
+                            url: payload.url || undefined,
+                            x: typeof payload.x === "number" ? payload.x : undefined,
+                            y: typeof payload.y === "number" ? payload.y : undefined,
+                            latencyMs: Number(payload.latency_ms || payload.latencyMs || 0) || undefined,
+                        });
+                        if (payload.latency_ms || payload.latencyMs) {
+                            store.pushVoyagerLatencyRow({
+                                label: `${eventKind}:${payload.action || "action"}`,
+                                latencyMs: Number(payload.latency_ms || payload.latencyMs || 0),
+                                status: "ok",
+                            });
+                        }
                     }
 
                     // ── Mission Log Line ──

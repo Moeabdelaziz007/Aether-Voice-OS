@@ -4,7 +4,7 @@ Tests for the Neural Dispatcher (ToolRouter) and tool modules.
 Validates:
   - ToolRouter registration and dispatch
   - System tool functions (time, system info, timer)
-  - Tasks tool functions (create, list, complete, add_note)
+  - Tasks tool functions (create, list, complete, add_note, recall_notes)
   - Module auto-discovery via get_tools()
   - Error handling for unknown tools
 """
@@ -53,11 +53,12 @@ class TestToolRouter:
 
         router = self._make_router()
         router.register_module(tasks_tool)
-        assert router.count >= 4
+        assert router.count >= 5
         assert "create_task" in router.names
         assert "list_tasks" in router.names
         assert "complete_task" in router.names
         assert "add_note" in router.names
+        assert "recall_notes" in router.names
 
     def test_get_declarations(self):
         from core.tools import system_tool
@@ -243,17 +244,26 @@ class TestTasksTool:
         assert result["status"] == "saved"
         assert "note_id" in result
 
+    @pytest.mark.asyncio
+    async def test_recall_notes_no_firebase(self):
+        """Recalling notes without Firebase should return unavailable."""
+        from core.tools.tasks_tool import recall_notes
+
+        result = await recall_notes(query="mail reminder")
+        assert result["status"] == "unavailable"
+
     def test_get_tools_returns_list(self):
         from core.tools.tasks_tool import get_tools
 
         tools = get_tools()
         assert isinstance(tools, list)
-        assert len(tools) >= 4
+        assert len(tools) >= 5
         names = [t["name"] for t in tools]
         assert "create_task" in names
         assert "list_tasks" in names
         assert "complete_task" in names
         assert "add_note" in names
+        assert "recall_notes" in names
 
 
 # ─── Integration: Engine + Router ─────────────────────────────

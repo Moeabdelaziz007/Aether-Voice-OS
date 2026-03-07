@@ -9,6 +9,7 @@ describe("MissionControlHUD", () => {
     const store = useAetherStore.getState();
     store.setWorkspaceGalaxy("Genesis");
     store.clearMissionLog();
+    store.clearVoyagerLatencyRows();
     store.setTaskPulse(null);
   });
 
@@ -45,5 +46,20 @@ describe("MissionControlHUD", () => {
     render(<MissionControlHUD />);
     expect(screen.getByText("Awaiting mission pulse.")).toBeTruthy();
     expect(screen.getByText("No timeline entries yet.")).toBeTruthy();
+    expect(screen.getByText("No voyager latency rows.")).toBeTruthy();
+  });
+
+  it("renders voyager latency rows", () => {
+    const store = useAetherStore.getState();
+    store.pushVoyagerLatencyRow({
+      label: "click:voyager_browser_control",
+      latencyMs: 42.3,
+      status: "ok",
+    });
+
+    render(<MissionControlHUD />);
+    expect(screen.getByText("Voyager Latency")).toBeTruthy();
+    expect(screen.getByText("click:voyager_browser_control")).toBeTruthy();
+    expect(screen.getByText("42ms")).toBeTruthy();
   });
 });

@@ -23,9 +23,14 @@ const STATUS_TONE: Record<string, string> = {
 export default function MissionControlHUD() {
   const taskPulse = useAetherStore((s) => s.taskPulse);
   const missionLog = useAetherStore((s) => s.missionLog);
+  const voyagerLatencyRows = useAetherStore((s) => s.voyagerLatencyRows);
   const workspaceGalaxy = useAetherStore((s) => s.workspaceGalaxy);
 
   const timeline = useMemo(() => missionLog.slice(-7).reverse(), [missionLog]);
+  const latencyRows = useMemo(
+    () => voyagerLatencyRows.slice(-4).reverse(),
+    [voyagerLatencyRows]
+  );
 
   return (
     <div className="absolute right-8 bottom-10 z-30 w-[min(560px,46vw)] space-y-3 pointer-events-none">
@@ -95,6 +100,32 @@ export default function MissionControlHUD() {
               </div>
             ))
           )}
+        </div>
+        <div className="mt-3 border-t border-white/10 pt-2">
+          <div className="text-[10px] tracking-[0.2em] text-cyan-200/70 font-mono uppercase">
+            Voyager Latency
+          </div>
+          <div className="mt-2 space-y-1">
+            {latencyRows.length === 0 ? (
+              <div className="text-[11px] text-white/45">No voyager latency rows.</div>
+            ) : (
+              latencyRows.map((row) => (
+                <div
+                  key={row.id}
+                  className="flex items-center justify-between rounded-md border border-white/5 bg-white/[0.02] px-2 py-1"
+                >
+                  <span className="text-[11px] text-white/70">{row.label}</span>
+                  <span
+                    className={`text-[11px] font-mono ${
+                      row.status === "ok" ? "text-emerald-300" : "text-rose-300"
+                    }`}
+                  >
+                    {Math.round(row.latencyMs)}ms
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       </div>
     </div>

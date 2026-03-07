@@ -16,8 +16,11 @@ If Firebase is unavailable, tools return graceful fallbacks.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
+from collections import Counter
 from datetime import datetime, timezone
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -213,6 +216,94 @@ async def add_note(content: str, tag: str = "general", **kwargs) -> dict:
     }
 
 
+def _tokenize(text: str) -> list[str]:
+    return [token for token in re.findall(r"[a-z0-9]+", text.lower()) if len(token) > 1]
+
+
+def _score_semantic_match(query: str, content: str) -> float:
+    query_tokens = _tokenize(query)
+    content_tokens = _tokenize(content)
+    if not query_tokens or not content_tokens:
+        return 0.0
+
+    query_counter = Counter(query_tokens)
+    content_counter = Counter(content_tokens)
+    overlap = set(query_counter).intersection(content_counter)
+    overlap_score = sum(
+        min(query_counter[token], content_counter[token]) for token in overlap
+    )
+    normalization = max(len(query_tokens), 1)
+    base_score = overlap_score / normalization
+    phrase_boost = 0.25 if query.lower() in content.lower() else 0.0
+    return min(1.0, base_score + phrase_boost)
+
+
+async def recall_notes(
+    query: str,
+    tag: str = "all",
+    limit: int = 5,
+    min_score: float = 0.15,
+    **kwargs: Any,
+) -> dict[str, Any]:
+    if not query.strip():
+        return {"status": "error", "message": "query_required", "notes": []}
+
+    db = _get_db()
+    if not db:
+        return {
+            "status": "unavailable",
+            "notes": [],
+            "message": "Firestore is not connected. Notes recall unavailable.",
+        }
+
+    try:
+        query_ref = db.collection("notes")
+        if tag != "all":
+            query_ref = query_ref.where("tag", "==", tag)
+
+        ranked: list[dict[str, Any]] = []
+        async for doc in query_ref.stream():
+            item = doc.to_dict()
+            content = str(item.get("content", ""))
+            score = _score_semantic_match(query, content)
+            if score < min_score:
+                continue
+            ranked.append(
+                {
+                    "note_id": item.get("note_id", doc.id),
+                    "content": content,
+                    "tag": item.get("tag", "general"),
+                    "created_at": item.get("created_at"),
+                    "score": round(score, 4),
+                }
+            )
+
+        ranked.sort(
+            key=lambda item: (float(item["score"]), str(item.get("created_at") or "")),
+            reverse=True,
+        )
+        sliced = ranked[: max(1, int(limit))]
+        if not sliced:
+            return {
+                "status": "empty",
+                "query": query,
+                "count": 0,
+                "notes": [],
+                "message": "No semantically related notes found.",
+            }
+
+        return {
+            "status": "success",
+            "query": query,
+            "count": len(sliced),
+            "notes": sliced,
+            "message": f"Found {len(sliced)} relevant note(s).",
+        }
+    except Exception as exc:
+        logger.error("Failed to recall notes: %s", exc)
+        return {"status": "error", "query": query, "notes": [], "message": str(exc)}
+
+
 def get_tools() -> list[dict]:
     """
     Module-level tool registration.
@@ -320,5 +411,33 @@ def get_tools() -> list[dict]:
             "handler": add_note,
             "latency_tier": "p95_sub_500ms",
             "idempotent": False,
+        },
+        {
+            "name": "recall_notes",
+            "description": (
+                "Semantically recall notes by meaning and keyword similarity. "
+                "Use when the user asks what they noted earlier about a topic."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Natural-language query for note recall",
+                    },
+                    "tag": {
+                        "type": "string",
+                        "description": "Optional tag filter; defaults to all",
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of note matches",
+                    },
+                },
+                "required": ["query"],
+            },
+            "handler": recall_notes,
+            "latency_tier": "p95_sub_500ms",
+            "idempotent": True,
         },
     ]

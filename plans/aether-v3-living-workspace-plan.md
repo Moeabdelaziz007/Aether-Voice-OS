@@ -1001,19 +1001,19 @@ src/styles/
 
 ### 17.6 Phase F — Notes Planet (AI-first App)
 
-- [ ] Create Notes Planet shell UI
-- [ ] Add note create/update/delete actions
-- [ ] Link notes to task IDs and voice session IDs
-- [ ] Add semantic note recall endpoint
-- [ ] Add one showcase flow in demo script
+- [x] Create Notes Planet shell UI
+- [x] Add note create/update/delete actions
+- [x] Link notes to task IDs and voice session IDs
+- [x] Add semantic note recall endpoint
+- [x] Add one showcase flow in demo script
 
 ### 17.7 Phase G — Voyager + Mirror
 
-- [ ] Add browser control tool wrapper
-- [ ] Add mirror frame event contract
-- [ ] Add click/typing highlight overlays
-- [ ] Add latency instrumentation rows in HUD
-- [ ] Add single fallback script path for demo
+- [x] Add browser control tool wrapper
+- [x] Add mirror frame event contract
+- [x] Add click/typing highlight overlays
+- [x] Add latency instrumentation rows in HUD
+- [x] Add single fallback script path for demo
 
 ### 17.8 Phase H — Galaxy Orchestration
 

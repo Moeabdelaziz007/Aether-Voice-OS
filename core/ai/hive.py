@@ -15,6 +15,7 @@ Architecture:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
 
@@ -116,6 +117,31 @@ class HiveCoordinator:
         """Register a callback for injecting DNA updates into the session."""
         self._inject_dna_callback = callback
 
+    async def _notify_handover(
+        self,
+        from_agent: str,
+        to_agent: str,
+        task: str,
+        payload: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        if not self._on_handover:
+            return
+        callback_payload = dict(payload or {})
+        callback_payload.setdefault("galaxy_id", "Genesis")
+        try:
+            if asyncio.iscoroutinefunction(self._on_handover):
+                try:
+                    await self._on_handover(from_agent, to_agent, task, callback_payload)
+                except TypeError:
+                    await self._on_handover(from_agent, to_agent, task)
+            else:
+                try:
+                    self._on_handover(from_agent, to_agent, task, callback_payload)
+                except TypeError:
+                    self._on_handover(from_agent, to_agent, task)
+        except Exception as e:
+            logger.error("Failed to trigger handover callback: %s", e)
+
     @property
     def active_soul(self) -> AthPackage:
         if not self._active_soul:
@@ -153,11 +179,7 @@ class HiveCoordinator:
     async def request_handoff(self, target_agent: str, task: str):
         """Standard request for any kind of handover."""
         logger.info(f"COORD: Requested handoff to {target_agent}")
-        if self._on_handover:
-            if asyncio.iscoroutinefunction(self._on_handover):
-                await self._on_handover("Hive", target_agent, task)
-            else:
-                self._on_handover("Hive", target_agent, task)
+        await self._notify_handover("Hive", target_agent, task, {"galaxy_id": "Genesis"})
 
     async def prepare_handoff(
         self,
@@ -194,13 +216,15 @@ class HiveCoordinator:
             source_name = (
                 self.active_soul.manifest.name if self._active_soul else "System"
             )
+            payload_with_galaxy = dict(payload or {})
+            payload_with_galaxy.setdefault("galaxy_id", "Genesis")
 
             # Create handover context
             context = await self._handover_protocol.create_handover( # Await protocol call
                 source_agent=source_name,
                 target_agent=target_name,
                 task=task,
-                payload=payload or {},
+                payload=payload_with_galaxy,
             )
             
             # Create snapshot for potential rollback
@@ -264,11 +288,12 @@ class HiveCoordinator:
                     else:
                         self._pre_warm_callback(target_name)
 
-                if self._on_handover:
-                    if asyncio.iscoroutinefunction(self._on_handover): # Await callback if async
-                        await self._on_handover(source_name, target_name, "PRE_WARMING")
-                    else:
-                        self._on_handover(source_name, target_name, "PRE_WARMING")
+                await self._notify_handover(
+                    source_name,
+                    target_name,
+                    "PRE_WARMING",
+                    context.payload,
+                )
 
             logger.info(
                 "A2A [HIVE] Handover prepared: %s -> %s (ID: %s)",
@@ -370,14 +395,12 @@ class HiveCoordinator:
                 self._handover_history.append(handover_id)
 
                 # Trigger UI notification
-                if self._on_handover:
-                    try:
-                        if asyncio.iscoroutinefunction(self._on_handover): # Await callback if async
-                            await self._on_handover(from_name, context.target_agent, context.task)
-                        else:
-                            self._on_handover(from_name, context.target_agent, context.task)
-                    except Exception as e:
-                        logger.error("Failed to trigger handover callback: %s", e)
+                await self._notify_handover(
+                    from_name,
+                    context.target_agent,
+                    context.task,
+                    context.payload,
+                )
 
                 # Record telemetry
                 if self._telemetry:

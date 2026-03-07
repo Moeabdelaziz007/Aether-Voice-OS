@@ -59,6 +59,7 @@ from core.tools import (
     memory_tool,
     system_tool,
     tasks_tool,
+    voyager_tool,
     vision_tool,
     workspace_tool,
 )
@@ -222,6 +223,7 @@ class AetherEngine:
         tasks_tool.set_firebase_connector(self._firebase)
         memory_tool.set_firebase_connector(self._firebase)
         workspace_tool.set_workspace_event_emitter(self._emit_workspace_event)
+        voyager_tool.set_mirror_event_emitter(self._emit_workspace_event)
 
         self._router.register_module(system_tool)
         self._router.register_module(tasks_tool)
@@ -234,6 +236,7 @@ class AetherEngine:
         self._router.register_module(context_scraper)
         self._router.register_module(aix_tool)
         self._router.register_module(workspace_tool)
+        self._router.register_module(voyager_tool)
         self._router.register(
             name="delegate_complex_task",
             description=(
@@ -365,9 +368,16 @@ class AetherEngine:
             )
         )
 
-    def _on_agent_handover(self, from_agent: str, to_agent: str, task: str) -> None:
+    def _on_agent_handover(
+        self,
+        from_agent: str,
+        to_agent: str,
+        task: str,
+        payload: dict[str, Any] | None = None,
+    ) -> None:
         """Broadcasts a neural handover event to the UI."""
         logger.info(f"Broadcast: Neural Handover [{from_agent}] -> [{to_agent}]")
+        galaxy_id = str((payload or {}).get("galaxy_id", "Genesis"))
         if self._gateway:
             handover_id = f"handover-{int(datetime.now().timestamp())}"
             self._run_background_task(
@@ -376,6 +386,7 @@ class AetherEngine:
                     from_agent=from_agent,
                     to_agent=to_agent,
                     task=task,
+                    galaxy_id=galaxy_id,
                 )
             )
             self._run_background_task(
@@ -387,6 +398,7 @@ class AetherEngine:
                         "toAgent": to_agent,
                         "task": task,
                         "status": "completed",
+                        "galaxy_id": galaxy_id,
                         "timestamp": datetime.now().isoformat(),
                     },
                 )
@@ -398,6 +410,7 @@ class AetherEngine:
         from_agent: str,
         to_agent: str,
         task: str,
+        galaxy_id: str = "Genesis",
     ) -> None:
         if not self._gateway:
             return
@@ -408,7 +421,7 @@ class AetherEngine:
         await self._gateway.broadcast(
             "workspace_state",
             {
-                "workspace_galaxy": "Genesis",
+                "workspace_galaxy": galaxy_id,
                 "focus_agent": to_agent,
                 "protocol_version": protocol_version,
                 "timestamp": now_iso,
@@ -435,6 +448,7 @@ class AetherEngine:
                 "avatar_target": to_agent,
                 "intensity": 0.82,
                 "latency_ms": 120,
+                "galaxy_id": galaxy_id,
                 "protocol_version": protocol_version,
                 "timestamp": now_iso,
             },
@@ -446,6 +460,7 @@ class AetherEngine:
                 "title": "Handover Completed",
                 "detail": f"{from_agent} delegated '{task}' to {to_agent}",
                 "status": "completed",
+                "galaxy_id": galaxy_id,
                 "protocol_version": protocol_version,
                 "timestamp": now_iso,
             },

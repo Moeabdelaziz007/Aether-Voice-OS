@@ -47,6 +47,7 @@ def format_handover_context_for_instruction(session_facade) -> str:
         "# HANDOVER CONTEXT",
         f"Handover ID: {ctx.handover_id}",
         f"From: {ctx.source_agent} → To: {ctx.target_agent}",
+        f"Galaxy: {ctx.galaxy_id}",
         f"Task: {ctx.task}",
     ]
 

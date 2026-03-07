@@ -17,10 +17,15 @@ beforeEach(() => {
     store.clearTranscript();
     store.clearMissionLog();
     store.clearOrbitRegistry();
+    store.clearPlanetNotes();
+    store.clearMirrorFrameEvents();
+    store.clearVoyagerLatencyRows();
     store.setFocusModeEnvironment(false);
     store.setOrbitalLayoutPreset('mid');
     store.focusOrbitPlanet(null);
     store.setWorkspaceGalaxy('Genesis');
+    store.setTaskPulse(null);
+    store.setSessionStartTime(null);
     // Clear silent hints by dismissing all
     store.silentHints.forEach(h => store.dismissHint(h.id));
 });
@@ -258,6 +263,38 @@ describe('useAetherStore', () => {
         expect(state.orbitalLayoutPreset).toBe('mid');
     });
 
+    it('should create update and delete notes planet entries', () => {
+        const store = useAetherStore.getState();
+        store.setTaskPulse({
+            taskId: 'task-notes',
+            phase: 'EXECUTING',
+            action: 'draft_plan',
+            vibe: 'typing',
+            intensity: 0.6,
+            timestamp: Date.now(),
+        });
+        store.setSessionStartTime(123456);
+
+        const noteId = store.createPlanetNote({
+            content: 'First crystal note',
+            tag: 'research',
+            taskId: 'task-notes',
+            sessionId: '123456',
+        });
+        let state = useAetherStore.getState();
+        expect(state.notesPlanet.length).toBe(1);
+        expect(state.notesPlanet[0].taskId).toBe('task-notes');
+        expect(state.notesPlanet[0].sessionId).toBe('123456');
+
+        store.updatePlanetNote(noteId, { content: 'Updated crystal note' });
+        state = useAetherStore.getState();
+        expect(state.notesPlanet[0].content).toBe('Updated crystal note');
+
+        store.deletePlanetNote(noteId);
+        state = useAetherStore.getState();
+        expect(state.notesPlanet.length).toBe(0);
+    });
+
     // ─── Session Time ───────────────────────────────────────────
     it('should track session start time', () => {
         const store = useAetherStore.getState();
@@ -268,5 +305,25 @@ describe('useAetherStore', () => {
 
         store.setSessionStartTime(null);
         expect(useAetherStore.getState().sessionStartTime).toBeNull();
+    });
+
+    it('should append mirror frame events and voyager latency rows', () => {
+        const store = useAetherStore.getState();
+        store.addMirrorFrameEvent({
+            action: 'click',
+            eventKind: 'click',
+            selector: '#run',
+            latencyMs: 33,
+        });
+        store.pushVoyagerLatencyRow({
+            label: 'click:run',
+            latencyMs: 33,
+            status: 'ok',
+        });
+
+        const state = useAetherStore.getState();
+        expect(state.mirrorFrames.length).toBe(1);
+        expect(state.voyagerLatencyRows.length).toBe(1);
+        expect(state.mirrorFrames[0].eventKind).toBe('click');
     });
 });

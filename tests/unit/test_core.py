@@ -270,6 +270,7 @@ class TestToolDeclarations:
         names = [t["name"] for t in tools]
         assert "create_task" in names
         assert "list_tasks" in names
+        assert "recall_notes" in names
 
     def test_memory_tool_declarations(self):
         from core.tools import memory_tool

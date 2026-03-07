@@ -119,6 +119,7 @@ class HandoverContext(BaseModel):
     )
     source_agent: str = Field(description="Agent handing off the task")
     target_agent: str = Field(description="Agent receiving the task")
+    galaxy_id: str = Field(default="Genesis")
     status: HandoverStatus = Field(default=HandoverStatus.PENDING)
 
     # Task decomposition
@@ -846,6 +847,7 @@ class HandoverProtocol:
             source_agent=source_agent,
             target_agent=target_agent,
             task=task,
+            galaxy_id=(payload or {}).get("galaxy_id", "Genesis"),
             payload=payload or {},
         )
         self._active_handovers[context.handover_id] = context

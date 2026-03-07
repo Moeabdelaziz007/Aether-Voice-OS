@@ -5,6 +5,7 @@ import { Activity, Shield, Cpu, Network } from "lucide-react";
 import { SkillsManagerWidget } from "./SkillsManagerWidget";
 import { PersonaConfigWidget } from "./PersonaConfigWidget";
 import { ThemeSettingsWidget } from "./ThemeSettingsWidget";
+import { NotesPlanetWidget } from "./NotesPlanetWidget";
 
 /**
  * SystemStatusWidget — Real-time health metrics.
@@ -73,4 +74,5 @@ export const WIDGET_REGISTRY: Record<string, React.FC<any>> = {
     "skills_manager": SkillsManagerWidget,
     "persona_config": PersonaConfigWidget,
     "theme_settings": ThemeSettingsWidget,
+    "notes_planet": NotesPlanetWidget,
 };
