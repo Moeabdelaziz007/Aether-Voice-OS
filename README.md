@@ -427,6 +427,36 @@ Learn more: [Galaxy Orchestration Guide](docs/GALAXY_ORCHESTRATION.md)
 
 ---
 
+## 📚 Documentation | الوثائق
+
+Comprehensive guides and references for Aether OS.
+
+أدلة ومراجع شاملة لـ Aether OS.
+
+### Core Documentation | الوثائق الأساسية
+
+- **[📖 Architecture Guide](docs/ARCHITECTURE.md)** - Complete system architecture (Pipeline layers, Thalamic Gate v2, Galaxy Orchestration)
+  - [دليل الهندسة المعمارية](docs/ARCHITECTURE.md) - توثيق كامل للهندسة المعمارية
+  
+- **[🌌 Galaxy Orchestration](docs/GALAXY_ORCHESTRATION.md)** - Gravity-based AI agent routing with API reference
+  - [تنظيم المجرة](docs/GALAXY_ORCHESTRATION.md) - توجيه وكلاء الذكاء الاصطناعي القائم على الجاذبية مع مرجع API
+  
+- **[🧪 Testing Guide](docs/TESTING.md)** - How to run and write tests (Unit, Integration, E2E)
+  - [دليل الاختبار](docs/TESTING.md) - كيفية تشغيل وكتابة الاختبارات
+  
+- **[🚀 Workspace Updates](docs/WORKSPACE_UPDATES.md)** - Latest avatar & workspace enhancements (March 2026)
+  - [تحديثات مساحة العمل](docs/WORKSPACE_UPDATES.md) - آخر تحسينات الأفاتار ومساحة العمل
+  
+- **[📑 Documentation Index](docs/index.md)** - Complete documentation hub
+  - [فهرس الوثائق](docs/index.md) - مركز الوثائق الكامل
+
+### Planning Documents | وثائق التخطيط
+
+- **[V3 Living Workspace Plan](plans/aether-v3-living-workspace-plan.md)** - Detailed architecture plan with implementation checklist
+  - [خطة مساحة العمل الحية V3](plans/aether-v3-living-workspace-plan.md) - خطة هندسية تفصيلية مع قائمة التحقق
+
+---
+
 ## ⭐ Stargazers & Contributors
 
 <a href="https://github.com/Moeabdelaziz007/Aether-Voice-OS/stargazers">
