@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from typing import Any, Callable, Optional
 
 import numpy as np
@@ -74,22 +75,22 @@ class SmoothMuter:
             return (pcm_chunk * self._current_gain).astype(np.int16)
 
         # Recursive Exponential Filter (EMA) gain ramping
-        # alpha determines the speed of convergence. 
+        # alpha determines the speed of convergence.
         # We want to reach ~99% of target in self._ramp_samples.
         alpha = np.exp(np.log(0.01) / self._ramp_samples)
-        
+
         gains = np.zeros(chunk_len, dtype=np.float32)
         current = self._current_gain
         for i in range(chunk_len):
             current = current * alpha + self._target_gain * (1 - alpha)
             gains[i] = current
-            
+
         self._current_gain = float(current)
-        
+
         # Snap to target if we are effectively there
         if abs(self._current_gain - self._target_gain) < 1e-3:
             self._current_gain = self._target_gain
-            
+
         return (pcm_chunk * gains).astype(np.int16)
 
     def mute(self) -> None:
@@ -330,11 +331,11 @@ class AudioCapture:
             with self._chunk_lock:
                 if self._last_pcm_chunk is not None:
                     pcm = self._last_pcm_chunk.copy()
-            
+
             if pcm is not None:
                 # Perform the heavy FFT + Correlation here
                 self._leakage.calculate_score(pcm)
-            
+
             # Pulse every 20ms or so (matches typical frame sizes)
             await asyncio.sleep(0.02)
 
