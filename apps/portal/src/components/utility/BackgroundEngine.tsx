@@ -8,7 +8,7 @@ import { useAetherStore } from '@/store/useAetherStore';
  * Also optionally renders animated grid pattern for Quantum Cyan theme
  * Uses low opacity to avoid visual noise while adding depth
  */
-export function BackgroundEngine() {
+export default function BackgroundEngine() {
     const themeConfig = useAetherStore((s) => s.themeConfig);
     const showGrain = themeConfig.grainEnabled;
 

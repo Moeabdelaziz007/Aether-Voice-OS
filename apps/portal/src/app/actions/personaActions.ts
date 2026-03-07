@@ -7,7 +7,7 @@ import type { PersonaConfig } from '@/store/useAetherStore';
  * Build system prompt based on persona configuration
  * This is what gets sent to the LLM backend for instruction tuning
  */
-export function buildSystemPrompt(personaConfig: PersonaConfig): string {
+export async function buildSystemPrompt(personaConfig: PersonaConfig): Promise<string> {
     const toneInstructions: Record<string, string> = {
         analytical: 'Approach problems systematically. Prioritize logic and evidence.',
         creative: 'Think outside the box. Explore novel solutions and perspectives.',
@@ -54,7 +54,7 @@ export async function updatePersona(personaConfig: Partial<PersonaConfig>) {
         store.addTerminalLog('PERSONA', `Updated to: ${desc}`);
 
         // Build and return new system prompt for backend
-        const systemPrompt = buildSystemPrompt(updated);
+        const systemPrompt = await buildSystemPrompt(updated);
 
         return {
             success: true,
@@ -85,7 +85,7 @@ export async function getPersonaConfig() {
  */
 export async function getSystemPrompt() {
     const personaConfig = useAetherStore.getState().personaConfig;
-    return buildSystemPrompt(personaConfig);
+    return await buildSystemPrompt(personaConfig);
 }
 
 /**

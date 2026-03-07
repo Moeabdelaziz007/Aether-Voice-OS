@@ -67,7 +67,7 @@ export async function* streamAgentResponse(prompt: string) {
  * Add log entry to terminal feed
  * Can be called from client components via useTransition for optimistic updates
  */
-export function addTerminalLogAction(
+export async function addTerminalLogAction(
     level: 'SYS' | 'VOICE' | 'AGENT' | 'SUCCESS' | 'ERROR' | 'SKILLS' | 'PERSONA' | 'THEME',
     message: string,
     widgetId?: string

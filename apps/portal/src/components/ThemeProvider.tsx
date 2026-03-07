@@ -9,7 +9,7 @@ import type { ThemeType } from '@/store/useAetherStore';
  * Updates :root element variables directly (zero React re-renders)
  * Syncs with Zustand store for persistence and multi-instance coordination
  */
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export default function ThemeProvider({ children }: { children: React.ReactNode }) {
     const themeConfig = useAetherStore((s) => s.themeConfig);
     const visualSettings = useAetherStore((s) => s.visualSettings);
 
