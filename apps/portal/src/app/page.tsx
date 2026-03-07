@@ -1,52 +1,75 @@
 "use client";
 /**
- * AetherOS — Quantum Neural Voice Portal
+ * AetherOS V2.5 — Unified Dashboard Portal
  *
- * An immersive single-page voice interface featuring:
- * - Unified 3D Scene with consolidated WebGL context
- * - State-responsive ambient effects and edge glow
- * - Dynamic realm morphing triggered by voice commands
- * 
- * Performance Optimized: Single Canvas for all 3D elements
+ * A redesigned main page featuring:
+ * - Collapsible sidebar navigation
+ * - Smart Widget grid (Weather, Crypto, News, Stocks, Tasks, AI Chat)
+ * - Integrated Voice Agent with 3D Orb
+ * - Memory / Skills / Persona management panels
+ * - Widget Store modal for adding/removing widgets
+ * - Real-time engine telemetry
+ *
+ * Performance: Single WebGL context, lazy-loaded panels, CSS-driven animations
  */
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { LayoutGroup, motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
-import RealmController from "@/components/realms/RealmController";
-import Omnibar from "@/components/shared/Omnibar";
+
+// Dashboard components
+import Sidebar, { type SidebarPanel } from "@/components/dashboard/Sidebar";
+import TopBar from "@/components/dashboard/TopBar";
+import WidgetGrid from "@/components/dashboard/WidgetGrid";
+import WidgetStoreModal from "@/components/dashboard/WidgetStoreModal";
+
+// Shared components
 import EdgeGlow from "@/components/shared/EdgeGlow";
-import HUDContainer from "@/components/HUD/HUDContainer";
-import SystemFailure from "@/components/HUD/SystemFailure";
-import PoweredByStrip from "@/components/shared/PoweredByStrip";
 import ParticleField from "@/components/shared/ParticleField";
 import SilentHintsOverlay from "@/components/shared/SilentHintsOverlay";
-import { useVoiceCommands } from "@/hooks/useVoiceCommands";
-import { useAetherStore } from "@/store/useAetherStore";
+import PoweredByStrip from "@/components/shared/PoweredByStrip";
+import Omnibar from "@/components/shared/Omnibar";
 import NeuralBackground from "@/components/shared/NeuralBackground";
+
+// Management panels
+import MemoryPanel from "@/components/management/MemoryPanel";
+import SkillsPanel from "@/components/management/SkillsPanel";
+import PersonaPanel from "@/components/management/PersonaPanel";
+
+// Voice
+import VoiceOrbMini from "@/components/dashboard/VoiceOrbMini";
+
+// Other components
+import { SettingsHub } from "@/components/SettingsHub";
 import GenerativePortal from "@/components/generative/GenerativePortal";
 import ThemeProvider from "@/components/ThemeProvider";
 import BackgroundEngine from "@/components/utility/BackgroundEngine";
 import TerminalFeed from "@/components/TerminalFeed";
+import HUDContainer from "@/components/HUD/HUDContainer";
+import SystemFailure from "@/components/HUD/SystemFailure";
+import RealmController from "@/components/realms/RealmController";
 
-// Dynamic import for 3D scene to improve initial load
+// Store
+import { useAetherStore } from "@/store/useAetherStore";
+import { useVoiceCommands } from "@/hooks/useVoiceCommands";
+
+// Dynamic 3D scene
 const UnifiedScene = dynamic(() => import("@/components/UnifiedScene"), {
     ssr: false,
     loading: () => <div className="fixed inset-0 bg-black" />,
 });
 
-// Quantum Neural Color Palette
+// Accent color palette
 const ACCENT_RGB: Record<string, [number, number, number]> = {
     cyan: [0, 243, 255],
     purple: [188, 19, 254],
     amber: [245, 158, 11],
     emerald: [16, 185, 129],
     rose: [244, 63, 94],
-    green: [57, 255, 20],    // Neon green - Primary
+    green: [57, 255, 20],
     blue: [59, 130, 246],
 };
 
-// State intensity mapping for visual effects
 const STATE_INTENSITY: Record<string, number> = {
     IDLE: 0.2,
     LISTENING: 0.6,
@@ -60,154 +83,182 @@ export default function AetherPortal() {
     const engineState = useAetherStore((s) => s.engineState);
     const currentRealm = useAetherStore((s) => s.currentRealm);
 
-    // Wire voice command → realm navigation
+    const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [omnibarOpen, setOmnibarOpen] = useState(false);
+
+    // Wire voice commands
     useVoiceCommands();
 
-    // Avatar config based on realm (optimized for unified scene)
+    // Avatar config
     const avatarConfig = useMemo(() => {
-        switch (currentRealm) {
-            case "void":
-                return { size: "large" as const, variant: "immersive" as const };
-            case "neural":
-                return { size: "fullscreen" as const, variant: "immersive" as const };
-            default:
-                return { size: "medium" as const, variant: "detailed" as const };
+        if (activePanel === 'voice' || activePanel === null) {
+            switch (currentRealm) {
+                case "void": return { size: "large" as const, variant: "immersive" as const };
+                case "neural": return { size: "fullscreen" as const, variant: "immersive" as const };
+                default: return { size: "medium" as const, variant: "detailed" as const };
+            }
         }
-    }, [currentRealm]);
+        return { size: "medium" as const, variant: "detailed" as const };
+    }, [currentRealm, activePanel]);
 
-    // State indicator color
-    const stateIndicatorColor = useMemo(() => {
-        switch (engineState) {
-            case "SPEAKING": return "#00ff88";
-            case "LISTENING": return "#39ff14";
-            case "THINKING": return "#ffd700";
-            case "INTERRUPTING": return "#ff1744";
-            default: return "#4b5563";
-        }
-    }, [engineState]);
-
-    // ── Drive CSS custom properties from accent color ────────
+    // Drive CSS custom properties
     useEffect(() => {
         const root = document.documentElement;
         const rgb = ACCENT_RGB[preferences.accentColor] || ACCENT_RGB.green;
-
         root.style.setProperty("--accent-r", String(rgb[0]));
         root.style.setProperty("--accent-g", String(rgb[1]));
         root.style.setProperty("--accent-b", String(rgb[2]));
-        root.style.setProperty(
-            "--glow-intensity",
-            String(STATE_INTENSITY[engineState] ?? 0.2)
-        );
-        
-        // Drive audio-reactive CSS variables for bioluminescent glow
-        // These will be read by the glow animations in globals.css
+        root.style.setProperty("--glow-intensity", String(STATE_INTENSITY[engineState] ?? 0.2));
     }, [preferences.accentColor, engineState]);
-    
-    // ── Drive audio level CSS variables ───────────────────────
+
+    // Audio level CSS vars
     useEffect(() => {
         const root = document.documentElement;
-        // Audio levels are already in store, map them to CSS vars
-        const updateAudioLevels = () => {
-            root.style.setProperty("--speaker-level", String(useAetherStore.getState().speakerLevel));
-            root.style.setProperty("--mic-level", String(useAetherStore.getState().micLevel));
-        };
-        
-        // Initial update
-        updateAudioLevels();
-        
-        // Update on animation frame for smooth reactivity
         let rafId: number;
         const loop = () => {
-            updateAudioLevels();
+            root.style.setProperty("--speaker-level", String(useAetherStore.getState().speakerLevel));
+            root.style.setProperty("--mic-level", String(useAetherStore.getState().micLevel));
             rafId = requestAnimationFrame(loop);
         };
         rafId = requestAnimationFrame(loop);
-        
         return () => cancelAnimationFrame(rafId);
     }, []);
+
+    const toggleOmnibar = useCallback(() => setOmnibarOpen(prev => !prev), []);
+
+    // Determine if we show Voice Agent view or Dashboard view
+    const showVoiceView = activePanel === 'voice';
+    const showDashboard = activePanel === 'dashboard';
+    const showManagementPanel = ['memory', 'skills', 'persona'].includes(activePanel || '');
+    const showTerminal = activePanel === 'terminal';
 
     return (
         <ThemeProvider>
             <LayoutGroup>
-                {/* ── Theme & Visual System ── */}
+                {/* Theme & Visual System */}
                 <BackgroundEngine />
-                
-                {/* ── Ambient Background Layers ── */}
                 <NeuralBackground />
-                <ParticleField count={20} />
-                
-                {/* ── Carbon Fiber Texture Overlay (Industrial Luxury) ── */}
+                <ParticleField count={15} />
                 <div className="carbon-fiber-overlay" />
 
-                {/* Unified 3D Scene — Single WebGL Context */}
-                <UnifiedScene
-                    avatarConfig={avatarConfig}
-                    showAvatar={true}
-                    showParticles={true}
-                    showConnections={true}
+                {/* Sidebar Navigation */}
+                <Sidebar
+                    activePanel={activePanel}
+                    onPanelChange={setActivePanel}
+                    onOpenSettings={() => setSettingsOpen(true)}
                 />
 
-            {/* Chromatic Edge Glow — State-responsive border */}
-            <EdgeGlow />
+                {/* Main content area — offset by sidebar width */}
+                <div className="ml-14 flex flex-col h-screen overflow-hidden">
+                    {/* Top Bar */}
+                    <TopBar
+                        onOpenSettings={() => setSettingsOpen(true)}
+                        onToggleOmnibar={toggleOmnibar}
+                    />
 
-            {/* HUD Frame (corner markers + scan line) */}
-            <HUDContainer>
-                <div className="relative w-full h-screen overflow-hidden aether-boot-enter">
-                    {/* Ambient State Indicator */}
-                    <motion.div
-                        className="absolute top-6 left-1/2 -translate-x-1/2 z-20"
-                        initial={{ opacity: 0, y: -20 }}
-                        animate={{
-                            opacity: engineState !== "IDLE" ? 1 : 0,
-                            y: engineState !== "IDLE" ? 0 : -20,
-                        }}
-                        transition={{ duration: 0.3 }}
-                    >
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/40 backdrop-blur-md border border-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.2)]">
-                            <motion.div
-                                className="w-2 h-2 rounded-full"
-                                style={{ backgroundColor: stateIndicatorColor }}
-                                animate={{
-                                    scale: [1, 1.3, 1],
-                                    opacity: [0.8, 1, 0.8],
-                                }}
-                                transition={{
-                                    duration: 1.5,
-                                    repeat: Infinity,
-                                    ease: "easeInOut",
-                                }}
-                            />
-                            <span
-                                className="text-[10px] font-mono tracking-wider uppercase"
-                                style={{ color: stateIndicatorColor, opacity: 0.9 }}
-                            >
-                                {engineState}
-                            </span>
-                        </div>
-                    </motion.div>
+                    {/* Main content */}
+                    <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
+                        <AnimatePresence mode="wait">
+                            {/* ── Dashboard View: Widget Grid ── */}
+                            {showDashboard && (
+                                <motion.div
+                                    key="dashboard"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="h-full"
+                                >
+                                    <WidgetGrid />
+                                </motion.div>
+                            )}
 
-                    {/* Autonomous Repair Overlay */}
-                    <SystemFailure />
+                            {/* ── Voice Agent View: Full Immersive 3D + Realms ── */}
+                            {showVoiceView && (
+                                <motion.div
+                                    key="voice"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.5 }}
+                                    className="fixed inset-0 ml-14"
+                                >
+                                    {/* 3D Scene */}
+                                    <UnifiedScene
+                                        avatarConfig={avatarConfig}
+                                        showAvatar={true}
+                                        showParticles={true}
+                                        showConnections={true}
+                                    />
 
-                    {/* Active realm content */}
-                    <RealmController />
+                                    {/* Edge Glow */}
+                                    <EdgeGlow />
+
+                                    {/* HUD Frame */}
+                                    <HUDContainer>
+                                        <div className="relative w-full h-screen overflow-hidden">
+                                            <SystemFailure />
+                                            <RealmController />
+                                        </div>
+                                    </HUDContainer>
+
+                                    {/* Silent Hints */}
+                                    <SilentHintsOverlay />
+
+                                    {/* Generative UI Widgets */}
+                                    <GenerativePortal />
+                                </motion.div>
+                            )}
+
+                            {/* ── Management Panels: Memory / Skills / Persona ── */}
+                            {showManagementPanel && (
+                                <motion.div
+                                    key={`panel-${activePanel}`}
+                                    initial={{ opacity: 0, x: 20 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -20 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="max-w-2xl mx-auto p-6 h-full"
+                                >
+                                    {activePanel === 'memory' && <MemoryPanel />}
+                                    {activePanel === 'skills' && <SkillsPanel />}
+                                    {activePanel === 'persona' && <PersonaPanel />}
+                                </motion.div>
+                            )}
+
+                            {/* ── Terminal View ── */}
+                            {showTerminal && (
+                                <motion.div
+                                    key="terminal"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="h-full"
+                                >
+                                    <TerminalFeed />
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </main>
                 </div>
-            </HUDContainer>
 
-            {/* Silent tool result hints — top-right floating cards */}
-            <SilentHintsOverlay />
+                {/* Voice Orb Mini — Floating button on dashboard view */}
+                {!showVoiceView && (
+                    <VoiceOrbMini onActivate={() => setActivePanel('voice')} />
+                )}
 
-            {/* Tech attribution — ambient, premium */}
-            <PoweredByStrip />
+                {/* Powered By Strip */}
+                <PoweredByStrip />
 
-            {/* Generative UI Widgets Overlay */}
-            <GenerativePortal />
-
-                {/* Terminal Feed — Central command log display */}
-                <TerminalFeed />
-
-                {/* Command bar — always visible at bottom */}
+                {/* Omnibar — Global command entry */}
                 <Omnibar />
+
+                {/* Settings Hub Modal */}
+                <SettingsHub isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+
+                {/* Widget Store Modal */}
+                <WidgetStoreModal />
             </LayoutGroup>
         </ThemeProvider>
     );

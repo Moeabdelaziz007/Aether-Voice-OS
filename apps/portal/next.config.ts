@@ -9,7 +9,12 @@ const withPWA = withPWAInit({
 
 const nextConfig: NextConfig = {
     output: "export",
-    turbopack: {}, // Silences the webpack/turbopack warning from the PWA plugin
+    turbopack: {},
+    
+    // Image optimization for external URLs
+    images: {
+        unoptimized: true, // Required for static export
+    },
     
     // Bundle Optimization
     experimental: {

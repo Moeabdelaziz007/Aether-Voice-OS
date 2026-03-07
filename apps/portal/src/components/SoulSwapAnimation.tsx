@@ -42,13 +42,14 @@ export function SoulSwapAnimation({
     const [phase, setPhase] = useState<'idle' | 'dissolve' | 'coalesce' | 'complete'>('idle');
     const [particles, setParticles] = useState<Array<{ id: number; x: number; y: number; size: number; delay: number }>>([]);
     const containerRef = useRef<HTMLDivElement>(null);
+    const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
     const { triggerHapticShake } = useMicroAnimations();
 
     // Generate particles for dissolution effect
     useEffect(() => {
         if (isSwapping && phase === 'idle') {
             setPhase('dissolve');
-            
+
             // Create dissolution particles
             const newParticles = Array.from({ length: 24 }, (_, i) => ({
                 id: i,
@@ -87,7 +88,7 @@ export function SoulSwapAnimation({
     // Get agent color classes
     const getAgentColorClasses = (agent: ExpertAgent | null) => {
         if (!agent) return 'from-gray-500/20 to-gray-500/10 border-gray-500/30 text-gray-400';
-        
+
         const colorMap: Record<string, string> = {
             cyan: 'from-cyan-500/20 to-cyan-500/10 border-cyan-500/30 text-cyan-400',
             blue: 'from-blue-500/20 to-blue-500/10 border-blue-500/30 text-blue-400',
@@ -96,15 +97,15 @@ export function SoulSwapAnimation({
             purple: 'from-purple-500/20 to-purple-500/10 border-purple-500/30 text-purple-400',
             orange: 'from-orange-500/20 to-orange-500/10 border-orange-500/30 text-orange-400',
         };
-        
+
         return colorMap[agent.color] || colorMap.cyan;
     };
 
     const currentAgent = phase === 'dissolve' ? fromAgent : toAgent;
-    const colorClasses = getAgentColorClasses(currentAgent);
+    const colorClasses = getAgentColorClasses(currentAgent as ExpertAgent | null);
 
     return (
-        <div 
+        <div
             ref={containerRef}
             className={clsx(
                 'soul-swap-container relative w-32 h-32 mx-auto',
@@ -168,7 +169,7 @@ export function SoulSwapAnimation({
                         const y1 = 64 + Math.sin(angle) * 20;
                         const x2 = 64 + Math.cos(angle) * 56;
                         const y2 = 64 + Math.sin(angle) * 56;
-                        
+
                         return (
                             <line
                                 key={i}
@@ -208,11 +209,11 @@ export function SoulSwapAnimation({
 /**
  * Agent Switcher Control Panel
  */
-export function AgentSwitcher({ 
+export function AgentSwitcher({
     availableAgents,
     activeAgentId,
     onSwitchAgent,
-    className 
+    className
 }: {
     availableAgents: ExpertAgent[];
     activeAgentId: string | null;
@@ -224,13 +225,13 @@ export function AgentSwitcher({
 
     const handleSwitch = async (agent: ExpertAgent) => {
         if (isSwapping || agent.id === activeAgentId) return;
-        
+
         setIsSwapping(true);
         setSwapTarget(agent);
-        
+
         // Simulate swap delay
         await new Promise(resolve => setTimeout(resolve, 1800));
-        
+
         onSwitchAgent(agent.id);
         setIsSwapping(false);
         setSwapTarget(null);
@@ -251,7 +252,7 @@ export function AgentSwitcher({
                     fromAgent={activeAgent}
                     toAgent={swapTarget || activeAgent}
                     isSwapping={isSwapping}
-                    onSwapComplete={() => {}}
+                    onSwapComplete={() => { }}
                 />
             </div>
 

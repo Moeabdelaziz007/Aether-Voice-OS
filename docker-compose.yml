@@ -22,7 +22,7 @@ services:
     container_name: aether-portal
     environment:
       - NEXT_PUBLIC_AETHER_GATEWAY_URL=ws://kernel:18789
-      - NEXT_PUBLIC_GEMINI_KEY=${GOOGLE_API_KEY}
+      # Note: GOOGLE_API_KEY stays in backend only — never exposed to frontend
     ports:
       - "3000:3000"
     depends_on:

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
+import AuthGuard from "@/components/auth/AuthGuard";
 import AetherBrain from "@/components/AetherBrain";
 import { TelemetryProvider } from "@/hooks/useTelemetry";
 import "./globals.css";
@@ -48,8 +49,10 @@ export default function RootLayout({
         <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`}>
             <body className="font-sans">
                 <TelemetryProvider>
-                    <AetherBrain />
-                    {children}
+                    <AuthGuard>
+                        <AetherBrain />
+                        {children}
+                    </AuthGuard>
                 </TelemetryProvider>
             </body>
         </html>

@@ -83,7 +83,7 @@ export default function Omnibar() {
         // Process intent with terminal logging
         try {
             const personaConfig = useAetherStore.getState().personaConfig;
-            const activeSkills = useAetherStore.getState().activeSkills;
+            const activeSkills = useAetherStore.getState().activeSkills.map(s => s.name);
             await processIntent(inputValue, personaConfig, activeSkills);
         } catch (error) {
             console.error("[v0] Intent processing error:", error);

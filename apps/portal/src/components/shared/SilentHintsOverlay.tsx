@@ -58,7 +58,7 @@ export default function SilentHintsOverlay() {
         };
 
         setCards((prev) => [...prev.slice(-(MAX_VISIBLE - 1)), newCard]);
-    }, [silentHints.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [silentHints.length]);
 
     // Auto-dismiss timer
     useEffect(() => {

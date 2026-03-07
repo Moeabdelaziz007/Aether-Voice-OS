@@ -45,7 +45,7 @@ export function IntentHub({ className }: IntentHubProps) {
     };
 
     return (
-        <header 
+        <header
             className={clsx(
                 'intent-hub',
                 'fixed top-0 left-0 right-0 z-50',
@@ -88,16 +88,16 @@ export function IntentHub({ className }: IntentHubProps) {
                             className={clsx(
                                 'agent-indicator relative px-3 py-1.5 rounded-lg border transition-all cursor-pointer',
                                 'magnetic-hover interactive-element',
-                                agent.active 
-                                    ? `bg-${agent.color}-500/20 border-${agent.color}-500/30` 
+                                agent.active
+                                    ? `bg-${agent.color}-500/20 border-${agent.color}-500/30`
                                     : 'bg-white/5 border-white/10 opacity-60'
                             )}
                             onMouseEnter={(e) => {
                                 const rect = e.currentTarget.getBoundingClientRect();
                                 applyMagneticEffect(e.currentTarget, rect.left + rect.width / 2, rect.top + rect.height / 2);
                             }}
-                            onClick={() => {
-                                triggerHapticShake(e.currentTarget as any, 'normal');
+                            onClick={(event) => {
+                                triggerHapticShake(event.currentTarget as any, 'normal');
                                 setShowAgentDetails(!showAgentDetails);
                             }}
                         >
@@ -108,7 +108,7 @@ export function IntentHub({ className }: IntentHubProps) {
                                 )} />
                                 <span className="text-white/90 text-xs font-medium">{agent.name}</span>
                             </div>
-                            
+
                             {/* Tooltip */}
                             <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-black/90 rounded text-xs text-white/90 whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity">
                                 {agent.role}

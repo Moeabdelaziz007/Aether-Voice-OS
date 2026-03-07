@@ -256,6 +256,22 @@ export interface ToolCallEntry {
     timestamp: number;
 }
 
+// ─── Memory Crystal State ──────────────────────────────────
+export interface MemoryCrystal {
+    id: string;
+    label: string;
+    type: 'research' | 'code' | 'session' | 'file';
+    metadata: any;
+    color?: string;
+}
+
+export interface DragState {
+    isDragging: boolean;
+    activeData: any;
+    type: 'crystal' | 'file' | 'data' | 'skill';
+    sourceId?: string;
+}
+
 // ─── State Interface ───────────────────────────────────────
 interface AetherState {
     // Realm
@@ -324,6 +340,11 @@ interface AetherState {
     themeConfig: ThemeConfig;
     visualSettings: VisualSettings;
 
+    // Sensory State
+    memoryCrystals: MemoryCrystal[];
+    dragState: DragState;
+    animationTrigger: 'none' | 'soul-swap' | 'laser-scan' | 'high-voltage' | 'tether-stream';
+
     // Actions — Realm
     setRealm: (realm: RealmType) => void;
 
@@ -390,6 +411,13 @@ interface AetherState {
     setThemeConfig: (config: Partial<ThemeConfig>) => void;
     setVisualSettings: (settings: Partial<VisualSettings>) => void;
     toggleThemeMode: () => void; // NEW: Toggle between dark-state and white-hole
+
+    // Actions — Sensory
+    addCrystal: (crystal: Omit<MemoryCrystal, 'id'>) => void;
+    removeCrystal: (id: string) => void;
+    setDragState: (updates: Partial<DragState>) => void;
+    absorbCrystal: (id: string) => void; // Trigger animation + absorption
+    triggerAnimation: (type: AetherState['animationTrigger']) => void;
 }
 
 // ─── Optimized Selectors for Performance ────────────────────
@@ -483,6 +511,13 @@ export const useAetherStore = create<AetherState>()(
                 scanlinesEnabled: false,
                 typography: 'monospace',
             },
+
+            memoryCrystals: [
+                { id: '1', label: 'Initial Refactor', type: 'code', color: '#00f3ff', metadata: {} },
+                { id: '2', label: 'Gemini Integration', type: 'research', color: '#bc13fe', metadata: {} },
+            ],
+            dragState: { isDragging: false, activeData: null, type: 'data' },
+            animationTrigger: 'none',
 
             visualSettings: {
                 blurLight: 12,
@@ -658,6 +693,44 @@ export const useAetherStore = create<AetherState>()(
                     themeMode: state.themeConfig.themeMode === 'dark-state' ? 'white-hole' : 'dark-state',
                 },
             })),
+
+            // Sensory Actions
+            addCrystal: (crystal) => set((state) => ({
+                memoryCrystals: [...state.memoryCrystals, { ...crystal, id: crypto.randomUUID() }]
+            })),
+
+            removeCrystal: (id) => set((state) => ({
+                memoryCrystals: state.memoryCrystals.filter(c => c.id !== id)
+            })),
+
+            setDragState: (updates) => set((state) => ({
+                dragState: { ...state.dragState, ...updates }
+            })),
+
+            absorbCrystal: (id) => {
+                const crystal = useAetherStore.getState().memoryCrystals.find(c => c.id === id);
+                if (crystal) {
+                    set((state) => ({
+                        terminalLogs: [...state.terminalLogs, {
+                            id: crypto.randomUUID(),
+                            level: 'SUCCESS',
+                            message: `💎 Crystal Absorbed: ${crystal.label}`,
+                            timestamp: Date.now()
+                        }],
+                        memoryCrystals: state.memoryCrystals.filter(c => c.id !== id)
+                    }));
+                }
+            },
+
+            triggerAnimation: (type) => {
+                set({ animationTrigger: type });
+                // Auto-reset after animation duration
+                setTimeout(() => {
+                    if (useAetherStore.getState().animationTrigger === type) {
+                        set({ animationTrigger: 'none' });
+                    }
+                }, 3000);
+            }
         }),
         {
             name: 'aether-preferences',

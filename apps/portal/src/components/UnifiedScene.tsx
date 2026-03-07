@@ -150,10 +150,7 @@ function UnifiedSceneContent({
 
       {/* Fluid Thought Particles Scene */}
       {showParticles && (
-        <ParticleSceneContent
-          engineState={engineState}
-          transcript={transcript}
-        />
+        <ParticleSceneContent />
       )}
 
       {/* Shared Post-Processing (Single Pipeline) */}

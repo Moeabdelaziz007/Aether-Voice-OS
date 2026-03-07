@@ -46,20 +46,20 @@ interface UseADKAgentsReturn {
     // Agents
     agents: ADKAgent[];
     activeAgent: string | null;
-    
+
     // Tasks
     tasks: ADKTask[];
     delegateTask: (task: string, agentName?: string) => Promise<void>;
     cancelTask: (taskId: string) => void;
-    
+
     // Events
     handoverHistory: HandoverEvent[];
-    
+
     // Status
     isConnected: boolean;
     isConnecting: boolean;
     error: string | null;
-    
+
     // Controls
     connect: () => Promise<void>;
     disconnect: () => void;
@@ -71,8 +71,8 @@ const ADK_WS_URL = process.env.NEXT_PUBLIC_ADK_WS_URL || 'ws://localhost:18790/a
 export function useADKAgents(): UseADKAgentsReturn {
     const store = useAetherStore();
     const wsRef = useRef<WebSocket | null>(null);
-    const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
-    
+    const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+
     // State
     const [agents, setAgents] = useState<ADKAgent[]>([
         {
@@ -97,7 +97,7 @@ export function useADKAgents(): UseADKAgentsReturn {
             status: 'idle',
         },
     ]);
-    
+
     const [tasks, setTasks] = useState<ADKTask[]>([]);
     const [handoverHistory, setHandoverHistory] = useState<HandoverEvent[]>([]);
     const [isConnected, setIsConnected] = useState(false);
@@ -110,19 +110,19 @@ export function useADKAgents(): UseADKAgentsReturn {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
             return;
         }
-        
+
         setIsConnecting(true);
         setError(null);
-        
+
         try {
             const ws = new WebSocket(ADK_WS_URL);
-            
+
             ws.onopen = () => {
                 console.log('[ADK] Connected to InMemoryRunner');
                 setIsConnected(true);
                 setIsConnecting(false);
             };
-            
+
             ws.onmessage = (event) => {
                 try {
                     const message = JSON.parse(event.data);
@@ -131,17 +131,17 @@ export function useADKAgents(): UseADKAgentsReturn {
                     console.error('[ADK] Failed to parse message:', err);
                 }
             };
-            
+
             ws.onerror = (err) => {
                 console.error('[ADK] WebSocket error:', err);
                 setError('Connection failed');
                 setIsConnecting(false);
             };
-            
+
             ws.onclose = () => {
                 console.log('[ADK] Disconnected');
                 setIsConnected(false);
-                
+
                 // Attempt reconnection after 3 seconds
                 reconnectTimeoutRef.current = setTimeout(() => {
                     if (!wsRef.current?.readyState) {
@@ -149,7 +149,7 @@ export function useADKAgents(): UseADKAgentsReturn {
                     }
                 }, 3000);
             };
-            
+
             wsRef.current = ws;
         } catch (err) {
             setError('Failed to connect to ADK backend');
@@ -160,16 +160,16 @@ export function useADKAgents(): UseADKAgentsReturn {
     // Handle incoming ADK messages
     const handleADKMessage = useCallback((message: any) => {
         const { type, data } = message;
-        
+
         switch (type) {
             case 'agent.status':
-                setAgents(prev => prev.map(agent => 
-                    agent.name === data.agent 
+                setAgents(prev => prev.map(agent =>
+                    agent.name === data.agent
                         ? { ...agent, status: data.status }
                         : agent
                 ));
                 break;
-                
+
             case 'agent.active':
                 setActiveAgentState(data.agent);
                 setAgents(prev => prev.map(agent => ({
@@ -177,7 +177,7 @@ export function useADKAgents(): UseADKAgentsReturn {
                     isActive: agent.name === data.agent,
                 })));
                 break;
-                
+
             case 'handover.initiated': {
                 const handoverEvent: HandoverEvent = {
                     fromAgent: data.from_agent,
@@ -187,12 +187,12 @@ export function useADKAgents(): UseADKAgentsReturn {
                     timestamp: Date.now(),
                 };
                 setHandoverHistory(prev => [handoverEvent, ...prev].slice(0, 50));
-                
+
                 // Update store
                 store.addSystemLog(`[Hive] Handover: ${data.from_agent} → ${data.to_agent}`);
                 break;
             }
-                
+
             case 'task.result':
                 setTasks(prev => prev.map(task =>
                     task.id === data.task_id
@@ -200,7 +200,7 @@ export function useADKAgents(): UseADKAgentsReturn {
                         : task
                 ));
                 break;
-                
+
             case 'error':
                 console.error('[ADK] Error:', data.message);
                 setError(data.message);
@@ -223,10 +223,10 @@ export function useADKAgents(): UseADKAgentsReturn {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             throw new Error('ADK not connected');
         }
-        
+
         const taskId = `task-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const targetAgent = agentName || activeAgent || 'AetherCore';
-        
+
         const newTask: ADKTask = {
             id: taskId,
             task,
@@ -234,9 +234,9 @@ export function useADKAgents(): UseADKAgentsReturn {
             status: 'pending',
             timestamp: Date.now(),
         };
-        
+
         setTasks(prev => [...prev, newTask]);
-        
+
         // Send task to ADK runner
         wsRef.current.send(JSON.stringify({
             type: 'task.delegate',
@@ -244,7 +244,7 @@ export function useADKAgents(): UseADKAgentsReturn {
             agent: targetAgent,
             task_description: task,
         }));
-        
+
         // Update task status to in_progress
         setTimeout(() => {
             setTasks(prev => prev.map(t =>
@@ -258,12 +258,12 @@ export function useADKAgents(): UseADKAgentsReturn {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
             return;
         }
-        
+
         wsRef.current.send(JSON.stringify({
             type: 'task.cancel',
             task_id: taskId,
         }));
-        
+
         setTasks(prev => prev.filter(t => t.id !== taskId));
     }, []);
 

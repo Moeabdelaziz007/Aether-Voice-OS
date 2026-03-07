@@ -62,7 +62,7 @@ export default function LivePage() {
         // Small delay to ensure page is rendered
         const timer = setTimeout(init, 500);
         return () => clearTimeout(timer);
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
     // Wire PCM chunks from mic → Gemini
     useEffect(() => {

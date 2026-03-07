@@ -454,7 +454,7 @@ describe('Phase 9 — Terminal Logging', () => {
     it('should support color-coded log levels', async () => {
         // Arrange
         const { getState } = useAetherStore;
-        const levels: Array<'SYS' | 'VOICE' | 'AGENT' | 'SUCCESS' | 'ERROR' | 'SKILLS' | 'PERSONA' | 'THEME'> = 
+        const levels: Array<'SYS' | 'VOICE' | 'AGENT' | 'SUCCESS' | 'ERROR' | 'SKILLS' | 'PERSONA' | 'THEME'> =
             ['SYS', 'VOICE', 'AGENT', 'SUCCESS', 'ERROR', 'SKILLS', 'PERSONA', 'THEME'];
 
         // Act
@@ -555,7 +555,7 @@ describe('Phase 9 — Complete Intent Flow', () => {
 
             // 3. Process intent with server action
             const personaConfig = getState().personaConfig;
-            const activeSkills = getState().activeSkills;
+            const activeSkills = (getState().activeSkills.map(s => s.name)) as string[];
             await processIntent(input, personaConfig, activeSkills);
         });
 

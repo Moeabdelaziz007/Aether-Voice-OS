@@ -63,14 +63,10 @@ export const SettingsHub: React.FC<SettingsHubProps> = ({
         // Apply glow intensity
         document.documentElement.style.setProperty('--glow-intensity', glowIntensity.toString());
         
-        // Persist to store
-        store.setSettings({
-            theme: themeMode,
+        // Persist to store via existing setters
+        store.setThemeConfig({
+            themeMode: themeMode,
             glowIntensity,
-            autoRestartAgents,
-            enableNotifications,
-            audioInput: audioInputDevice,
-            audioOutput: audioOutputDevice,
         });
 
         setHasChanges(false);
