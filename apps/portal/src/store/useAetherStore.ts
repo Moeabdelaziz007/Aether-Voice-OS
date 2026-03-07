@@ -102,6 +102,37 @@ export interface NeuralEvent {
     status: 'active' | 'completed' | 'pending';
 }
 
+export type AvatarCinematicState =
+    | 'IDLE'
+    | 'SEARCHING'
+    | 'LOOKING_AT_SCREEN'
+    | 'POINTING'
+    | 'TYPING'
+    | 'EXECUTING'
+    | 'EUREKA'
+    | 'ERROR';
+
+export interface TaskPulse {
+    taskId: string;
+    phase: 'SEARCHING' | 'PLANNING' | 'EXECUTING' | 'VERIFYING' | 'COMPLETED' | 'FAILED';
+    action: string;
+    vibe: 'exploring' | 'focusing' | 'eureka' | 'typing' | 'caution' | 'success';
+    thought?: string;
+    avatarTarget?: string;
+    intensity: number;
+    latencyMs?: number;
+    timestamp: number;
+}
+
+export interface MissionLogEntry {
+    id: string;
+    taskId?: string;
+    title: string;
+    detail?: string;
+    status: 'started' | 'in-progress' | 'completed' | 'failed';
+    timestamp: number;
+}
+
 // ─── Superpowers — Toggleable AI Capabilities ──────────────
 export interface Superpowers {
     visionPulse: boolean;     // Screen capture + visual context
@@ -316,6 +347,10 @@ interface AetherState {
     // Generative UI
     activeWidgets: { id: string; type: string; props: any }[];
     predictedGoal: string | null;
+    workspaceGalaxy: string;
+    avatarCinematicState: AvatarCinematicState;
+    taskPulse: TaskPulse | null;
+    missionLog: MissionLogEntry[];
 
     // Persona & Preferences
     persona: AetherPersona;
@@ -382,6 +417,11 @@ interface AetherState {
     removeWidget: (id: string) => void;
     clearWidgets: () => void;
     setPredictedGoal: (goal: string | null) => void;
+    setWorkspaceGalaxy: (galaxy: string) => void;
+    setAvatarCinematicState: (state: AvatarCinematicState) => void;
+    setTaskPulse: (pulse: TaskPulse | null) => void;
+    pushMissionLog: (entry: Omit<MissionLogEntry, 'id' | 'timestamp'>) => void;
+    clearMissionLog: () => void;
 
     // Actions — Persona & Preferences
     setPersona: (updates: Partial<AetherPersona>) => void;
@@ -477,6 +517,10 @@ export const useAetherStore = create<AetherState>()(
             activeSoul: null,
             activeWidgets: [],
             predictedGoal: null,
+            workspaceGalaxy: "Genesis",
+            avatarCinematicState: "IDLE",
+            taskPulse: null,
+            missionLog: [],
             toolCallHistory: [],
             persona: DEFAULT_PERSONA,
             preferences: DEFAULT_PREFERENCES,
@@ -604,6 +648,17 @@ export const useAetherStore = create<AetherState>()(
             })),
             clearWidgets: () => set({ activeWidgets: [] }),
             setPredictedGoal: (predictedGoal) => set({ predictedGoal }),
+            setWorkspaceGalaxy: (workspaceGalaxy) => set({ workspaceGalaxy }),
+            setAvatarCinematicState: (avatarCinematicState) => set({ avatarCinematicState }),
+            setTaskPulse: (taskPulse) => set({ taskPulse }),
+            pushMissionLog: (entry) => set((state) => ({
+                missionLog: [...state.missionLog, {
+                    ...entry,
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now(),
+                }].slice(-120),
+            })),
+            clearMissionLog: () => set({ missionLog: [] }),
 
             // Persona & Preferences actions
             setPersona: (updates) => set((state) => ({
@@ -740,6 +795,7 @@ export const useAetherStore = create<AetherState>()(
                 themeConfig: state.themeConfig,
                 visualSettings: state.visualSettings,
                 cachedSkills: state.cachedSkills,
+                workspaceGalaxy: state.workspaceGalaxy,
             }),
         }
     )

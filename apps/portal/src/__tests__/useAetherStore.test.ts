@@ -190,6 +190,35 @@ describe('useAetherStore', () => {
         expect(useAetherStore.getState().latencyMs).toBe(142);
     });
 
+    it('should persist cinematic avatar and mission signals', () => {
+        const store = useAetherStore.getState();
+
+        store.setWorkspaceGalaxy('gal-test');
+        store.setAvatarCinematicState('EUREKA');
+        store.setTaskPulse({
+            taskId: 'task-777',
+            phase: 'COMPLETED',
+            action: 'verify_handover',
+            vibe: 'success',
+            thought: 'Validation path confirmed',
+            intensity: 0.9,
+            timestamp: Date.now(),
+        });
+        store.pushMissionLog({
+            taskId: 'task-777',
+            title: 'Handover completed',
+            detail: 'Debugger confirmed final route',
+            status: 'completed',
+        });
+
+        const state = useAetherStore.getState();
+        expect(state.workspaceGalaxy).toBe('gal-test');
+        expect(state.avatarCinematicState).toBe('EUREKA');
+        expect(state.taskPulse?.phase).toBe('COMPLETED');
+        expect(state.missionLog.length).toBeGreaterThan(0);
+        expect(state.missionLog[state.missionLog.length - 1].title).toBe('Handover completed');
+    });
+
     // ─── Session Time ───────────────────────────────────────────
     it('should track session start time', () => {
         const store = useAetherStore.getState();

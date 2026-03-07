@@ -102,6 +102,17 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
             ws.onmessage = async (event) => {
                 if (typeof event.data === "string") {
                     const msg = JSON.parse(event.data);
+                    const getCinematicPayload = () => {
+                        const payload = msg.payload ?? msg;
+                        const protocolVersion = Number(
+                            payload?.protocol_version ?? payload?.protocolVersion ?? msg?.protocol_version ?? msg?.protocolVersion ?? 1
+                        );
+                        if (!Number.isFinite(protocolVersion) || protocolVersion !== 1) {
+                            store.addSystemLog(`[Protocol] Ignored ${msg.type} with version ${String(protocolVersion)}`);
+                            return null;
+                        }
+                        return payload;
+                    };
 
                     // ── Handshake Challenge ──
                     if (msg.type === "connect.challenge") {
@@ -222,6 +233,64 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                             timestamp: Date.now(),
                         });
                         store.addSystemLog(`[Tool] ${msg.tool_name}: ${msg.status || "done"}`);
+                    }
+
+                    // ── Cinematic Task Pulse (Visual Task Execution Director) ──
+                    else if (msg.type === "task_pulse") {
+                        const payload = getCinematicPayload();
+                        if (!payload) return;
+                        const taskId = payload.task_id || payload.taskId || "task-unknown";
+                        const pulse = {
+                            taskId,
+                            phase: payload.phase || "EXECUTING",
+                            action: payload.action || "task_execution",
+                            vibe: payload.vibe || "focusing",
+                            thought: payload.thought || "",
+                            avatarTarget: payload.avatar_target || payload.avatarTarget || "center",
+                            intensity: Number(payload.intensity ?? 0.6),
+                            latencyMs: payload.latency_ms || payload.latencyMs,
+                            timestamp: Date.now(),
+                        } as const;
+
+                        store.setTaskPulse(pulse);
+                        store.setAvatarCinematicState(payload.avatar_state || payload.avatarState || "EXECUTING");
+                        store.pushMissionLog({
+                            taskId,
+                            title: payload.action || "Neural Operation",
+                            detail: payload.thought || payload.message || "",
+                            status: payload.phase === "FAILED" ? "failed" : payload.phase === "COMPLETED" ? "completed" : "in-progress",
+                        });
+                    }
+
+                    // ── Avatar State Stream (Embodied Agent) ──
+                    else if (msg.type === "avatar_state") {
+                        const payload = getCinematicPayload();
+                        if (!payload) return;
+                        const nextState = payload.state || payload.avatar_state || "IDLE";
+                        store.setAvatarCinematicState(nextState);
+                        if (payload.reason) {
+                            store.addSystemLog(`[Avatar] ${nextState} — ${payload.reason}`);
+                        }
+                    }
+
+                    // ── Workspace Galaxy State ──
+                    else if (msg.type === "workspace_state") {
+                        const payload = getCinematicPayload();
+                        if (!payload) return;
+                        const galaxy = payload.galaxy || payload.workspace_galaxy || "Genesis";
+                        store.setWorkspaceGalaxy(galaxy);
+                    }
+
+                    // ── Mission Log Line ──
+                    else if (msg.type === "task_timeline_item") {
+                        const payload = getCinematicPayload();
+                        if (!payload) return;
+                        store.pushMissionLog({
+                            taskId: payload.task_id || payload.taskId || undefined,
+                            title: payload.title || "Mission Step",
+                            detail: payload.detail || payload.description || "",
+                            status: payload.status || "in-progress",
+                        });
                     }
 
                     // ── Affected / Paralinguistics Telemetry (Alpha Kernel V2) ──

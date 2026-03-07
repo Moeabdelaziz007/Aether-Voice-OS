@@ -15,7 +15,11 @@ import {
   Sparkles,
   Trail,
 } from "@react-three/drei";
-import { type EngineState } from "@/store/useAetherStore";
+import {
+  useAetherStore,
+  type AvatarCinematicState,
+  type EngineState,
+} from "@/store/useAetherStore";
 
 // ═══════════════════════════════════════════════════════════════════
 // Quantum Neural Color System
@@ -127,7 +131,8 @@ const quantumFieldFragmentShader = `
 interface AvatarSceneProps {
   size: number;
   showConnections: boolean;
-  state: EngineState; // Kept for high-level logic, but actual levels are fetched in frame
+  state: EngineState;
+  cinematicState: AvatarCinematicState;
   variant: string;
 }
 
@@ -135,6 +140,7 @@ export const AvatarSceneContent = memo(function AvatarSceneContent({
   size,
   showConnections,
   state,
+  cinematicState,
   variant
 }: AvatarSceneProps) {
   const { camera } = useThree();
@@ -152,22 +158,23 @@ export const AvatarSceneContent = memo(function AvatarSceneContent({
       </Float>
 
       {/* Holographic Voice Rings */}
-      <HolographicVoiceRings state={state} />
+      <HolographicVoiceRings state={state} cinematicState={cinematicState} />
 
       {/* Neural Synaptic Mesh */}
       {showConnections && (
         <NeuralSynapticMesh
           state={state}
+          cinematicState={cinematicState}
           nodeCount={variant === "immersive" ? 35 : 20}
         />
       )}
 
       {/* Quantum Particles */}
-      <QuantumParticleField state={state} />
+      <QuantumParticleField state={state} cinematicState={cinematicState} />
 
       {/* Orbiting Energy Trails */}
       {variant !== "minimal" && (
-        <OrbitingEnergyTrails state={state} />
+        <OrbitingEnergyTrails state={state} cinematicState={cinematicState} />
       )}
     </group>
   );
@@ -213,9 +220,20 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
       materialRef.current.uniforms.uAudioLevel.value = audioLevel;
     }
 
+    const cinematicState = useAetherStore.getState().avatarCinematicState;
+
     if (coreRef.current) {
       coreRef.current.position.y = Math.sin(t * 0.5) * 0.12;
-      const rotSpeed = state === "THINKING" ? 0.025 : state === "SPEAKING" ? 0.015 : 0.006;
+      const rotSpeed =
+        cinematicState === "EUREKA"
+          ? 0.04
+          : cinematicState === "ERROR"
+            ? 0.01
+            : state === "THINKING"
+              ? 0.025
+              : state === "SPEAKING"
+                ? 0.015
+                : 0.006;
       coreRef.current.rotation.y += rotSpeed;
     }
 
@@ -292,9 +310,11 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
 // ═══════════════════════════════════════════════════════════════════
 
 const HolographicVoiceRings = memo(function HolographicVoiceRings({
-  state
+  state,
+  cinematicState,
 }: {
-  state: EngineState
+  state: EngineState;
+  cinematicState: AvatarCinematicState;
 }) {
   const ringsRef = useRef<THREE.Group>(null);
   const ringCount = 4;
@@ -322,7 +342,12 @@ const HolographicVoiceRings = memo(function HolographicVoiceRings({
       mesh.scale.setScalar(expansion);
       mesh.rotation.z = t * (0.15 + i * 0.08) * (i % 2 === 0 ? 1 : -1);
       const material = mesh.material as THREE.MeshBasicMaterial;
-      material.opacity = (state === "SPEAKING" || state === "LISTENING" ? 0.35 : 0.12) - i * 0.05 + audioLevel * 0.25;
+      const baseOpacity =
+        state === "SPEAKING" || state === "LISTENING" ? 0.35 : 0.12;
+      const cinematicBoost = cinematicState === "EUREKA" ? 0.18 : 0;
+      const cinematicPenalty = cinematicState === "ERROR" ? 0.08 : 0;
+      material.opacity =
+        baseOpacity - i * 0.05 + audioLevel * 0.25 + cinematicBoost - cinematicPenalty;
     });
   });
 
@@ -352,9 +377,11 @@ const HolographicVoiceRings = memo(function HolographicVoiceRings({
 
 const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
   state,
+  cinematicState,
   nodeCount = 30
 }: {
   state: EngineState;
+  cinematicState: AvatarCinematicState;
   nodeCount?: number;
 }) {
   const networkRef = useRef<THREE.Group>(null);
@@ -413,8 +440,10 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
 
     if (networkRef.current) {
       networkRef.current.rotation.y += 0.0015;
-      if (state === "SPEAKING") {
+      if (state === "SPEAKING" || cinematicState === "EUREKA") {
         networkRef.current.scale.setScalar(1.0 + audioLevel * 0.1);
+      } else if (cinematicState === "ERROR") {
+        networkRef.current.scale.setScalar(0.95);
       }
     }
 
@@ -459,9 +488,11 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
 // ═══════════════════════════════════════════════════════════════════
 
 const QuantumParticleField = memo(function QuantumParticleField({
-  state
+  state,
+  cinematicState,
 }: {
-  state: EngineState
+  state: EngineState;
+  cinematicState: AvatarCinematicState;
 }) {
   const [audioLevel, setAudioLevel] = React.useState(0);
 
@@ -485,9 +516,9 @@ const QuantumParticleField = memo(function QuantumParticleField({
       count={150}
       scale={7}
       size={2.5 + audioLevel * 4}
-      speed={0.4 + audioLevel * 1.5}
       opacity={0.5 + audioLevel * 0.35}
       color={particleColor}
+      speed={cinematicState === "EUREKA" ? 2.5 : 0.4 + audioLevel * 1.5}
     />
   );
 });
@@ -497,9 +528,11 @@ const QuantumParticleField = memo(function QuantumParticleField({
 // ═══════════════════════════════════════════════════════════════════
 
 const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
-  state
+  state,
+  cinematicState,
 }: {
-  state: EngineState
+  state: EngineState;
+  cinematicState: AvatarCinematicState;
 }) {
   const orbitersRef = useRef<THREE.Group>(null);
   const orbiterCount = 2;
@@ -521,12 +554,16 @@ const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
 
     orbitersRef.current.children.forEach((orbiter, i) => {
       const speed = 0.4 + i * 0.25 + audioLevel * 0.4;
+      const cinematicMultiplier =
+        cinematicState === "EUREKA" ? 1.8 : cinematicState === "ERROR" ? 0.7 : 1.0;
+      const cinematicRadius =
+        cinematicState === "EUREKA" ? 0.25 : cinematicState === "ERROR" ? -0.2 : 0.0;
       const angle = t * speed + (i * Math.PI * 2) / orbiterCount;
-      const radius = 2.0 + i * 0.25;
+      const radius = 2.0 + i * 0.25 + cinematicRadius;
 
-      orbiter.position.x = Math.cos(angle) * radius;
+      orbiter.position.x = Math.cos(angle * cinematicMultiplier) * radius;
       orbiter.position.y = Math.sin(angle * 0.5) * 0.4;
-      orbiter.position.z = Math.sin(angle) * radius;
+      orbiter.position.z = Math.sin(angle * cinematicMultiplier) * radius;
     });
   });
 
@@ -549,5 +586,3 @@ const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
     </group>
   );
 });
-
-import { useAetherStore } from "@/store/useAetherStore";

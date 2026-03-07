@@ -53,7 +53,15 @@ from core.infra.config import AetherConfig, load_config
 from core.infra.transport.gateway import AetherGateway
 from core.services.admin_api import SHARED_STATE, AdminAPIServer
 from core.services.registry import AetherRegistry
-from core.tools import hive_memory, memory_tool, system_tool, tasks_tool, vision_tool
+from core.tools import (
+    aix_tool,
+    hive_memory,
+    memory_tool,
+    system_tool,
+    tasks_tool,
+    vision_tool,
+    workspace_tool,
+)
 from core.tools.router import ToolRouter
 
 logger = logging.getLogger(__name__)
@@ -213,6 +221,7 @@ class AetherEngine:
         # Inject Firebase connector into persistence tools
         tasks_tool.set_firebase_connector(self._firebase)
         memory_tool.set_firebase_connector(self._firebase)
+        workspace_tool.set_workspace_event_emitter(self._emit_workspace_event)
 
         self._router.register_module(system_tool)
         self._router.register_module(tasks_tool)
@@ -223,6 +232,8 @@ class AetherEngine:
         self._router.register_module(rag_tool)
         self._router.register_module(discovery_tool)
         self._router.register_module(context_scraper)
+        self._router.register_module(aix_tool)
+        self._router.register_module(workspace_tool)
         self._router.register(
             name="delegate_complex_task",
             description=(
@@ -358,19 +369,94 @@ class AetherEngine:
         """Broadcasts a neural handover event to the UI."""
         logger.info(f"Broadcast: Neural Handover [{from_agent}] -> [{to_agent}]")
         if self._gateway:
+            handover_id = f"handover-{int(datetime.now().timestamp())}"
+            self._run_background_task(
+                self._emit_cinematic_handover_events(
+                    handover_id=handover_id,
+                    from_agent=from_agent,
+                    to_agent=to_agent,
+                    task=task,
+                )
+            )
             self._run_background_task(
                 self._gateway.broadcast(
                     "neural_event",
                     {
-                        "id": f"handover-{int(datetime.now().timestamp())}",
+                        "id": handover_id,
                         "fromAgent": from_agent,
                         "toAgent": to_agent,
                         "task": task,
-                        "status": "active",
+                        "status": "completed",
                         "timestamp": datetime.now().isoformat(),
                     },
                 )
             )
+
+    async def _emit_cinematic_handover_events(
+        self,
+        handover_id: str,
+        from_agent: str,
+        to_agent: str,
+        task: str,
+    ) -> None:
+        if not self._gateway:
+            return
+
+        now_iso = datetime.now().isoformat()
+        protocol_version = 1
+
+        await self._gateway.broadcast(
+            "workspace_state",
+            {
+                "workspace_galaxy": "Genesis",
+                "focus_agent": to_agent,
+                "protocol_version": protocol_version,
+                "timestamp": now_iso,
+            },
+        )
+        await self._gateway.broadcast(
+            "avatar_state",
+            {
+                "avatar_state": "EXECUTING",
+                "reason": f"Handover {from_agent} -> {to_agent}",
+                "protocol_version": protocol_version,
+                "timestamp": now_iso,
+            },
+        )
+        await self._gateway.broadcast(
+            "task_pulse",
+            {
+                "task_id": handover_id,
+                "phase": "COMPLETED",
+                "action": f"handover_{from_agent.lower()}_to_{to_agent.lower()}",
+                "vibe": "success",
+                "thought": f"{to_agent} received and completed handover task.",
+                "avatar_state": "EUREKA",
+                "avatar_target": to_agent,
+                "intensity": 0.82,
+                "latency_ms": 120,
+                "protocol_version": protocol_version,
+                "timestamp": now_iso,
+            },
+        )
+        await self._gateway.broadcast(
+            "task_timeline_item",
+            {
+                "task_id": handover_id,
+                "title": "Handover Completed",
+                "detail": f"{from_agent} delegated '{task}' to {to_agent}",
+                "status": "completed",
+                "protocol_version": protocol_version,
+                "timestamp": now_iso,
+            },
+        )
+
+    async def _emit_workspace_event(
+        self, event_type: str, payload: dict[str, Any]
+    ) -> None:
+        if not self._gateway:
+            return
+        await self._gateway.broadcast(event_type, payload)
 
     async def _trigger_intervention(self) -> None:
         """

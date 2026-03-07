@@ -9,11 +9,15 @@
  */
 
 import React, { memo, useMemo, useRef } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { EffectComposer, Bloom, ChromaticAberration, Vignette, Noise } from "@react-three/postprocessing";
 import { BlendFunction, KernelSize } from "postprocessing";
-import { useAetherStore, type EngineState } from "@/store/useAetherStore";
+import {
+  useAetherStore,
+  type AvatarCinematicState,
+  type EngineState,
+} from "@/store/useAetherStore";
 
 // Import scene contents (not full components with Canvas)
 import { AvatarSceneContent } from "./QuantumNeuralAvatarScene";
@@ -24,8 +28,27 @@ import { ParticleSceneContent } from "./FluidThoughtParticlesScene";
 // ═══════════════════════════════════════════════════════════════════
 
 const useEngineState = () => useAetherStore((s) => s.engineState);
-const useCurrentRealm = () => useAetherStore((s) => s.currentRealm);
-const useTranscript = () => useAetherStore((s) => s.transcript);
+const useAvatarCinematicState = () => useAetherStore((s) => s.avatarCinematicState);
+
+const mapCinematicToVisualState = (
+  cinematicState: AvatarCinematicState,
+  engineState: EngineState
+): EngineState => {
+  if (cinematicState === "IDLE") {
+    return engineState;
+  }
+  const cinematicMap: Record<AvatarCinematicState, EngineState> = {
+    IDLE: engineState,
+    SEARCHING: "THINKING",
+    LOOKING_AT_SCREEN: "LISTENING",
+    POINTING: "LISTENING",
+    TYPING: "THINKING",
+    EXECUTING: "THINKING",
+    EUREKA: "SPEAKING",
+    ERROR: "INTERRUPTING",
+  };
+  return cinematicMap[cinematicState];
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // Shared Post-Processing (Single Pipeline)
@@ -39,12 +62,12 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
   const bloomRef = useRef<any>(null);
 
   useFrame(() => {
-    const { micLevel, speakerLevel, engineState } = useAetherStore.getState();
-    const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
+    const { micLevel, speakerLevel } = useAetherStore.getState();
+    const audioLevel = state === "SPEAKING" ? speakerLevel : micLevel;
 
     if (bloomRef.current) {
       let intensity = 0.5;
-      switch (engineState) {
+      switch (state) {
         case "SPEAKING": intensity = 1.2 + audioLevel * 0.3; break;
         case "LISTENING": intensity = 0.8 + audioLevel * 0.2; break;
         case "THINKING": intensity = 1.0; break;
@@ -130,8 +153,12 @@ function UnifiedSceneContent({
   showConnections = true,
 }: UnifiedSceneProps) {
   const engineState = useEngineState();
-  const transcript = useTranscript();
+  const avatarCinematicState = useAvatarCinematicState();
   const cameraZ = SIZE_MAP[avatarConfig.size];
+  const visualState = useMemo(
+    () => mapCinematicToVisualState(avatarCinematicState, engineState),
+    [avatarCinematicState, engineState]
+  );
 
   return (
     <>
@@ -143,7 +170,8 @@ function UnifiedSceneContent({
         <AvatarSceneContent
           size={cameraZ}
           showConnections={showConnections && avatarConfig.variant !== "minimal"}
-          state={engineState}
+          state={visualState}
+          cinematicState={avatarCinematicState}
           variant={avatarConfig.variant}
         />
       )}
@@ -154,7 +182,7 @@ function UnifiedSceneContent({
       )}
 
       {/* Shared Post-Processing (Single Pipeline) */}
-      <SharedPostProcessing state={engineState} />
+      <SharedPostProcessing state={visualState} />
     </>
   );
 }
