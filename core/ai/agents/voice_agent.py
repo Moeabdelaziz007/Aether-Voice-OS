@@ -89,7 +89,22 @@ class VoiceAgent:
             behavioral_modifiers.append("- **Awareness:** You are aware of the user's cognitive state. If they are thinking (indicated by silence), give them space and do not interrupt. If they seem frustrated, offer help.")
 
         mod_str = "\n".join(behavioral_modifiers)
-        return f"{base_instructions}\n\n**BEHAVIORAL DIRECTIVES (DNA OVERRIDE):**\n{mod_str}"
+        
+        # Inject Semantic Seed if provided in context
+        seed_prompt = ""
+        if hasattr(self, "_active_context") and self._active_context and self._active_context.compressed_seed:
+            seed = self._active_context.compressed_seed
+            seed_prompt = f"""
+### 🧬 SEMANTIC SEED (Compressed Context)
+The following is a high-density summary of the conversation so far:
+- **Core Intent:** {seed.get('intent_summary', 'N/A')}
+- **Key Entities:** {', '.join(seed.get('entities', []))}
+- **Unresolved Items:** {', '.join(seed.get('unresolved_items', []))}
+- **Critical Knowledge:** {seed.get('critical_knowledge', 'N/A')}
+- **Emotional Trajectory:** {seed.get('emotional_trajectory', 'N/A')}
+"""
+
+        return f"{base_instructions}\n\n{seed_prompt}\n\n**BEHAVIORAL DIRECTIVES (DNA OVERRIDE):**\n{mod_str}"
 
     def stream_audio(self, _pcm_chunk: bytes):
         """
@@ -109,3 +124,11 @@ class VoiceAgent:
         valence = -0.5
         arousal = 0.8
         return valence, arousal
+
+    async def process(self, context: Any) -> str:
+        """
+        Process a task from another agent.
+        Must be implemented by subclasses.
+        """
+        self._active_context = context # Store context for prompt building
+        raise NotImplementedError("Subclasses must implement process()")

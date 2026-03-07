@@ -31,7 +31,7 @@ class DebuggerAgent(VoiceAgent):
         """Set the orchestrator for handover coordination."""
         self.orchestrator = orchestrator
 
-    def process(self, context: HandoverContext) -> str:
+    async def process(self, context: HandoverContext) -> str:
         """
         Process a verification task from the Architect or other agents.
 
@@ -41,7 +41,8 @@ class DebuggerAgent(VoiceAgent):
         - Store verification results
         - Provide feedback for rework if needed
         """
-        logger.info("🐛 Debugger verifying task: %s", context.task)
+        logger.info("🐛 Debugger analyzing task: %s", context.task)
+        self._active_context = context  # Store for prompt building
 
         # Update context
         context.add_history("Debugger began verification", agent="Debugger")
@@ -59,20 +60,22 @@ class DebuggerAgent(VoiceAgent):
         # Perform verification
         self._verify_blueprint(context, architect_data)
 
-        # Add validation results
-        self._output.add_verification_result(
-            category="architecture",
-            target_id="blueprint",
-            status="passed",
-            findings="Architecture follows established patterns and best practices",
-            severity="info",
+        # Add blueprint sections
+        self._output.add_blueprint_section(
+            title=self.SYSTEM_OVERVIEW,
+            content="High-level architecture with microservices pattern",
         )
 
-        # Check for potential issues
-        self._output.add_warning(
-            category="performance",
-            message="Consider adding caching for frequently accessed data",
-            severity="medium",
+        self._output.add_blueprint_section(
+            title="Data Model",
+            content="Relational database with normalized schema",
+            dependencies=[self.SYSTEM_OVERVIEW],
+        )
+
+        self._output.add_blueprint_section(
+            title="API Strategy",
+            content="RESTful APIs with clear versioning strategy",
+            dependencies=[self.SYSTEM_OVERVIEW, "Data Model"],
         )
 
         # Update context with output
@@ -85,7 +88,7 @@ class DebuggerAgent(VoiceAgent):
 
         # Add verification checkpoint if orchestrator supports it
         if self.orchestrator:
-            checkpoint = self.orchestrator.create_validation_checkpoint(
+            checkpoint = await self.create_validation_checkpoint( # Changed to call self.create_validation_checkpoint
                 handover_id=context.handover_id,
                 stage="design_verification",
                 partial_output={
@@ -93,6 +96,7 @@ class DebuggerAgent(VoiceAgent):
                         v.model_dump() for v in self._output.verification_results
                     ],
                     "warnings": [w.model_dump() for w in self._output.warnings],
+                    "blueprint_sections": [bs.model_dump() for bs in self._output.blueprint_sections], # Added blueprint_sections
                 },
             )
             if checkpoint:
@@ -108,7 +112,7 @@ class DebuggerAgent(VoiceAgent):
             )
 
             # Request rework from Architect
-            return self._request_rework(context)
+            return await self._request_rework(context)
 
         # All checks passed
         context.add_history(
@@ -192,7 +196,7 @@ class DebuggerAgent(VoiceAgent):
                     severity="critical",
                 )
 
-    def _request_rework(self, context: HandoverContext) -> str:
+    async def _request_rework(self, context: HandoverContext) -> str:
         """
         Request rework from the Architect agent.
 
@@ -215,8 +219,8 @@ class DebuggerAgent(VoiceAgent):
         )
 
         # Use specialist manager for rework handover
-        success, final_context, message = (
-            self.orchestrator.specialists.debugger_to_architect_feedback(
+        success, _, message = (
+            await self.orchestrator.specialists.debugger_to_architect_feedback(
                 original_context=context,
                 debugger_output=self._output,
             )
@@ -236,6 +240,26 @@ class DebuggerAgent(VoiceAgent):
     def get_output(self) -> Optional[DebuggerOutput]:
         """Get the current debugger output."""
         return self._output
+
+    async def create_validation_checkpoint(
+        self,
+        handover_id: str,
+        stage: str,
+        partial_output: Dict[str, Any],
+    ) -> Optional[ValidationCheckpoint]:
+        """
+        Create a validation checkpoint for an active handover.
+        """
+        if not self._handover_protocol:
+            return None
+
+        checkpoint = await self._handover_protocol.create_checkpoint(
+            handover_id=handover_id,
+            stage=stage,
+            partial_output=partial_output,
+        )
+
+        return checkpoint
 
     def propose_fix(
         self,

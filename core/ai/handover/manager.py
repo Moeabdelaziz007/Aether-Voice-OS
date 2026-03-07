@@ -92,7 +92,7 @@ class SpecialistHandoverManager:
         self._telemetry = get_telemetry()
         self._serializer = ContextSerializer()
 
-    def architect_to_debugger_handover(
+    async def architect_to_debugger_handover(
         self,
         task: str,
         architect_output: ArchitectOutput,
@@ -148,9 +148,9 @@ class SpecialistHandoverManager:
         )
 
         # Perform handover through orchestrator
-        return self._orchestrator.handover_with_context("Architect", "Debugger", context)
+        return await self._orchestrator.handover_with_context("Architect", "Debugger", context)
 
-    def debugger_to_architect_feedback(
+    async def debugger_to_architect_feedback(
         self,
         original_context: HandoverContext,
         debugger_output: DebuggerOutput,
@@ -192,7 +192,7 @@ class SpecialistHandoverManager:
         context.conversation_history = original_context.conversation_history.copy()
 
         # Perform handover
-        return self._orchestrator.handover_with_context("Debugger", "Architect", context)
+        return await self._orchestrator.handover_with_context("Debugger", "Architect", context)
 
     def negotiate_scope(
         self,
@@ -263,7 +263,7 @@ class MultiAgentOrchestrator:
         self.active_agents[name] = agent
         logger.debug("Registered ADK Specialist: %s", name)
 
-    def handover(self, from_agent: str, to_agent: str, context: HandoverContext) -> str:
+    async def handover(self, from_agent: str, to_agent: str, context: HandoverContext) -> str:
         """
         Legacy handover method for backward compatibility.
 
@@ -275,9 +275,12 @@ class MultiAgentOrchestrator:
 
         if self.on_handover:
             try:
-                self.on_handover(from_agent, to_agent, context.task)
+                if asyncio.iscoroutinefunction(self.on_handover):
+                    await self.on_handover(from_agent, to_agent, context.task)
+                else:
+                    self.on_handover(from_agent, to_agent, context.task)
             except Exception as e:
-                logger.error("Failed to trigger handover callback: %e", e)
+                logger.error("Failed to trigger handover callback: %s", e)
 
         target = self.active_agents.get(to_agent)
         if not target:
@@ -287,9 +290,9 @@ class MultiAgentOrchestrator:
         if hasattr(target, "set_orchestrator"):
             target.set_orchestrator(self)
 
-        return target.process(context)
+        return await target.process(context)
 
-    def handover_with_context(
+    async def handover_with_context(
         self,
         from_agent: str,
         to_agent: str,
@@ -336,7 +339,7 @@ class MultiAgentOrchestrator:
 
         try:
             # Pre-transfer preparation
-            success, message = self._protocol.prepare_handoff(context.handover_id)
+            success, message = await self._protocol.prepare_handoff(context.handover_id)
             if not success:
                 logger.error("Handover preparation failed: %s", message)
                 if self._telemetry:
@@ -366,14 +369,14 @@ class MultiAgentOrchestrator:
                 target.set_orchestrator(self)
 
             # Process with target agent
-            result = target.process(context)
+            result = await target.process(context)
 
             # Record result in context
             context.payload["handover_result"] = result
             context.add_history(f"Target agent '{to_agent}' processed task")
 
             # Post-transfer completion
-            success, message = self._protocol.complete_handoff(context.handover_id)
+            success, message = await self._protocol.complete_handoff(context.handover_id)
 
             if success:
                 self._handover_history.append(context.handover_id)
@@ -381,7 +384,10 @@ class MultiAgentOrchestrator:
                 # Trigger callback
                 if self.on_handover:
                     try:
-                        self.on_handover(from_agent, to_agent, context.task)
+                        if asyncio.iscoroutinefunction(self.on_handover):
+                            await self.on_handover(from_agent, to_agent, context.task)
+                        else:
+                            self.on_handover(from_agent, to_agent, context.task)
                     except Exception as e:
                         logger.error("Handover callback failed: %s", e)
 
@@ -461,7 +467,7 @@ class MultiAgentOrchestrator:
 
         return checkpoint
 
-    def rollback_handover(self, handover_id: str) -> Tuple[bool, str]:
+    async def rollback_handover(self, handover_id: str) -> Tuple[bool, str]:
         """
         Rollback a handover to its pre-transfer state.
 
@@ -471,11 +477,14 @@ class MultiAgentOrchestrator:
         Returns:
             Tuple of (success, message)
         """
+        context = self._last_handover if hasattr(self, "_last_handover") else None
+        # Note: In MultiAgentOrchestrator, we use _active_handovers
         context = self._active_handovers.get(handover_id)
+        
         if not context:
             return False, f"Handover {handover_id} not found"
 
-        success, message = self._protocol.rollback_handover(handover_id)
+        success, message = await self._protocol.rollback_handover(handover_id)
 
         if success:
             if self._telemetry:
@@ -608,7 +617,7 @@ class MultiAgentOrchestrator:
         logger.info("Cleaned up %d handovers", len(to_remove))
         return len(to_remove)
 
-    def collaborate(self, task: str, primary_agent: str) -> str:
+    async def collaborate(self, task: str, primary_agent: str) -> str:
         """
         Takes a complex task and routes it starting from a primary agent.
         Uses the deep handover protocol for rich context preservation.
@@ -631,7 +640,7 @@ class MultiAgentOrchestrator:
             starter.set_orchestrator(self)
 
         # Use deep handover
-        success, final_context, message = self.handover_with_context("Orchestrator", primary_agent, context)
+        success, final_context, message = await self.handover_with_context("Orchestrator", primary_agent, context)
 
         if success and final_context:
             return f"Task: {task}\n" f"Status: {final_context.status.value}\n" f"History: {final_context.history}"

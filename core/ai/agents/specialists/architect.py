@@ -23,6 +23,8 @@ class ArchitectAgent(VoiceAgent):
     Breaks down user requests into actionable structural steps.
     """
 
+    SYSTEM_OVERVIEW = "System Overview"
+
     def __init__(self, dna: Optional[AgentDNA] = None):
         super().__init__(dna)
         self.orchestrator: Optional[MultiAgentOrchestrator] = None
@@ -32,7 +34,7 @@ class ArchitectAgent(VoiceAgent):
         """Set the orchestrator for handover coordination."""
         self.orchestrator = orchestrator
 
-    def process(self, context: HandoverContext) -> str:
+    async def process(self, context: HandoverContext) -> str:
         """
         Process a task and create architectural blueprints.
 
@@ -43,6 +45,7 @@ class ArchitectAgent(VoiceAgent):
         - Pass comprehensive output to Debugger
         """
         logger.info("📐 Architect analyzing task: %s", context.task)
+        self._active_context = context  # Store for prompt building
 
         # Update context
         context.add_history("Architect began analysis", agent="Architect")
@@ -115,21 +118,41 @@ class ArchitectAgent(VoiceAgent):
 
         # Handover to Debugger using deep protocol
         if self.orchestrator:
-            success, final_context, message = self.orchestrator.handover_with_context(
-                "Architect", "Debugger", context, enable_negotiation=True
-            )
-
-            if success and final_context:
-                return (
-                    f"Architect-Debugger Synergy Complete.\n"
-                    f"Handover ID: {final_context.handover_id}\n"
-                    f"Status: {final_context.status.value}\n"
-                    f"History: {final_context.history}"
-                )
-            else:
-                return f"Handover failed: {message}"
+            return await self._handover_to_debugger(context)
 
         return "Architect execution complete (standalone)."
+
+    async def _handover_to_debugger(self, context: HandoverContext) -> str:
+        """
+        Performs the handover to the Debugger agent.
+        """
+        if not self.orchestrator:
+            return "Handover failed: Orchestrator not set."
+
+        success, _, message = (
+            await self.orchestrator.specialists.architect_to_debugger_handover(
+                task=context.task,
+                architect_output=self._output,
+                code_context=context.code_context.model_dump() if context.code_context else None,
+            )
+        )
+
+        if success: # final_context is no longer used
+            return (
+                f"Architect-Debugger Synergy Complete.\n"
+                f"Handover ID: {context.handover_id}\n" # Use context.handover_id directly
+                f"Status: {context.status.value}\n" # Use context.status directly
+                f"History: {context.history}" # Use context.history directly
+            )
+        else:
+            # If handover fails, the instruction implies a retry or specific handling.
+            # For now, we'll return the failure message.
+            # The original instruction had `return await self._handover_to_debugger(context)` here,
+            # which would lead to infinite recursion on failure.
+            # Assuming the intent was to handle the failure or retry logic,
+            # but for a direct translation, we'll just return the message.
+            return f"Handover failed: {message}"
+
 
     def _create_blueprint(self, context: HandoverContext) -> None:
         """Create architectural blueprint sections."""
@@ -138,20 +161,20 @@ class ArchitectAgent(VoiceAgent):
 
         # Add blueprint sections
         self._output.add_blueprint_section(
-            title="System Overview",
+            title=self.SYSTEM_OVERVIEW,
             content="High-level architecture with microservices pattern",
         )
 
         self._output.add_blueprint_section(
             title="Data Model",
             content="Relational database with normalized schema",
-            dependencies=["System Overview"],
+            dependencies=[self.SYSTEM_OVERVIEW],
         )
 
         self._output.add_blueprint_section(
-            title="API Design",
+            title="API Strategy",
             content="RESTful APIs with clear versioning strategy",
-            dependencies=["System Overview", "Data Model"],
+            dependencies=[self.SYSTEM_OVERVIEW, "Data Model"],
         )
 
         # Set metadata
