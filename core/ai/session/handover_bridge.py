@@ -48,8 +48,16 @@ def format_handover_context_for_instruction(session_facade) -> str:
         f"Handover ID: {ctx.handover_id}",
         f"From: {ctx.source_agent} → To: {ctx.target_agent}",
         f"Galaxy: {ctx.galaxy_id}",
-        f"Task: {ctx.task}",
+        f"Orbit Lane: {ctx.orbit_lane or 'N/A'}",
     ]
+    
+    if ctx.gravity_score is not None:
+        parts.append(f"Gravity Score: {ctx.gravity_score:.2f}")
+    else:
+        parts.append("Gravity Score: N/A")
+    
+    parts.append(f"Focus Target: {ctx.focus_target or 'Not assigned'}")
+    parts.append(f"Task: {ctx.task}")
 
     if ctx.task_tree:
         parts.append("\n## Task Tree")

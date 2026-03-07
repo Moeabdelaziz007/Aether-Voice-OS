@@ -26,6 +26,7 @@ beforeEach(() => {
     store.setWorkspaceGalaxy('Genesis');
     store.setTaskPulse(null);
     store.setSessionStartTime(null);
+    store.setPreferences({ compactMissionHud: false, lowMotionMode: false });
     // Clear silent hints by dismissing all
     store.silentHints.forEach(h => store.dismissHint(h.id));
 });
@@ -325,5 +326,13 @@ describe('useAetherStore', () => {
         expect(state.mirrorFrames.length).toBe(1);
         expect(state.voyagerLatencyRows.length).toBe(1);
         expect(state.mirrorFrames[0].eventKind).toBe('click');
+    });
+
+    it('should update cinematic preference toggles', () => {
+        const store = useAetherStore.getState();
+        store.setPreferences({ compactMissionHud: true, lowMotionMode: true });
+        const state = useAetherStore.getState();
+        expect(state.preferences.compactMissionHud).toBe(true);
+        expect(state.preferences.lowMotionMode).toBe(true);
     });
 });

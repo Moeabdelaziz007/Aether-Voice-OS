@@ -89,6 +89,7 @@ export default function AetherPortal() {
     const activeWidgets = useAetherStore((s) => s.activeWidgets);
     const applyWorkspaceState = useAetherStore((s) => s.applyWorkspaceState);
     const addWidget = useAetherStore((s) => s.addWidget);
+    const setPreferences = useAetherStore((s) => s.setPreferences);
 
     const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
     const [settingsOpen, setSettingsOpen] = useState(false);
@@ -156,6 +157,25 @@ export default function AetherPortal() {
             addWidget('notes_planet', { appId: 'planet-notes' });
         }
     }, [showVoiceView, orbitRegistry, activeWidgets, applyWorkspaceState, addWidget]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const compactHud = params.get("hud");
+        const motion = params.get("motion");
+        if (compactHud === "compact") {
+            setPreferences({ compactMissionHud: true });
+        }
+        if (compactHud === "full") {
+            setPreferences({ compactMissionHud: false });
+        }
+        if (motion === "low") {
+            setPreferences({ lowMotionMode: true });
+        }
+        if (motion === "full") {
+            setPreferences({ lowMotionMode: false });
+        }
+    }, [setPreferences]);
 
     return (
         <ThemeProvider>

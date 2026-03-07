@@ -311,3 +311,30 @@ AetherOS core infrastructure is now restored and protocol-aligned. **[NEURAL ENG
 - **Zen Focus**: Subscribed to "Architectural Thinking Mode", offloading direct coding tasks to the implementation agent while focusing on 10x systems design.
 
 AetherOS is now pioneering the next generation of sensory-integrated AI Operating Systems. **[SENSORY ARCHITECTURE COMPLETE]**
+
+#### Phase 30: Living Workspace Execution Burst (Phases F, G, B, C) [2026-03-07]
+
+- **Notes Planet Completed (Phase F)**:
+  - Shipped Notes Planet UI + actions for create/update/delete.
+  - Linked notes to task and session context.
+  - Added semantic recall path and a deterministic showcase script.
+  - Added focused unit tests for notes flows and showcase reliability.
+- **Voyager + Mirror Completed (Phase G)**:
+  - Added `voyager_browser_control` wrapper with safe action contracts and emitted `mirror_frame` protocol events.
+  - Wired mirror frames into gateway/store and rendered live interaction highlights (click/typing).
+  - Added Voyager latency rows to Mission HUD for visible timing instrumentation.
+  - Added one fallback demo path for mirror continuity in `phase_g_showcase`.
+- **Avatar Embodiment Upgrade (Phase B closeout)**:
+  - Implemented gaze targeting from cinematic `avatar_target`, including orbit-aware gaze vectors.
+  - Added low-motion fallback behavior in avatar animation and post-processing stack.
+  - Exposed demo URL toggles for recording control: `?hud=compact` and `?motion=low`.
+- **Mission HUD Upgrade (Phase C closeout)**:
+  - Added compact HUD mode optimized for recording.
+  - Compact mode trims timeline/latency rows and removes verbose thought/detail content.
+  - Kept full mode parity for normal operation.
+- **Galaxy Orchestration Start (Phase H kickoff)**:
+  - Extended handover context propagation with `galaxy_id` across protocol, hive callback payloads, session instruction bridge, and cinematic emission paths.
+- **Verification + Delivery**:
+  - Ran targeted portal tests and backend tests, all passing for changed paths.
+  - Updated architecture plan checklist: Phase F and Phase G complete, remaining Phase B/C items marked complete.
+  - Committed and pushed production changes to `main` (`1d7d85c`).

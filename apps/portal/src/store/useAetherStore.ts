@@ -227,6 +227,8 @@ export interface UserPreferences {
     emotionDisplay: EmotionDisplay;
     showTelemetry: boolean;
     showParticles: boolean;
+    lowMotionMode: boolean;
+    compactMissionHud: boolean;
 
     // Persona Customization
     personaName: string;       // User can rename the AI
@@ -325,6 +327,8 @@ const DEFAULT_PREFERENCES: UserPreferences = {
     emotionDisplay: 'aura',
     showTelemetry: true,
     showParticles: true,
+    lowMotionMode: false,
+    compactMissionHud: false,
     personaName: 'Aether',
     personaRole: 'Developer Co-Pilot',
     voiceTone: 'friendly',

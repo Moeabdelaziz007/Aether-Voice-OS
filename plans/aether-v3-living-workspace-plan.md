@@ -969,10 +969,10 @@ src/styles/
 ### 17.2 Phase B — Avatar Embodiment
 
 - [x] Map cinematic states to animation graph nodes
-- [ ] Implement gaze targeting by `avatar_target`
+- [x] Implement gaze targeting by `avatar_target`
 - [x] Add eureka pulse visual trigger
 - [x] Add graceful failure visual state
-- [ ] Add low-motion fallback mode
+- [x] Add low-motion fallback mode
 
 ### 17.3 Phase C — Mission HUD
 
@@ -980,7 +980,7 @@ src/styles/
 - [x] Build `ThoughtEcho` strip from `taskPulse.thought`
 - [x] Add status vocabulary mapping (`TARGET_ACQUIRED`, `SYNAPSES_LINKED`)
 - [x] Add retry/failure reason rows
-- [ ] Add compact mode for demo recording
+- [x] Add compact mode for demo recording
 
 ### 17.4 Phase D — Orbital Workspace
 

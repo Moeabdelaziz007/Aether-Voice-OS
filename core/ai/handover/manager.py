@@ -24,6 +24,9 @@ from core.ai.handover.protocol_models import (
     get_handover_protocol,
 )
 from core.ai.handover.telemetry import FailureCategory, HandoverOutcome, get_telemetry
+from core.ai.orchestrator.gravity_router import (
+    PlanetCandidate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -258,6 +261,153 @@ class MultiAgentOrchestrator:
         # Specialist handover manager
         self.specialists = SpecialistHandoverManager(self)
 
+        # Galaxy orchestration components
+        from core.ai.orchestrator.gravity_router import GravityRouter
+        from core.ai.orchestrator.fallback_strategy import FallbackStrategy
+        from core.ai.orchestrator.galaxy_policy import GalaxyPolicyEnforcer
+
+        self.gravity_router = GravityRouter()
+        self.fallback_strategy = FallbackStrategy(max_retries=2)
+        self.policy_enforcer = GalaxyPolicyEnforcer()
+        self._engine = None  # Will be set by engine.py
+
+    def set_engine(self, engine) -> None:
+        """Set engine reference for cinematic event emission."""
+        self._engine = engine
+
+    def _extract_agent_capabilities(self, agent_name: str) -> List[str]:
+        """Extract capabilities from a registered agent.
+
+        Args:
+            agent_name: Name of the agent
+
+        Returns:
+            List of capability strings (e.g., ["note.create", "semantic.search"])
+        """
+        agent = self.active_agents.get(agent_name)
+        if not agent:
+            logger.warning(
+                "Agent '%s' not found for capability extraction",
+                agent_name,
+            )
+            return []
+
+        # Try to extract from agent metadata or manifest
+        capabilities = []
+
+        # Check if agent has capabilities attribute
+        if hasattr(agent, 'capabilities'):
+            capabilities.extend(agent.capabilities)
+
+        # Check if agent has metadata with capabilities
+        if hasattr(agent, 'metadata') and hasattr(agent.metadata, 'capabilities'):
+            capabilities.extend(agent.metadata.capabilities)
+
+        # Default capabilities based on agent type if not specified
+        if not capabilities:
+            # Map common agent types to default capabilities
+            agent_type_map = {
+                "Architect": [
+                    "design.create",
+                    "blueprint.generate",
+                    "risk.assess",
+                ],
+                "Debugger": [
+                    "debug.analyze",
+                    "verify.design",
+                    "risk.assess",
+                ],
+                "CodingExpert": [
+                    "code.write",
+                    "code.review",
+                    "refactor",
+                ],
+                "System": [
+                    "system.orchestrate",
+                    "task.route",
+                ],
+            }
+            capabilities = agent_type_map.get(agent_name, ["general.task"])
+
+        return capabilities
+
+    def _extract_required_capabilities(
+        self,
+        context: HandoverContext,
+    ) -> List[str]:
+        """Extract required capabilities from task context.
+
+        Args:
+            context: Handover context with task information
+
+        Returns:
+            List of required capability strings
+        """
+        capabilities = set()
+
+        # Analyze task description for keywords
+        task_lower = context.task.lower()
+
+        # Design-related capabilities
+        if any(
+            word in task_lower
+            for word in ["design", "architecture", "blueprint", "plan"]
+        ):
+            capabilities.add("design.create")
+            capabilities.add("blueprint.generate")
+
+        # Debug-related capabilities
+        if any(
+            word in task_lower
+            for word in ["debug", "error", "fix", "issue", "problem"]
+        ):
+            capabilities.add("debug.analyze")
+            capabilities.add("verify.design")
+
+        # Code-related capabilities
+        if any(
+            word in task_lower
+            for word in ["code", "implement", "write", "function", "class"]
+        ):
+            capabilities.add("code.write")
+            capabilities.add("code.review")
+
+        # Risk assessment
+        if any(
+            word in task_lower
+            for word in ["risk", "validate", "verify", "check"]
+        ):
+            capabilities.add("risk.assess")
+
+        # Search capabilities
+        if any(
+            word in task_lower
+            for word in ["search", "find", "lookup", "documentation"]
+        ):
+            capabilities.add("semantic.search")
+            capabilities.add("docs.lookup")
+
+        # Note/documentation capabilities
+        if any(
+            word in task_lower
+            for word in ["note", "document", "record", "summary"]
+        ):
+            capabilities.add("note.create")
+
+        # Fallback to general task if no specific capabilities identified
+        if not capabilities:
+            capabilities.add("general.task")
+
+        # Also consider working memory hints
+        if context.working_memory:
+            memory_str = str(context.working_memory).lower()
+            if "design" in memory_str:
+                capabilities.add("design.create")
+            if "code" in memory_str:
+                capabilities.add("code.write")
+
+        return list(capabilities)
+
     def register_agent(self, name: str, agent: Any):
         """Register an agent with the orchestrator."""
         self.active_agents[name] = agent
@@ -350,6 +500,51 @@ class MultiAgentOrchestrator:
                         failure_reason=message,
                     )
                 return False, context, message
+
+            # Galaxy policy validation
+            policy_violations = self.policy_enforcer.validate_routing_decision(
+                planet_id=to_agent,
+                galaxy_id=context.galaxy_id,
+                latency_ms=0.0,  # Will be populated from telemetry
+                load=0.0,  # Will be populated from planet health
+            )
+
+            if policy_violations:
+                logger.error("Policy violations: %s", policy_violations)
+                return (
+                    False,
+                    context,
+                    f"Policy violations: {', '.join(policy_violations)}",
+                )
+
+            # Calculate gravity score if not set
+            if context.gravity_score is None:
+                # Create candidate from target agent
+                candidate = PlanetCandidate(
+                    planet_id=to_agent,
+                    capabilities=self._extract_agent_capabilities(to_agent),
+                    confidence=(
+                        context.intent_confidence.confidence_score
+                        if context.intent_confidence
+                        else 0.5
+                    ),
+                    latency_ms=0.0,  # Will be populated later
+                    load=0.0,  # Will be populated later
+                    continuity_bonus=0.0,
+                )
+
+                best_planet, best_score = self.gravity_router.select_best_planet(
+                    [candidate],
+                    required_capabilities=self._extract_required_capabilities(context),
+                )
+
+                context.gravity_score = best_score
+                context.focus_target = best_planet or to_agent
+                logger.info(
+                    "Calculated gravity score %.3f for planet %s",
+                    best_score,
+                    best_planet or to_agent,
+                )
 
             # Negotiation phase (if enabled)
             if enable_negotiation and not context.negotiation:

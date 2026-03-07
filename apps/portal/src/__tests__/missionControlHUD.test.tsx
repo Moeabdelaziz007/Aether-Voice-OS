@@ -11,6 +11,7 @@ describe("MissionControlHUD", () => {
     store.clearMissionLog();
     store.clearVoyagerLatencyRows();
     store.setTaskPulse(null);
+    store.setPreferences({ compactMissionHud: false });
   });
 
   it("renders pulse thought and mapped phase label", () => {
@@ -61,5 +62,32 @@ describe("MissionControlHUD", () => {
     expect(screen.getByText("Voyager Latency")).toBeTruthy();
     expect(screen.getByText("click:voyager_browser_control")).toBeTruthy();
     expect(screen.getByText("42ms")).toBeTruthy();
+  });
+
+  it("hides thought and detail rows in compact mode", () => {
+    const store = useAetherStore.getState();
+    store.setPreferences({ compactMissionHud: true });
+    store.setTaskPulse({
+      taskId: "task-compact",
+      phase: "EXECUTING",
+      action: "compact_preview",
+      vibe: "focusing",
+      thought: "Hidden in compact mode",
+      intensity: 0.6,
+      timestamp: Date.now(),
+    });
+    store.pushMissionLog({
+      taskId: "task-compact",
+      title: "Compact row",
+      detail: "Detail should not be visible in compact mode",
+      status: "in-progress",
+    });
+
+    render(<MissionControlHUD />);
+    expect(screen.getByText("compact_preview")).toBeTruthy();
+    expect(screen.queryByText("Hidden in compact mode")).toBeNull();
+    expect(
+      screen.queryByText("Detail should not be visible in compact mode")
+    ).toBeNull();
   });
 });

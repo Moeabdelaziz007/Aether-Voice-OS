@@ -134,6 +134,8 @@ interface AvatarSceneProps {
   state: EngineState;
   cinematicState: AvatarCinematicState;
   variant: string;
+  gazeTarget: [number, number, number];
+  lowMotionMode: boolean;
 }
 
 export const AvatarSceneContent = memo(function AvatarSceneContent({
@@ -141,20 +143,47 @@ export const AvatarSceneContent = memo(function AvatarSceneContent({
   showConnections,
   state,
   cinematicState,
-  variant
+  variant,
+  gazeTarget,
+  lowMotionMode,
 }: AvatarSceneProps) {
   const { camera } = useThree();
+  const sceneRootRef = useRef<THREE.Group>(null);
+  const targetVector = useMemo(
+    () => new THREE.Vector3(...gazeTarget),
+    [gazeTarget]
+  );
+  const lookAtMatrix = useMemo(() => new THREE.Matrix4(), []);
+  const targetQuaternion = useMemo(() => new THREE.Quaternion(), []);
 
   // Update camera position based on size
   React.useEffect(() => {
     camera.position.z = size;
   }, [camera, size]);
 
+  useFrame(() => {
+    if (!sceneRootRef.current) return;
+    lookAtMatrix.lookAt(
+      sceneRootRef.current.position,
+      targetVector,
+      new THREE.Vector3(0, 1, 0)
+    );
+    targetQuaternion.setFromRotationMatrix(lookAtMatrix);
+    sceneRootRef.current.quaternion.slerp(
+      targetQuaternion,
+      lowMotionMode ? 0.03 : 0.08
+    );
+  });
+
   return (
-    <group>
+    <group ref={sceneRootRef}>
       {/* Main Consciousness Core */}
-      <Float speed={1.2} rotationIntensity={0.25} floatIntensity={0.35}>
-        <QuantumConsciousnessCore state={state} />
+      <Float
+        speed={lowMotionMode ? 0.35 : 1.2}
+        rotationIntensity={lowMotionMode ? 0.08 : 0.25}
+        floatIntensity={lowMotionMode ? 0.1 : 0.35}
+      >
+        <QuantumConsciousnessCore state={state} lowMotionMode={lowMotionMode} />
       </Float>
 
       {/* Holographic Voice Rings */}
@@ -166,15 +195,24 @@ export const AvatarSceneContent = memo(function AvatarSceneContent({
           state={state}
           cinematicState={cinematicState}
           nodeCount={variant === "immersive" ? 35 : 20}
+          lowMotionMode={lowMotionMode}
         />
       )}
 
       {/* Quantum Particles */}
-      <QuantumParticleField state={state} cinematicState={cinematicState} />
+      <QuantumParticleField
+        state={state}
+        cinematicState={cinematicState}
+        lowMotionMode={lowMotionMode}
+      />
 
       {/* Orbiting Energy Trails */}
       {variant !== "minimal" && (
-        <OrbitingEnergyTrails state={state} cinematicState={cinematicState} />
+        <OrbitingEnergyTrails
+          state={state}
+          cinematicState={cinematicState}
+          lowMotionMode={lowMotionMode}
+        />
       )}
     </group>
   );
@@ -182,9 +220,11 @@ export const AvatarSceneContent = memo(function AvatarSceneContent({
 
 // Implementation for QuantumConsciousnessCore with direct state access
 const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
-  state
+  state,
+  lowMotionMode,
 }: {
-  state: EngineState
+  state: EngineState;
+  lowMotionMode: boolean;
 }) {
   const coreRef = useRef<THREE.Group>(null);
   const innerRef = useRef<THREE.Mesh>(null);
@@ -234,18 +274,22 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
               : state === "SPEAKING"
                 ? 0.015
                 : 0.006;
-      coreRef.current.rotation.y += rotSpeed;
+      coreRef.current.rotation.y += lowMotionMode ? rotSpeed * 0.35 : rotSpeed;
     }
 
     if (innerRef.current) {
-      const pulse = 1.0 + Math.sin(t * 3) * 0.06 + audioLevel * 0.3 * Math.sin(t * 10);
+      const pulse = lowMotionMode
+        ? 1.0 + Math.sin(t * 1.1) * 0.02 + audioLevel * 0.08 * Math.sin(t * 3)
+        : 1.0 + Math.sin(t * 3) * 0.06 + audioLevel * 0.3 * Math.sin(t * 10);
       innerRef.current.scale.setScalar(pulse);
     }
 
     if (quantumShellRef.current) {
-      const breathe = 1.0 + Math.sin(t * 1.5) * 0.05 + audioLevel * 0.2;
+      const breathe = lowMotionMode
+        ? 1.0 + Math.sin(t * 0.8) * 0.02 + audioLevel * 0.08
+        : 1.0 + Math.sin(t * 1.5) * 0.05 + audioLevel * 0.2;
       quantumShellRef.current.scale.setScalar(breathe);
-      quantumShellRef.current.rotation.x += 0.002;
+      quantumShellRef.current.rotation.x += lowMotionMode ? 0.0007 : 0.002;
     }
   });
 
@@ -378,11 +422,13 @@ const HolographicVoiceRings = memo(function HolographicVoiceRings({
 const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
   state,
   cinematicState,
-  nodeCount = 30
+  nodeCount = 30,
+  lowMotionMode,
 }: {
   state: EngineState;
   cinematicState: AvatarCinematicState;
   nodeCount?: number;
+  lowMotionMode: boolean;
 }) {
   const networkRef = useRef<THREE.Group>(null);
   const nodesRef = useRef<THREE.InstancedMesh>(null);
@@ -439,9 +485,11 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
     const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
 
     if (networkRef.current) {
-      networkRef.current.rotation.y += 0.0015;
+      networkRef.current.rotation.y += lowMotionMode ? 0.0004 : 0.0015;
       if (state === "SPEAKING" || cinematicState === "EUREKA") {
-        networkRef.current.scale.setScalar(1.0 + audioLevel * 0.1);
+        networkRef.current.scale.setScalar(
+          1.0 + audioLevel * (lowMotionMode ? 0.03 : 0.1)
+        );
       } else if (cinematicState === "ERROR") {
         networkRef.current.scale.setScalar(0.95);
       }
@@ -454,7 +502,9 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
       const quaternion = new THREE.Quaternion();
 
       for (let i = 0; i < nodeCount; i++) {
-        const pulse = 1.0 + Math.sin(t * 4 + i) * 0.15 * audioLevel;
+        const pulse = lowMotionMode
+          ? 1.0 + Math.sin(t * 1.3 + i) * 0.04 * audioLevel
+          : 1.0 + Math.sin(t * 4 + i) * 0.15 * audioLevel;
         position.copy(nodePositions[i]);
         scale.setScalar(0.05 * pulse);
         matrix.compose(position, quaternion, scale);
@@ -490,9 +540,11 @@ const NeuralSynapticMesh = memo(function NeuralSynapticMesh({
 const QuantumParticleField = memo(function QuantumParticleField({
   state,
   cinematicState,
+  lowMotionMode,
 }: {
   state: EngineState;
   cinematicState: AvatarCinematicState;
+  lowMotionMode: boolean;
 }) {
   const [audioLevel, setAudioLevel] = React.useState(0);
 
@@ -513,12 +565,12 @@ const QuantumParticleField = memo(function QuantumParticleField({
 
   return (
     <Sparkles
-      count={150}
+      count={lowMotionMode ? 70 : 150}
       scale={7}
-      size={2.5 + audioLevel * 4}
-      opacity={0.5 + audioLevel * 0.35}
+      size={lowMotionMode ? 1.8 + audioLevel * 2.2 : 2.5 + audioLevel * 4}
+      opacity={lowMotionMode ? 0.28 + audioLevel * 0.18 : 0.5 + audioLevel * 0.35}
       color={particleColor}
-      speed={cinematicState === "EUREKA" ? 2.5 : 0.4 + audioLevel * 1.5}
+      speed={lowMotionMode ? 0.18 : cinematicState === "EUREKA" ? 2.5 : 0.4 + audioLevel * 1.5}
     />
   );
 });
@@ -530,9 +582,11 @@ const QuantumParticleField = memo(function QuantumParticleField({
 const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
   state,
   cinematicState,
+  lowMotionMode,
 }: {
   state: EngineState;
   cinematicState: AvatarCinematicState;
+  lowMotionMode: boolean;
 }) {
   const orbitersRef = useRef<THREE.Group>(null);
   const orbiterCount = 2;
@@ -553,7 +607,9 @@ const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
     const audioLevel = engineState === "SPEAKING" ? speakerLevel : micLevel;
 
     orbitersRef.current.children.forEach((orbiter, i) => {
-      const speed = 0.4 + i * 0.25 + audioLevel * 0.4;
+      const speed = lowMotionMode
+        ? 0.16 + i * 0.08 + audioLevel * 0.12
+        : 0.4 + i * 0.25 + audioLevel * 0.4;
       const cinematicMultiplier =
         cinematicState === "EUREKA" ? 1.8 : cinematicState === "ERROR" ? 0.7 : 1.0;
       const cinematicRadius =
@@ -572,8 +628,8 @@ const OrbitingEnergyTrails = memo(function OrbitingEnergyTrails({
       {Array.from({ length: orbiterCount }).map((_, i) => (
         <Trail
           key={i}
-          width={0.12}
-          length={6}
+          width={lowMotionMode ? 0.08 : 0.12}
+          length={lowMotionMode ? 3 : 6}
           color={trailColor}
           attenuation={(width) => width}
         >

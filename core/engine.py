@@ -466,6 +466,70 @@ class AetherEngine:
             },
         )
 
+    async def _emit_rollback_event(
+        self,
+        handover_id: str,
+        from_agent: str,
+        to_agent: str,
+        reason: str,
+        galaxy_id: str = "Genesis",
+    ) -> None:
+        """Emit cinematic events for handover rollback.
+
+        Args:
+            handover_id: Handover identifier
+            from_agent: Source agent name
+            to_agent: Target agent name
+            reason: Reason for rollback
+            galaxy_id: Galaxy identifier
+        """
+        if not self._gateway:
+            return
+
+        now_iso = datetime.now().isoformat()
+        protocol_version = 1
+
+        # Emit FAILED task_pulse
+        await self._gateway.broadcast(
+            "task_pulse",
+            {
+                "task_id": handover_id,
+                "phase": "FAILED",
+                "action": f"rollback_{to_agent.lower()}_to_{from_agent.lower()}",
+                "vibe": "caution",
+                "thought": f"Rollback triggered: {reason}",
+                "avatar_state": "ERROR",
+                "avatar_target": from_agent,
+                "intensity": 0.9,
+                "latency_ms": 80,  # Fast rollback target
+                "galaxy_id": galaxy_id,
+                "protocol_version": protocol_version,
+                "timestamp": now_iso,
+            },
+        )
+
+        # Emit timeline item
+        await self._gateway.broadcast(
+            "task_timeline_item",
+            {
+                "task_id": handover_id,
+                "title": "Rollback Executed",
+                "detail": f"Failed handover rolled back: {reason}",
+                "status": "failed",
+                "galaxy_id": galaxy_id,
+                "protocol_version": protocol_version,
+                "timestamp": now_iso,
+            },
+        )
+
+        logger.warning(
+            "🔄 Rollback emitted for handover %s: %s -> %s (%s)",
+            handover_id,
+            from_agent,
+            to_agent,
+            reason,
+        )
+
     async def _emit_workspace_event(
         self, event_type: str, payload: dict[str, Any]
     ) -> None:

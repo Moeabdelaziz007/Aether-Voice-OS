@@ -8,7 +8,7 @@
  * Performance Impact: 30-40% GPU reduction, 15-20 FPS gain
  */
 
-import React, { memo, useMemo, useRef } from "react";
+import React, { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { EffectComposer, Bloom, ChromaticAberration, Vignette, Noise } from "@react-three/postprocessing";
@@ -30,6 +30,10 @@ import { ParticleSceneContent } from "./FluidThoughtParticlesScene";
 const useEngineState = () => useAetherStore((s) => s.engineState);
 const useAvatarCinematicState = () => useAetherStore((s) => s.avatarCinematicState);
 const useFocusModeEnvironment = () => useAetherStore((s) => s.focusModeEnvironment);
+const useTaskPulse = () => useAetherStore((s) => s.taskPulse);
+const useFocusedPlanetId = () => useAetherStore((s) => s.focusedPlanetId);
+const useOrbitRegistry = () => useAetherStore((s) => s.orbitRegistry);
+const usePreferences = () => useAetherStore((s) => s.preferences);
 
 const mapCinematicToVisualState = (
   cinematicState: AvatarCinematicState,
@@ -51,6 +55,16 @@ const mapCinematicToVisualState = (
   return cinematicMap[cinematicState];
 };
 
+const mapTargetKeywordToVector = (target: string): [number, number, number] => {
+  const normalized = target.toLowerCase();
+  if (normalized.includes("left")) return [-1.8, 0.35, 0.2];
+  if (normalized.includes("right")) return [1.8, 0.35, 0.2];
+  if (normalized.includes("up") || normalized.includes("top")) return [0, 1.4, 0.5];
+  if (normalized.includes("down") || normalized.includes("bottom")) return [0, -1.2, 0.2];
+  if (normalized.includes("screen")) return [0.25, 0.2, 1.8];
+  return [0, 0.15, 1.25];
+};
+
 // ═══════════════════════════════════════════════════════════════════
 // Shared Post-Processing (Single Pipeline)
 // ═══════════════════════════════════════════════════════════════════
@@ -58,9 +72,11 @@ const mapCinematicToVisualState = (
 const SharedPostProcessing = memo(function SharedPostProcessing({
   state,
   focusModeEnvironment,
+  lowMotionMode,
 }: {
   state: EngineState;
   focusModeEnvironment: boolean;
+  lowMotionMode: boolean;
 }) {
   const bloomRef = useRef<any>(null);
 
@@ -76,6 +92,9 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
         case "THINKING": intensity = 1.0; break;
         case "INTERRUPTING": intensity = 1.5; break;
       }
+      if (lowMotionMode) {
+        intensity = Math.min(intensity, 0.55);
+      }
       if (focusModeEnvironment) {
         intensity += 0.25;
       }
@@ -87,7 +106,7 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
     <EffectComposer>
       <Bloom
         ref={bloomRef}
-        intensity={1.0}
+        intensity={lowMotionMode ? 0.45 : 1.0}
         luminanceThreshold={0.3}  // Raised from 0.2 for better performance
         luminanceSmoothing={0.9}
         kernelSize={KernelSize.MEDIUM}  // Changed from LARGE for performance
@@ -105,7 +124,7 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
         blendFunction={BlendFunction.NORMAL}
       />
       <Noise
-        opacity={0.015}
+        opacity={lowMotionMode ? 0.005 : 0.015}
         blendFunction={BlendFunction.OVERLAY}
       />
     </EffectComposer>
@@ -164,11 +183,46 @@ function UnifiedSceneContent({
   const engineState = useEngineState();
   const avatarCinematicState = useAvatarCinematicState();
   const focusModeEnvironment = useFocusModeEnvironment();
+  const taskPulse = useTaskPulse();
+  const focusedPlanetId = useFocusedPlanetId();
+  const orbitRegistry = useOrbitRegistry();
+  const preferences = usePreferences();
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const cameraZ = SIZE_MAP[avatarConfig.size];
   const visualState = useMemo(
     () => mapCinematicToVisualState(avatarCinematicState, engineState),
     [avatarCinematicState, engineState]
   );
+  const lowMotionMode = preferences.lowMotionMode || prefersReducedMotion;
+  const gazeTarget = useMemo<[number, number, number]>(() => {
+    const explicitTarget = taskPulse?.avatarTarget || "";
+    const targetId = explicitTarget || focusedPlanetId || "";
+    const orbitTarget = orbitRegistry[targetId];
+    if (orbitTarget) {
+      return [
+        Math.max(-2.4, Math.min(2.4, orbitTarget.position.x / 70)),
+        Math.max(-1.4, Math.min(1.4, orbitTarget.position.y / 80)),
+        0.9,
+      ];
+    }
+    if (targetId) {
+      return mapTargetKeywordToVector(targetId);
+    }
+    return [0, 0.15, 1.25];
+  }, [taskPulse?.avatarTarget, focusedPlanetId, orbitRegistry]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) {
+      return;
+    }
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handleChange = (event: MediaQueryListEvent) => {
+      setPrefersReducedMotion(event.matches);
+    };
+    setPrefersReducedMotion(media.matches);
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
+  }, []);
 
   return (
     <>
@@ -183,6 +237,8 @@ function UnifiedSceneContent({
           state={visualState}
           cinematicState={avatarCinematicState}
           variant={avatarConfig.variant}
+          gazeTarget={gazeTarget}
+          lowMotionMode={lowMotionMode}
         />
       )}
 
@@ -195,6 +251,7 @@ function UnifiedSceneContent({
       <SharedPostProcessing
         state={visualState}
         focusModeEnvironment={focusModeEnvironment}
+        lowMotionMode={lowMotionMode}
       />
     </>
   );
