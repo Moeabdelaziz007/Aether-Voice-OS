@@ -29,6 +29,7 @@ import { ParticleSceneContent } from "./FluidThoughtParticlesScene";
 
 const useEngineState = () => useAetherStore((s) => s.engineState);
 const useAvatarCinematicState = () => useAetherStore((s) => s.avatarCinematicState);
+const useFocusModeEnvironment = () => useAetherStore((s) => s.focusModeEnvironment);
 
 const mapCinematicToVisualState = (
   cinematicState: AvatarCinematicState,
@@ -55,9 +56,11 @@ const mapCinematicToVisualState = (
 // ═══════════════════════════════════════════════════════════════════
 
 const SharedPostProcessing = memo(function SharedPostProcessing({
-  state
+  state,
+  focusModeEnvironment,
 }: {
   state: EngineState;
+  focusModeEnvironment: boolean;
 }) {
   const bloomRef = useRef<any>(null);
 
@@ -73,6 +76,9 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
         case "THINKING": intensity = 1.0; break;
         case "INTERRUPTING": intensity = 1.5; break;
       }
+      if (focusModeEnvironment) {
+        intensity += 0.25;
+      }
       bloomRef.current.intensity = intensity;
     }
   });
@@ -87,12 +93,15 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
         kernelSize={KernelSize.MEDIUM}  // Changed from LARGE for performance
       />
       <ChromaticAberration
-        offset={new THREE.Vector2(0.0015, 0.0015)}
+        offset={new THREE.Vector2(
+          focusModeEnvironment ? 0.001 : 0.0015,
+          focusModeEnvironment ? 0.001 : 0.0015
+        )}
         blendFunction={BlendFunction.NORMAL}
       />
       <Vignette
-        offset={0.3}
-        darkness={0.7}
+        offset={focusModeEnvironment ? 0.42 : 0.3}
+        darkness={focusModeEnvironment ? 0.82 : 0.7}
         blendFunction={BlendFunction.NORMAL}
       />
       <Noise
@@ -154,6 +163,7 @@ function UnifiedSceneContent({
 }: UnifiedSceneProps) {
   const engineState = useEngineState();
   const avatarCinematicState = useAvatarCinematicState();
+  const focusModeEnvironment = useFocusModeEnvironment();
   const cameraZ = SIZE_MAP[avatarConfig.size];
   const visualState = useMemo(
     () => mapCinematicToVisualState(avatarCinematicState, engineState),
@@ -182,7 +192,10 @@ function UnifiedSceneContent({
       )}
 
       {/* Shared Post-Processing (Single Pipeline) */}
-      <SharedPostProcessing state={visualState} />
+      <SharedPostProcessing
+        state={visualState}
+        focusModeEnvironment={focusModeEnvironment}
+      />
     </>
   );
 }

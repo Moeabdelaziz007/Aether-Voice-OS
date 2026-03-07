@@ -133,6 +133,36 @@ export interface MissionLogEntry {
     timestamp: number;
 }
 
+export type OrbitLane = 'inner' | 'mid' | 'outer';
+export type OrbitalLayoutPreset = 'inner' | 'mid' | 'outer';
+
+export interface OrbitPlanet {
+    planetId: string;
+    planetType: string;
+    lane: OrbitLane;
+    angle: number;
+    radius: number;
+    position: { x: number; y: number };
+    isMaterialized: boolean;
+    isCollapsed: boolean;
+    updatedAt: number;
+}
+
+export interface WorkspaceStateEnvelope {
+    action?: string;
+    app_id?: string;
+    appId?: string;
+    focused_app_id?: string;
+    focusedAppId?: string;
+    workspace_galaxy?: string;
+    galaxy?: string;
+    x?: number;
+    y?: number;
+    orbit_lane?: OrbitLane;
+    orbitLane?: OrbitLane;
+    position?: { x?: number; y?: number };
+}
+
 // ─── Superpowers — Toggleable AI Capabilities ──────────────
 export interface Superpowers {
     visionPulse: boolean;     // Screen capture + visual context
@@ -351,6 +381,10 @@ interface AetherState {
     avatarCinematicState: AvatarCinematicState;
     taskPulse: TaskPulse | null;
     missionLog: MissionLogEntry[];
+    orbitRegistry: Record<string, OrbitPlanet>;
+    focusedPlanetId: string | null;
+    orbitalLayoutPreset: OrbitalLayoutPreset;
+    focusModeEnvironment: boolean;
 
     // Persona & Preferences
     persona: AetherPersona;
@@ -422,6 +456,12 @@ interface AetherState {
     setTaskPulse: (pulse: TaskPulse | null) => void;
     pushMissionLog: (entry: Omit<MissionLogEntry, 'id' | 'timestamp'>) => void;
     clearMissionLog: () => void;
+    setOrbitalLayoutPreset: (preset: OrbitalLayoutPreset) => void;
+    setFocusModeEnvironment: (enabled: boolean) => void;
+    upsertOrbitPlanet: (planet: OrbitPlanet) => void;
+    focusOrbitPlanet: (planetId: string | null) => void;
+    clearOrbitRegistry: () => void;
+    applyWorkspaceState: (payload: WorkspaceStateEnvelope) => void;
 
     // Actions — Persona & Preferences
     setPersona: (updates: Partial<AetherPersona>) => void;
@@ -484,6 +524,26 @@ export const useTelemetrySelector = () => {
     return { valence, arousal, engagement, frustrationScore };
 };
 
+const ORBIT_PRESET_MULTIPLIER: Record<OrbitalLayoutPreset, number> = {
+    inner: 0.85,
+    mid: 1.0,
+    outer: 1.2,
+};
+
+const laneFromRadius = (radius: number): OrbitLane => {
+    if (radius < 120) return 'inner';
+    if (radius < 220) return 'mid';
+    return 'outer';
+};
+
+const hashToOrbitSeed = (input: string): number => {
+    let hash = 0;
+    for (let i = 0; i < input.length; i += 1) {
+        hash = (hash * 31 + input.charCodeAt(i)) % 100000;
+    }
+    return hash;
+};
+
 // ─── Store ─────────────────────────────────────────────────
 export const useAetherStore = create<AetherState>()(
     persist(
@@ -521,6 +581,10 @@ export const useAetherStore = create<AetherState>()(
             avatarCinematicState: "IDLE",
             taskPulse: null,
             missionLog: [],
+            orbitRegistry: {},
+            focusedPlanetId: null,
+            orbitalLayoutPreset: 'mid',
+            focusModeEnvironment: false,
             toolCallHistory: [],
             persona: DEFAULT_PERSONA,
             preferences: DEFAULT_PREFERENCES,
@@ -659,6 +723,76 @@ export const useAetherStore = create<AetherState>()(
                 }].slice(-120),
             })),
             clearMissionLog: () => set({ missionLog: [] }),
+            setOrbitalLayoutPreset: (orbitalLayoutPreset) => set({ orbitalLayoutPreset }),
+            setFocusModeEnvironment: (focusModeEnvironment) => set({ focusModeEnvironment }),
+            upsertOrbitPlanet: (planet) => set((state) => ({
+                orbitRegistry: {
+                    ...state.orbitRegistry,
+                    [planet.planetId]: planet,
+                },
+            })),
+            focusOrbitPlanet: (focusedPlanetId) => set({
+                focusedPlanetId,
+                focusModeEnvironment: Boolean(focusedPlanetId),
+            }),
+            clearOrbitRegistry: () => set({
+                orbitRegistry: {},
+                focusedPlanetId: null,
+                focusModeEnvironment: false,
+            }),
+            applyWorkspaceState: (payload) => set((state) => {
+                const galaxy = payload.galaxy || payload.workspace_galaxy;
+                const appId = payload.app_id || payload.appId || payload.focused_app_id || payload.focusedAppId;
+                const focusedPlanetId = payload.focused_app_id || payload.focusedAppId || state.focusedPlanetId;
+                const nextState: Partial<AetherState> = {};
+
+                if (galaxy) {
+                    nextState.workspaceGalaxy = galaxy;
+                }
+                if (!appId) {
+                    if (focusedPlanetId !== state.focusedPlanetId) {
+                        nextState.focusedPlanetId = focusedPlanetId;
+                        nextState.focusModeEnvironment = Boolean(focusedPlanetId);
+                    }
+                    return nextState;
+                }
+
+                const current = state.orbitRegistry[appId];
+                const seed = hashToOrbitSeed(appId);
+                const defaultAngle = ((seed % 360) * Math.PI) / 180;
+                const defaultRadius = (130 + (seed % 110)) * ORBIT_PRESET_MULTIPLIER[state.orbitalLayoutPreset];
+                const x = Number(payload.position?.x ?? payload.x ?? current?.position.x ?? Math.cos(defaultAngle) * defaultRadius);
+                const y = Number(payload.position?.y ?? payload.y ?? current?.position.y ?? Math.sin(defaultAngle) * defaultRadius);
+                const radius = Math.max(24, Math.hypot(x, y));
+                const angle = Math.atan2(y, x);
+                const lane = payload.orbit_lane || payload.orbitLane || laneFromRadius(radius);
+                const action = payload.action || '';
+                if (payload.orbit_lane || payload.orbitLane) {
+                    nextState.orbitalLayoutPreset = lane;
+                }
+                const nextPlanet: OrbitPlanet = {
+                    planetId: appId,
+                    planetType: current?.planetType || appId.split('-')[0] || 'utility',
+                    lane,
+                    angle,
+                    radius,
+                    position: { x, y },
+                    isMaterialized: action === 'materialize_app' ? true : (current?.isMaterialized ?? true),
+                    isCollapsed: action === 'collapse_app' ? true : action === 'materialize_app' ? false : (current?.isCollapsed ?? false),
+                    updatedAt: Date.now(),
+                };
+
+                const focusFromAction = action === 'focus_app' ? appId : focusedPlanetId;
+                const shouldDisableFocusMode = action === 'collapse_app' && (state.focusedPlanetId === appId || focusedPlanetId === appId);
+
+                nextState.orbitRegistry = {
+                    ...state.orbitRegistry,
+                    [appId]: nextPlanet,
+                };
+                nextState.focusedPlanetId = shouldDisableFocusMode ? null : focusFromAction || null;
+                nextState.focusModeEnvironment = shouldDisableFocusMode ? false : Boolean(nextState.focusedPlanetId);
+                return nextState;
+            }),
 
             // Persona & Preferences actions
             setPersona: (updates) => set((state) => ({

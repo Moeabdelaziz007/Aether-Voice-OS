@@ -984,11 +984,11 @@ src/styles/
 
 ### 17.4 Phase D — Orbital Workspace
 
-- [ ] Add orbit registry in global store
-- [ ] Add focused planet state + transitions
-- [ ] Implement materialize/collapse app behavior
-- [ ] Add orbital layout presets (inner/mid/outer)
-- [ ] Add focus mode environment morphing
+- [x] Add orbit registry in global store
+- [x] Add focused planet state + transitions
+- [x] Implement materialize/collapse app behavior
+- [x] Add orbital layout presets (inner/mid/outer)
+- [x] Add focus mode environment morphing
 
 ### 17.5 Phase E — Workspace Tool Backend
 

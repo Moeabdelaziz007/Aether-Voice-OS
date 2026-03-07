@@ -277,8 +277,7 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
                     else if (msg.type === "workspace_state") {
                         const payload = getCinematicPayload();
                         if (!payload) return;
-                        const galaxy = payload.galaxy || payload.workspace_galaxy || "Genesis";
-                        store.setWorkspaceGalaxy(galaxy);
+                        store.applyWorkspaceState(payload);
                     }
 
                     // ── Mission Log Line ──

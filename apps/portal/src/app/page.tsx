@@ -47,6 +47,7 @@ import BackgroundEngine from "@/components/utility/BackgroundEngine";
 import TerminalFeed from "@/components/TerminalFeed";
 import HUDContainer from "@/components/HUD/HUDContainer";
 import MissionControlHUD from "@/components/HUD/MissionControlHUD";
+import OrbitalWorkspaceOverlay from "@/components/HUD/OrbitalWorkspaceOverlay";
 import SystemFailure from "@/components/HUD/SystemFailure";
 import RealmController from "@/components/realms/RealmController";
 
@@ -199,6 +200,7 @@ export default function AetherPortal() {
                                     {/* HUD Frame */}
                                     <HUDContainer>
                                         <div className="relative w-full h-screen overflow-hidden">
+                                            <OrbitalWorkspaceOverlay />
                                             <SystemFailure />
                                             <RealmController />
                                             <MissionControlHUD />

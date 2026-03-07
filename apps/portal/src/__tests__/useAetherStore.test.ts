@@ -15,6 +15,12 @@ beforeEach(() => {
     store.setEngineState('IDLE');
     store.setVisionActive(false);
     store.clearTranscript();
+    store.clearMissionLog();
+    store.clearOrbitRegistry();
+    store.setFocusModeEnvironment(false);
+    store.setOrbitalLayoutPreset('mid');
+    store.focusOrbitPlanet(null);
+    store.setWorkspaceGalaxy('Genesis');
     // Clear silent hints by dismissing all
     store.silentHints.forEach(h => store.dismissHint(h.id));
 });
@@ -217,6 +223,39 @@ describe('useAetherStore', () => {
         expect(state.taskPulse?.phase).toBe('COMPLETED');
         expect(state.missionLog.length).toBeGreaterThan(0);
         expect(state.missionLog[state.missionLog.length - 1].title).toBe('Handover completed');
+    });
+
+    it('should apply workspace state updates into orbital registry', () => {
+        const store = useAetherStore.getState();
+
+        store.applyWorkspaceState({
+            workspace_galaxy: 'gal-orbit',
+            action: 'materialize_app',
+            app_id: 'planet-notes',
+            x: 140,
+            y: 20,
+            orbit_lane: 'mid',
+        });
+        store.applyWorkspaceState({
+            action: 'focus_app',
+            app_id: 'planet-notes',
+            focused_app_id: 'planet-notes',
+        });
+        store.applyWorkspaceState({
+            action: 'move_app',
+            app_id: 'planet-notes',
+            x: 80,
+            y: 90,
+        });
+
+        const state = useAetherStore.getState();
+        expect(state.workspaceGalaxy).toBe('gal-orbit');
+        expect(state.focusedPlanetId).toBe('planet-notes');
+        expect(state.focusModeEnvironment).toBe(true);
+        expect(state.orbitRegistry['planet-notes']).toBeDefined();
+        expect(state.orbitRegistry['planet-notes'].position.x).toBe(80);
+        expect(state.orbitRegistry['planet-notes'].position.y).toBe(90);
+        expect(state.orbitalLayoutPreset).toBe('mid');
     });
 
     // ─── Session Time ───────────────────────────────────────────
