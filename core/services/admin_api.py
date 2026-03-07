@@ -25,7 +25,17 @@ SHARED_STATE = {
 
 class AdminAPIHandler(BaseHTTPRequestHandler):
     def end_headers(self):
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin")
+        allowed_origins = [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:1420",
+            "tauri://localhost",
+        ]
+        if origin in allowed_origins:
+            self.send_header("Access-Control-Allow-Origin", origin)
+        else:
+            self.send_header("Access-Control-Allow-Origin", "http://localhost:3000")
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
         self.send_header("Content-Type", "application/json")
         super().end_headers()
