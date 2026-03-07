@@ -837,7 +837,7 @@ src/styles/
 
 ### 15.3 Next Execution Slice
 
-- [ ] Build backend `workspace_tool` with focus/move/materialize actions
+- [x] Build backend `workspace_tool` with focus/move/materialize actions
 - [ ] Add `galaxy_id` to orchestration context and tool traces
 - [ ] Run one fully visible voice flow in a single galaxy with fallback path
 
