@@ -5,11 +5,11 @@ Part of the "Grounded Healing" suite.
 Allows Gemini to autonomously diagnose terminal errors and propose/apply fixes.
 """
 
+import hashlib
 import logging
 import os
-from pathlib import Path
-import hashlib
 import subprocess
+from pathlib import Path
 from typing import Any, Optional
 
 from core.tools.vision_tool import take_screenshot

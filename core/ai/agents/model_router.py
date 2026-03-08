@@ -1,6 +1,7 @@
 import logging
-from typing import Any, Dict, Optional
-from core.ai.agents.registry import AgentRegistry, AgentMetadata
+from typing import Any, Dict
+
+from core.ai.agents.registry import AgentRegistry
 from core.infra.config import GeminiModel
 
 logger = logging.getLogger("AetherOS.ModelRouter")

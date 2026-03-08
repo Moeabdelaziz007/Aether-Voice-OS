@@ -10,7 +10,7 @@ import os
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket
 
 router = APIRouter(prefix="/api/gemini", tags=["gemini"])
 
@@ -94,4 +94,3 @@ async def health_check() -> dict[str, str]:
             return {"status": "unhealthy", "error": str(e)}
 
 
-import asyncio  # noqa: E402

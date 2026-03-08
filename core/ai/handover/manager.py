@@ -262,9 +262,9 @@ class MultiAgentOrchestrator:
         self.specialists = SpecialistHandoverManager(self)
 
         # Galaxy orchestration components
-        from core.ai.orchestrator.gravity_router import GravityRouter
         from core.ai.orchestrator.fallback_strategy import FallbackStrategy
         from core.ai.orchestrator.galaxy_policy import GalaxyPolicyEnforcer
+        from core.ai.orchestrator.gravity_router import GravityRouter
 
         self.gravity_router = GravityRouter()
         self.fallback_strategy = FallbackStrategy(max_retries=2)

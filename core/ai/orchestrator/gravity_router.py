@@ -12,9 +12,9 @@ Formula:
             - 0.15*latency - 0.15*load + 0.10*continuity
 """
 
-from dataclasses import dataclass
-from typing import List, Tuple, Optional
 import logging
+from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 

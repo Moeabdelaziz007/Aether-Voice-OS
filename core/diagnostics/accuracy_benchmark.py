@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-import random
 import sys
 import time
 
@@ -12,6 +11,7 @@ if ROOT not in sys.path:
     sys.path.append(ROOT)
 
 from scripts.internal.bug_generator import BugGenerator
+
 from core.ai.handover.manager import HandoverContext
 from core.tools.healing_tool import diagnose_and_repair
 

@@ -4,8 +4,8 @@ import time
 from typing import Any, Dict, List, Optional
 
 from core.ai.echo import EchoGenerator
-from core.ai.memory.wal import WALProtocol
 from core.ai.memory.buffer import WorkingBuffer
+from core.ai.memory.wal import WALProtocol
 from core.infra.event_bus import AcousticTraitEvent, VisionPulseEvent
 
 logger = logging.getLogger("AetherOS.Cortex")

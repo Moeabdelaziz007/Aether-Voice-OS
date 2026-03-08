@@ -29,24 +29,24 @@ from websockets.asyncio.server import Server, ServerConnection
 from core.ai.session import GeminiLiveSession
 from core.infra.config import AIConfig, GatewayConfig
 from core.infra.telemetry import get_tracer
+
+# New Decentralized Services
+from core.infra.transport.auth import AuthService
 from core.infra.transport.bus import GlobalBus
+from core.infra.transport.intent import IntentBroker
 from core.infra.transport.messages import (
     AckMessage,
     ChallengeMessage,
     ErrorMessage,
     MessageType,
 )
+from core.infra.transport.session_manager import SessionManager
 from core.infra.transport.session_state import (
     SessionMetadata,
     SessionState,
     SessionStateManager,
 )
-from core.utils.errors import HandshakeError, HandshakeTimeoutError
-
-# New Decentralized Services
-from core.infra.transport.auth import AuthService
-from core.infra.transport.intent import IntentBroker
-from core.infra.transport.session_manager import SessionManager
+from core.utils.errors import HandshakeError
 
 logger = logging.getLogger(__name__)
 

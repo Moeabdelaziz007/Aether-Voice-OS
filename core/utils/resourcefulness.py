@@ -1,7 +1,7 @@
 import asyncio
-import logging
 import functools
-from typing import Any, Callable, List, TypeVar
+import logging
+from typing import Any, Callable, TypeVar
 
 T = TypeVar("T")
 logger = logging.getLogger("AetherOS.Utils.Resourcefulness")

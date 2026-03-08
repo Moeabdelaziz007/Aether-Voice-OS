@@ -7,7 +7,10 @@ from time import perf_counter
 
 from google.genai import types
 
-from core.infra.telemetry import get_tool_timeout_dashboard, record_tool_dispatch_telemetry
+from core.infra.telemetry import (
+    get_tool_timeout_dashboard,
+    record_tool_dispatch_telemetry,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -1,6 +1,7 @@
-import logging
 import asyncio
-from typing import Any, Dict, Optional, Callable
+import logging
+from typing import Dict
+
 from core.ai.session import GeminiLiveSession
 
 logger = logging.getLogger(__name__)

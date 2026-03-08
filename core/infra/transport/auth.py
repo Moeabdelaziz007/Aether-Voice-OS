@@ -2,8 +2,8 @@ import logging
 from typing import Any, Dict, Optional
 
 import jwt
-
 from firebase_admin import auth as firebase_auth
+
 from core.services.registry import AetherRegistry
 from core.utils.security import verify_signature
 
