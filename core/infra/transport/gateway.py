@@ -92,7 +92,7 @@ class AetherGateway:
         self._audio_config = audio_config
         self._tool_router = tool_router
         self._hive = hive
-        self._hive.set_pre_warm_callback(self.pre_warm_soul)
+        self._hive._pre_warm_callback = self.pre_warm_soul
         self._hive.set_inject_dna_callback(self.inject_dna_update)
 
         # Global State Bus

@@ -49,14 +49,16 @@ class AuthService:
         """
         try:
             # 1. Try to find the package in the registry for its public key
-            pkg = self._registry.get_package_by_client_id(client_id)
-            if pkg and pkg.manifest.public_key:
-                return verify_signature(pkg.manifest.public_key, signature, challenge)
+            if hasattr(self._registry, "get_package_by_client_id"):
+                pkg = self._registry.get_package_by_client_id(client_id)
+                if pkg and pkg.manifest.public_key:
+                    return verify_signature(pkg.manifest.public_key, signature, bytes.fromhex(challenge))
 
             # 2. Ephemeral/Direct Mode Fallback (match Gateway logic)
             is_hex = all(c in "0123456789abcdef" for c in client_id.lower())
             if len(client_id) == 64 and is_hex:
-                return verify_signature(client_id, signature, challenge)
+                # The raw message was actually signed by the client, but `verify_signature` in core.utils.security expects the hex challenge!
+                return verify_signature(client_id, signature, bytes.fromhex(challenge))
 
             return False
         except Exception as e:
