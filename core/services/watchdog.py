@@ -311,19 +311,3 @@ class SREWatchdog:
                         "log": f"Error: {e}",
                     },
                 )
-
-    async def _trigger_find_and_extend(self, error_msg: str = ""):
-        """Skill 3: Triggered when a non-existent tool or capability is requested."""
-        logger.info("🔍 Watchdog: Skill 3 (Find & Extend) triggered. Analyzing gap: %s", error_msg)
-        
-        # 1. Notify the user/system via the bus
-        if self._bus:
-            await self._bus.publish("system_events", {
-                "type": "capability_gap_detected",
-                "details": error_msg,
-                "status": "drafting_blueprint"
-            })
-
-        # 2. In a real integration, this would trigger the 'Architect' expert 
-        # to write a new implementation_plan.md and register it in Skills.md.
-        logger.info("📑 Architect: Drafting autonomous blueprint for new capability...")
