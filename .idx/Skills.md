@@ -40,5 +40,15 @@ This directory acts as the central capability registry for the AetherOS Live Age
 
 - Automatically analyzes generated Next.js structures for Apple-level perfection, ensuring CSS variables, glassmorphism layers, and color saturation meet premium standards.
 
+## 5. 🧠 Proactive Neural OS (`proactive-neural-os`)
+
+**Trigger:** Every 15 minutes (Heartbeat) or context usage > 60%.
+**Action:**
+
+- **WAL Protocol**: Autonomously persists critical user preferences and decisions to `SESSION-STATE.md` to prevent context amnesia.
+- **Working Buffer**: High-fidelity exchange logging for 100% recovery during context compaction.
+- **Relentless Resourcefulness**: Intelligent retry logic that explores up to 10 alternative strategies (Web, Sub-Agent, API) before admitting failure.
+- **Heartbeat Pattern Recognition**: Identifies repetitive tasks and proactively proposes automation via Reverse Prompting.
+
 ---
 *Note: Aether is expected to dynamically read this file at the start of complex tasks per the System Identity instructions.*
