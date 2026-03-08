@@ -5,6 +5,7 @@
  * a running server. Perfect for CI/CD pipelines.
  */
 
+import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -19,6 +20,19 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
+vi.mock('../lib/firebase', () => ({
+  auth: { currentUser: null },
+  googleProvider: {},
+  db: {},
+}));
+
+vi.mock('firebase/auth', () => ({
+  getAuth: vi.fn(() => ({})),
+  onAuthStateChanged: vi.fn(() => vi.fn()),
+  getIdToken: vi.fn(),
+  GoogleAuthProvider: vi.fn(),
+}));
+
 describe('Frontend E2E - Browser Simulation', () => {
   
   beforeEach(() => {
@@ -30,7 +44,8 @@ describe('Frontend E2E - Browser Simulation', () => {
   describe('Page Load and Initial Render', () => {
     it('should render main page structure', async () => {
       // Import the page component
-      const HomePage = (await import('@/app/page')).default;
+      const PageModule = await import('../app/page');
+      const HomePage = PageModule.default;
       
       render(<HomePage />);
       
@@ -41,8 +56,8 @@ describe('Frontend E2E - Browser Simulation', () => {
       }, { timeout: 5000 });
     });
 
-    it('should initialize store correctly', () => {
-      const { useAetherStore } = await import('@/store/useAetherStore');
+    it('should initialize store correctly', async () => {
+      const { useAetherStore } = await import('../store/useAetherStore');
       const { getState } = useAetherStore;
       
       // Verify initial state
@@ -54,10 +69,10 @@ describe('Frontend E2E - Browser Simulation', () => {
 
   describe('Mission Control HUD', () => {
     it('should render HUD components when active', async () => {
-      const MissionControlHUD = await import('@/components/HUD/MissionControlHUD');
+      const MissionControlHUD = await import('../components/HUD/MissionControlHUD');
       
       // Mock active mission state
-      const { useAetherStore } = await import('@/store/useAetherStore');
+      const { useAetherStore } = await import('../store/useAetherStore');
       const { setState } = useAetherStore;
       
       setState({
@@ -74,11 +89,12 @@ describe('Frontend E2E - Browser Simulation', () => {
         },
       });
       
-      render(<MissionControlHUD.default />);
+      const Component = MissionControlHUD.default;
+      render(<Component />);
       
       // Check for HUD elements
       await waitFor(() => {
-        const hudElement = document.querySelector('[class*="MissionControl"]');
+        const hudElement = screen.getByText(/Mission Control/i);
         expect(hudElement).toBeInTheDocument();
       });
     });
@@ -88,7 +104,8 @@ describe('Frontend E2E - Browser Simulation', () => {
     it('should respond to Escape key', async () => {
       const user = userEvent.setup();
       
-      const HomePage = (await import('@/app/page')).default;
+      const PageModule = await import('../app/page');
+      const HomePage = PageModule.default;
       render(<HomePage />);
       
       // Press Escape
@@ -101,7 +118,8 @@ describe('Frontend E2E - Browser Simulation', () => {
     it('should respond to Enter key', async () => {
       const user = userEvent.setup();
       
-      const HomePage = (await import('@/app/page')).Default;
+      const PageModule = await import('../app/page');
+      const HomePage = PageModule.default;
       render(<HomePage />);
       
       // Press Enter
@@ -113,8 +131,8 @@ describe('Frontend E2E - Browser Simulation', () => {
   });
 
   describe('Galaxy Orchestration State', () => {
-    it('should maintain galaxy state in store', () => {
-      const { useAetherStore } = require('@/store/useAetherStore');
+    it('should maintain galaxy state in store', async () => {
+      const { useAetherStore } = await import('../store/useAetherStore');
       const { getState, setState } = useAetherStore;
       
       // Set galaxy state
@@ -128,8 +146,8 @@ describe('Frontend E2E - Browser Simulation', () => {
       expect(state.focusedPlanetId).toBe('Architect');
     });
 
-    it('should update orbit registry', () => {
-      const { useAetherStore } = require('@/store/useAetherStore');
+    it('should update orbit registry', async () => {
+      const { useAetherStore } = await import('../store/useAetherStore');
       const { setState } = useAetherStore;
       
       setState({
@@ -152,8 +170,8 @@ describe('Frontend E2E - Browser Simulation', () => {
   });
 
   describe('Cinematic Event Handling', () => {
-    it('should process task pulse events', () => {
-      const { useAetherStore } = require('@/store/useAetherStore');
+    it('should process task pulse events', async () => {
+      const { useAetherStore } = await import('../store/useAetherStore');
       const { setState } = useAetherStore;
       
       const taskPulse = {
@@ -174,8 +192,8 @@ describe('Frontend E2E - Browser Simulation', () => {
       expect(state.taskPulse).toEqual(taskPulse);
     });
 
-    it('should handle avatar state changes', () => {
-      const { useAetherStore } = require('@/store/useAetherStore');
+    it('should handle avatar state changes', async () => {
+      const { useAetherStore } = await import('../store/useAetherStore');
       const { setState } = useAetherStore;
       
       setState({
@@ -242,11 +260,11 @@ describe('Frontend E2E - Browser Simulation', () => {
       }
     });
 
-    it('should log errors to store', () => {
-      const { useAetherStore } = require('@/store/useAetherStore');
-      const { addTerminalLog } = useAetherStore;
+    it('should log errors to store', async () => {
+      const { useAetherStore } = await import('../store/useAetherStore');
+      const { getState } = useAetherStore;
       
-      addTerminalLog({
+      getState().addTerminalLog({
         message: 'Test error log',
         type: 'error',
         timestamp: new Date().toISOString(),

@@ -1,6 +1,7 @@
 import React from 'react';
 import { render } from '@testing-library/react';
 import AetherLine from '../components/AetherLine';
+import { renderHook, act } from '@testing-library/react';
 import { useAetherStore } from '../store/useAetherStore';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 

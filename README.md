@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="assets/aether_banner.png" alt="Aether OS Banner" width="100%"/>
+  <img src="docs/assets/aether_banner.png" alt="Aether OS Banner" width="100%"/>
 </p>
 
 <p align="center">
-  <img src="assets/aether_avatar.png" alt="Aether Agent Avatar" width="300px" style="border-radius:20px; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);"/>
+  <img src="docs/assets/aether_avatar.png" alt="Aether Agent Avatar" width="300px" style="border-radius:20px; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);"/>
 </p>
 
 <h1 align="center">🌌 Aether Voice OS</h1>
@@ -242,7 +242,7 @@ score = 0.35*capability + 0.25*confidence - 0.15*latency - 0.15*load + 0.10*cont
 - Average gravity score calculation: <50ms
 - Wrong-planet routing: ≤2.1%
 
-Learn more: [Galaxy Orchestration Guide](docs/GALAXY_ORCHESTRATION.md)
+Learn more: [Galaxy Orchestration Guide](docs/architecture/GALAXY_ORCHESTRATION.md)
 
 ---
 
@@ -435,17 +435,17 @@ Comprehensive guides and references for Aether OS.
 
 ### Core Documentation | الوثائق الأساسية
 
-- **[📖 Architecture Guide](docs/ARCHITECTURE.md)** - Complete system architecture (Pipeline layers, Thalamic Gate v2, Galaxy Orchestration)
-  - [دليل الهندسة المعمارية](docs/ARCHITECTURE.md) - توثيق كامل للهندسة المعمارية
+- **[📖 Architecture Guide](docs/architecture/ARCHITECTURE.md)** - Complete system architecture (Pipeline layers, Thalamic Gate v2, Galaxy Orchestration)
+  - [دليل الهندسة المعمارية](docs/architecture/ARCHITECTURE.md) - توثيق كامل للهندسة المعمارية
   
-- **[🌌 Galaxy Orchestration](docs/GALAXY_ORCHESTRATION.md)** - Gravity-based AI agent routing with API reference
-  - [تنظيم المجرة](docs/GALAXY_ORCHESTRATION.md) - توجيه وكلاء الذكاء الاصطناعي القائم على الجاذبية مع مرجع API
+- **[🌌 Galaxy Orchestration](docs/architecture/GALAXY_ORCHESTRATION.md)** - Gravity-based AI agent routing with API reference
+  - [تنظيم المجرة](docs/architecture/GALAXY_ORCHESTRATION.md) - توجيه وكلاء الذكاء الاصطناعي القائم على الجاذبية مع مرجع API
   
-- **[🧪 Testing Guide](docs/TESTING.md)** - How to run and write tests (Unit, Integration, E2E)
-  - [دليل الاختبار](docs/TESTING.md) - كيفية تشغيل وكتابة الاختبارات
+- **[🧪 Testing Guide](docs/guides/TESTING.md)** - How to run and write tests (Unit, Integration, E2E)
+  - [دليل الاختبار](docs/guides/TESTING.md) - كيفية تشغيل وكتابة الاختبارات
   
-- **[🚀 Workspace Updates](docs/WORKSPACE_UPDATES.md)** - Latest avatar & workspace enhancements (March 2026)
-  - [تحديثات مساحة العمل](docs/WORKSPACE_UPDATES.md) - آخر تحسينات الأفاتار ومساحة العمل
+- **[🚀 Workspace Updates](docs/guides/WORKSPACE_UPDATES.md)** - Latest avatar & workspace enhancements (March 2026)
+  - [تحديثات مساحة العمل](docs/guides/WORKSPACE_UPDATES.md) - آخر تحسينات الأفاتار ومساحة العمل
   
 - **[📑 Documentation Index](docs/index.md)** - Complete documentation hub
   - [فهرس الوثائق](docs/index.md) - مركز الوثائق الكامل
@@ -501,7 +501,7 @@ This project is licensed under the **Apache 2.0 License** — see the [LICENSE](
 ---
 
 <p align="center">
-  <img src="assets/aether_banner.png" alt="Aether" width="60%"/>
+  <img src="docs/assets/aether_banner.png" alt="Aether" width="60%"/>
   <br /><br />
   <em>"In the realm of Aether, there is no distance between voice and vision."</em>
   <br />

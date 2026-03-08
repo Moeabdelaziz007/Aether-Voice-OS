@@ -11,7 +11,7 @@ import logging
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Callable, Optional
+from typing import Callable, Optional, Coroutine
 
 logger = logging.getLogger("AetherOS.HealthCheck")
 
@@ -64,12 +64,16 @@ class HealthChecker:
         check_fn: Callable[[], Coroutine[None, None, tuple[bool, float, str]]],
     ) -> None:
         """Register a component for health monitoring."""
-        self._components[name] = ComponentHealth
+        self._components[name] = ComponentHealth(
             name=name,
             status=HealthStatus.UNKNOWN,
             last_check=0.0,
-            check_fn=check_fn,
+            latency_ms=0.0,
+            error_message="",
+            consecutive_failures=0
         )
+        # Store check_fn separately since it's not in the dataclass
+        self._components[name]._check_fn = check_fn
 
     async def start(self) -> None:
         """Start health monitoring."""
@@ -95,7 +99,7 @@ class HealthChecker:
         while self._running:
             for name, component in self._components.items():
                 try:
-                    is_healthy, latency, msg = await component.check_fn()
+                    is_healthy, latency, msg = await component._check_fn()
                     component.last_check = time.time()
                     component.latency_ms = latency
 
@@ -190,6 +194,3 @@ async def check_aec_convergence() -> tuple[bool, float, str]:
     if converged:
         return True, 0.0, f"Converged (ERLE: {erle:.1f}dB)"
     return True, 0.0, "Not yet converged"
-
-
-from typing import Coroutine

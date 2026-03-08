@@ -12,7 +12,7 @@
  * Performance Impact: 50% CPU reduction vs Framer Motion
  */
 
-import { useMemo, memo, useState, useEffect } from "react";
+import React, { useMemo, memo, useState, useEffect } from "react";
 import { useAetherStore } from "@/store/useAetherStore";
 
 interface Particle {
