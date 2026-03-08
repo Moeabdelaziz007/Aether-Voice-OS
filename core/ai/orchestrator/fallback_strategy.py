@@ -6,10 +6,10 @@ Manages fallback planet reassignment when routing fails, including:
 - Fallback planet selection
 """
 
-import logging
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional
+import logging
 
 logger = logging.getLogger(__name__)
 

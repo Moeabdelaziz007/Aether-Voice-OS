@@ -88,7 +88,7 @@ class DebuggerAgent(VoiceAgent):
 
         # Add verification checkpoint if orchestrator supports it
         if self.orchestrator:
-            checkpoint = await self.create_validation_checkpoint(  # Changed to call self.create_validation_checkpoint
+            checkpoint = await self.create_validation_checkpoint( # Changed to call self.create_validation_checkpoint
                 handover_id=context.handover_id,
                 stage="design_verification",
                 partial_output={
@@ -96,9 +96,7 @@ class DebuggerAgent(VoiceAgent):
                         v.model_dump() for v in self._output.verification_results
                     ],
                     "warnings": [w.model_dump() for w in self._output.warnings],
-                    "blueprint_sections": [
-                        bs.model_dump() for bs in self._output.blueprint_sections
-                    ],  # Added blueprint_sections
+                    "blueprint_sections": [bs.model_dump() for bs in self._output.blueprint_sections], # Added blueprint_sections
                 },
             )
             if checkpoint:
@@ -221,13 +219,11 @@ class DebuggerAgent(VoiceAgent):
         )
 
         # Use specialist manager for rework handover
-        (
-            success,
-            _,
-            message,
-        ) = await self.orchestrator.specialists.debugger_to_architect_feedback(
-            original_context=context,
-            debugger_output=self._output,
+        success, _, message = (
+            await self.orchestrator.specialists.debugger_to_architect_feedback(
+                original_context=context,
+                debugger_output=self._output,
+            )
         )
 
         if success:

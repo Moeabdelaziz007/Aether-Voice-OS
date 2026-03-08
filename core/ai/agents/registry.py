@@ -116,12 +116,7 @@ def get_default_agents() -> List[AgentMetadata]:
             name="Galaxy Orchestrator",
             version="2.0.0",
             description="Expert in workspace distribution and SLO monitoring.",
-            capabilities=[
-                "orchestration",
-                "planet_routing",
-                "slo_monitoring",
-                "spatial_reasoning",
-            ],
+            capabilities=["orchestration", "planet_routing", "slo_monitoring", "spatial_reasoning"],
             foundation_model=GeminiModel.LIVE_FLASH,
             system_prompt="You are the guardian of the Aether Galaxy. Your duty is to ensure optimal planet distribution and sub-80ms event propagation.",
         ),

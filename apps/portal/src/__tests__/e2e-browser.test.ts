@@ -19,26 +19,6 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
 }));
 
-// Mock Firebase
-vi.mock('@/lib/firebase', () => ({
-  auth: {
-    currentUser: null,
-    onAuthStateChanged: vi.fn((cb) => { cb(null); return () => {}; }),
-  },
-  db: {},
-  googleProvider: {},
-}));
-
-// Mock useAuth to avoid Firebase initialization during tests
-vi.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({
-    user: null,
-    loading: false,
-    signInWithGoogle: vi.fn(),
-    logout: vi.fn(),
-  })
-}));
-
 describe('Frontend E2E - Browser Simulation', () => {
   
   beforeEach(() => {
@@ -51,22 +31,17 @@ describe('Frontend E2E - Browser Simulation', () => {
     it('should render main page structure', async () => {
       // Import the page component
       const HomePage = (await import('@/app/page')).default;
-      const React = (await import('react')).default;
-
-      // Vitest jsdom does not support `<canvas>` WebGL contexts correctly,
-      // leading to Three.js errors or timeout rendering Home. Skip inner components
-      // or check basics. We will just check it doesn't crash on simple render with mocks.
-      vi.mock('@/components/canvas/AetherOrb', () => ({ default: () => React.createElement('div', { 'data-testid': 'mock-orb' }) }));
       
-      const { container } = render(React.createElement(HomePage));
+      render(<HomePage />);
       
-      // Check that layout renders
+      // Wait for Three.js canvas to render
       await waitFor(() => {
-        expect(container).toBeDefined();
-      });
+        const canvas = document.querySelector('canvas');
+        expect(canvas).toBeInTheDocument();
+      }, { timeout: 5000 });
     });
 
-    it('should initialize store correctly', async () => {
+    it('should initialize store correctly', () => {
       const { useAetherStore } = await import('@/store/useAetherStore');
       const { getState } = useAetherStore;
       
@@ -80,7 +55,6 @@ describe('Frontend E2E - Browser Simulation', () => {
   describe('Mission Control HUD', () => {
     it('should render HUD components when active', async () => {
       const MissionControlHUD = await import('@/components/HUD/MissionControlHUD');
-      const React = (await import('react')).default;
       
       // Mock active mission state
       const { useAetherStore } = await import('@/store/useAetherStore');
@@ -100,11 +74,12 @@ describe('Frontend E2E - Browser Simulation', () => {
         },
       });
       
-      const { container } = render(React.createElement(MissionControlHUD.default));
+      render(<MissionControlHUD.default />);
       
-      // Check for HUD elements without chai-dom matchers, since setup file is missing
+      // Check for HUD elements
       await waitFor(() => {
-        expect(container.textContent).toContain('Mission Control');
+        const hudElement = document.querySelector('[class*="MissionControl"]');
+        expect(hudElement).toBeInTheDocument();
       });
     });
   });
@@ -114,34 +89,32 @@ describe('Frontend E2E - Browser Simulation', () => {
       const user = userEvent.setup();
       
       const HomePage = (await import('@/app/page')).default;
-      const React = (await import('react')).default;
-      render(React.createElement(HomePage));
+      render(<HomePage />);
       
       // Press Escape
       await user.keyboard('{Escape}');
       
       // Verify no errors occurred
-      expect(document.body).not.toBeNull();
+      expect(document.body).toBeInTheDocument();
     });
 
     it('should respond to Enter key', async () => {
       const user = userEvent.setup();
       
-      const HomePage = (await import('@/app/page')).default;
-      const React = (await import('react')).default;
-      render(React.createElement(HomePage));
+      const HomePage = (await import('@/app/page')).Default;
+      render(<HomePage />);
       
       // Press Enter
       await user.keyboard('{Enter}');
       
       // App should still be functional
-      expect(document.body).not.toBeNull();
+      expect(document.body).toBeInTheDocument();
     });
   });
 
   describe('Galaxy Orchestration State', () => {
-    it('should maintain galaxy state in store', async () => {
-      const { useAetherStore } = await import('@/store/useAetherStore');
+    it('should maintain galaxy state in store', () => {
+      const { useAetherStore } = require('@/store/useAetherStore');
       const { getState, setState } = useAetherStore;
       
       // Set galaxy state
@@ -155,8 +128,8 @@ describe('Frontend E2E - Browser Simulation', () => {
       expect(state.focusedPlanetId).toBe('Architect');
     });
 
-    it('should update orbit registry', async () => {
-      const { useAetherStore } = await import('@/store/useAetherStore');
+    it('should update orbit registry', () => {
+      const { useAetherStore } = require('@/store/useAetherStore');
       const { setState } = useAetherStore;
       
       setState({
@@ -179,8 +152,8 @@ describe('Frontend E2E - Browser Simulation', () => {
   });
 
   describe('Cinematic Event Handling', () => {
-    it('should process task pulse events', async () => {
-      const { useAetherStore } = await import('@/store/useAetherStore');
+    it('should process task pulse events', () => {
+      const { useAetherStore } = require('@/store/useAetherStore');
       const { setState } = useAetherStore;
       
       const taskPulse = {
@@ -201,8 +174,8 @@ describe('Frontend E2E - Browser Simulation', () => {
       expect(state.taskPulse).toEqual(taskPulse);
     });
 
-    it('should handle avatar state changes', async () => {
-      const { useAetherStore } = await import('@/store/useAetherStore');
+    it('should handle avatar state changes', () => {
+      const { useAetherStore } = require('@/store/useAetherStore');
       const { setState } = useAetherStore;
       
       setState({
@@ -256,7 +229,6 @@ describe('Frontend E2E - Browser Simulation', () => {
     it('should handle component errors gracefully', async () => {
       const consoleError = console.error;
       console.error = vi.fn();
-      const React = (await import('react')).default;
       
       try {
         // Try to render a component that might error
@@ -264,22 +236,23 @@ describe('Frontend E2E - Browser Simulation', () => {
           throw new Error('Test error');
         };
         
-        expect(() => render(React.createElement(BadComponent))).toThrow();
+        expect(() => render(<BadComponent />)).toThrow();
       } finally {
         console.error = consoleError;
       }
     });
 
-    it('should log errors to store', async () => {
-      const { useAetherStore } = await import('@/store/useAetherStore');
-      const { getState } = useAetherStore;
+    it('should log errors to store', () => {
+      const { useAetherStore } = require('@/store/useAetherStore');
+      const { addTerminalLog } = useAetherStore;
       
-      getState().addTerminalLog(
-        'ERROR',
-        'Test error log'
-      );
+      addTerminalLog({
+        message: 'Test error log',
+        type: 'error',
+        timestamp: new Date().toISOString(),
+      });
       
-      const state = getState();
+      const state = useAetherStore.getState();
       expect(state.terminalLogs.length).toBeGreaterThan(0);
     });
   });

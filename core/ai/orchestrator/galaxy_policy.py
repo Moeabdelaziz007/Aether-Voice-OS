@@ -4,10 +4,10 @@ Enforces per-galaxy policies for planet routing and task execution,
 including domain allowlists, latency thresholds, and load limits.
 """
 
-import logging
 from dataclasses import dataclass, field
+from typing import List, Dict, Set, Tuple
 from enum import Enum
-from typing import Dict, List, Set, Tuple
+import logging
 
 logger = logging.getLogger(__name__)
 

@@ -151,8 +151,8 @@ def generate_echo_signal(
     """Generate echo of original signal."""
     delay_samples = int(delay_ms * sample_rate / 1000)
     echo = np.zeros(len(original) + delay_samples, dtype=np.float64)
-    echo[delay_samples : delay_samples + len(original)] = original * attenuation
-    return echo[: len(original)].astype(np.int16)
+    echo[delay_samples: delay_samples + len(original)] = original * attenuation
+    return echo[:len(original)].astype(np.int16)
 
 
 def mix_signals(
@@ -220,7 +220,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(speech) - frame_size, frame_size):
-            frame = speech[i : i + frame_size]
+            frame = speech[i: i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -244,7 +244,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(noisy_speech) - frame_size, frame_size):
-            frame = noisy_speech[i : i + frame_size]
+            frame = noisy_speech[i: i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -453,13 +453,7 @@ class TestEchoGuard:
         # Note: The original test seems broken or the similarity threshold logic doesn't align
         # with synthetic sine waves. For testing purposes, we override output cache with a perfect match
         import numpy as np
-
-        echo_np = (
-            np.frombuffer(
-                echo.tobytes()[: len(echo.tobytes()) // 2 * 2], dtype=np.int16
-            ).astype(np.float32)
-            / 32768.0
-        )
+        echo_np = np.frombuffer(echo.tobytes()[:len(echo.tobytes())//2*2], dtype=np.int16).astype(np.float32) / 32768.0
         input_spectrum = np.abs(np.fft.rfft(echo_np))
         splits = np.array_split(input_spectrum, 13)
         echo_fp = np.array([np.mean(s) for s in splits if len(s) > 0])

@@ -119,16 +119,10 @@ class HandoverContext(BaseModel):
     )
     source_agent: str = Field(description="Agent handing off the task")
     target_agent: str = Field(description="Agent receiving the task")
-    galaxy_id: str = Field(
-        default="Genesis", description="Logical workspace galaxy namespace"
-    )
+    galaxy_id: str = Field(default="Genesis", description="Logical workspace galaxy namespace")
     orbit_lane: Optional[str] = Field(None, description="Orbital lane: inner/mid/outer")
-    gravity_score: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Routing priority weight"
-    )
-    focus_target: Optional[str] = Field(
-        None, description="Target planet/agent for focus"
-    )
+    gravity_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Routing priority weight")
+    focus_target: Optional[str] = Field(None, description="Target planet/agent for focus")
     status: HandoverStatus = Field(default=HandoverStatus.PENDING)
 
     # Task decomposition

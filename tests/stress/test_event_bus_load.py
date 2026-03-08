@@ -126,9 +126,7 @@ async def test_event_bus_subscriber_latency_isolation_under_slow_consumer():
 
     def mk_fast_cb():
         async def fast_cb(event: ControlEvent):
-            fast_latencies_ms.append(
-                (time.perf_counter() - event.payload["sent_perf"]) * 1000
-            )
+            fast_latencies_ms.append((time.perf_counter() - event.payload["sent_perf"]) * 1000)
 
         return fast_cb
 

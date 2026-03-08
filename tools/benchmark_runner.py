@@ -16,7 +16,7 @@ def run_benchmarks():
         "tests/benchmarks/test_event_bus_stress.py",
         "tests/benchmarks/test_dna_stability.py",
         "tests/benchmarks/test_cortex_prediction.py",
-        "tests/benchmarks/test_long_session.py",
+        "tests/benchmarks/test_long_session.py"
     ]
 
     reports_dir = Path("tests/reports")
@@ -28,9 +28,7 @@ def run_benchmarks():
         print(f"📡 Running {Path(test).name}...")
         try:
             # Use pytest to run the specific file
-            result = subprocess.run(
-                ["pytest", "-v", test], capture_output=True, text=True
-            )
+            result = subprocess.run(["pytest", "-v", test], capture_output=True, text=True)
             if result.returncode == 0:
                 print(f"✅ {Path(test).name} Passed.")
             else:
@@ -43,7 +41,7 @@ def run_benchmarks():
     final_report = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "total_runtime_s": round(time.time() - start_time, 2),
-        "metrics": {},
+        "metrics": {}
     }
 
     report_files = {
@@ -51,7 +49,7 @@ def run_benchmarks():
         "stress": "stress_report.json",
         "dna": "dna_report.json",
         "cortex": "cortex_report.json",
-        "stability": "stability_report.json",
+        "stability": "stability_report.json"
     }
 
     for key, filename in report_files.items():
@@ -65,9 +63,9 @@ def run_benchmarks():
     with open(reports_dir / "benchmark_report.json", "w") as f:
         json.dump(final_report, f, indent=4)
 
-    print("\n" + "=" * 40)
+    print("\n" + "="*40)
     print("📊 AetherOS PERFORMANCE SUMMARY")
-    print("=" * 40)
+    print("="*40)
 
     m = final_report["metrics"]
     if m.get("latency") != "NOT_FOUND":
@@ -81,9 +79,8 @@ def run_benchmarks():
     if m.get("stability") != "NOT_FOUND":
         print(f"Memory Growth              : {m['stability']['memory_growth_mb']} MB")
 
-    print("=" * 40)
+    print("="*40)
     print(f"Full report saved to: {reports_dir}/benchmark_report.json")
-
 
 if __name__ == "__main__":
     run_benchmarks()

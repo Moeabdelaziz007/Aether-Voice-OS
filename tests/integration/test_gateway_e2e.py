@@ -120,8 +120,6 @@ async def test_gateway_handshake_e2e():
             challenge_bytes = bytes.fromhex(challenge_token)
             signature = signing_key.sign(challenge_bytes)
 
-            # Gateway's handle_handshake function expects 'signature' directly
-            # in connect.response, but auth.py verify_signature() checks it.
             client_response = {
                 "type": "connect.response",
                 "client_id": client_id,

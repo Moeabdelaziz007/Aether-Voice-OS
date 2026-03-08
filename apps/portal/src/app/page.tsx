@@ -13,7 +13,7 @@
  * Performance: Single WebGL context, lazy-loaded panels, CSS-driven animations
  */
 
-import React, { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { LayoutGroup, motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 

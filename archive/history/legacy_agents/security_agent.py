@@ -26,7 +26,7 @@ class SecurityAgent:
             "vulnerabilities_found": 0,
             "issues_fixed": 0,
             "security_tools_run": [],
-            "errors": [],
+            "errors": []
         }
 
         try:
@@ -55,7 +55,10 @@ class SecurityAgent:
 
             found = results["vulnerabilities_found"]
             fixed = results["issues_fixed"]
-            msg = f"✅ Security scan completed: {found} issues found, {fixed} fixed"
+            msg = (
+                f"✅ Security scan completed: {found} issues found, "
+                f"{fixed} fixed"
+            )
             self.logger.info(msg)
             results["status"] = "success"
 
@@ -71,7 +74,9 @@ class SecurityAgent:
         try:
             cmd = ["bandit", "-r", "core/", "-f", "json"]
             proc = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
@@ -100,7 +105,9 @@ class SecurityAgent:
         try:
             cmd = ["safety", "check", "-r", "requirements.txt", "--json"]
             proc = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
@@ -157,7 +164,7 @@ class SecurityAgent:
     async def _fix_file_security_issues(self, file_path: Path) -> bool:
         """Fix common security issues in a file"""
         try:
-            content = file_path.read_text(encoding="utf-8")
+            content = file_path.read_text(encoding='utf-8')
             original_content = content
 
             # Fix common issues:
@@ -174,19 +181,22 @@ class SecurityAgent:
 
             # 3. Add proper input validation comments
             if "input(" in content and "# SECURITY:" not in content:
-                lines = content.split("\n")
+                lines = content.split('\n')
                 new_lines = []
                 for line in lines:
                     if "input(" in line and "# SECURITY:" not in line:
                         new_lines.append(line)
-                        sec_msg = "        # SECURITY: Validate input before processing"
+                        sec_msg = (
+                            "        # SECURITY: "
+                            "Validate input before processing"
+                        )
                         new_lines.append(sec_msg)
                     else:
                         new_lines.append(line)
-                content = "\n".join(new_lines)
+                content = '\n'.join(new_lines)
 
             if content != original_content:
-                file_path.write_text(content, encoding="utf-8")
+                file_path.write_text(content, encoding='utf-8')
                 return True
 
         except Exception as e:

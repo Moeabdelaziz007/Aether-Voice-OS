@@ -59,8 +59,8 @@ from core.tools import (
     memory_tool,
     system_tool,
     tasks_tool,
-    vision_tool,
     voyager_tool,
+    vision_tool,
     widget_awareness_tool,
     workspace_tool,
 )

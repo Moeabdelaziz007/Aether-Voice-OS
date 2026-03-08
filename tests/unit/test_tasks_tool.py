@@ -68,7 +68,8 @@ async def test_recall_notes_returns_semantic_matches() -> None:
             {
                 "note_id": "a1",
                 "content": (
-                    "Fallback path validated after handover failure in galaxy alpha."
+                    "Fallback path validated after handover failure "
+                    "in galaxy alpha."
                 ),
                 "tag": "research",
                 "created_at": "2026-03-07T12:00:00+00:00",

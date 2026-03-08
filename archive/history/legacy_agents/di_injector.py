@@ -26,7 +26,7 @@ class DIInjectorAgent:
             "files_modified": [],
             "dependencies_converted": 0,
             "service_container_added": False,
-            "errors": [],
+            "errors": []
         }
 
         try:
@@ -118,13 +118,13 @@ container = ServiceContainer()
 '''
 
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(container_code, encoding="utf-8")
+        path.write_text(container_code, encoding='utf-8')
         self.logger.info(f"Created service container at {path}")
 
     async def _convert_direct_instantiation(self, file_path: Path) -> bool:
         """Convert direct class instantiation to DI"""
         try:
-            content = file_path.read_text(encoding="utf-8")
+            content = file_path.read_text(encoding='utf-8')
             tree = ast.parse(content)
 
             # Find class instantiations
@@ -143,7 +143,7 @@ container = ServiceContainer()
                 modified_content = modified_content.replace(old_pattern, new_pattern, 1)
 
             if modified_content != content:
-                file_path.write_text(modified_content, encoding="utf-8")
+                file_path.write_text(modified_content, encoding='utf-8')
                 self.logger.debug(f"Converted dependencies in {file_path}")
                 return True
 
@@ -173,5 +173,7 @@ class InstantiationVisitor(ast.NodeVisitor):
             # Direct class instantiation like ClassName()
             class_name = node.func.id
             if class_name[0].isupper():  # Likely a class name
-                self.instantiations.append(InstantiationNode(class_name, node.lineno))
+                self.instantiations.append(
+                    InstantiationNode(class_name, node.lineno)
+                )
         self.generic_visit(node)

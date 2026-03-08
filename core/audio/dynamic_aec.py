@@ -759,7 +759,9 @@ class DynamicAEC:
         audio burst to accelerate convergence.
         """
         return self.adaptive_filter.pre_train(
-            far_end_signal, near_end_signal, iterations
+            far_end_signal,
+            near_end_signal,
+            iterations
         )
 
     def _adaptive_step_size(self, current_erle: float) -> float:
@@ -791,8 +793,7 @@ class DynamicAEC:
                 self._divergence_counter += 1
                 logger.warning(
                     "AEC potential divergence detected: recent_erle=%.1f, older_erle=%.1f",
-                    recent_avg,
-                    older_avg,
+                    recent_avg, older_avg
                 )
 
                 if self._divergence_counter >= self._divergence_threshold:
@@ -821,12 +822,11 @@ class DynamicAEC:
             self.convergence_frame_count = max(0, self.convergence_frame_count - 1)
 
         # Exponential smoothing for progress
-        raw_progress = min(
-            1.0, self.convergence_frame_count / self.convergence_frames_needed
-        )
+        raw_progress = min(1.0, self.convergence_frame_count / self.convergence_frames_needed)
         smoothing = 0.9  # High smoothing for stability
         self.state.convergence_progress = (
-            smoothing * self.state.convergence_progress + (1 - smoothing) * raw_progress
+            smoothing * self.state.convergence_progress +
+            (1 - smoothing) * raw_progress
         )
 
         # Mark converged when sustained

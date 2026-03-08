@@ -27,7 +27,7 @@ class OptimizationAgent:
             "optimizations_found": 0,
             "optimizations_applied": 0,
             "performance_improvements": [],
-            "errors": [],
+            "errors": []
         }
 
         try:
@@ -70,7 +70,7 @@ class OptimizationAgent:
         optimizations = []
 
         try:
-            content = file_path.read_text(encoding="utf-8")
+            content = file_path.read_text(encoding='utf-8')
             tree = ast.parse(content)
 
             # Visitor to find optimization opportunities
@@ -79,76 +79,64 @@ class OptimizationAgent:
 
             # Convert findings to optimization suggestions
             for loop_node in visitor.loops_with_range:
-                optimizations.append(
-                    {
-                        "type": "loop_optimization",
-                        "file": str(file_path),
-                        "line": loop_node.lineno,
-                        "description": "Range-based loop could use enumerate or direct iteration",
-                        "suggestion": "Use enumerate() for index+value access or direct iteration",
-                    }
-                )
+                optimizations.append({
+                    "type": "loop_optimization",
+                    "file": str(file_path),
+                    "line": loop_node.lineno,
+                    "description": "Range-based loop could use enumerate or direct iteration",
+                    "suggestion": "Use enumerate() for index+value access or direct iteration"
+                })
 
             for comprehension_node in visitor.list_comprehensions:
                 if len(comprehension_node.generators) > 1:
-                    optimizations.append(
-                        {
-                            "type": "comprehension_optimization",
-                            "file": str(file_path),
-                            "line": comprehension_node.lineno,
-                            "description": "Nested list comprehension - consider generator or loop",
-                            "suggestion": "Use generator expression or break into multiple steps",
-                        }
-                    )
+                    optimizations.append({
+                        "type": "comprehension_optimization",
+                        "file": str(file_path),
+                        "line": comprehension_node.lineno,
+                        "description": "Nested list comprehension - consider generator or loop",
+                        "suggestion": "Use generator expression or break into multiple steps"
+                    })
 
             for func_node in visitor.functions_with_globals:
-                optimizations.append(
-                    {
-                        "type": "global_access_optimization",
-                        "file": str(file_path),
-                        "line": func_node.lineno,
-                        "description": "Function accesses global variables",
-                        "suggestion": "Pass globals as parameters or use dependency injection",
-                    }
-                )
+                optimizations.append({
+                    "type": "global_access_optimization",
+                    "file": str(file_path),
+                    "line": func_node.lineno,
+                    "description": "Function accesses global variables",
+                    "suggestion": "Pass globals as parameters or use dependency injection"
+                })
 
             # Check for inefficient string operations
             if " + " in content and ".join(" not in content:
-                optimizations.append(
-                    {
-                        "type": "string_concatenation",
-                        "file": str(file_path),
-                        "line": None,
-                        "description": "String concatenation detected",
-                        "suggestion": "Use ''.join() for multiple string concatenations",
-                    }
-                )
+                optimizations.append({
+                    "type": "string_concatenation",
+                    "file": str(file_path),
+                    "line": None,
+                    "description": "String concatenation detected",
+                    "suggestion": "Use ''.join() for multiple string concatenations"
+                })
 
             # Check for inefficient list operations
             if ".append(" in content and "extend(" not in content:
-                optimizations.append(
-                    {
-                        "type": "list_operations",
-                        "file": str(file_path),
-                        "line": None,
-                        "description": "Multiple .append() calls detected",
-                        "suggestion": "Consider using .extend() or list comprehension",
-                    }
-                )
+                optimizations.append({
+                    "type": "list_operations",
+                    "file": str(file_path),
+                    "line": None,
+                    "description": "Multiple .append() calls detected",
+                    "suggestion": "Consider using .extend() or list comprehension"
+                })
 
         except Exception as e:
             self.logger.warning(f"Failed to analyze {file_path}: {str(e)}")
 
         return optimizations
 
-    async def _apply_optimizations(
-        self, file_path: Path, optimizations: List[Dict]
-    ) -> int:
+    async def _apply_optimizations(self, file_path: Path, optimizations: List[Dict]) -> int:
         """Apply applicable optimizations to a file"""
         applied_count = 0
 
         try:
-            content = file_path.read_text(encoding="utf-8")
+            content = file_path.read_text(encoding='utf-8')
             original_content = content
 
             # Apply string concatenation optimization
@@ -162,44 +150,40 @@ class OptimizationAgent:
                     applied_count += 1
 
             if content != original_content:
-                file_path.write_text(content, encoding="utf-8")
-                self.logger.debug(
-                    f"Applied {applied_count} optimizations to {file_path}"
-                )
+                file_path.write_text(content, encoding='utf-8')
+                self.logger.debug(f"Applied {applied_count} optimizations to {file_path}")
 
         except Exception as e:
-            self.logger.warning(
-                f"Failed to apply optimizations to {file_path}: {str(e)}"
-            )
+            self.logger.warning(f"Failed to apply optimizations to {file_path}: {str(e)}")
 
         return applied_count
 
     async def _optimize_string_concatenation(self, content: str) -> str:
         """Optimize string concatenation operations"""
         try:
-            lines = content.split("\n")
+            lines = content.split('\n')
             new_lines = []
 
             for line in lines:
                 # Simple pattern: multiple + operations on strings
-                if '"' in line and "+" in line and ".join" not in line:
+                if '"' in line and '+' in line and '.join' not in line:
                     # Convert a + b + c to ''.join([a, b, c])
-                    if line.count("+") >= 2 and line.count('"') >= 2:
+                    if line.count('+') >= 2 and line.count('"') >= 2:
                         # Simple replacement for common cases
-                        if "result =" in line and "+" in line:
+                        if 'result =' in line and '+' in line:
                             # Example: result = "a" + "b" + "c"
-                            parts = line.split(" = ")
+                            parts = line.split(' = ')
                             if len(parts) == 2:
                                 var_name = parts[0].strip()
                                 expression = parts[1].strip()
-                                if "+" in expression:
+                                if '+' in expression:
                                     # Simple join optimization
                                     new_line = f'{var_name} = "".join([{expression.replace("+", ", ")}])'
                                     new_lines.append(new_line)
                                     continue
                 new_lines.append(line)
 
-            return "\n".join(new_lines)
+            return '\n'.join(new_lines)
 
         except Exception as e:
             self.logger.warning(f"String optimization failed: {str(e)}")
@@ -208,7 +192,7 @@ class OptimizationAgent:
     async def _optimize_list_operations(self, content: str) -> str:
         """Optimize list operation patterns"""
         try:
-            lines = content.split("\n")
+            lines = content.split('\n')
             new_lines = []
             i = 0
 
@@ -219,24 +203,22 @@ class OptimizationAgent:
                 # items = []
                 # items.append(a)
                 # items.append(b)
-                if "items = []" in line and i + 2 < len(lines):
+                if 'items = []' in line and i + 2 < len(lines):
                     next_line = lines[i + 1]
                     next_next_line = lines[i + 2]
 
-                    if (
-                        "items.append(" in next_line
-                        and "items.append(" in next_next_line
-                    ):
+                    if ('items.append(' in next_line and
+                        'items.append(' in next_next_line):
                         # Convert to list comprehension or direct assignment
                         var_lines = [next_line, next_next_line]
                         items = []
                         for var_line in var_lines:
-                            if "items.append(" in var_line:
-                                item = var_line.split("items.append(")[1].rstrip(")")
+                            if 'items.append(' in var_line:
+                                item = var_line.split('items.append(')[1].rstrip(')')
                                 items.append(item.strip())
 
                         if len(items) >= 2:
-                            new_lines.append(f"items = [{', '.join(items)}]")
+                            new_lines.append(f'items = [{", ".join(items)}]')
                             i += 2  # Skip the next two lines
                         else:
                             new_lines.append(line)
@@ -247,7 +229,7 @@ class OptimizationAgent:
 
                 i += 1
 
-            return "\n".join(new_lines)
+            return '\n'.join(new_lines)
 
         except Exception as e:
             self.logger.warning(f"List optimization failed: {str(e)}")
@@ -267,7 +249,7 @@ class OptimizationVisitor(ast.NodeVisitor):
         """Visit for loops"""
         if isinstance(node.iter, ast.Call):
             if isinstance(node.iter.func, ast.Name):
-                if node.iter.func.id == "range":
+                if node.iter.func.id == 'range':
                     self.loops_with_range.append(node)
         self.generic_visit(node)
 

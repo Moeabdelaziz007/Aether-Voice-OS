@@ -55,7 +55,6 @@ def test_handover_emits_cinematic_events() -> None:
 def test_handover_without_gateway_does_not_crash() -> None:
     engine = object.__new__(AetherEngine)
     setattr(engine, "_gateway", None)
-
     def _run_background_task(
         coro: Coroutine[Any, Any, Any], name: str | None = None
     ) -> asyncio.Task[Any]:

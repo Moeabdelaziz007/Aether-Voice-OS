@@ -2,8 +2,8 @@ import logging
 from typing import Any, Dict, Optional
 
 import jwt
-from firebase_admin import auth as firebase_auth
 
+from firebase_admin import auth as firebase_auth
 from core.services.registry import AetherRegistry
 from core.utils.security import verify_signature
 
@@ -52,14 +52,11 @@ class AuthService:
             if hasattr(self._registry, "get_package_by_client_id"):
                 pkg = self._registry.get_package_by_client_id(client_id)
                 if pkg and pkg.manifest.public_key:
-                    return verify_signature(
-                        pkg.manifest.public_key, signature, bytes.fromhex(challenge)
-                    )
+                    return verify_signature(pkg.manifest.public_key, signature, bytes.fromhex(challenge))
 
             # 2. Ephemeral/Direct Mode Fallback (match Gateway logic)
             is_hex = all(c in "0123456789abcdef" for c in client_id.lower())
             if len(client_id) == 64 and is_hex:
-                # The raw message was actually signed by the client, but `verify_signature` in core.utils.security expects the hex challenge!
                 return verify_signature(client_id, signature, bytes.fromhex(challenge))
 
             return False

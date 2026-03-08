@@ -63,6 +63,7 @@ def mock_dependencies():
         patch("core.audio.capture.HysteresisGate") as MockHysteresis,
         patch("core.audio.capture.AECBridge"),
     ):
+
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
         mock_aec_state = MagicMock()
@@ -264,7 +265,6 @@ def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(
     capture_instance: AudioCapture,
 ):
     import core.audio.capture
-
     # Simulate QueueFull once, then success.
     q = capture_instance._async_queue
 

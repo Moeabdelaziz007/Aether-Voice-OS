@@ -12,20 +12,13 @@ def build_system_instruction(session_facade) -> str:
     instruction_parts = []
 
     if session_facade._soul:
-        manifest = (
-            session_facade._soul.manifest
-            if hasattr(session_facade._soul, "manifest")
-            else session_facade._soul
-        )
+        manifest = session_facade._soul.manifest if hasattr(session_facade._soul, "manifest") else session_facade._soul
         expertise = getattr(manifest, "expertise", {})
         persona = getattr(manifest, "persona", "An Aether Agent")
         soul_instruction = f"{persona}\n\nPrimary Domain: {expertise}"
         instruction_parts.append(soul_instruction)
         session_facade._soul_instruction_cache = soul_instruction
-        logger.info(
-            "A2A [SESSION] Applying Expert Soul: %s",
-            getattr(manifest, "name", "Unknown"),
-        )
+        logger.info("A2A [SESSION] Applying Expert Soul: %s", getattr(manifest, "name", "Unknown"))
 
     if session_facade._injected_handover_context:
         handover_section = format_handover_context_for_instruction(session_facade)
@@ -85,9 +78,7 @@ def format_handover_context_for_instruction(session_facade) -> str:
     if ctx.code_context:
         parts.append("\n## Code Context")
         if ctx.code_context.files_modified:
-            parts.append(
-                f"Modified files: {', '.join(ctx.code_context.files_modified)}"
-            )
+            parts.append(f"Modified files: {', '.join(ctx.code_context.files_modified)}")
         if ctx.code_context.language:
             parts.append(f"Language: {ctx.code_context.language}")
         if ctx.code_context.framework:
@@ -114,17 +105,9 @@ def inject_handover_context(session_facade, context) -> bool:
         context.add_conversation_entry(
             speaker=context.target_agent,
             message=f"Handover acknowledged by {context.target_agent}. Ready to proceed.",
-            metadata={
-                "type": "handover_acknowledgment",
-                "acknowledgment_id": ack_id,
-                "session_id": id(session_facade),
-            },
+            metadata={"type": "handover_acknowledgment", "acknowledgment_id": ack_id, "session_id": id(session_facade)},
         )
-        logger.info(
-            "A2A [SESSION] Handover context injected: %s (Task: %s)",
-            context.handover_id,
-            context.task[:50],
-        )
+        logger.info("A2A [SESSION] Handover context injected: %s (Task: %s)", context.handover_id, context.task[:50])
         return True
     except Exception as e:
         logger.error("Failed to inject handover context: %s", e)
@@ -133,40 +116,23 @@ def inject_handover_context(session_facade, context) -> bool:
 
 def clear_handover_context(session_facade) -> None:
     if session_facade._injected_handover_context:
-        logger.info(
-            "A2A [SESSION] Clearing handover context: %s",
-            session_facade._injected_handover_context.handover_id,
-        )
+        logger.info("A2A [SESSION] Clearing handover context: %s", session_facade._injected_handover_context.handover_id)
         session_facade._injected_handover_context = None
 
 
-def complete_handover_acknowledgment(
-    session_facade, handover_id: str, success: bool, message: str = ""
-) -> bool:
+def complete_handover_acknowledgment(session_facade, handover_id: str, success: bool, message: str = "") -> bool:
     context = session_facade._injected_handover_context
     if not context or context.handover_id != handover_id:
-        logger.warning(
-            "Cannot complete handover acknowledgment: context mismatch or not found"
-        )
+        logger.warning("Cannot complete handover acknowledgment: context mismatch or not found")
         return False
 
-    context.update_status(
-        HandoverStatus.COMPLETED if success else HandoverStatus.FAILED
-    )
+    context.update_status(HandoverStatus.COMPLETED if success else HandoverStatus.FAILED)
     context.add_conversation_entry(
         speaker=context.target_agent,
         message=message or f"Handover {'completed' if success else 'failed'}",
-        metadata={
-            "type": "handover_completion",
-            "success": success,
-            "timestamp": datetime.now().isoformat(),
-        },
+        metadata={"type": "handover_completion", "success": success, "timestamp": datetime.now().isoformat()},
     )
-    logger.info(
-        "A2A [SESSION] Handover acknowledgment completed: %s (success=%s)",
-        handover_id,
-        success,
-    )
+    logger.info("A2A [SESSION] Handover acknowledgment completed: %s (success=%s)", handover_id, success)
     return True
 
 
@@ -174,9 +140,7 @@ def export_handover_state(session_facade) -> dict:
     return {
         "has_active_handover": session_facade._injected_handover_context is not None,
         "handover_id": (
-            session_facade._injected_handover_context.handover_id
-            if session_facade._injected_handover_context
-            else None
+            session_facade._injected_handover_context.handover_id if session_facade._injected_handover_context else None
         ),
         "acknowledgments": session_facade._handover_acknowledgments.copy(),
         "timestamp": datetime.now().isoformat(),
@@ -186,10 +150,7 @@ def export_handover_state(session_facade) -> dict:
 def restore_handover_state(session_facade, state: dict) -> bool:
     try:
         session_facade._handover_acknowledgments = state.get("acknowledgments", {})
-        logger.info(
-            "Restored handover acknowledgments: %d",
-            len(session_facade._handover_acknowledgments),
-        )
+        logger.info("Restored handover acknowledgments: %d", len(session_facade._handover_acknowledgments))
         return True
     except Exception as e:
         logger.error("Failed to restore handover state: %s", e)

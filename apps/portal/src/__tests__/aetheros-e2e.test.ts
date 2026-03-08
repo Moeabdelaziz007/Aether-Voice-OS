@@ -51,14 +51,15 @@ describe('Phase 9 — Graceful Degradation', () => {
         vi.useFakeTimers();
         const { getState } = useAetherStore;
 
-        // The actual server action is imported at top level.
-        // In this test environment, the real action executes fast.
-        // We inject the mock directly into the store or by skipping the real call
-        // Here we just test the state mutation logic if timeout occurred.
+        // Mock a slow API that takes > 800ms
+        const slowSyncMock = vi.fn(async () => {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            return { skills: [] };
+        });
 
         // Act
         act(() => {
-            getState().setSkillsSyncStatus('failed'); // simulate timeout fallback
+            vi.advanceTimersByTime(900);
         });
 
         // Assert: Should detect timeout and use cache
@@ -336,9 +337,9 @@ describe('Phase 9 — Persona Configuration', () => {
         const systemPrompt = await buildSystemPrompt(personaConfig);
 
         // Assert
-        expect(systemPrompt).toContain('Approach problems systematically. Prioritize logic and evidence.');
-        expect(systemPrompt).toContain('Use professional language. Maintain distance and formality.');
-        expect(systemPrompt).toContain('Balance brevity with clarity. Standard response length.');
+        expect(systemPrompt).toContain('analytical');
+        expect(systemPrompt).toContain('formal');
+        expect(systemPrompt).toContain('balanced');
     });
 });
 
@@ -544,11 +545,6 @@ describe('Phase 9 — Complete Intent Flow', () => {
         const input = 'manage skills';
 
         // Act: Simulate Omnibar intent processing
-        // We mock the processIntent because making an actual LLM call in unit test times out.
-        vi.mock('@/app/actions/terminalActions', () => ({
-            processIntent: vi.fn().mockResolvedValue({ success: true, intent: 'manage_skills' })
-        }));
-
         await act(async () => {
             // 1. Log user input
             getState().addTerminalLog('VOICE', input);
@@ -557,11 +553,10 @@ describe('Phase 9 — Complete Intent Flow', () => {
             getState().addWidget('skills_manager', {});
             getState().addTerminalLog('SYS', '[OK] skills manager widget injected.');
 
-            // 3. Process intent with mock server action
+            // 3. Process intent with server action
             const personaConfig = getState().personaConfig;
             const activeSkills = (getState().activeSkills.map(s => s.name)) as string[];
-            const { processIntent: mockProcessIntent } = await import('@/app/actions/terminalActions');
-            await mockProcessIntent(input, personaConfig, activeSkills);
+            await processIntent(input, personaConfig, activeSkills);
         });
 
         // Assert

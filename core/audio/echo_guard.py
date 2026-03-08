@@ -65,17 +65,10 @@ class EchoGuard:
         3. Identity Conflict Check (Self vs User)
         """
         try:
-            audio_np = (
-                np.frombuffer(mic_pcm, dtype=np.int16).astype(np.float32) / 32768.0
-            )
+            audio_np = np.frombuffer(mic_pcm, dtype=np.int16).astype(np.float32) / 32768.0
         except ValueError:
             # Fallback if bytes don't align to int16 cleanly
-            audio_np = (
-                np.frombuffer(mic_pcm[: len(mic_pcm) // 2 * 2], dtype=np.int16).astype(
-                    np.float32
-                )
-                / 32768.0
-            )
+            audio_np = np.frombuffer(mic_pcm[:len(mic_pcm)//2*2], dtype=np.int16).astype(np.float32) / 32768.0
         if len(audio_np) == 0:
             return False
 
@@ -91,7 +84,7 @@ class EchoGuard:
         is_above_threshold = rms > (self._ambient_noise_floor * 1.8 + 0.01)
 
         # Gate 2: Acoustic Identity Conflict (Echo Suppression)
-        if True:  # Always check cache even if AI is "not speaking" just in case
+        if True: # Always check cache even if AI is "not speaking" just in case
             # Check if current input matches anything in our cache (Acoustic Identity)
             # This handles delay compensation naturally by scanning the window
             input_spectrum = np.abs(np.fft.rfft(audio_np))
@@ -104,9 +97,7 @@ class EchoGuard:
                 similarity = np.dot(input_fp, cached_fp) / (
                     np.linalg.norm(input_fp) * np.linalg.norm(cached_fp) + 1e-6
                 )
-                if (
-                    similarity > 0.70
-                ):  # High match = Echo detected (Lowered for tests to pass)
+                if similarity > 0.70:  # High match = Echo detected (Lowered for tests to pass)
                     if time.time() % 0.5 < 0.1:  # Periodic logging to omit spam
                         logger.debug(
                             f"[EchoGuard] 🚫 Self-Acoustic Match (sim={similarity:.2f}). Gating input."

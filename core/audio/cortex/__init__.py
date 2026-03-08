@@ -28,7 +28,6 @@ except ImportError as e:
         "Falling back to NumPy (Performance degraded)."
     )
     import traceback
-
     logger.debug(traceback.format_exc())
 
 

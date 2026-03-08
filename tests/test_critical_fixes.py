@@ -9,11 +9,10 @@ This test suite validates all critical bug fixes implemented in Phase 1 & 2:
 - Buffer optimization
 """
 
-import asyncio
-from unittest.mock import Mock, patch
-
 import numpy as np
 import pytest
+from unittest.mock import Mock, patch, MagicMock
+import asyncio
 
 
 class TestResamplingFix:
@@ -32,9 +31,7 @@ class TestResamplingFix:
 
         # Verify correct output length
         expected_len = int(1024 * 16 / 24)
-        assert len(pcm_16k) == expected_len, (
-            f"Expected {expected_len}, got {len(pcm_16k)}"
-        )
+        assert len(pcm_16k) == expected_len, f"Expected {expected_len}, got {len(pcm_16k)}"
         assert len(pcm_16k) == 682, f"Expected 682 samples, got {len(pcm_16k)}"
 
         # Verify data type preserved
@@ -56,9 +53,8 @@ class TestResamplingFix:
             actual_ratio = target_len / orig_len
 
             # Allow small rounding error
-            assert abs(actual_ratio - expected_ratio) < 0.01, (
+            assert abs(actual_ratio - expected_ratio) < 0.01, \
                 f"Ratio mismatch for length {orig_len}: {actual_ratio} vs {expected_ratio}"
-            )
 
     def test_old_vs_new_resampling(self):
         """Demonstrate the difference between old (wrong) and new (correct) approach."""
@@ -90,11 +86,11 @@ class TestDuplicateFixes:
         from core.audio.dynamic_aec import DynamicAEC
 
         # Mock dependencies to avoid hardware requirements
-        with patch("core.audio.dynamic_aec.AdaptiveFilter"):
+        with patch('core.audio.dynamic_aec.AdaptiveFilter'):
             aec = DynamicAEC(sample_rate=16000, filter_length_ms=128)
 
             # Should have exactly one spectral_analyzer instance
-            assert hasattr(aec, "spectral_analyzer")
+            assert hasattr(aec, 'spectral_analyzer')
             assert aec.spectral_analyzer is not None
 
             # Verify it's not None or duplicated
@@ -111,7 +107,7 @@ class TestDuplicateFixes:
         state = AudioState.get_instance()
 
         # Verify capture_queue_drops exists and is initialized
-        assert hasattr(state, "capture_queue_drops")
+        assert hasattr(state, 'capture_queue_drops')
         assert state.capture_queue_drops == 0
 
         # Verify it can be incremented (proves it's working)
@@ -124,23 +120,22 @@ class TestExceptionHandling:
 
     def test_rust_cortex_exception_handling(self):
         """Verify Rust cortex failures don't crash the pipeline."""
-        from core.audio.config import AudioConfig
-
         from core.audio.capture import AudioCapture
+        from core.audio.config import AudioConfig
 
         # Create mock config
         config = AudioConfig()
 
         # Mock PyAudio to avoid hardware requirements
-        with patch("pyaudio.PyAudio") as mock_pyaudio:
+        with patch('pyaudio.PyAudio') as mock_pyaudio:
             mock_pyaudio.return_value.get_default_input_device_info.return_value = {
-                "defaultSampleRate": 16000
+                'defaultSampleRate': 16000
             }
 
             capture = AudioCapture(config=config)
 
             # Mock spectral_denoise to raise exception
-            with patch("core.audio.capture.spectral_denoise") as mock_denoise:
+            with patch('core.audio.capture.spectral_denoise') as mock_denoise:
                 mock_denoise.side_effect = Exception("Rust backend error")
 
                 # Simulate audio chunk
@@ -157,21 +152,20 @@ class TestExceptionHandling:
 
     def test_playback_callback_exception_handler(self):
         """Verify playback callback has catch-all exception handler."""
-        from core.audio.config import AudioConfig
-
         from core.audio.playback import PlaybackEngine
+        from core.audio.config import AudioConfig
 
         config = AudioConfig()
 
-        with patch("pyaudio.PyAudio") as mock_pyaudio:
+        with patch('pyaudio.PyAudio') as mock_pyaudio:
             mock_pyaudio.return_value.get_default_output_device_info.return_value = {
-                "defaultSampleRate": 24000
+                'defaultSampleRate': 24000
             }
 
             playback = PlaybackEngine(config=config)
 
             # Verify the _callback method exists and has exception handling
-            assert hasattr(playback, "_callback")
+            assert hasattr(playback, '_callback')
 
             # The exception handling is in the source code
             # We verify it compiles and doesn't crash on basic calls
@@ -199,17 +193,15 @@ class TestAsyncToSyncConversion:
 
     def test_pre_train_is_sync_function(self):
         """Verify pre_train is now a synchronous function."""
+        from core.audio.dynamic_aec import DynamicAEC
         import inspect
 
-        from core.audio.dynamic_aec import DynamicAEC
-
-        with patch("core.audio.dynamic_aec.AdaptiveFilter"):
+        with patch('core.audio.dynamic_aec.AdaptiveFilter'):
             aec = DynamicAEC(sample_rate=16000, filter_length_ms=128)
 
             # Check if pre_train is a coroutine function
-            assert not asyncio.iscoroutinefunction(aec.pre_train), (
+            assert not asyncio.iscoroutinefunction(aec.pre_train), \
                 "pre_train should NOT be async anymore"
-            )
 
             # Verify it's a regular method
             assert inspect.ismethod(aec.pre_train) or callable(aec.pre_train)
@@ -218,7 +210,7 @@ class TestAsyncToSyncConversion:
         """Verify pre_train returns a float value."""
         from core.audio.dynamic_aec import DynamicAEC
 
-        with patch("core.audio.dynamic_aec.AdaptiveFilter") as MockFilter:
+        with patch('core.audio.dynamic_aec.AdaptiveFilter') as MockFilter:
             mock_filter_instance = Mock()
             mock_filter_instance.pre_train.return_value = 0.95
             MockFilter.return_value = mock_filter_instance
@@ -244,7 +236,7 @@ class TestBufferOptimization:
         """Verify reset() uses .clear() instead of creating new objects."""
         from core.audio.dynamic_aec import DynamicAEC
 
-        with patch("core.audio.dynamic_aec.AdaptiveFilter"):
+        with patch('core.audio.dynamic_aec.AdaptiveFilter'):
             aec = DynamicAEC(sample_rate=16000, filter_length_ms=128)
 
             # Get initial buffer IDs
@@ -266,15 +258,12 @@ class TestBufferOptimization:
             near_end_id_after = id(aec.near_end_accumulator)
             far_end_acc_id_after = id(aec.far_end_accumulator)
 
-            assert far_end_id_before == far_end_id_after, (
+            assert far_end_id_before == far_end_id_after, \
                 "Should reuse same buffer object, not create new one"
-            )
-            assert near_end_id_before == near_end_id_after, (
+            assert near_end_id_before == near_end_id_after, \
                 "Should reuse same buffer object, not create new one"
-            )
-            assert far_end_acc_id_before == far_end_acc_id_after, (
+            assert far_end_acc_id_before == far_end_acc_id_after, \
                 "Should reuse same buffer object, not create new one"
-            )
 
 
 class TestLoggerPattern:
@@ -282,16 +271,15 @@ class TestLoggerPattern:
 
     def test_update_config_uses_safe_logger(self):
         """Verify update_config uses logging.getLogger() pattern."""
-
-        from core.audio.config import AudioConfig
-
         from core.audio.capture import AudioCapture
+        from core.audio.config import AudioConfig
+        import logging
 
         config = AudioConfig()
 
-        with patch("pyaudio.PyAudio") as mock_pyaudio:
+        with patch('pyaudio.PyAudio') as mock_pyaudio:
             mock_pyaudio.return_value.get_default_input_device_info.return_value = {
-                "defaultSampleRate": 16000
+                'defaultSampleRate': 16000
             }
 
             capture = AudioCapture(config=config)
@@ -310,13 +298,13 @@ class TestLoggerPattern:
 
 def run_all_tests():
     """Run all critical fix tests."""
-    print("\n" + "=" * 70)
+    print("\n" + "="*70)
     print("AETHER VOICE OS - CRITICAL BUG FIXES TEST SUITE")
-    print("=" * 70 + "\n")
+    print("="*70 + "\n")
 
     # Run with pytest
-    pytest.main([__file__, "-v", "--tb=short"])
+    pytest.main([__file__, '-v', '--tb=short'])
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     run_all_tests()

@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
-
 from core.audio.capture import SmoothMuter
-
 
 def test_smooth_muter_linear_vs_exponential():
     """Verify that SmoothMuter applies an exponential-like ramp."""
@@ -28,7 +26,6 @@ def test_smooth_muter_linear_vs_exponential():
     # With 100 samples and 100 ramp_samples, it should hit ~0.01 (99% decay)
     assert muter._current_gain == pytest.approx(0.01, abs=1e-3)
 
-
 def test_smooth_muter_unmute():
     """Verify unmute ramp (attack)."""
     muter = SmoothMuter(ramp_samples=100)
@@ -43,7 +40,6 @@ def test_smooth_muter_unmute():
     # Should be ~99% of 1000
     assert processed[-1] == pytest.approx(990, abs=5)
     assert muter._current_gain == pytest.approx(0.99, abs=0.01)
-
 
 def test_smooth_muter_no_ramp():
     """Verify behavior when ramp is 0 (instant switch)."""

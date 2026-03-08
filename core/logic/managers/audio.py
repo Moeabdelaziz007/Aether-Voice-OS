@@ -136,11 +136,13 @@ class AudioManager:
         """Add audio tasks to TaskGroup."""
         if self._capture:
             self._capture_task = tg.create_task(
-                self._capture.run(), name="audio-capture"
+                self._capture.run(),
+                name="audio-capture"
             )
         if self._playback:
             self._playback_task = tg.create_task(
-                self._playback.run(), name="audio-playback"
+                self._playback.run(),
+                name="audio-playback"
             )
 
     def interrupt(self):

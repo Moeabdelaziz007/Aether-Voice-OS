@@ -1,9 +1,8 @@
-import json
 import logging
-from typing import Any, Optional
+import json
+from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
-
 
 class IntentBroker:
     """
@@ -14,9 +13,7 @@ class IntentBroker:
     def __init__(self):
         self._schema_version = "1.1"
 
-    async def handle_intent(
-        self, client_id: str, msg_content: str, gateway: Any
-    ) -> bool:
+    async def handle_intent(self, client_id: str, msg_content: str, gateway: Any) -> bool:
         """
         Process an incoming intent message.
         Validates schema and triggers appropriate internal routing.
@@ -26,9 +23,7 @@ class IntentBroker:
             intent_type = payload.get("type")
 
             if not intent_type:
-                logger.warning(
-                    f"IntentBroker: Missing 'type' in payload from {client_id}"
-                )
+                logger.warning(f"IntentBroker: Missing 'type' in payload from {client_id}")
                 return False
 
             logger.info(f"✦ Intent Broker: Routing '{intent_type}' for {client_id}")
@@ -36,9 +31,7 @@ class IntentBroker:
             # Delegate to Gateway's broadcast or session injection
             # (Matches AetherGateway legacy logic)
             if intent_type == "UI_INTERACTION":
-                await gateway.broadcast(
-                    {"type": "STATE_UPDATE", "source": "broker", "intent": intent_type}
-                )
+                await gateway.broadcast({"type": "STATE_UPDATE", "source": "broker", "intent": intent_type})
                 return True
 
             elif intent_type == "SOUL_SHIFT":
@@ -46,9 +39,7 @@ class IntentBroker:
                 prob = payload.get("probability", 0.0)
 
                 if target and prob > 0.8:
-                    logger.info(
-                        f"🚀 IntentBroker: High probability ({prob}) for soul shift to {target}. Triggering Pre-Warm."
-                    )
+                    logger.info(f"🚀 IntentBroker: High probability ({prob}) for soul shift to {target}. Triggering Pre-Warm.")
                     # AetherGateway v2 includes pre_warm_soul method
                     if hasattr(gateway, "pre_warm_soul"):
                         asyncio.create_task(gateway.pre_warm_soul(target))

@@ -1,12 +1,12 @@
 import asyncio
 import logging
+from datetime import datetime, timezone
 from typing import Optional, Set
 
 from core.ai.session import GeminiLiveSession
 from core.infra.cloud.firebase.interface import FirebaseConnector
 
 logger = logging.getLogger(__name__)
-
 
 class AetherCodex:
     """
@@ -22,7 +22,7 @@ class AetherCodex:
         self,
         firebase: FirebaseConnector,
         session: GeminiLiveSession,
-        pulse_interval: float = 5.0,
+        pulse_interval: float = 5.0
     ) -> None:
         self._firebase = firebase
         self._session = session

@@ -77,7 +77,7 @@ class DependencyManagementAgent:
             "security_vulnerabilities": 0,
             "updates_available": [],
             "critical_updates": [],
-            "errors": [],
+            "errors": []
         }
 
         try:
@@ -104,7 +104,9 @@ class DependencyManagementAgent:
 
             # Compile results
             results["outdated_packages"] = self.report.outdated_count
-            results["security_vulnerabilities"] = len(self.report.vulnerabilities)
+            results["security_vulnerabilities"] = (
+                len(self.report.vulnerabilities)
+            )
             results["updates_available"] = [
                 f"{d.name}: {d.current_version} → {d.latest_version}"
                 for d in self.report.dependencies
@@ -158,7 +160,8 @@ class DependencyManagementAgent:
                     dep.latest_version = outdated[dep.name]["latest"]
                     dep.is_outdated = True
                     dep.update_type = self._determine_update_type(
-                        dep.current_version, dep.latest_version
+                        dep.current_version,
+                        dep.latest_version
                     )
                     self.report.outdated_count += 1
 
@@ -172,29 +175,27 @@ class DependencyManagementAgent:
     def _parse_requirements_txt(self, path: Path) -> List[DependencyInfo]:
         """Parse requirements.txt file."""
         dependencies = []
-        content = path.read_text(encoding="utf-8")
+        content = path.read_text(encoding='utf-8')
 
-        for line in content.split("\n"):
+        for line in content.split('\n'):
             line = line.strip()
-            if not line or line.startswith("#") or line.startswith("-"):
+            if not line or line.startswith('#') or line.startswith('-'):
                 continue
 
             # Parse package==version or package>=version
-            match = re.match(r"^([a-zA-Z0-9_-]+)[=<>!~]+([0-9.]+)", line)
+            match = re.match(r'^([a-zA-Z0-9_-]+)[=<>!~]+([0-9.]+)', line)
             if match:
-                dependencies.append(
-                    DependencyInfo(
-                        name=match.group(1).lower(),
-                        current_version=match.group(2),
-                        source="pip",
-                    )
-                )
-            elif re.match(r"^[a-zA-Z0-9_-]+$", line):
-                dependencies.append(
-                    DependencyInfo(
-                        name=line.lower(), current_version="latest", source="pip"
-                    )
-                )
+                dependencies.append(DependencyInfo(
+                    name=match.group(1).lower(),
+                    current_version=match.group(2),
+                    source="pip"
+                ))
+            elif re.match(r'^[a-zA-Z0-9_-]+$', line):
+                dependencies.append(DependencyInfo(
+                    name=line.lower(),
+                    current_version="latest",
+                    source="pip"
+                ))
 
         return dependencies
 
@@ -203,40 +204,38 @@ class DependencyManagementAgent:
         dependencies = []
 
         try:
-            content = path.read_text(encoding="utf-8")
+            content = path.read_text(encoding='utf-8')
 
             # Simple regex parsing for dependencies section
             in_deps = False
-            for line in content.split("\n"):
-                if (
-                    "[project.dependencies]" in line
-                    or "[tool.poetry.dependencies]" in line
-                ):
+            for line in content.split('\n'):
+                if ('[project.dependencies]' in line or
+                    '[tool.poetry.dependencies]' in line):
                     in_deps = True
                     continue
-                elif line.startswith("[") and in_deps:
+                elif line.startswith('[') and in_deps:
                     in_deps = False
                     continue
 
-                if in_deps and "=" in line:
+                if in_deps and '=' in line:
                     # Parse "package = version" or "package = {version = ...}"
-                    parts = line.split("=", 1)
+                    parts = line.split('=', 1)
                     if len(parts) == 2:
                         name = parts[0].strip().strip('"')
-                        version_str = parts[1].strip().strip('"').strip("{").strip("}")
+                        version_str = (parts[1].strip().strip('"')
+                                      .strip('{').strip('}'))
 
                         # Extract version number
-                        version_match = re.search(r"[0-9]+\.[0-9]+", version_str)
-                        version = version_match.group(0) if version_match else "unknown"
+                        version_match = re.search(r'[0-9]+\.[0-9]+', version_str)
+                        version = (version_match.group(0)
+                                  if version_match else "unknown")
 
-                        if name and name != "python":
-                            dependencies.append(
-                                DependencyInfo(
-                                    name=name.lower(),
-                                    current_version=version,
-                                    source="pip",
-                                )
-                            )
+                        if name and name != 'python':
+                            dependencies.append(DependencyInfo(
+                                name=name.lower(),
+                                current_version=version,
+                                source="pip"
+                            ))
 
         except Exception as e:
             self.logger.warning(f"Failed to parse pyproject.toml: {str(e)}")
@@ -250,7 +249,9 @@ class DependencyManagementAgent:
         try:
             cmd = ["pip", "list", "--outdated", "--format=json"]
             proc = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
@@ -259,7 +260,7 @@ class DependencyManagementAgent:
                 for pkg in packages:
                     outdated[pkg["name"].lower()] = {
                         "current": pkg["version"],
-                        "latest": pkg["latest_version"],
+                        "latest": pkg["latest_version"]
                     }
 
         except FileNotFoundError:
@@ -274,29 +275,32 @@ class DependencyManagementAgent:
         dependencies = []
 
         # Check multiple package.json locations
-        package_paths = [Path("package.json"), Path("apps/portal/package.json")]
+        package_paths = [
+            Path("package.json"),
+            Path("apps/portal/package.json")
+        ]
 
         for package_path in package_paths:
             if not package_path.exists():
                 continue
 
             try:
-                content = json.loads(package_path.read_text(encoding="utf-8"))
+                content = json.loads(package_path.read_text(encoding='utf-8'))
 
                 # Parse dependencies
                 for dep_type in ["dependencies", "devDependencies"]:
                     if dep_type in content:
                         for name, version in content[dep_type].items():
                             # Clean version string
-                            clean_version = re.sub(r"^[\^~>=<]", "", str(version))
-                            dependencies.append(
-                                DependencyInfo(
-                                    name=name,
-                                    current_version=clean_version,
-                                    is_dev_dependency=(dep_type == "devDependencies"),
-                                    source="npm",
-                                )
-                            )
+                            clean_version = re.sub(r'^[\^~>=<]', '',
+                                                  str(version))
+                            dependencies.append(DependencyInfo(
+                                name=name,
+                                current_version=clean_version,
+                                is_dev_dependency=(dep_type ==
+                                                  "devDependencies"),
+                                source="npm"
+                            ))
 
                 # Check for outdated using npm (if available)
                 outdated = await self._get_npm_outdated(package_path.parent)
@@ -306,7 +310,8 @@ class DependencyManagementAgent:
                         dep.latest_version = outdated[dep.name]
                         dep.is_outdated = True
                         dep.update_type = self._determine_update_type(
-                            dep.current_version, dep.latest_version
+                            dep.current_version,
+                            dep.latest_version
                         )
                         self.report.outdated_count += 1
 
@@ -326,7 +331,7 @@ class DependencyManagementAgent:
                 *cmd,
                 cwd=str(cwd),
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
@@ -350,7 +355,7 @@ class DependencyManagementAgent:
         # Check Cargo.toml files
         cargo_paths = [
             Path("cortex/Cargo.toml"),
-            Path("apps/portal/src-tauri/Cargo.toml"),
+            Path("apps/portal/src-tauri/Cargo.toml")
         ]
 
         for cargo_path in cargo_paths:
@@ -358,37 +363,36 @@ class DependencyManagementAgent:
                 continue
 
             try:
-                content = cargo_path.read_text(encoding="utf-8")
+                content = cargo_path.read_text(encoding='utf-8')
 
                 in_deps = False
-                for line in content.split("\n"):
-                    if "[dependencies]" in line or "[dev-dependencies]" in line:
+                for line in content.split('\n'):
+                    if ('[dependencies]' in line or
+                        '[dev-dependencies]' in line):
                         in_deps = True
                         continue
-                    elif line.startswith("[") and in_deps:
+                    elif line.startswith('[') and in_deps:
                         in_deps = False
                         continue
 
-                    if in_deps and "=" in line:
-                        parts = line.split("=", 1)
+                    if in_deps and '=' in line:
+                        parts = line.split('=', 1)
                         if len(parts) == 2:
                             name = parts[0].strip()
-                            version_str = parts[1].strip().strip('"')
+                            version_str = (parts[1].strip()
+                                          .strip('"'))
 
                             # Extract version
-                            version_match = re.search(r"[0-9]+\.[0-9]+", version_str)
-                            version = (
-                                version_match.group(0) if version_match else "unknown"
-                            )
+                            version_match = re.search(r'[0-9]+\.[0-9]+', version_str)
+                            version = (version_match.group(0)
+                                      if version_match else "unknown")
 
-                            if name and not name.startswith("#"):
-                                dependencies.append(
-                                    DependencyInfo(
-                                        name=name,
-                                        current_version=version,
-                                        source="cargo",
-                                    )
-                                )
+                            if name and not name.startswith('#'):
+                                dependencies.append(DependencyInfo(
+                                    name=name,
+                                    current_version=version,
+                                    source="cargo"
+                                ))
 
             except Exception as e:
                 self.logger.warning(f"Failed to parse {cargo_path}: {str(e)}")
@@ -400,7 +404,7 @@ class DependencyManagementAgent:
                 *cmd,
                 cwd="cortex",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
@@ -416,7 +420,8 @@ class DependencyManagementAgent:
                         dep.latest_version = outdated_map[dep.name]
                         dep.is_outdated = True
                         dep.update_type = self._determine_update_type(
-                            dep.current_version, dep.latest_version
+                            dep.current_version,
+                            dep.latest_version
                         )
                         self.report.outdated_count += 1
 
@@ -445,52 +450,48 @@ class DependencyManagementAgent:
             # Try pip-audit first
             cmd = ["pip-audit", "--format=json", "--desc=on"]
             proc = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
             if proc.returncode == 0 and stdout:
                 vulns = json.loads(stdout.decode())
                 for vuln in vulns:
-                    self.report.vulnerabilities.append(
-                        SecurityVulnerability(
-                            package=vuln.get("name", "unknown"),
-                            vulnerability_id=vuln.get("id", "unknown"),
-                            severity=vuln.get("severity", "unknown"),
-                            description=vuln.get("description", ""),
-                            fixed_in=vuln.get("fix_versions", [None])[0],
-                            cve_id=vuln.get("cve", None),
-                        )
-                    )
+                    self.report.vulnerabilities.append(SecurityVulnerability(
+                        package=vuln.get("name", "unknown"),
+                        vulnerability_id=vuln.get("id", "unknown"),
+                        severity=vuln.get("severity", "unknown"),
+                        description=vuln.get("description", ""),
+                        fixed_in=vuln.get("fix_versions", [None])[0],
+                        cve_id=vuln.get("cve", None)
+                    ))
 
         except FileNotFoundError:
             # Try safety as fallback
             try:
                 cmd = ["safety", "check", "--json"]
                 proc = await asyncio.create_subprocess_exec(
-                    *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
                 )
                 stdout, stderr = await proc.communicate()
 
                 if stdout:
                     result = json.loads(stdout.decode())
                     for vuln in result.get("vulnerabilities", []):
-                        self.report.vulnerabilities.append(
-                            SecurityVulnerability(
-                                package=vuln.get("package_name", "unknown"),
-                                vulnerability_id=vuln.get(
-                                    "vulnerability_id", "unknown"
-                                ),
-                                severity=vuln.get("severity", "unknown"),
-                                description=vuln.get("advisory", ""),
-                                cve_id=vuln.get("cve", None),
-                            )
-                        )
+                        self.report.vulnerabilities.append(SecurityVulnerability(
+                            package=vuln.get("package_name", "unknown"),
+                            vulnerability_id=vuln.get("vulnerability_id", "unknown"),
+                            severity=vuln.get("severity", "unknown"),
+                            description=vuln.get("advisory", ""),
+                            cve_id=vuln.get("cve", None)
+                        ))
 
             except FileNotFoundError:
-                self.logger.info(
-                    "No Python security audit tool available (pip-audit or safety)"
-                )
+                self.logger.info("No Python security audit tool available (pip-audit or safety)")
             except Exception as e:
                 self.logger.warning(f"Safety check failed: {str(e)}")
         except Exception as e:
@@ -510,7 +511,7 @@ class DependencyManagementAgent:
                     *cmd,
                     cwd=str(pkg_dir),
                     stdout=asyncio.subprocess.PIPE,
-                    stderr=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
                 )
                 stdout, stderr = await proc.communicate()
 
@@ -519,18 +520,14 @@ class DependencyManagementAgent:
                     advisories = audit_result.get("advisories", {})
 
                     for adv_id, adv in advisories.items():
-                        self.report.vulnerabilities.append(
-                            SecurityVulnerability(
-                                package=adv.get("module_name", "unknown"),
-                                vulnerability_id=str(adv_id),
-                                severity=adv.get("severity", "unknown"),
-                                description=adv.get("title", ""),
-                                fixed_in=adv.get("patched_versions", None),
-                                cve_id=adv.get("cves", [None])[0]
-                                if adv.get("cves")
-                                else None,
-                            )
-                        )
+                        self.report.vulnerabilities.append(SecurityVulnerability(
+                            package=adv.get("module_name", "unknown"),
+                            vulnerability_id=str(adv_id),
+                            severity=adv.get("severity", "unknown"),
+                            description=adv.get("title", ""),
+                            fixed_in=adv.get("patched_versions", None),
+                            cve_id=adv.get("cves", [None])[0] if adv.get("cves") else None
+                        ))
 
             except FileNotFoundError:
                 self.logger.info("npm not available for security audit")
@@ -548,26 +545,20 @@ class DependencyManagementAgent:
                 *cmd,
                 cwd="cortex",
                 stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
             if stdout:
                 audit_result = json.loads(stdout.decode())
                 for vuln in audit_result.get("vulnerabilities", {}).get("list", []):
-                    self.report.vulnerabilities.append(
-                        SecurityVulnerability(
-                            package=vuln.get("package", {}).get("name", "unknown"),
-                            vulnerability_id=vuln.get("advisory", {}).get(
-                                "id", "unknown"
-                            ),
-                            severity=vuln.get("advisory", {}).get(
-                                "severity", "unknown"
-                            ),
-                            description=vuln.get("advisory", {}).get("title", ""),
-                            cve_id=vuln.get("advisory", {}).get("cvss", None),
-                        )
-                    )
+                    self.report.vulnerabilities.append(SecurityVulnerability(
+                        package=vuln.get("package", {}).get("name", "unknown"),
+                        vulnerability_id=vuln.get("advisory", {}).get("id", "unknown"),
+                        severity=vuln.get("advisory", {}).get("severity", "unknown"),
+                        description=vuln.get("advisory", {}).get("title", ""),
+                        cve_id=vuln.get("advisory", {}).get("cvss", None)
+                    ))
 
         except FileNotFoundError:
             self.logger.info("cargo-audit not available")
@@ -577,8 +568,8 @@ class DependencyManagementAgent:
     def _determine_update_type(self, current: str, latest: str) -> str:
         """Determine if update is major, minor, or patch."""
         try:
-            current_parts = [int(x) for x in re.findall(r"\d+", current)[:3]]
-            latest_parts = [int(x) for x in re.findall(r"\d+", latest)[:3]]
+            current_parts = [int(x) for x in re.findall(r'\d+', current)[:3]]
+            latest_parts = [int(x) for x in re.findall(r'\d+', latest)[:3]]
 
             # Pad to 3 parts
             while len(current_parts) < 3:
@@ -621,9 +612,7 @@ class DependencyManagementAgent:
         suggestions = []
 
         # Critical: Security vulnerabilities
-        critical_vulns = [
-            v for v in self.report.vulnerabilities if v.severity == "critical"
-        ]
+        critical_vulns = [v for v in self.report.vulnerabilities if v.severity == "critical"]
         if critical_vulns:
             suggestions.append(
                 f"🚨 CRITICAL: {len(critical_vulns)} critical security vulnerabilities found! "
@@ -632,8 +621,7 @@ class DependencyManagementAgent:
 
         # High priority: Major version updates with security fixes
         major_updates = [
-            d
-            for d in self.report.dependencies
+            d for d in self.report.dependencies
             if d.is_outdated and d.update_type == "major"
         ]
         if major_updates:
@@ -644,8 +632,7 @@ class DependencyManagementAgent:
 
         # Medium priority: Minor/patch updates
         safe_updates = [
-            d
-            for d in self.report.dependencies
+            d for d in self.report.dependencies
             if d.is_outdated and d.update_type in ["minor", "patch"]
         ]
         if safe_updates:
@@ -662,21 +649,19 @@ class DependencyManagementAgent:
             )
 
         # General recommendations for Aether Voice OS
-        suggestions.extend(
-            [
-                "🎵 For audio processing, ensure numpy and scipy are up-to-date for performance.",
-                "🔒 Run security audits regularly: pip-audit && npm audit && cargo audit",
-                "📌 Consider pinning critical dependencies for reproducible builds.",
-                "🧹 Remove unused dependencies to reduce attack surface.",
-            ]
-        )
+        suggestions.extend([
+            "🎵 For audio processing, ensure numpy and scipy are up-to-date for performance.",
+            "🔒 Run security audits regularly: pip-audit && npm audit && cargo audit",
+            "📌 Consider pinning critical dependencies for reproducible builds.",
+            "🧹 Remove unused dependencies to reduce attack surface."
+        ])
 
         self.report.update_suggestions = suggestions
 
     async def update_dependencies(
         self,
         packages: Optional[List[str]] = None,
-        update_type: str = "safe",  # safe, all, specific
+        update_type: str = "safe"  # safe, all, specific
     ) -> Dict[str, Any]:
         """Update dependencies (safe updates only by default)."""
         results = {"updated": [], "failed": [], "skipped": []}
@@ -685,16 +670,14 @@ class DependencyManagementAgent:
 
         if update_type == "safe":
             deps_to_update = [
-                d
-                for d in self.report.dependencies
+                d for d in self.report.dependencies
                 if d.is_outdated and d.update_type in ["minor", "patch"]
             ]
         elif update_type == "all":
             deps_to_update = [d for d in self.report.dependencies if d.is_outdated]
         elif packages:
             deps_to_update = [
-                d
-                for d in self.report.dependencies
+                d for d in self.report.dependencies
                 if d.name in packages and d.is_outdated
             ]
 
@@ -711,7 +694,9 @@ class DependencyManagementAgent:
                     continue
 
                 proc = await asyncio.create_subprocess_exec(
-                    *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
                 )
                 await proc.communicate()
 
@@ -740,7 +725,7 @@ class DependencyManagementAgent:
                     "latest": d.latest_version,
                     "outdated": d.is_outdated,
                     "update_type": d.update_type,
-                    "source": d.source,
+                    "source": d.source
                 }
                 for d in self.report.dependencies
             ],
@@ -751,7 +736,7 @@ class DependencyManagementAgent:
                     "severity": v.severity,
                     "description": v.description,
                     "fixed_in": v.fixed_in,
-                    "cve": v.cve_id,
+                    "cve": v.cve_id
                 }
                 for v in self.report.vulnerabilities
             ],
@@ -760,6 +745,6 @@ class DependencyManagementAgent:
             "summary": {
                 "total": len(self.report.dependencies),
                 "outdated": self.report.outdated_count,
-                "vulnerabilities": len(self.report.vulnerabilities),
-            },
+                "vulnerabilities": len(self.report.vulnerabilities)
+            }
         }

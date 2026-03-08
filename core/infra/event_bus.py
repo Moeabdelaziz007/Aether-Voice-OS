@@ -189,9 +189,7 @@ class EventBus:
         for states in self._subscribers.values():
             for state in states:
                 if state.worker_task is None or state.worker_task.done():
-                    state.worker_task = asyncio.create_task(
-                        self._subscriber_worker(state)
-                    )
+                    state.worker_task = asyncio.create_task(self._subscriber_worker(state))
         logger.info("[EventBus] 🌌 Multi-Lane Neural Event Bus initialized.")
 
     async def stop(self):
@@ -270,9 +268,7 @@ class EventBus:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(
-                    "[EventBus] Subscriber worker error (%s): %s", state.name, e
-                )
+                logger.error("[EventBus] Subscriber worker error (%s): %s", state.name, e)
 
     async def _execute_subscriber_callback(
         self, state: _SubscriberState, event: SystemEvent
@@ -290,9 +286,7 @@ class EventBus:
         start = time.perf_counter()
         try:
             async with self._callback_semaphore:
-                await asyncio.wait_for(
-                    state.callback(event), timeout=callback_timeout_s
-                )
+                await asyncio.wait_for(state.callback(event), timeout=callback_timeout_s)
             elapsed_ms = (time.perf_counter() - start) * 1000
             state.processed += 1
             state.total_service_time_ms += elapsed_ms

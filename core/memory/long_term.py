@@ -47,7 +47,6 @@ class LongTermMemory:
         if provider == "firestore":
             # Import Firestore backend
             from core.tools.firestore_vector_store import FirestoreVectorStore
-
             key = api_key if api_key else "demo-key"
             self._firestore_store: Any = FirestoreVectorStore(api_key=key)
             logger.info("[Memory] Long-term storage using Firestore (Cloud)")
@@ -70,7 +69,10 @@ class LongTermMemory:
             truncated = content[:40]
             if len(content) > 40:
                 truncated += "..."
-            logger.info("[Memory] Persisted knowledge to Firestore: %s", truncated)
+            logger.info(
+                "[Memory] Persisted knowledge to Firestore: %s",
+                truncated
+            )
         else:
             # Local storage fallback
             entry = MemoryEntry(
@@ -100,11 +102,11 @@ class LongTermMemory:
             # Convert to MemoryEntry format
             return [
                 MemoryEntry(
-                    id=r.get("key", "unknown"),
+                    id=r.get('key', 'unknown'),
                     vector=[],  # Firestore doesn't return vectors
-                    content=r.get("text", ""),
-                    metadata=r.get("metadata", {}),
-                    timestamp=time.time(),
+                    content=r.get('text', ''),
+                    metadata=r.get('metadata', {}),
+                    timestamp=time.time()
                 )
                 for r in results
             ]

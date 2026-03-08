@@ -1,7 +1,8 @@
+import json
 import os
+import time
+from typing import Any, Dict, List, Optional
 from datetime import datetime
-from typing import List
-
 
 class WALProtocol:
     """
@@ -12,7 +13,13 @@ class WALProtocol:
 
     def __init__(self, workspace_path: str):
         self.state_file = os.path.join(workspace_path, "SESSION-STATE.md")
-        self.triggers = ["correction", "preference", "decision", "value", "identity"]
+        self.triggers = [
+            "correction",
+            "preference",
+            "decision",
+            "value",
+            "identity"
+        ]
 
     async def on_interaction(self, input_text: str, detected_traits: List[str]):
         """Analyze interaction and write to WAL if critical details are detected."""

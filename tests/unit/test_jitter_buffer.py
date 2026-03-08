@@ -23,7 +23,6 @@ def test_jitter_buffer_stabilizes_bursts():
         output = jb.read(chunk_size)
         assert len(output) == chunk_size  # Should never underrun after initial fill
 
-
 def test_jitter_buffer_handles_underrun():
     """Test buffer returns silence on underrun"""
     jb = AdaptiveJitterBuffer(
@@ -36,7 +35,6 @@ def test_jitter_buffer_handles_underrun():
 
     assert len(output) == 512
     assert np.all(output == 0)  # Silence
-
 
 def test_jitter_buffer_overflow():
     """Test buffer handles overflow correctly"""

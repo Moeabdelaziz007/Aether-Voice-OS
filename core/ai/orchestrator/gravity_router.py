@@ -12,9 +12,9 @@ Formula:
             - 0.15*latency - 0.15*load + 0.10*continuity
 """
 
-import logging
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
+from typing import List, Tuple, Optional
+import logging
 
 logger = logging.getLogger(__name__)
 
@@ -62,14 +62,16 @@ class GravityRouter:
             Gravity score clamped to [0.0, 1.0]
         """
         # Capability match (binary: 0 or 1)
-        capability_match = (
-            1.0
-            if all(cap in candidate.capabilities for cap in required_capabilities)
-            else 0.0
-        )
+        capability_match = 1.0 if all(
+            cap in candidate.capabilities
+            for cap in required_capabilities
+        ) else 0.0
 
         # Normalized latency (lower is better, max 500ms)
-        normalized_latency = min(candidate.latency_ms / self.MAX_LATENCY_MS, 1.0)
+        normalized_latency = min(
+            candidate.latency_ms / self.MAX_LATENCY_MS,
+            1.0
+        )
 
         # Load (0-1, lower is better)
         load = min(candidate.load, 1.0)

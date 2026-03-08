@@ -8,10 +8,8 @@ Tests the complete handover flow with galaxy orchestration:
 - Cinematic event emission on rollbacks
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-
+from unittest.mock import AsyncMock, MagicMock, patch
 from core.ai.handover.manager import MultiAgentOrchestrator
 from core.ai.handover_protocol import HandoverContext, IntentConfidence
 from core.ai.orchestrator.fallback_strategy import FailureCategory
@@ -109,7 +107,7 @@ async def test_handover_policy_violation_latency(orchestrator, mock_agents):
     # Mock policy enforcer to report latency violation
     with patch.object(
         orchestrator.policy_enforcer,
-        "validate_routing_decision",
+        'validate_routing_decision',
         return_value=["Latency 650ms exceeds max 500ms"],
     ):
         success, result_context, message = await orchestrator.handover_with_context(
@@ -205,9 +203,8 @@ async def test_handover_task_keyword_extraction(orchestrator, mock_agents):
         required = orchestrator._extract_required_capabilities(context)
 
         for expected_cap in expected_caps:
-            assert expected_cap in required, (
+            assert expected_cap in required, \
                 f"Task '{task}' should extract {expected_cap}"
-            )
 
 
 @pytest.mark.asyncio

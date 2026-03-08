@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import random
 import sys
 import time
 
@@ -11,13 +12,11 @@ if ROOT not in sys.path:
     sys.path.append(ROOT)
 
 from scripts.internal.bug_generator import BugGenerator
-
 from core.ai.handover.manager import HandoverContext
 from core.tools.healing_tool import diagnose_and_repair
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("AetherAccuracy")
-
 
 class AccuracyBench:
     def __init__(self):
@@ -25,7 +24,7 @@ class AccuracyBench:
         self.results = {
             "timestamp": time.time(),
             "healing_accuracy": [],
-            "handover_integrity": {},
+            "handover_integrity": {}
         }
 
     async def run_healing_bench(self):
@@ -63,13 +62,11 @@ class AccuracyBench:
                 context=f"The script {bug_path} crashed."
             )
             success = expected_keyword in diagnosis.get("terminal_output", "")
-            self.results["healing_accuracy"].append(
-                {
-                    "case": name,
-                    "success": success,
-                    "captured_context": diagnosis.get("status") == "analysis_ready",
-                }
-            )
+            self.results["healing_accuracy"].append({
+                "case": name,
+                "success": success,
+                "captured_context": diagnosis.get("status") == "analysis_ready"
+            })
             print(f"  Result: {'✅' if success else '❌'}", flush=True)
 
     async def run_handover_bench(self, hops: int = 10):
@@ -97,18 +94,18 @@ class AccuracyBench:
             current_payload = json.loads(serialized)
             current_payload["hop_count"] += 1
             if i % 2 == 0:
-                print(f"  Hop {i + 1} complete...", flush=True)
+                print(f"  Hop {i+1} complete...", flush=True)
 
         integrity_success = (
-            current_payload["seed_key"] == initial_data["seed_key"]
-            and current_payload["secret"] == initial_data["secret"]
-            and current_payload["hop_count"] == hops
+            current_payload["seed_key"] == initial_data["seed_key"] and
+            current_payload["secret"] == initial_data["secret"] and
+            current_payload["hop_count"] == hops
         )
 
         self.results["handover_integrity"] = {
             "hops": hops,
             "success": integrity_success,
-            "bits_preserved": "100%" if integrity_success else "FAIL",
+            "bits_preserved": "100%" if integrity_success else "FAIL"
         }
         print(f"  Integrity: {'✅' if integrity_success else '❌'}", flush=True)
 
@@ -119,12 +116,10 @@ class AccuracyBench:
         def _write_audit():
             with open("accuracy_audit.json", "w") as f:
                 json.dump(self.results, f, indent=4)
-
         await asyncio.to_thread(_write_audit)
 
         print("📊 Accuracy Audit saved to accuracy_audit.json", flush=True)
         self.bug_gen.cleanup()
-
 
 if __name__ == "__main__":
     bench = AccuracyBench()

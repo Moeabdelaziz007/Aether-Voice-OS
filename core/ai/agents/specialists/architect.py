@@ -129,24 +129,20 @@ class ArchitectAgent(VoiceAgent):
         if not self.orchestrator:
             return "Handover failed: Orchestrator not set."
 
-        (
-            success,
-            _,
-            message,
-        ) = await self.orchestrator.specialists.architect_to_debugger_handover(
-            task=context.task,
-            architect_output=self._output,
-            code_context=context.code_context.model_dump()
-            if context.code_context
-            else None,
+        success, _, message = (
+            await self.orchestrator.specialists.architect_to_debugger_handover(
+                task=context.task,
+                architect_output=self._output,
+                code_context=context.code_context.model_dump() if context.code_context else None,
+            )
         )
 
-        if success:  # final_context is no longer used
+        if success: # final_context is no longer used
             return (
                 f"Architect-Debugger Synergy Complete.\n"
-                f"Handover ID: {context.handover_id}\n"  # Use context.handover_id directly
-                f"Status: {context.status.value}\n"  # Use context.status directly
-                f"History: {context.history}"  # Use context.history directly
+                f"Handover ID: {context.handover_id}\n" # Use context.handover_id directly
+                f"Status: {context.status.value}\n" # Use context.status directly
+                f"History: {context.history}" # Use context.history directly
             )
         else:
             # If handover fails, the instruction implies a retry or specific handling.
@@ -156,6 +152,7 @@ class ArchitectAgent(VoiceAgent):
             # Assuming the intent was to handle the failure or retry logic,
             # but for a direct translation, we'll just return the message.
             return f"Handover failed: {message}"
+
 
     def _create_blueprint(self, context: HandoverContext) -> None:
         """Create architectural blueprint sections."""

@@ -12,19 +12,18 @@ Comprehensive verification of backend systems:
 
 import asyncio
 import logging
-import os
 import sys
+import os
 import time
+from typing import List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List
 
 # Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 
 logger = logging.getLogger("AetherOS.BackendVerification")
-
 
 @dataclass
 class TestResult:
@@ -33,7 +32,6 @@ class TestResult:
     duration_ms: float
     details: str = ""
     error: str = ""
-
 
 class BackendVerifier:
     """
@@ -82,29 +80,31 @@ class BackendVerifier:
             session_state_file = os.path.join(
                 project_root, "core/infra/transport/session_state.py"
             )
-            with open(session_state_file, "r") as f:
+            with open(session_state_file, 'r') as f:
                 content = f.read()
-                assert "class SessionStateManager" in content
-                assert "class SessionState" in content
-                assert "INITIALIZING" in content
-                assert "CONNECTED" in content
+                assert 'class SessionStateManager' in content
+                assert 'class SessionState' in content
+                assert 'INITIALIZING' in content
+                assert 'CONNECTED' in content
                 logger.info("  ✓ SessionStateManager verified")
 
             session_mgr_file = os.path.join(
                 project_root, "core/infra/transport/session_manager.py"
             )
-            with open(session_mgr_file, "r") as f:
+            with open(session_mgr_file, 'r') as f:
                 content = f.read()
-                assert "class SessionManager" in content
-                assert "async def start_session_loop" in content
+                assert 'class SessionManager' in content
+                assert 'async def start_session_loop' in content
                 logger.info("  ✓ SessionManager verified")
 
-            gemini_file = os.path.join(project_root, "core/ai/session/facade.py")
-            with open(gemini_file, "r") as f:
+            gemini_file = os.path.join(
+                project_root, "core/ai/session/facade.py"
+            )
+            with open(gemini_file, 'r') as f:
                 content = f.read()
-                assert "class GeminiLiveSession" in content
-                assert "async def connect" in content
-                assert "async def run" in content
+                assert 'class GeminiLiveSession' in content
+                assert 'async def connect' in content
+                assert 'async def run' in content
                 logger.info("  ✓ GeminiLiveSession verified")
 
             duration_ms = (time.time() - start_time) * 1000
@@ -113,7 +113,7 @@ class BackendVerifier:
                 name="Gemini Session Lifecycle",
                 passed=True,
                 duration_ms=duration_ms,
-                details="All lifecycle components verified via static analysis",
+                details="All lifecycle components verified via static analysis"
             )
 
         except Exception as e:
@@ -124,7 +124,7 @@ class BackendVerifier:
                 name="Gemini Session Lifecycle",
                 passed=False,
                 duration_ms=duration_ms,
-                error=str(e),
+                error=str(e)
             )
 
     async def verify_tick_heartbeat_sync(self) -> TestResult:
@@ -141,14 +141,13 @@ class BackendVerifier:
         logger.info("🔍 Verifying Tick/Heartbeat Synchronization...")
 
         try:
-            from core.infra.config import load_config
             from core.infra.transport.gateway import AetherGateway
+            from core.infra.config import load_config
 
             # Test 1: Verify tick loop exists in gateway
             logger.info("  Testing AetherGateway tick loop...")
-            assert hasattr(AetherGateway, "_tick_loop"), (
+            assert hasattr(AetherGateway, '_tick_loop'), \
                 "AetherGateway missing _tick_loop method"
-            )
             logger.info("  ✓ Tick loop method exists")
 
             # Test 2: Verify heartbeat interval configuration
@@ -156,13 +155,12 @@ class BackendVerifier:
             config = load_config()
 
             # Check if gateway config has heartbeat settings
-            if hasattr(config, "gateway"):
+            if hasattr(config, 'gateway'):
                 gateway_config = config.gateway
                 # Default should be around 1 second
-                heartbeat_interval = getattr(gateway_config, "heartbeat_interval", 1.0)
-                assert 0.5 <= heartbeat_interval <= 5.0, (
+                heartbeat_interval = getattr(gateway_config, 'heartbeat_interval', 1.0)
+                assert 0.5 <= heartbeat_interval <= 5.0, \
                     f"Heartbeat interval {heartbeat_interval}s outside reasonable range"
-                )
                 logger.info(f"  ✓ Heartbeat interval configured: {heartbeat_interval}s")
 
             # Test 3: Verify state manager integration
@@ -170,9 +168,8 @@ class BackendVerifier:
             from core.infra.transport.session_state import SessionStateManager
 
             # State manager should have methods for tracking
-            assert hasattr(SessionStateManager, "state"), (
+            assert hasattr(SessionStateManager, 'state'), \
                 "SessionStateManager missing state property"
-            )
             logger.info("  ✓ SessionStateManager state tracking valid")
 
             duration_ms = (time.time() - start_time) * 1000
@@ -181,7 +178,7 @@ class BackendVerifier:
                 name="Tick/Heartbeat Synchronization",
                 passed=True,
                 duration_ms=duration_ms,
-                details="Tick loop and heartbeat sync verified",
+                details="Tick loop and heartbeat sync verified"
             )
 
         except Exception as e:
@@ -192,7 +189,7 @@ class BackendVerifier:
                 name="Tick/Heartbeat Synchronization",
                 passed=False,
                 duration_ms=duration_ms,
-                error=str(e),
+                error=str(e)
             )
 
     async def verify_engine_state_broadcast(self) -> TestResult:
@@ -213,11 +210,11 @@ class BackendVerifier:
             bus_file = os.path.join(project_root, "core/infra/transport/bus.py")
             assert os.path.exists(bus_file), "GlobalBus file not found"
 
-            with open(bus_file, "r") as f:
+            with open(bus_file, 'r') as f:
                 content = f.read()
-                assert "class GlobalBus" in content
-                assert "def subscribe" in content
-                assert "def publish" in content
+                assert 'class GlobalBus' in content
+                assert 'def subscribe' in content
+                assert 'def publish' in content
                 logger.info("  ✓ GlobalBus structure verified")
 
             # Test 2: Verify event types in codebase
@@ -233,15 +230,12 @@ class BackendVerifier:
 
             # Search for event type usage across codebase
             gateway_file = os.path.join(project_root, "core/infra/transport/gateway.py")
-            with open(gateway_file, "r") as f:
+            with open(gateway_file, 'r') as f:
                 gateway_content = f.read()
 
             found_count = 0
             for event_type in expected_event_types:
-                if (
-                    event_type.replace("_", " ") in gateway_content
-                    or event_type in gateway_content
-                ):
+                if event_type.replace('_', ' ') in gateway_content or event_type in gateway_content:
                     found_count += 1
 
             count = len(expected_event_types)
@@ -253,7 +247,7 @@ class BackendVerifier:
                 name="Engine State Broadcast",
                 passed=True,
                 duration_ms=duration_ms,
-                details=f"GlobalBus verified with {found_count}/{count} event types",
+                details=f"GlobalBus verified with {found_count}/{count} event types"
             )
 
         except Exception as e:
@@ -264,7 +258,7 @@ class BackendVerifier:
                 name="Engine State Broadcast",
                 passed=False,
                 duration_ms=duration_ms,
-                error=str(e),
+                error=str(e)
             )
 
     async def run_all_verifications(self) -> List[TestResult]:
@@ -321,7 +315,8 @@ class BackendVerifier:
         report.append(f"Date: {now_str}")
         rate_str = f"{(passed / total * 100) if total > 0 else 0:.1f}"
         status_msg = (
-            f"Overall Status: {passed}/{total} tests passed ({rate_str}% success rate)"
+            f"Overall Status: {passed}/{total} tests passed "
+            f"({rate_str}% success rate)"
         )
         report.append(status_msg)
         report.append("")

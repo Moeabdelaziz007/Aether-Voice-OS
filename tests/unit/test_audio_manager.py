@@ -1,25 +1,13 @@
+import asyncio
 import sys
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def setup_mocks():
-    mock_modules = [
-        "firebase_admin",
-        "firebase_admin.credentials",
-        "firebase_admin.firestore",
-        "google.cloud.firestore",
-        "websockets",
-        "google.genai",
-        "pyaudio",
-        "watchdog",
-        "watchdog.observers",
-        "watchdog.events",
-        "webrtcvad",
-    ]
+    mock_modules = ['firebase_admin', 'firebase_admin.credentials', 'firebase_admin.firestore', 'google.cloud.firestore', 'websockets', 'google.genai', 'pyaudio', 'watchdog', 'watchdog.observers', 'watchdog.events', 'webrtcvad']
     for module_name in mock_modules:
         if module_name not in sys.modules:
             sys.modules[module_name] = MagicMock()
-
 
 setup_mocks()
 
@@ -54,10 +42,12 @@ def audio_manager(mock_config, mock_gateway):
         patch("core.logic.managers.audio.ParalinguisticAnalyzer"),
         patch("core.logic.managers.audio.AdaptiveVAD"),
         patch("core.logic.managers.audio.AudioCapture"),
-        patch("core.logic.managers.audio.AudioPlayback"),
+        patch("core.logic.managers.audio.AudioPlayback")
     ):
         manager = AudioManager(
-            config=mock_config, gateway=mock_gateway, on_affective_data=MagicMock()
+            config=mock_config,
+            gateway=mock_gateway,
+            on_affective_data=MagicMock()
         )
         return manager
 
@@ -66,7 +56,7 @@ def audio_manager(mock_config, mock_gateway):
 async def test_audio_manager_start(audio_manager):
     with (
         patch("core.logic.managers.audio.AudioCapture") as MockCapture,
-        patch("core.logic.managers.audio.AudioPlayback") as MockPlayback,
+        patch("core.logic.managers.audio.AudioPlayback") as MockPlayback
     ):
         mock_capture_instance = MockCapture.return_value
         mock_capture_instance.start = AsyncMock()
@@ -78,12 +68,11 @@ async def test_audio_manager_start(audio_manager):
         mock_capture_instance.start.assert_called_once()
         mock_playback_instance.start.assert_called_once()
 
-
 @pytest.mark.asyncio
 async def test_audio_manager_stop(audio_manager):
     with (
         patch("core.logic.managers.audio.AudioCapture") as MockCapture,
-        patch("core.logic.managers.audio.AudioPlayback") as MockPlayback,
+        patch("core.logic.managers.audio.AudioPlayback") as MockPlayback
     ):
         mock_capture_instance = MockCapture.return_value
         mock_capture_instance.start = AsyncMock()

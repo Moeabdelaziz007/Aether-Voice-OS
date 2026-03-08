@@ -222,44 +222,31 @@ class FirebaseConnector:
 
         try:
 
-            def _aggregate():
+            def _stream():
                 metrics_ref = (
                     self._db.collection("sessions")
                     .document(session_id)
                     .collection("metrics")
                 )
+                return list(metrics_ref.stream())
 
-                # Use Firestore Aggregation Queries
-                query = (
-                    metrics_ref.count(alias="count")
-                    .avg("valence", alias="avg_valence")
-                    .avg("arousal", alias="avg_arousal")
-                )
+            docs = await asyncio.to_thread(_stream)
 
-                return query.get()
-
-            results = await asyncio.to_thread(_aggregate)
-
-            # Results is a list of AggregationResults
-            # Extract first element
-            if not results or not results[0]:
-                return {"status": "empty", "message": "No telemetry data found"}
-
-            agg_results = results[0]
+            valence_sum = 0.0
+            arousal_sum = 0.0
             count = 0
-            avg_valence = 0.0
-            avg_arousal = 0.0
 
-            for agg in agg_results:
-                if agg.alias == "count":
-                    count = agg.value
-                elif agg.alias == "avg_valence":
-                    avg_valence = agg.value or 0.0
-                elif agg.alias == "avg_arousal":
-                    avg_arousal = agg.value or 0.0
+            for doc in docs:
+                data = doc.to_dict()
+                valence_sum += data.get("valence", 0.0)
+                arousal_sum += data.get("arousal", 0.0)
+                count += 1
 
             if count == 0:
                 return {"status": "empty", "message": "No telemetry data found"}
+
+            avg_valence = valence_sum / count
+            avg_arousal = arousal_sum / count
 
             # Heuristic fitness matching GeneticOptimizer expectation
             summary = {
@@ -295,7 +282,6 @@ class FirebaseConnector:
             return []
 
         try:
-
             def _read():
                 query = (
                     self._db.collection("knowledge")

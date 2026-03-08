@@ -27,7 +27,7 @@ class LearningAgent:
             "patterns_identified": [],
             "suggestions_generated": [],
             "learning_insights": [],
-            "errors": [],
+            "errors": []
         }
 
         try:
@@ -66,32 +66,36 @@ class LearningAgent:
         """Analyze recent git commit history"""
         try:
             # Get last 20 commits
-            cmd = ["git", "log", "-20", "--pretty=format:%H|%an|%ad|%s", "--date=iso"]
+            cmd = [
+                "git", "log", "-20",
+                "--pretty=format:%H|%an|%ad|%s",
+                "--date=iso"
+            ]
             proc = await asyncio.create_subprocess_exec(
-                *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
             )
             stdout, stderr = await proc.communicate()
 
             if proc.returncode == 0:
                 commits = []
-                lines = stdout.decode().strip().split("\n")
+                lines = stdout.decode().strip().split('\n')
 
                 for line in lines:
-                    if "|" in line:
-                        parts = line.split("|")
+                    if '|' in line:
+                        parts = line.split('|')
                         if len(parts) == 4:
                             commit_hash, author, date_str, message = parts
-                            commits.append(
-                                {
-                                    "hash": commit_hash.strip(),
-                                    "author": author.strip(),
-                                    "date": date_str.strip(),
-                                    "message": message.strip(),
-                                    "timestamp": datetime.fromisoformat(
-                                        date_str.strip().replace(" ", "T")
-                                    ),
-                                }
-                            )
+                            commits.append({
+                                "hash": commit_hash.strip(),
+                                "author": author.strip(),
+                                "date": date_str.strip(),
+                                "message": message.strip(),
+                                "timestamp": datetime.fromisoformat(
+                                    date_str.strip().replace(' ', 'T')
+                                )
+                            })
 
                 return commits
             else:
@@ -133,14 +137,12 @@ class LearningAgent:
             # Generate patterns
             for category, count in keyword_counts.items():
                 if count > 2:  # Significant pattern
-                    patterns.append(
-                        {
-                            "type": "commit_category",
-                            "category": category,
-                            "frequency": count,
-                            "percentage": round((count / len(commits)) * 100, 1),
-                        }
-                    )
+                    patterns.append({
+                        "type": "commit_category",
+                        "category": category,
+                        "frequency": count,
+                        "percentage": round((count / len(commits)) * 100, 1)
+                    })
 
             # Look for file modification patterns
             file_modifications = await self._analyze_file_changes(commits[:10])
@@ -159,32 +161,30 @@ class LearningAgent:
             for commit in recent_commits:
                 cmd = ["git", "show", "--name-only", commit["hash"]]
                 proc = await asyncio.create_subprocess_exec(
-                    *cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
                 )
                 stdout, stderr = await proc.communicate()
 
                 if proc.returncode == 0:
-                    lines = stdout.decode().split("\n")
+                    lines = stdout.decode().split('\n')
                     for line in lines:
-                        if line and not line.startswith("commit"):
+                        if line and not line.startswith('commit'):
                             file_path = line.strip()
-                            if file_path.endswith(".py") or file_path.endswith(".ts"):
-                                file_changes[file_path] = (
-                                    file_changes.get(file_path, 0) + 1
-                                )
+                            if file_path.endswith('.py') or file_path.endswith('.ts'):
+                                file_changes[file_path] = file_changes.get(file_path, 0) + 1
 
             # Convert to patterns
             patterns = []
             for file_path, count in file_changes.items():
                 if count > 1:
-                    patterns.append(
-                        {
-                            "type": "file_modification",
-                            "file": file_path,
-                            "modifications": count,
-                            "hotspot": count > 3,
-                        }
-                    )
+                    patterns.append({
+                        "type": "file_modification",
+                        "file": file_path,
+                        "modifications": count,
+                        "hotspot": count > 3
+                    })
 
             return patterns[:10]  # Top 10 hotspots
 
@@ -204,9 +204,7 @@ class LearningAgent:
                             "⚠️ High bug fix ratio detected. "
                             "Consider adding more unit tests or improving code review process."
                         )
-                    elif (
-                        pattern["category"] == "refactor" and pattern["percentage"] > 25
-                    ):
+                    elif pattern["category"] == "refactor" and pattern["percentage"] > 25:
                         suggestions.append(
                             "🔄 Frequent refactoring detected. "
                             "Consider establishing coding standards and automated linting."
@@ -252,13 +250,9 @@ class LearningAgent:
                 authors[author] = authors.get(author, 0) + 1
 
             if len(authors) == 1:
-                insights.append(
-                    "👤 Single contributor detected. Consider peer review process."
-                )
+                insights.append("👤 Single contributor detected. Consider peer review process.")
             elif len(authors) > 3:
-                insights.append(
-                    "👥 Multiple contributors active. Good collaboration signs."
-                )
+                insights.append("👥 Multiple contributors active. Good collaboration signs.")
 
             # Commit frequency analysis
             if commits:
@@ -269,20 +263,14 @@ class LearningAgent:
                 if days_span > 0:
                     commits_per_day = len(commits) / days_span
                     if commits_per_day > 2:
-                        insights.append(
-                            "⚡ High commit frequency. Rapid development pace."
-                        )
+                        insights.append("⚡ High commit frequency. Rapid development pace.")
                     elif commits_per_day < 0.5:
-                        insights.append(
-                            "🐢 Low commit frequency. Consider more frequent integration."
-                        )
+                        insights.append("🐢 Low commit frequency. Consider more frequent integration.")
 
             # Message quality insights
             short_messages = sum(1 for c in commits if len(c["message"]) < 20)
             if short_messages > len(commits) * 0.3:
-                insights.append(
-                    "📝 Many short commit messages. Consider more descriptive messages."
-                )
+                insights.append("📝 Many short commit messages. Consider more descriptive messages.")
 
         except Exception as e:
             self.logger.error(f"Insight extraction failed: {str(e)}")

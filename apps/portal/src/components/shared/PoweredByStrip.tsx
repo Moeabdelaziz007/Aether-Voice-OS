@@ -10,7 +10,6 @@
  * Position: Fixed bottom, just above the CommandBar.
  */
 
-import React from "react";
 import { motion } from "framer-motion";
 
 const TECH_STACK = [

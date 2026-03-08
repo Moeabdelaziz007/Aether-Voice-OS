@@ -69,17 +69,15 @@ class SREWatchdog:
 
     def _register_default_patterns(self):
         """Register default failure patterns."""
-        self._healing_registry.update(
-            {
-                r"Redis.*connection.*failed": self._heal_bus_failure,
-                r"timeout.*error": self._heal_system_failure,
-                r"connection.*error": self._heal_system_failure,
-                r"Audio device.*disconnected": self._recover_audio_device,
-                r"Audio.*capture.*error": self._recover_audio_device,
-                r"AEC.*diverged": self._reset_aec,
-                r"Queue.*overflow.*100": self._throttle_audio,
-            }
-        )
+        self._healing_registry.update({
+            r"Redis.*connection.*failed": self._heal_bus_failure,
+            r"timeout.*error": self._heal_system_failure,
+            r"connection.*error": self._heal_system_failure,
+            r"Audio device.*disconnected": self._recover_audio_device,
+            r"Audio.*capture.*error": self._recover_audio_device,
+            r"AEC.*diverged": self._reset_aec,
+            r"Queue.*overflow.*100": self._throttle_audio,
+        })
 
         # Failure counts for throttling
         self._failure_counts: Dict[str, int] = {}
@@ -187,16 +185,13 @@ class SREWatchdog:
             return
 
         try:
-            await self._firebase.log_event(
-                "audio_telemetry",
-                {
-                    "timestamp": datetime.now().isoformat(),
-                    "rms": metrics.get("rms"),
-                    "aec_erle": metrics.get("aec_erle"),
-                    "aec_converged": metrics.get("aec_converged"),
-                    "queue_drops": getattr(audio_state, "capture_queue_drops", 0),
-                },
-            )
+            await self._firebase.log_event("audio_telemetry", {
+                "timestamp": datetime.now().isoformat(),
+                "rms": metrics.get("rms"),
+                "aec_erle": metrics.get("aec_erle"),
+                "aec_converged": metrics.get("aec_converged"),
+                "queue_drops": getattr(audio_state, "capture_queue_drops", 0),
+            })
         except Exception as e:
             logger.error("Failed to log audio metrics: %s", e)
 
@@ -208,35 +203,26 @@ class SREWatchdog:
 
         # 1. Notify frontend
         if self._gateway:
-            await self._gateway.broadcast(
-                "repair_state",
-                {
-                    "status": "diagnosing",
-                    "message": "Audio device failure detected. Restarting audio driver...",
-                },
-            )
+            await self._gateway.broadcast("repair_state", {
+                "status": "diagnosing",
+                "message": "Audio device failure detected. Restarting audio driver...",
+            })
 
         # 2. Try to reinitialize
         try:
             if self._audio_manager:
                 await self._audio_manager.restart()
                 if self._gateway:
-                    await self._gateway.broadcast(
-                        "repair_state",
-                        {
-                            "status": "applied",
-                            "message": "Audio driver reinitialized successfully.",
-                        },
-                    )
+                    await self._gateway.broadcast("repair_state", {
+                        "status": "applied",
+                        "message": "Audio driver reinitialized successfully.",
+                    })
         except Exception as e:
             if self._gateway:
-                await self._gateway.broadcast(
-                    "repair_state",
-                    {
-                        "status": "failed",
-                        "message": f"Audio recovery failed: {e}",
-                    },
-                )
+                await self._gateway.broadcast("repair_state", {
+                    "status": "failed",
+                    "message": f"Audio recovery failed: {e}",
+                })
 
     async def _reset_aec(self, error_msg: str = ""):
         """Reset AEC when it diverges"""
@@ -249,13 +235,10 @@ class SREWatchdog:
         """Throttle audio when queue overflows"""
         logger.warning("Queue overflow detected, throttling audio...")
         if self._gateway:
-            await self._gateway.broadcast(
-                "repair_state",
-                {
-                    "status": "applied",
-                    "message": "Audio buffer overflow detected. Throttling capture stream.",
-                },
-            )
+            await self._gateway.broadcast("repair_state", {
+                "status": "applied",
+                "message": "Audio buffer overflow detected. Throttling capture stream.",
+            })
 
     async def _heal_bus_failure(self):
         """Protocol: Redis/Bus connection recovery."""
@@ -331,21 +314,15 @@ class SREWatchdog:
 
     async def _trigger_find_and_extend(self, error_msg: str = ""):
         """Skill 3: Triggered when a non-existent tool or capability is requested."""
-        logger.info(
-            "🔍 Watchdog: Skill 3 (Find & Extend) triggered. Analyzing gap: %s",
-            error_msg,
-        )
+        logger.info("🔍 Watchdog: Skill 3 (Find & Extend) triggered. Analyzing gap: %s", error_msg)
 
         # 1. Notify the user/system via the bus
         if self._bus:
-            await self._bus.publish(
-                "system_events",
-                {
-                    "type": "capability_gap_detected",
-                    "details": error_msg,
-                    "status": "drafting_blueprint",
-                },
-            )
+            await self._bus.publish("system_events", {
+                "type": "capability_gap_detected",
+                "details": error_msg,
+                "status": "drafting_blueprint"
+            })
 
         # 2. In a real integration, this would trigger the 'Architect' expert
         # to write a new implementation_plan.md and register it in Skills.md.

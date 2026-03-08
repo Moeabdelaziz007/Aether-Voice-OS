@@ -27,17 +27,11 @@ def build_session_config(session) -> types.LiveConnectConfig:
     system_instruction = session._build_system_instruction()
 
     speech_config = None
-    if (
-        session._soul
-        and hasattr(session._soul, "manifest")
-        and session._soul.manifest.voice_id
-    ):
+    if session._soul and hasattr(session._soul, "manifest") and session._soul.manifest.voice_id:
         voice_name = session._soul.manifest.voice_id
         logger.info("A2A [SESSION] Applying Expert Voice: %s", voice_name)
         speech_config = types.SpeechConfig(
-            voice_config=types.VoiceConfig(
-                prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name)
-            )
+            voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=voice_name))
         )
 
     config = types.LiveConnectConfig(

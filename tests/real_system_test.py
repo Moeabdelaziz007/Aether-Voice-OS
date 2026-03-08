@@ -28,7 +28,8 @@ import time
 
 # Setup logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("RealSystemTest")
 
@@ -48,7 +49,6 @@ def check_prerequisites():
     # 2. PyAudio
     try:
         import pyaudio
-
         p = pyaudio.PyAudio()
         device_count = p.get_device_count()
         logger.info(f"✅ PyAudio: {device_count} audio devices found")
@@ -56,9 +56,9 @@ def check_prerequisites():
         # List input devices
         for i in range(device_count):
             info = p.get_device_info_by_index(i)
-            if info["maxInputChannels"] > 0:
+            if info['maxInputChannels'] > 0:
                 logger.info(f"   🎤 Input Device {i}: {info['name']}")
-            if info["maxOutputChannels"] > 0:
+            if info['maxOutputChannels'] > 0:
                 logger.info(f"   🔊 Output Device {i}: {info['name']}")
 
         p.terminate()
@@ -69,7 +69,6 @@ def check_prerequisites():
     # 3. Google GenAI
     try:
         from google import genai  # noqa: F401
-
         logger.info("✅ Google GenAI SDK available")
     except ImportError:
         logger.error("❌ Google GenAI SDK not installed")
@@ -78,7 +77,6 @@ def check_prerequisites():
     # 4. Firebase
     try:
         import firebase_admin  # noqa: F401
-
         logger.info("✅ Firebase Admin SDK available")
     except ImportError:
         logger.warning("⚠️ Firebase not configured (optional)")
@@ -86,7 +84,6 @@ def check_prerequisites():
     # 5. WebSockets
     try:
         import websockets  # noqa: F401
-
         logger.info("✅ WebSockets available")
     except ImportError:
         logger.error("❌ WebSockets not installed")
@@ -110,7 +107,7 @@ async def test_gemini_api():
         response = await asyncio.to_thread(
             client.models.generate_content,
             model="gemini-2.0-flash",
-            contents="Say 'Hello Aether' in exactly 3 words",
+            contents="Say 'Hello Aether' in exactly 3 words"
         )
         latency = (time.time() - start) * 1000
 
@@ -132,8 +129,8 @@ async def test_audio_capture_playback():
     logger.info("\n🧪 TEST 2: Audio Capture & Playback Pipeline")
 
     try:
-        import numpy as np
         import pyaudio
+        import numpy as np
 
         p = pyaudio.PyAudio()
 
@@ -144,7 +141,7 @@ async def test_audio_capture_playback():
             channels=1,
             rate=16000,
             input=True,
-            frames_per_buffer=1024,
+            frames_per_buffer=1024
         )
 
         # Capture some audio
@@ -171,7 +168,7 @@ async def test_audio_capture_playback():
             channels=1,
             rate=16000,
             output=True,
-            frames_per_buffer=1024,
+            frames_per_buffer=1024
         )
 
         # Generate sine wave
@@ -248,7 +245,7 @@ async def test_firebase_connection():
 
         # Test read
         start = time.time()
-        docs = db.collection("knowledge").limit(1).stream()
+        docs = db.collection('knowledge').limit(1).stream()
         doc_count = sum(1 for _ in docs)
         latency = (time.time() - start) * 1000
 
@@ -272,7 +269,10 @@ async def test_tool_execution():
         logger.info("Testing system_tool (read-only operation)...")
 
         start = time.time()
-        result = await sys_tool.execute({"command": "pwd", "timeout": 5})
+        result = await sys_tool.execute({
+            "command": "pwd",
+            "timeout": 5
+        })
         latency = (time.time() - start) * 1000
 
         if result.get("success"):
@@ -304,7 +304,7 @@ async def run_integration_test():
 
         logger.info("✅ Engine initialized successfully")
         logger.info(f"   Audio config: {config.audio.send_sample_rate}Hz")
-        ai_model = getattr(config.ai, "model_name", "unknown")
+        ai_model = getattr(config.ai, 'model_name', 'unknown')
         logger.info(f"   AI model: {ai_model}")
         logger.info(f"   Gateway port: {config.gateway.port}")
 
@@ -313,7 +313,6 @@ async def run_integration_test():
     except Exception as e:
         logger.error(f"❌ Integration test failed: {e}")
         import traceback
-
         traceback.print_exc()
         return False
 
@@ -334,12 +333,12 @@ async def main():
     # Run tests
     results = {}
 
-    results["gemini_api"] = await test_gemini_api()
-    results["audio_pipeline"] = await test_audio_capture_playback()
-    results["websocket"] = await test_websocket_gateway()
-    results["firebase"] = await test_firebase_connection()
-    results["tool_execution"] = await test_tool_execution()
-    results["integration"] = await run_integration_test()
+    results['gemini_api'] = await test_gemini_api()
+    results['audio_pipeline'] = await test_audio_capture_playback()
+    results['websocket'] = await test_websocket_gateway()
+    results['firebase'] = await test_firebase_connection()
+    results['tool_execution'] = await test_tool_execution()
+    results['integration'] = await run_integration_test()
 
     # Summary
     logger.info("\n" + "=" * 70)

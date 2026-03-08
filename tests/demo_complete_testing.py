@@ -38,16 +38,13 @@ async def run_comprehensive_test():
     # Verify API key setup - For benchmarking, we can use a dummy if not present
     api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     if not api_key:
-        print(
-            "⚠ WARNING: No API key found in environment. Injecting mock key for benchmark."
-        )
+        print("⚠ WARNING: No API key found in environment. Injecting mock key for benchmark.")
         os.environ["GOOGLE_API_KEY"] = "AIza_MOCK_KEY_FOR_BENCHMARK_VERIFICATION"
         api_key = os.environ["GOOGLE_API_KEY"]
 
     print(f"✓ API Key Available: {'*' * 10}{api_key[-5:]}")
 
     from core.infra.config import AetherConfig
-
     try:
         # Avoid .env loading which is restricted on this system
         config = AetherConfig(_env_file=None)

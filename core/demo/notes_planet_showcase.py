@@ -49,7 +49,8 @@ async def run_notes_planet_showcase(
     )
     await tasks_tool.add_note(
         content=(
-            "Mission timeline highlight: semantic recall can recover intent context."
+            "Mission timeline highlight: semantic recall can recover "
+            "intent context."
         ),
         tag="showcase",
     )
