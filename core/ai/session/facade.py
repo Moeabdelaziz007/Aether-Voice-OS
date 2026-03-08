@@ -229,6 +229,45 @@ class GeminiLiveSession:
     async def _receive_loop(self, session) -> None:
         await receive_loop(self, session)
 
+    async def _proactive_vision_loop(self, session) -> None:
+        """
+        Periodically captures screenshots and injects them into the Gemini stream.
+        This provides 'Temporal Grounding' — the AI sees what the user sees
+        without being explicitly asked.
+        """
+        logger.info("Vision Pulse loop active (Proactive Perception enabled)")
+        while self._running:
+            try:
+                # Capture frame (buffer is managed by VisionPulseAgent)
+                image_bytes = await self._vision_pulse.capture_pulse()
+
+                if image_bytes and self._vision_pulse.should_pulse():
+                    logger.info("📸 Sending Proactive Vision Pulse to Gemini.")
+
+                    # Inject into the realtime stream
+                    await session.send_realtime_input(
+                        parts=[
+                            types.Part.from_bytes(
+                                data=image_bytes, mime_type="image/jpeg"
+                            )
+                        ]
+                    )
+                    self._vision_pulse.record_pulse()
+
+                    # Broadcast a subtle pulse event to the UI
+                    asyncio.create_task(
+                        self._gateway.broadcast(
+                            "vision_pulse",
+                            {"status": "captured", "timestamp": datetime.now().isoformat()},
+                        )
+                    )
+
+            except Exception as e:
+                logger.error("Vision Pulse loop error: %s", e)
+                await asyncio.sleep(2.0)  # Back off on error
+
+            await asyncio.sleep(1.0)  # Check capture every second
+
     def _handle_usage(self, response: types.LiveConnectResponse) -> None:
         handle_usage(self, response)
 

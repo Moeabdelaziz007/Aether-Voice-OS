@@ -55,6 +55,7 @@ import RealmController from "@/components/realms/RealmController";
 // Store
 import { useAetherStore } from "@/store/useAetherStore";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
+import { useUIStateSync } from "@/hooks/useUIStateSync";
 
 // Dynamic 3D scene
 const UnifiedScene = dynamic(() => import("@/components/UnifiedScene"), {
@@ -95,8 +96,9 @@ export default function AetherPortal() {
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [omnibarOpen, setOmnibarOpen] = useState(false);
 
-    // Wire voice commands
+    // Wire voice commands & UI Sync
     useVoiceCommands();
+    useUIStateSync();
 
     // Avatar config
     const avatarConfig = useMemo(() => {

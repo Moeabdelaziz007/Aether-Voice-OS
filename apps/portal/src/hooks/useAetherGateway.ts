@@ -32,6 +32,7 @@ interface AetherGatewayReturn {
     sendAudio: (pcm: ArrayBuffer) => void;
     sendVisionFrame: (base64: string) => void;
     sendIntent: (input: string, level?: 1 | 2 | 3) => Promise<void>;
+    sendUIStateSync: (widgets: any[]) => void;
     onAudioResponse: React.MutableRefObject<((audio: ArrayBuffer) => void) | null>;
 }
 
@@ -435,6 +436,18 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
         }));
     }, [status]);
 
+    const sendUIStateSync = useCallback((widgets: any[]) => {
+        const ws = wsRef.current;
+        if (!ws || ws.readyState !== WebSocket.OPEN || status !== "connected") return;
+        ws.send(JSON.stringify({
+            type: "UI_STATE_SYNC",
+            payload: {
+                active_widgets: widgets
+            },
+            timestamp: Date.now()
+        }));
+    }, [status]);
+
     const disconnect = useCallback(() => {
         wsRef.current?.close();
         wsRef.current = null;
@@ -447,5 +460,5 @@ export function useAetherGateway(url = DEFAULT_URL): AetherGatewayReturn {
         };
     }, [disconnect]);
 
-    return { status, latencyMs, connect, disconnect, sendAudio, sendVisionFrame, sendIntent, onAudioResponse };
+    return { status, latencyMs, connect, disconnect, sendAudio, sendVisionFrame, sendIntent, sendUIStateSync, onAudioResponse };
 }

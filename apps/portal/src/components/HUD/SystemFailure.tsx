@@ -31,9 +31,9 @@ export default function SystemFailure() {
     const isFailed = repairState.status === "failed";
     const isApplied = repairState.status === "applied";
 
-    const baseColor = isFailed ? "rgba(239, 68, 68, " // red-500
-        : isApplied ? "rgba(16, 185, 129, " // emerald-500
-            : "rgba(245, 158, 11, "; // amber-500
+    const baseColor = isFailed ? "rgba(255, 0, 60, " // Radically neon red
+        : isApplied ? "rgba(0, 255, 170, " // Cyber emerald
+            : "rgba(255, 170, 0, "; // Neon amber
 
     return (
         <AnimatePresence>
@@ -41,75 +41,97 @@ export default function SystemFailure() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 z-[100] flex flex-col items-center justify-center pointer-events-none overflow-hidden"
+                className="absolute inset-0 z-[100] flex flex-col items-center justify-center pointer-events-none overflow-hidden system-failure-overlay"
                 style={{
-                    backgroundColor: `${baseColor}0.15)`,
-                    backdropFilter: "blur(6px)",
+                    backgroundColor: `${baseColor}0.12)`,
                 }}
             >
                 {/* SVG Filter Definition */}
                 <svg className="absolute w-0 h-0 hidden">
                     <filter id={glitchId}>
-                        <feTurbulence type="fractalNoise" baseFrequency="0.01 0.2" numOctaves="3" result="noise" seed="2" />
-                        <feDisplacementMap in="SourceGraphic" in2="noise" scale={isFailed ? "15" : "5"} />
+                        <feTurbulence type="fractalNoise" baseFrequency="0.05 0.5" numOctaves="3" result="noise" seed="5" />
+                        <feDisplacementMap in="SourceGraphic" in2="noise" scale={isFailed ? "25" : "8"} />
                     </filter>
-                svg>
+                </svg>
 
-                {/* Glitch Overlay Noise */}
-                <div
-                    className="absolute inset-0 opacity-20 pointer-events-none mix-blend-overlay"
-                    style={{ backgroundImage: "url('https://grainy-gradients.vercel.app/noise.svg')" }}
+                {/* Glitch Overlay Noise (Animated) */}
+                <motion.div
+                    animate={{
+                        opacity: [0.1, 0.2, 0.15, 0.25, 0.1],
+                        x: [0, -10, 10, -5, 0],
+                    }}
+                    transition={{ repeat: Infinity, duration: 0.1 }}
+                    className="absolute inset-0 pointer-events-none mix-blend-overlay"
+                    style={{
+                        backgroundImage: "url('https://grainy-gradients.vercel.app/noise.svg')",
+                        backgroundSize: "200px 200px"
+                    }}
                 />
 
                 <motion.div
-                    initial={{ scale: 0.9, y: 20 }}
-                    animate={{ 
-                        scale: 1, 
-                        y: 0,
+                    initial={{ scale: 0.85, opacity: 0 }}
+                    animate={{
+                        scale: 1,
+                        opacity: 1,
                         filter: isFailed ? [`url(#${glitchId})`, "none", `url(#${glitchId})`] : "none",
-                        x: isFailed ? [0, -2, 2, -1, 0] : 0
+                        x: isFailed ? [0, -4, 4, -2, 0] : 0,
+                        skewY: isFailed ? [0, -1, 1, 0] : 0
                     }}
-                    exit={{ scale: 0.9, y: 20, opacity: 0 }}
-                    transition={{ 
-                        type: "spring", 
-                        stiffness: 300, 
-                        damping: 20,
-                        filter: { repeat: Infinity, duration: 0.2 },
-                        x: { repeat: Infinity, duration: 0.1 }
+                    exit={{ scale: 1.1, opacity: 0, filter: "blur(20px)" }}
+                    transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 15,
+                        filter: { repeat: Infinity, duration: 0.15 },
+                        x: { repeat: Infinity, duration: 0.08 },
+                        skewY: { repeat: Infinity, duration: 0.12 }
                     }}
-                    className="relative px-8 py-6 max-w-2xl w-full text-center border-y"
+                    className="relative px-12 py-10 max-w-2xl w-full text-center border-y-2"
                     style={{
-                        borderColor: `${baseColor}0.5)`,
-                        backgroundColor: `${baseColor}0.05)`,
-                        boxShadow: `0 0 60px ${baseColor}0.2), inset 0 0 30px ${baseColor}0.1)`,
-                        backdropFilter: "blur(20px)"
+                        borderColor: `${baseColor}0.6)`,
+                        backgroundColor: "rgba(10, 10, 10, 0.85)",
+                        boxShadow: `0 0 100px ${baseColor}0.25), inset 0 0 50px ${baseColor}0.15)`,
+                        borderImage: `linear-gradient(90deg, transparent, ${baseColor}0.8), transparent) 1`
                     }}
                 >
-                    {/* Top/Bottom Scan Lines */}
-                    <motion.div
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ duration: 0.5 }}
-                        className="absolute top-0 left-0 right-0 h-[2px]"
-                        style={{ background: `linear-gradient(90deg, transparent, ${baseColor}1), transparent)` }}
-                    />
-                    <motion.div
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: 1 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
-                        className="absolute bottom-0 left-0 right-0 h-[2px]"
-                        style={{ background: `linear-gradient(90deg, transparent, ${baseColor}1), transparent)` }}
-                    />
+                    {/* Chromatic Aberration RGB Layers (Simulated for text) */}
+                    {isFailed && (
+                        <>
+                            <motion.div
+                                className="absolute inset-0 flex items-center justify-center opacity-40 mix-blend-screen pointer-events-none"
+                                animate={{ x: [-2, 2, -1], y: [1, -1, 0] }}
+                                transition={{ repeat: Infinity, duration: 0.1 }}
+                                style={{ color: "#0FF" }} // Cyan
+                            >
+                                <div className="text-3xl font-bold tracking-[0.3em] mb-4 italic opacity-0">⊘ CRITICAL STATE_FAULT</div>
+                            </motion.div>
+                            <motion.div
+                                className="absolute inset-0 flex items-center justify-center opacity-40 mix-blend-screen pointer-events-none"
+                                animate={{ x: [2, -2, 1], y: [-1, 1, 0] }}
+                                transition={{ repeat: Infinity, duration: 0.12 }}
+                                style={{ color: "#F0F" }} // Magenta
+                            >
+                                <div className="text-3xl font-bold tracking-[0.3em] mb-4 italic opacity-0">⊘ CRITICAL STATE_FAULT</div>
+                            </motion.div>
+                        </>
+                    )}
+
+                    {/* Top/Bottom Scan Lines (High Intensity) */}
+                    <div className="absolute top-0 left-0 right-0 h-[3px] bg-white opacity-20 blur-sm animate-pulse" />
+                    <div className="absolute bottom-0 left-0 right-0 h-[3px] bg-white opacity-20 blur-sm animate-pulse" />
 
                     {/* Header */}
                     <motion.h2
-                        animate={isDiagnosing || isFailed ? { 
-                            opacity: [1, 0.5, 1],
-                            skewX: isFailed ? [-5, 5, -5] : 0
+                        animate={isDiagnosing || isFailed ? {
+                            opacity: [1, 0.3, 1, 0.8, 1],
+                            scale: [1, 1.02, 0.98, 1]
                         } : {}}
-                        transition={{ duration: isDiagnosing ? 1.5 : 0.1, repeat: Infinity }}
-                        className="text-3xl font-bold tracking-[0.3em] mb-4 italic"
-                        style={{ color: `${baseColor}1)`, textShadow: `0 0 25px ${baseColor}0.6)` }}
+                        transition={{ duration: 0.12, repeat: Infinity }}
+                        className="text-4xl font-extrabold tracking-[0.4em] mb-6 italic z-10 relative uppercase"
+                        style={{
+                            color: `${baseColor}1)`,
+                            textShadow: `0 0 30px ${baseColor}0.8), 0 0 60px ${baseColor}0.4)`
+                        }}
                     >
                         {isFailed ? "⊘ CRITICAL STATE_FAULT"
                             : isApplied ? "✦ NEURAL_PATCH DEPLOYED"
@@ -117,33 +139,37 @@ export default function SystemFailure() {
                     </motion.h2>
 
                     {/* Main Message */}
-                    <p className="text-xl font-mono text-white/90 mb-6 tracking-widest drop-shadow-md uppercase">
+                    <p className="text-xl font-mono text-white/90 mb-8 tracking-[0.2em] drop-shadow-lg uppercase leading-relaxed">
                         {repairState.message || (isDiagnosing ? "TRANSMISSION GAP DETECTED. RETRYING..." : "")}
                     </p>
 
-                    {/* Log details */}
+                    {/* Log details (Industrial terminal style) */}
                     {repairState.log && (
-                        <div className="bg-black/70 p-4 rounded text-left font-mono text-xs max-h-40 overflow-y-auto mb-6 border-l-2 pointer-events-auto"
-                            style={{ borderColor: `${baseColor}0.6)`, color: `${baseColor}0.9)` }}>
-                            <div className="flex items-center gap-2 mb-2 opacity-50 uppercase tracking-tighter">
-                                <span className="animate-pulse">_</span>
-                                <span>diagnostics_stream_v2.log</span>
+                        <div className="bg-black/90 p-6 rounded-sm text-left font-mono text-xs max-h-48 overflow-y-auto mb-8 border border-white/10 pointer-events-auto shadow-2xl system-failure-log">
+                            <div className="flex items-center justify-between mb-3 opacity-60 uppercase tracking-widest text-[10px]">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full animate-pulse system-failure-indicator" />
+                                    <span>diagnostics_v4.0.96.log</span>
+                                </div>
+                                <span>{new Date().toLocaleTimeString()}</span>
                             </div>
-                            <div className="break-all whitespace-pre-wrap leading-relaxed opacity-80">{repairState.log}</div>
+                            <div className="break-all whitespace-pre-wrap leading-loose opacity-90 font-medium selection:bg-white/20">
+                                {`[SYSTEM_KERN]: ${repairState.log}`}
+                            </div>
                         </div>
                     )}
 
                     {/* Actionable / Loading */}
-                    <div className="flex justify-center mt-4 h-12 items-center">
+                    <div className="flex justify-center mt-6 h-14 items-center gap-8">
                         {isDiagnosing && (
-                            <div className="flex gap-3">
-                                {[0, 1, 2, 3, 4].map((i) => (
+                            <div className="flex gap-4">
+                                {[0, 1, 2, 3, 4, 5, 6].map((i) => (
                                     <motion.div
                                         key={i}
-                                        animate={{ height: ["32px", "4px", "32px"], opacity: [1, 0.3, 1] }}
-                                        transition={{ duration: 0.6, delay: i * 0.1, repeat: Infinity }}
-                                        className="w-[3px]"
-                                        style={{ backgroundColor: `${baseColor}0.9)` }}
+                                        animate={{ height: ["48px", "8px", "48px"], opacity: [1, 0.2, 1] }}
+                                        transition={{ duration: 0.4, delay: i * 0.05, repeat: Infinity }}
+                                        className="w-[4px]"
+                                        style={{ backgroundColor: `${baseColor}1)`, boxShadow: `0 0 10px ${baseColor}0.5)` }}
                                     />
                                 ))}
                             </div>
@@ -151,10 +177,9 @@ export default function SystemFailure() {
                         {isFailed && (
                             <button
                                 onClick={() => clearRepairState()}
-                                className="px-8 py-3 border-2 font-mono text-xs uppercase tracking-[0.4em] hover:bg-white/5 transition-all pointer-events-auto active:scale-95"
-                                style={{ borderColor: `${baseColor}0.4)`, color: `${baseColor}1)` }}
+                                className="px-12 py-4 border-2 font-black text-sm uppercase tracking-[0.5em] backdrop-blur-md transition-all pointer-events-auto active:scale-90 hover:tracking-[0.6em] system-failure-override"
                             >
-                                [ OVERRIDE_HANDSHAKE ]
+                                [ FORCE_OVERRIDE ]
                             </button>
                         )}
                     </div>
@@ -165,13 +190,35 @@ export default function SystemFailure() {
                             initial={{ width: 0 }}
                             animate={{ width: "100%" }}
                             transition={{ duration: 4, ease: "linear" }}
-                            className="h-[2px] absolute bottom-0 left-0"
-                            style={{ backgroundColor: `${baseColor}0.8)` }}
+                            className="h-[4px] absolute bottom-0 left-0"
+                            style={{
+                                background: `linear-gradient(90deg, transparent, ${baseColor}1))`,
+                                boxShadow: `0 0 20px ${baseColor}0.8)`
+                            }}
                         />
                     )}
                 </motion.div>
+
+                <style jsx>{`
+                    .system-failure-overlay {
+                        backdrop-filter: blur(12px) saturate(1.5);
+                    }
+                    .system-failure-log {
+                        border-left: 4px solid ${baseColor}0.8);
+                        color: ${baseColor}1);
+                    }
+                    .system-failure-indicator {
+                        background-color: ${baseColor}1);
+                    }
+                    .system-failure-override {
+                        border-color: ${baseColor}0.5);
+                        color: ${baseColor}1);
+                        text-shadow: 0 0 10px ${baseColor}0.5);
+                    }
+                `}</style>
             </motion.div>
         </AnimatePresence>
+
     );
 }
 

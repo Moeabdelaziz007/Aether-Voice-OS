@@ -52,6 +52,7 @@ class SessionMetadata:
     last_activity: datetime = field(default_factory=datetime.now)
     handoff_count: int = 0
     error_count: int = 0
+    active_widgets: list[str] = field(default_factory=list)
     compressed_seed: Optional[dict[str, Any]] = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -64,6 +65,7 @@ class SessionMetadata:
             "last_activity": self.last_activity.isoformat(),
             "handoff_count": self.handoff_count,
             "error_count": self.error_count,
+            "active_widgets": self.active_widgets,
             "compressed_seed": self.compressed_seed,
         }
 
@@ -375,6 +377,16 @@ class SessionStateManager:
         if self._metadata:
             self._metadata.handoff_count += 1
 
+    def update_active_widgets(self, widgets: list[str]) -> None:
+        """Update the list of active widgets in the current session."""
+        if self._metadata:
+            self._metadata.active_widgets = widgets
+            self._metadata.last_activity = datetime.now()
+            # Proactively persist on UI change
+            if self._bus:
+                asyncio.create_task(self.persist_to_bus())
+            logger.debug("A2A [UI_SYNC] Active widgets updated: %s", widgets)
+
     async def start_health_monitoring(self, check_interval: float = 5.0) -> None:
         """Start background health monitoring task."""
         if self._health_check_task and not self._health_check_task.done():
@@ -454,6 +466,7 @@ class SessionStateManager:
                     message_count=meta.get("message_count", 0),
                     handoff_count=meta.get("handoff_count", 0),
                     error_count=meta.get("error_count", 0),
+                    active_widgets=meta.get("active_widgets", []),
                 )
             logger.info("Session restored from snapshot")
             return True

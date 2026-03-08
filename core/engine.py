@@ -61,6 +61,7 @@ from core.tools import (
     tasks_tool,
     voyager_tool,
     vision_tool,
+    widget_awareness_tool,
     workspace_tool,
 )
 from core.tools.router import ToolRouter
@@ -237,6 +238,7 @@ class AetherEngine:
         self._router.register_module(aix_tool)
         self._router.register_module(workspace_tool)
         self._router.register_module(voyager_tool)
+        self._router.register_module(widget_awareness_tool)
         self._router.register(
             name="delegate_complex_task",
             description=(

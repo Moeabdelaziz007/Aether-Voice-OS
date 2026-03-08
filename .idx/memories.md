@@ -338,3 +338,12 @@ AetherOS is now pioneering the next generation of sensory-integrated AI Operatin
   - Ran targeted portal tests and backend tests, all passing for changed paths.
   - Updated architecture plan checklist: Phase F and Phase G complete, remaining Phase B/C items marked complete.
   - Committed and pushed production changes to `main` (`1d7d85c`).
+
+#### Phase 31: Neural Workspace Awareness & Proactive Vision [2026-03-08]
+
+- **Neural Workspace Sync**: Engineered a high-fidelity state bus bridge between the React frontend and Python engine. The `useUIStateSync` hook captures active widget IDs at 1Hz, broadcasting them via the `AetherGateway` to a Redis-backed `GlobalBus`.
+- **Workspace-Aware Discovery**: Implemented the `get_active_widgets` tool. Gemini now possesses "Neural Workspace Awareness," querying the Global Bus to understand exactly which UI components (terminal, editor, dashboard) are currently in the user's focus.
+- **Proactive Vision Pulse**: Launched the `_proactive_vision_loop` in `GeminiLiveSession`. Aether now captures and injects real-time screenshots into the Gemini Live stream every 10 seconds, providing continuous "Temporal Grounding" for autonomous spatial perception.
+- **Unified Perception**: Closed the loop between visual state and logical state, enabling Aether to reason about code changes while visually observing the terminal's reaction in real-time.
+
+AetherOS now possesses full spatial and environmental awareness. **[WORKSPACE AWARENESS COMPLETE]**

@@ -639,6 +639,10 @@ class AetherGateway:
             # Phase A: Handle V1.1 Intent Schema
             await self._handle_intent(client_id, msg)
 
+        elif msg_type == "UI_STATE_SYNC":
+            widgets = msg.get("payload", {}).get("active_widgets", [])
+            self._state_manager.update_active_widgets(widgets)
+
         elif msg_type == MessageType.DISCONNECT.value:
             async with self._lock:
                 session = self._clients.pop(client_id, None)
