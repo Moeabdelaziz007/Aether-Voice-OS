@@ -1,16 +1,16 @@
-# Aether OS Architecture | هندسة أيثر
+# Gemigram Architecture | هندسة جيميجرام
 
-Comprehensive architecture documentation for Aether Voice OS v3.0.
+Comprehensive architecture documentation for Gemigram Platform v3.0.
 
-وثائق شاملة لهندسة نظام أيثر الصوتي الإصدار 3.0.
+وثائق شاملة لهندسة منصة جيميجرام الإصدار 3.0.
 
 ---
 
 ## System Overview | نظرة عامة على النظام
 
-Aether OS is built on a **Pipeline Architecture** with independent layers communicating via thread-safe queues and async messaging.
+Gemigram is built on a **Pipeline Architecture** with independent layers communicating via thread-safe queues and async messaging.
 
-تم بناء نظام أيثر على **هندسة خطوط الأنابيب** مع طبقات مستقلة تتواصل عبر طوابير آمنة ومراسلة غير متزامنة.
+تم بناء جيميجرام على **هندسة خطوط الأنابيب** مع طبقات مستقلة تتواصل عبر طوابير آمنة ومراسلة غير متزامنة.
 
 ### High-Level Architecture | الهندسة عالية المستوى
 

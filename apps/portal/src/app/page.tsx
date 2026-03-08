@@ -96,7 +96,18 @@ export default function AetherPortal() {
     const platformFeed = useAetherStore((s) => s.platformFeed);
     const pushToFeed = useAetherStore((s) => s.pushToFeed);
 
+    const agentDNA = useForgeStore((s) => s.dna);
     const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
+
+    // Onboarding Logic: If agent is not forged, force the Forge as the main phase
+    useEffect(() => {
+        if (!agentDNA.isForged) {
+            setActivePanel('hub');
+            useAetherStore.getState().setActiveHubView('forge');
+        } else {
+            setActivePanel('dashboard');
+        }
+    }, [agentDNA.isForged]);
 
     useEffect(() => {
         if (platformFeed.length === 0) {

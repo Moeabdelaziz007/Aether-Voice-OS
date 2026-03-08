@@ -1,7 +1,7 @@
 <h1 align="center">🌠 Gemigram Platform</h1>
 
 <p align="center">
-  <img src="file:///Users/cryptojoker710/.gemini/antigravity/brain/bd8a19c5-e4d9-49b9-ad7d-ff96a92c02e9/gemigram_landing_page_mockup_1772998432243.png" width="800" alt="Gemigram Landing Page"/>
+  <img src="./docs/images/landing.png" width="800" alt="Gemigram Landing Page"/>
 </p>
 
 <p align="center">
@@ -10,11 +10,11 @@
 </p>
 
 <p align="center">
-  <img src="file:///Users/cryptojoker710/.gemini/antigravity/brain/bd8a19c5-e4d9-49b9-ad7d-ff96a92c02e9/gemigram_agent_hub_mockup_1772998453823.png" width="800" alt="Agent Hub Discovery"/>
+  <img src="./docs/images/hub.png" width="800" alt="Agent Hub Discovery"/>
 </p>
 
 <p align="center">
-  <img src="file:///Users/cryptojoker710/.gemini/antigravity/brain/bd8a19c5-e4d9-49b9-ad7d-ff96a92c02e9/gemigram_forge_interface_mockup_1772998473796.png" width="800" alt="The Aether Forge"/>
+  <img src="./docs/images/forge.png" width="800" alt="The Aether Forge"/>
 </p>
 
 <p align="center">
@@ -502,7 +502,7 @@ This project is licensed under the **Apache 2.0 License** — see the [LICENSE](
 ---
 
 <p align="center">
-  <img src="assets/aether_banner.png" alt="Aether" width="60%"/>
+  <img src="./docs/images/platform.png" alt="Gemigram Platform Mockup" width="80%"/>
   <br /><br />
   <em>"In the realm of Aether, there is no distance between voice and vision."</em>
   <br />

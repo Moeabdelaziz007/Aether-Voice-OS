@@ -12,6 +12,7 @@ export interface AgentDNA {
     memoryType: 'firebase' | 'local';
     skills: string[];
     avatarUrl?: string;
+    isForged?: boolean; // Added isForged to AgentDNA
 }
 
 interface ForgeState {
@@ -26,6 +27,7 @@ interface ForgeState {
     setListening: (listening: boolean) => void;
     setTranscript: (text: string) => void;
     resetForge: () => void;
+    completeForge: () => void; // Added completeForge action
 }
 
 const initialDNA: AgentDNA = {
@@ -37,6 +39,7 @@ const initialDNA: AgentDNA = {
     apiKey: '',
     memoryType: 'firebase',
     skills: [],
+    isForged: false, // Initialized isForged
 };
 
 export const useForgeStore = create<ForgeState>((set) => ({
@@ -50,4 +53,12 @@ export const useForgeStore = create<ForgeState>((set) => ({
     setListening: (listening) => set({ isListening: listening }),
     setTranscript: (text) => set({ transcript: text }),
     resetForge: () => set({ activeStep: 'genesis', dna: initialDNA, transcript: '' }),
+    completeForge: () => set((state) => {
+        console.log("🔥 Gemigram Cloud: Syncing Agent DNA...", state.dna);
+        // In a real environment, this would call '/api/forge' to trigger package_generator.py
+        return {
+            dna: { ...state.dna, isForged: true },
+            activeStep: 'review'
+        };
+    }),
 }));
