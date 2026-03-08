@@ -54,6 +54,7 @@ def test_audio_telemetry_throttling(capture_config):
 
         def mock_run_coroutine_threadsafe(coro, loop):
             import asyncio
+
             # we are in a sync test, so asyncio.run is fine
             asyncio.run(coro)
 

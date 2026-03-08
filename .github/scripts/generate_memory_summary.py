@@ -7,7 +7,7 @@ from google import genai
 def generate_summary():
     diff_file = sys.argv[1]
 
-    with open(diff_file, 'r', encoding='utf-8') as f:
+    with open(diff_file, "r", encoding="utf-8") as f:
         diff_content = f.read()
 
     # Truncate diff if it's too large for the context window (basic protection)
@@ -38,7 +38,7 @@ Here is the Git diff:
 
     try:
         response = client.models.generate_content(
-            model='gemini-1.5-flash',
+            model="gemini-1.5-flash",
             contents=prompt,
         )
         print(response.text)
@@ -46,6 +46,7 @@ Here is the Git diff:
         print(f"Failed to generate summary via Gemini API: {e}")
         # Fallback to basic summary if API fails
         print("Summary generation failed. Check action logs for details.")
+
 
 if __name__ == "__main__":
     generate_summary()

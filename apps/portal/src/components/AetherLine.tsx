@@ -7,7 +7,7 @@
  * and coloring itself based on the user's selected Persona AccentColor.
  */
 
-import { useEffect, useRef, useCallback } from "react";
+import React, { useEffect, useRef, useCallback } from "react";
 import { useAetherStore, ACCENT_COLORS } from "@/store/useAetherStore";
 
 export default function AetherLine() {

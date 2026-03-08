@@ -24,7 +24,9 @@ def _resolve_project_path(filepath: str) -> Path:
     try:
         resolved_path.relative_to(PROJECT_ROOT)
     except ValueError as exc:
-        raise ValueError("Path is outside the project root and is not allowed.") from exc
+        raise ValueError(
+            "Path is outside the project root and is not allowed."
+        ) from exc
     return resolved_path
 
 
@@ -78,13 +80,23 @@ def _apply_unified_diff(original_content: str, diff_text: str) -> str:
             content = hunk_line[1:]
 
             if prefix == " ":
-                if src_index >= len(original_lines) or original_lines[src_index] != content:
-                    raise ValueError("Unified diff context does not match file content.")
+                if (
+                    src_index >= len(original_lines)
+                    or original_lines[src_index] != content
+                ):
+                    raise ValueError(
+                        "Unified diff context does not match file content."
+                    )
                 result.append(content)
                 src_index += 1
             elif prefix == "-":
-                if src_index >= len(original_lines) or original_lines[src_index] != content:
-                    raise ValueError("Unified diff removal does not match file content.")
+                if (
+                    src_index >= len(original_lines)
+                    or original_lines[src_index] != content
+                ):
+                    raise ValueError(
+                        "Unified diff removal does not match file content."
+                    )
                 src_index += 1
             elif prefix == "+":
                 result.append(content)
@@ -204,9 +216,7 @@ async def apply_repair(filepath: str, diff: str, **kwargs) -> dict[str, Any]:
             message = f"No changes applied to {safe_path}."
         else:
             status = "success"
-            message = (
-                f"Repair applied to {safe_path}. Backup created at {backup_path}."
-            )
+            message = f"Repair applied to {safe_path}. Backup created at {backup_path}."
 
         return {
             "status": status,

@@ -14,6 +14,7 @@ from core.infra.event_bus import EventBus, TelemetryEvent
 
 logger = structlog.get_logger("AetherOS.Telemetry")
 
+
 def log_audio_metrics(
     rms: float,
     zcr: float,
@@ -31,6 +32,7 @@ def log_audio_metrics(
         queue_size=queue_size,
         latency_budget_ms=32,  # target
     )
+
 
 # ==========================================
 # 🌌 Audio Telemetry Engine

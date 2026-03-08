@@ -58,7 +58,7 @@ class ResponseMessage(BaseModel):
     type: MessageType = MessageType.CONNECT_RESPONSE
     client_id: str
     signature: Optional[str] = None  # hex-encoded Ed25519 signature
-    id_token: Optional[str] = None   # Firebase ID Token
+    id_token: Optional[str] = None  # Firebase ID Token
     capabilities: list[str] = Field(default_factory=list)
 
 

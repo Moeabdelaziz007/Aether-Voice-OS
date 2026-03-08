@@ -222,7 +222,6 @@ class FirebaseConnector:
 
         try:
 
-
             def _aggregate():
                 metrics_ref = (
                     self._db.collection("sessions")
@@ -232,8 +231,7 @@ class FirebaseConnector:
 
                 # Use Firestore Aggregation Queries
                 query = (
-                    metrics_ref
-                    .count(alias="count")
+                    metrics_ref.count(alias="count")
                     .avg("valence", alias="avg_valence")
                     .avg("arousal", alias="avg_arousal")
                 )
@@ -297,6 +295,7 @@ class FirebaseConnector:
             return []
 
         try:
+
             def _read():
                 query = (
                     self._db.collection("knowledge")

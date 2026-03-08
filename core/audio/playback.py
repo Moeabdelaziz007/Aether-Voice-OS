@@ -178,7 +178,10 @@ class AudioPlayback:
                 payload = await self._async_queue.get()
 
                 audio_bytes: bytes
-                if isinstance(payload, dict) and payload.get("type") == "pressure_marker":
+                if (
+                    isinstance(payload, dict)
+                    and payload.get("type") == "pressure_marker"
+                ):
                     fill_ms = int(payload.get("fill_ms", 20))
                     sample_rate = self._config.receive_sample_rate
                     samples = max(1, int(sample_rate * fill_ms / 1000))
@@ -191,7 +194,9 @@ class AudioPlayback:
                 elif isinstance(payload, (bytes, bytearray)):
                     audio_bytes = bytes(payload)
                 else:
-                    logger.debug("Skipping unsupported playback payload type: %s", type(payload))
+                    logger.debug(
+                        "Skipping unsupported playback payload type: %s", type(payload)
+                    )
                     continue
 
                 # 1.5 Mirror to UI (WebSockets) if connected
@@ -211,7 +216,9 @@ class AudioPlayback:
                         try:
                             self._buffer.get_nowait()
                             self._buffer.put_nowait(audio_bytes)
-                            logger.debug("Playback buffer overflow, dropped oldest chunk")
+                            logger.debug(
+                                "Playback buffer overflow, dropped oldest chunk"
+                            )
                             break
                         except queue.Empty:
                             pass

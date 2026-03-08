@@ -99,7 +99,9 @@ class AetherGateway:
         self._bus = GlobalBus()
 
         # Session State Manager (Single Source of Truth)
-        self._state_manager = SessionStateManager(broadcast_callback=self.broadcast, bus=self._bus)
+        self._state_manager = SessionStateManager(
+            broadcast_callback=self.broadcast, bus=self._bus
+        )
 
         # Legacy session reference (now managed by state manager)
         self._server: Optional[Server] = None
@@ -110,10 +112,12 @@ class AetherGateway:
         # Decentralized Logic Brackets
         self._auth = AuthService(
             registry=self._hive._registry,
-            secret_key=os.environ.get("AETHER_JWT_SECRET") or os.environ.get("GOOGLE_API_KEY") or ""
+            secret_key=os.environ.get("AETHER_JWT_SECRET")
+            or os.environ.get("GOOGLE_API_KEY")
+            or "",
         )
         self._intent_broker = IntentBroker()
-        
+
         # Audio queues
         self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
             maxsize=self._audio_config.mic_queue_max
@@ -310,7 +314,7 @@ class AetherGateway:
                     on_interrupt=self._on_interrupt,
                     on_tool_call=self._on_tool_call,
                     tool_router=self._tool_router,
-                    soul_manifest=target_soul
+                    soul_manifest=target_soul,
                 )
                 await session.connect()
                 # We don't call session.run() yet, just connect()
@@ -380,7 +384,7 @@ class AetherGateway:
             session_metadata = SessionMetadata(
                 session_id=str(uuid.uuid4()),
                 soul_name=soul_name,
-                started_at=datetime.now()
+                started_at=datetime.now(),
             )
 
             # Transition to INITIALIZING
@@ -415,7 +419,7 @@ class AetherGateway:
                         on_interrupt=self._on_interrupt,
                         on_tool_call=self._on_tool_call,
                         tool_router=self._tool_router,
-                        soul_manifest=active_soul
+                        soul_manifest=active_soul,
                     )
 
             # Inject pending handover context if available (if not already injected during pre-warming)
@@ -470,7 +474,10 @@ class AetherGateway:
 
                 self._session_manager._session = session
                 async with asyncio.TaskGroup() as tg:
-                    session_task = tg.create_task(self._session_manager.start_session_loop(), name="gemini-session")
+                    session_task = tg.create_task(
+                        self._session_manager.start_session_loop(),
+                        name="gemini-session",
+                    )
                     restart_waiter = tg.create_task(
                         self._session_restart_event.wait(), name="restart-waiter"
                     )
@@ -576,7 +583,9 @@ class AetherGateway:
         await ws.send(challenge.model_dump_json())
 
         try:
-            raw = await asyncio.wait_for(ws.recv(), timeout=self._gateway_config.handshake_timeout_s)
+            raw = await asyncio.wait_for(
+                ws.recv(), timeout=self._gateway_config.handshake_timeout_s
+            )
             resp = json.loads(raw)
         except (asyncio.TimeoutError, json.JSONDecodeError):
             raise HandshakeError("Handshake timed out or malformed")
@@ -597,16 +606,24 @@ class AetherGateway:
             if not self._auth.verify_jwt(token):
                 raise HandshakeError("Invalid JWT")
         elif signature:
-            if not self._auth.verify_signature(challenge_bytes.hex(), signature, client_id):
+            if not self._auth.verify_signature(
+                challenge_bytes.hex(), signature, client_id
+            ):
                 raise HandshakeError("Invalid Signature")
         else:
             raise HandshakeError("No authentication provided")
 
-        session = ClientSession(client_id=client_id, ws=ws, capabilities=resp.get("capabilities", []))
+        session = ClientSession(
+            client_id=client_id, ws=ws, capabilities=resp.get("capabilities", [])
+        )
         async with self._lock:
             self._clients[client_id] = session
 
-        ack = AckMessage(session_id=session.session_id, granted_capabilities=session.capabilities, tick_interval_s=self._gateway_config.tick_interval_s)
+        ack = AckMessage(
+            session_id=session.session_id,
+            granted_capabilities=session.capabilities,
+            tick_interval_s=self._gateway_config.tick_interval_s,
+        )
         await ws.send(ack.model_dump_json())
         return client_id
 
@@ -656,9 +673,13 @@ class AetherGateway:
         """Process structured intent via IntentBroker."""
         await self._intent_broker.handle_intent(client_id, json.dumps(msg), self)
 
-    def _verify_payload_signature(self, payload: dict, signature: str, client_id: str) -> bool:
+    def _verify_payload_signature(
+        self, payload: dict, signature: str, client_id: str
+    ) -> bool:
         """Verify payload signature via AuthService."""
-        return self._auth.verify_payload_signature(json.dumps(payload).encode(), signature, client_id)
+        return self._auth.verify_payload_signature(
+            json.dumps(payload).encode(), signature, client_id
+        )
 
     async def _tick_loop(self) -> None:
         """Send periodic heartbeats and prune dead clients."""

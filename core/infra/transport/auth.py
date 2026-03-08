@@ -52,7 +52,9 @@ class AuthService:
             if hasattr(self._registry, "get_package_by_client_id"):
                 pkg = self._registry.get_package_by_client_id(client_id)
                 if pkg and pkg.manifest.public_key:
-                    return verify_signature(pkg.manifest.public_key, signature, bytes.fromhex(challenge))
+                    return verify_signature(
+                        pkg.manifest.public_key, signature, bytes.fromhex(challenge)
+                    )
 
             # 2. Ephemeral/Direct Mode Fallback (match Gateway logic)
             is_hex = all(c in "0123456789abcdef" for c in client_id.lower())

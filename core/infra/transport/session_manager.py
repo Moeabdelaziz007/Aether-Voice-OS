@@ -6,12 +6,13 @@ from core.ai.session import GeminiLiveSession
 
 logger = logging.getLogger(__name__)
 
+
 class SessionManager:
     """
     Manages the Gemini session lifecycle, speculative pre-warming, and handoffs.
     Offloads session loop management from AetherGateway.
     """
-    
+
     def __init__(self, engine_session: GeminiLiveSession):
         self._session = engine_session
         self._active_tasks: Dict[str, asyncio.Task] = {}
