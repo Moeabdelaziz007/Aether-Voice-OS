@@ -8,10 +8,15 @@ new AI agent packages (.ath) based on user voice requests.
 import json
 import logging
 import os
+import asyncio
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from core.infra.cloud.firebase.interface import FirebaseConnector
 
 logger = logging.getLogger(__name__)
+
+# Initialize single connector for the forge
+_connector = FirebaseConnector()
 
 def create_agent(
     name: str,
@@ -82,9 +87,27 @@ def create_agent(
             f.write(f"# Heartbeat for {name}\n\nAutonomous background routines.")
 
         logger.info("✨ Agent Forge: Successfully created agent '%s' at %s", name, agent_dir)
+        
+        # 6. Sync to Firebase (Autonomous Cloud Persistence)
+        try:
+            # We use a helper to run the async sync in the background or thread
+            loop = asyncio.get_event_loop()
+            if not _connector._initialized:
+                 loop.create_task(_connector.initialize())
+            
+            dna = {
+                "name": name,
+                "manifest": manifest,
+                "instructions": instructions,
+                "created_at": str(Path(agent_dir).stat().st_ctime) 
+            }
+            loop.create_task(_connector.sync_agent_dna(name, dna))
+        except Exception as sync_err:
+            logger.warning("Agent forged locally but Cloud Sync failed: %s", sync_err)
+
         return {
             "status": "success",
-            "message": f"Agent '{name}' forged successfully.",
+            "message": f"Agent '{name}' forged and synced successfully.",
             "path": str(agent_dir)
         }
         

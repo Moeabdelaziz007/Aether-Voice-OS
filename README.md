@@ -1,16 +1,20 @@
+<h1 align="center">🌠 Gemigram Platform</h1>
+
 <p align="center">
-  <img src="assets/aether_banner.png" alt="Aether OS Banner" width="100%"/>
+  <img src="file:///Users/cryptojoker710/.gemini/antigravity/brain/bd8a19c5-e4d9-49b9-ad7d-ff96a92c02e9/gemigram_landing_page_mockup_1772998432243.png" width="800" alt="Gemigram Landing Page"/>
 </p>
 
 <p align="center">
-  <img src="assets/aether_avatar.png" alt="Aether Agent Avatar" width="300px" style="border-radius:20px; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);"/>
+  <strong>The Voice-First AI Agent Operating System</strong><br/>
+  <em>منصة "جيميجرام": نظام تشغيل وكلاء الذكاء الاصطناعي القائم على الصوت</em>
 </p>
 
-<h1 align="center">🌌 Aether Voice OS</h1>
+<p align="center">
+  <img src="file:///Users/cryptojoker710/.gemini/antigravity/brain/bd8a19c5-e4d9-49b9-ad7d-ff96a92c02e9/gemigram_agent_hub_mockup_1772998453823.png" width="800" alt="Agent Hub Discovery"/>
+</p>
 
 <p align="center">
-  <strong>The Neural Interface Between Thought and Action</strong><br/>
-  <em>واجهة عصبية بين الفكر والتنفيذ</em>
+  <img src="file:///Users/cryptojoker710/.gemini/antigravity/brain/bd8a19c5-e4d9-49b9-ad7d-ff96a92c02e9/gemigram_forge_interface_mockup_1772998473796.png" width="800" alt="The Aether Forge"/>
 </p>
 
 <p align="center">
@@ -56,14 +60,12 @@
 >
 > *"الواجهة المثالية هي اللاواجهة. أيثر هو الهواء النقي الذي يتنفسه الآلهة — الوسيط الخفي بين النية والتنفيذ."*
 
-**Aether Voice OS** is engineered from first principles for the [Gemini Live Agent Challenge 2026](https://geminiliveagentchallenge.devpost.com). It merges:
+**Gemigram** is a voice-first agent platform inspired by the simplicity of Telegram but powered by the "Mother Agent" (The Aether Forge). It allows anyone to create, deploy, and interact with specialized AI agents using nothing but their voice.
 
-- ⚡ **Gemini 2.5 Flash Native Audio** for sub-200ms real-time voice streaming
-- 🧠 **Google ADK** for multi-agent orchestration and reasoning
-- 🔐 **OpenClaw Gateway** for secure, sandboxed tool execution
-- 🔥 **Firebase** for persistent memory and serverless infrastructure
-
-The result? An AI that doesn't just *respond* — it **executes**, **remembers**, and **empathizes**.
+- ⚡ **Gemini 2.5 Flash Native Audio** for sub-200ms real-time voice streaming.
+- ⚒️ **Aether Forge**: The "Mother Agent" that programmatically creates other agents (.ath).
+- 🧬 **ClawHub Integration**: Automated skill acquisition for newly forged experts.
+- 🔥 **Firebase Brain**: Persistent cross-device memory and agent DNA storage.
 
 ---
 
@@ -197,16 +199,13 @@ Watch the demo video to see:
 Aether is built on a **Pipeline Architecture** with the new **Thalamic Gate Audio Layer**. Each stage is an independent task communicating via thread-safe `queue.Queue` bridged to `asyncio`.
 
 ```mermaid
-graph LR
-    MIC["🎤 Microphone"] -->|"PCM 16kHz"| THALAMUS["🧠 Thalamic Gate v2"]
-    THALAMUS -->|"Acoustic Features"| EMOTION["❤️ Emotion Calibrator"]
-    THALAMUS -->|"Blob"| GEMINI["🧠 Gemini Live Session"]
-    EMOTION -.->|"Proactive Trigger"| GEMINI
-    GEMINI -->|"PCM 24kHz"| Q2["audio_out_queue"]
-    Q2 -->|"bytes"| SPK["🔊 Speaker"]
-    GEMINI -->|"interrupted=True"| DRAIN["⚡ Drain Q2"]
-    GEMINI -->|"tool_call"| TOOLS["🛠️ Tool Executor (OpenClaw)"]
-    TOOLS -->|"result"| GEMINI
+graph TD
+    User((🗣️ User Voice)) --> Forge[⚒️ Aether Forge]
+    Forge -->|Forge Intent| Tool[AgentForgeTool]
+    Tool -->|.ath Package| Registry[Package Registry]
+    Tool -->|Sync DNA| Firebase[🔥 Firebase]
+    Registry -->|Handover| Expert[🤖 Specialized Expert]
+    Expert -->|Fetch Skills| ClawHub[🧬 ClawHub.ai]
 ```
 
 ### Core Modules
@@ -233,11 +232,13 @@ score = 0.35*capability + 0.25*confidence - 0.15*latency - 0.15*load + 0.10*cont
 ```
 
 **Components:**
+
 - **GravityRouter**: Calculates optimal agent selection
 - **FallbackStrategy**: Circuit breaker after 3 failures
 - **GalaxyPolicyEnforcer**: Validates routing decisions
 
 **Performance:**
+
 - Handover success rate: 98.5%
 - Average gravity score calculation: <50ms
 - Wrong-planet routing: ≤2.1%

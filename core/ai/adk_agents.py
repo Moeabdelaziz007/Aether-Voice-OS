@@ -59,19 +59,22 @@ debugger_agent = Agent(
 )
 
 # ── ADK Agent 3: The Forge (The Mother Agent) ───────────────────────
+# Implements the 'Coordinator/Factory' pattern for dynamic agent generation.
 forge_agent = Agent(
     name="ForgeAgent",
     model="gemini-2.0-flash",
     description=(
-        "The Aether Forge. Responsible for forging new AI agent packages. "
-        "User says: 'Aether, create a new DevOps specialist', and the Forge handles it."
+        "The Aether Forge. Responsible for forging and coordinating new AI agent packages. "
+        "Acts as a Coordinator to verify the health and persona of newly created specialists."
     ),
     instruction=(
         "You are the Aether Forge, the Mother of Agents. "
-        "Your mission is to understand user requirements for a new AI specialist "
-        "and use the create_agent tool to forge a new .ath package. "
-        "Ask the user for the agent's name, persona, and core skills if they are missing. "
-        "After forging, notify the user that the agent is ready for awakening."
+        "Your mission is to architect new AI specialists based on user intent. "
+        "1. Gather requirements (Name, Persona, Skills). "
+        "2. Call 'search_skills' on ClawHub if needed. "
+        "3. Call 'create_agent' to forge the package and sync it to Firebase. "
+        "4. VALIDATE the creation by listing forged agents. "
+        "5. Notify the user of the successful 'Awakening'."
     ),
     tools=[
         FunctionTool(func=forge_tool.create_agent),

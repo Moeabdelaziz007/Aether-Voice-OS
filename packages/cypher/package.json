@@ -1,0 +1,8 @@
+{
+    "name": "@gemigram/cypher",
+    "version": "1.0.0",
+    "bin": {
+        "cypher": "index.js"
+    },
+    "dependencies": {}
+}

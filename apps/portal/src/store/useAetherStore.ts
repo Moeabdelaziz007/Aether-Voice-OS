@@ -167,6 +167,28 @@ export interface VoyagerLatencyRow {
 export type OrbitLane = 'inner' | 'mid' | 'outer';
 export type OrbitalLayoutPreset = 'inner' | 'mid' | 'outer';
 
+// ─── Platform Types ──────────────────────────────────────────
+export interface FeedEntry {
+    id: string;
+    agentId: string;
+    agentName: string;
+    action: string;
+    detail?: string;
+    timestamp: number;
+    type: 'creation' | 'handover' | 'task' | 'achievement';
+    auraLevel: number;
+}
+
+export interface GlobalAgent {
+    id: string;
+    name: string;
+    role: string;
+    auraLevel: number;
+    status: 'online' | 'busy' | 'offline' | 'forging';
+    lastActive: number;
+    dnaToken: string;
+}
+
 export interface OrbitPlanet {
     planetId: string;
     planetType: string;
@@ -429,6 +451,11 @@ interface AetherState {
     preferences: UserPreferences;
     settingsOpen: boolean;
 
+    // Platform State
+    platformFeed: FeedEntry[];
+    globalRegistry: Record<string, GlobalAgent>;
+    activeHubView: 'discovery' | 'my-agents' | 'forge';
+
     // Terminal Feed State
     terminalLogs: TerminalLog[];
     isInterrupted: boolean;
@@ -544,6 +571,11 @@ interface AetherState {
     setDragState: (updates: Partial<DragState>) => void;
     absorbCrystal: (id: string) => void; // Trigger animation + absorption
     triggerAnimation: (type: AetherState['animationTrigger']) => void;
+
+    // Platform Actions
+    pushToFeed: (entry: Omit<FeedEntry, 'id' | 'timestamp'>) => void;
+    updateGlobalAgent: (agent: GlobalAgent) => void;
+    setHubView: (view: AetherState['activeHubView']) => void;
 }
 
 // ─── Optimized Selectors for Performance ────────────────────
@@ -638,6 +670,11 @@ export const useAetherStore = create<AetherState>()(
             persona: DEFAULT_PERSONA,
             preferences: DEFAULT_PREFERENCES,
             settingsOpen: false,
+
+            // Platform Initial State
+            platformFeed: [],
+            globalRegistry: {},
+            activeHubView: 'discovery',
 
             // Terminal Feed initial state
             terminalLogs: [],
@@ -1015,7 +1052,20 @@ export const useAetherStore = create<AetherState>()(
                         set({ animationTrigger: 'none' });
                     }
                 }, 3000);
-            }
+            },
+
+            // Platform Actions
+            pushToFeed: (entry) => set((state) => ({
+                platformFeed: [{
+                    ...entry,
+                    id: crypto.randomUUID(),
+                    timestamp: Date.now()
+                }, ...state.platformFeed].slice(0, 100)
+            })),
+            updateGlobalAgent: (agent) => set((state) => ({
+                globalRegistry: { ...state.globalRegistry, [agent.id]: agent }
+            })),
+            setHubView: (activeHubView) => set({ activeHubView }),
         }),
         {
             name: 'aether-preferences',

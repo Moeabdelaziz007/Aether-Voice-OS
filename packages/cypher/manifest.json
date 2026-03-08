@@ -1,0 +1,9 @@
+{
+    "id": "cypher",
+    "version": "1.0.0",
+    "name": "Cypher",
+    "provider": "google",
+    "model": "gemini-2.0-flash",
+    "memoryType": "firebase",
+    "schemaVersion": "2.0"
+}

@@ -13,10 +13,12 @@ import {
     ChevronRight,
     Layers,
     Terminal,
+    Globe,
+    Zap,
 } from 'lucide-react';
 import { useAetherStore, type RealmType } from '@/store/useAetherStore';
 
-export type SidebarPanel = 'dashboard' | 'memory' | 'skills' | 'persona' | 'voice' | 'terminal' | null;
+export type SidebarPanel = 'dashboard' | 'hub' | 'memory' | 'skills' | 'persona' | 'voice' | 'terminal' | null;
 
 interface SidebarProps {
     activePanel: SidebarPanel;
@@ -26,6 +28,7 @@ interface SidebarProps {
 
 const NAV_ITEMS: { id: SidebarPanel; icon: React.ReactNode; label: string; realm?: RealmType }[] = [
     { id: 'dashboard', icon: <LayoutDashboard className="w-5 h-5" />, label: 'Dashboard' },
+    { id: 'hub', icon: <Globe className="w-5 h-5" />, label: 'Agent Hub' },
     { id: 'voice', icon: <Mic className="w-5 h-5" />, label: 'Voice Agent', realm: 'void' },
     { id: 'memory', icon: <Brain className="w-5 h-5" />, label: 'Memory', realm: 'memory' },
     { id: 'skills', icon: <Sparkles className="w-5 h-5" />, label: 'Skills', realm: 'skills' },
@@ -55,10 +58,10 @@ export default function Sidebar({ activePanel, onPanelChange, onOpenSettings }: 
             <div className="flex items-center justify-center h-14 border-b border-white/[0.06]">
                 <motion.div
                     className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500/30 to-purple-500/30 
-                               flex items-center justify-center border border-white/10"
+                                flex items-center justify-center border border-white/10"
                     whileHover={{ scale: 1.1 }}
                 >
-                    <Layers className="w-4 h-4 text-cyan-400" />
+                    <Zap className="w-4 h-4 text-cyan-400" />
                 </motion.div>
                 <AnimatePresence>
                     {isExpanded && (
@@ -66,9 +69,9 @@ export default function Sidebar({ activePanel, onPanelChange, onOpenSettings }: 
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -10 }}
-                            className="ml-2.5 text-sm font-medium text-white/70 whitespace-nowrap"
+                            className="ml-2.5 text-sm font-bold tracking-tight text-white/90 whitespace-nowrap"
                         >
-                            AetherOS
+                            GEMIGRAM
                         </motion.span>
                     )}
                 </AnimatePresence>

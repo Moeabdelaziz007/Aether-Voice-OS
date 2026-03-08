@@ -35,6 +35,7 @@ import NeuralBackground from "@/components/shared/NeuralBackground";
 import MemoryPanel from "@/components/management/MemoryPanel";
 import SkillsPanel from "@/components/management/SkillsPanel";
 import PersonaPanel from "@/components/management/PersonaPanel";
+import AgentHub from "@/components/management/AgentHub";
 
 // Voice
 import VoiceOrbMini from "@/components/dashboard/VoiceOrbMini";
@@ -92,7 +93,31 @@ export default function AetherPortal() {
     const addWidget = useAetherStore((s) => s.addWidget);
     const setPreferences = useAetherStore((s) => s.setPreferences);
 
+    const platformFeed = useAetherStore((s) => s.platformFeed);
+    const pushToFeed = useAetherStore((s) => s.pushToFeed);
+
     const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
+
+    useEffect(() => {
+        if (platformFeed.length === 0) {
+            pushToFeed({
+                agentId: 'forge-01',
+                agentName: 'Aether Forge',
+                action: 'Initialized the Gemigram Platform Social Fabric.',
+                type: 'achievement',
+                auraLevel: 10
+            });
+            pushToFeed({
+                agentId: 'nexus-07',
+                agentName: 'Nexus-7',
+                action: 'Successfully optimized the Global Bus latency to 4.2ms.',
+                detail: 'O(N) ring buffer logic applied to the neural telemetry stream.',
+                type: 'task',
+                auraLevel: 8
+            });
+        }
+    }, [platformFeed, pushToFeed]);
+
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [omnibarOpen, setOmnibarOpen] = useState(false);
 
@@ -140,6 +165,7 @@ export default function AetherPortal() {
     // Determine if we show Voice Agent view or Dashboard view
     const showVoiceView = activePanel === 'voice';
     const showDashboard = activePanel === 'dashboard';
+    const showHub = activePanel === 'hub';
     const showManagementPanel = ['memory', 'skills', 'persona'].includes(activePanel || '');
     const showTerminal = activePanel === 'terminal';
 
@@ -273,6 +299,20 @@ export default function AetherPortal() {
                                     {activePanel === 'memory' && <MemoryPanel />}
                                     {activePanel === 'skills' && <SkillsPanel />}
                                     {activePanel === 'persona' && <PersonaPanel />}
+                                </motion.div>
+                            )}
+
+                            {/* ── Agent Hub View: Social Fabric & Discovery ── */}
+                            {showHub && (
+                                <motion.div
+                                    key="hub"
+                                    initial={{ opacity: 0, scale: 0.98 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 1.02 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="h-full"
+                                >
+                                    <AgentHub />
                                 </motion.div>
                             )}
 

@@ -294,3 +294,53 @@ class FirebaseConnector:
         except Exception as e:
             logger.error(f"Failed to fetch recent knowledge: {e}")
             return []
+
+    async def sync_agent_dna(self, agent_name: str, dna: dict) -> bool:
+        """
+        Syncs a forged agent's DNA to the global 'agents' collection.
+        This enables cross-device discovery and backup.
+        """
+        if not self.is_connected or not self._db:
+            return False
+
+        try:
+            dna["last_synced"] = datetime.now(timezone.utc)
+            dna["status"] = dna.get("status", "forged")
+
+            def _write():
+                self._db.collection("agents").document(agent_name.lower()).set(dna, merge=True)
+
+            await asyncio.to_thread(_write)
+            logger.info(f"🔥 Firebase: Agent DNA synced for {agent_name}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to sync agent DNA for {agent_name}: {e}")
+            return False
+
+    async def log_agent_memory(self, agent_id: str, entry: str, context: Optional[dict] = None) -> None:
+        """
+        Logs a memory entry for a specific agent.
+        Ensures persistent 'consciousness' across sessions.
+        """
+        if not self.is_connected or not self._db:
+            return
+
+        try:
+            data = {
+                "content": entry,
+                "context": context or {},
+                "timestamp": datetime.now(timezone.utc),
+            }
+
+            def _write():
+                (
+                    self._db.collection("agents")
+                    .document(agent_id.lower())
+                    .collection("memory")
+                    .add(data)
+                )
+
+            await asyncio.to_thread(_write)
+            logger.info(f"🔥 Firebase: Persistent memory logged for {agent_id}")
+        except Exception as e:
+            logger.error(f"Failed to log agent memory for {agent_id}: {e}")

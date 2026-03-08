@@ -32,14 +32,13 @@ export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps)
             {/* Left — Status */}
             <div className="flex items-center gap-3">
                 {/* Engine state */}
+                {/* Platform ID */}
                 <div className="flex items-center gap-2">
-                    <motion.div
-                        className="w-2 h-2 rounded-full"
-                        style={{ backgroundColor: stateColor }}
-                        animate={{ scale: engineState !== 'IDLE' ? [1, 1.3, 1] : 1 }}
-                        transition={{ duration: 1.5, repeat: engineState !== 'IDLE' ? Infinity : 0 }}
-                    />
-                    <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider">
+                    <span className="text-[10px] font-black tracking-[0.2em] text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20 uppercase">
+                        GEMIGRAM V2
+                    </span>
+                    <div className="w-px h-3 bg-white/10" />
+                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest leading-none">
                         {engineState}
                     </span>
                 </div>
@@ -79,11 +78,10 @@ export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps)
                 {/* Edit mode toggle */}
                 <button
                     onClick={() => setEditMode(!editMode)}
-                    className={`p-2 rounded-lg transition-all ${
-                        editMode
+                    className={`p-2 rounded-lg transition-all ${editMode
                             ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                             : 'text-white/20 hover:text-white/40 hover:bg-white/5'
-                    }`}
+                        }`}
                     title={editMode ? 'Done editing' : 'Edit widgets'}
                 >
                     {editMode ? <Check className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
