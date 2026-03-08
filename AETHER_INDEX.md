@@ -23,18 +23,18 @@ Welcome to the **AetherOS** "Pre-Frontal Cortex". This index serves as a Zero-Fr
 
 ### 🔍 For The Auditor
 
-- [System Memory](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/.idx/memories.md) — The Hippocampus of all project phases.
-- [Engineering History](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/archive/history/) — Archival documentation of the V1-V2 evolution.
+- [System Memory](.idx/memories.md) — The Hippocampus of all project phases.
+- [Engineering History](archive/history/) — Archival documentation of the V1-V2 evolution.
 
 ### 💻 For The Coder
 
-- [Identity Protocols](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/user_global.md) — Multi-modal engineering and Arabic/English bilingual mandates.
-- [Skills Hub](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/.idx/Skills.md) — Autonomous capability registry (ClawHub).
+- [Identity Protocols](user_global.md) — Multi-modal engineering and Arabic/English bilingual mandates.
+- [Skills Hub](.idx/Skills.md) — Autonomous capability registry (ClawHub).
 
 ### 🚀 For The DevOps
 
-- [Deployment Matrix](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/firebase.json) — Infrastructure as Code (IaC) signatures.
-- [Diagnostics Realm](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/core/diagnostics/) — Real-time stability and latency probes.
+- [Deployment Matrix](firebase.json) — Infrastructure as Code (IaC) signatures.
+- [Diagnostics Realm](core/diagnostics/) — Real-time stability and latency probes.
 
 ---
 
@@ -46,7 +46,7 @@ The AetherOS design system is driven by **Zero-Latency CSS Variables**.
 - **Quantum Cyan**: `#00E5FF` (Electric Cyan) on `#050914` (Deep Deep Blue).
 - **Glass-Morphism**: Backdrop blur (12px) + Neon glow states (1.2 intensity).
 
-*For visual tokens, refer to [globals.css](file:///Users/cryptojoker710/Desktop/Aether%20Live%20Agent/apps/portal/src/app/globals.css).*
+*For visual tokens, refer to [globals.css](apps/portal/src/app/globals.css).*
 
 ---
 
