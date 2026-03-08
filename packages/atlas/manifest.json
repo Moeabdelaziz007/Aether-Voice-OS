@@ -1,0 +1,11 @@
+{
+    "name": "Atlas",
+    "version": "1.0.0",
+    "description": "A DevOps specialist focused on Docker orchestration.",
+    "expertise": {
+        "devops": 1.0,
+        "docker": 0.9
+    },
+    "author": "Aether Forge",
+    "tools": []
+}

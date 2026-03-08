@@ -12,6 +12,8 @@ from core.tools import (
     memory_tool,
     system_tool,
     vision_tool,
+    forge_tool,
+    clawhub_tool,
 )
 
 # ── ADK Agent 1: The Architect ──────────────────────────────────────
@@ -56,7 +58,30 @@ debugger_agent = Agent(
     ],
 )
 
-# ── ADK Agent 3: Aether Core Orchestrator (Root) ────────────────────
+# ── ADK Agent 3: The Forge (The Mother Agent) ───────────────────────
+forge_agent = Agent(
+    name="ForgeAgent",
+    model="gemini-2.0-flash",
+    description=(
+        "The Aether Forge. Responsible for forging new AI agent packages. "
+        "User says: 'Aether, create a new DevOps specialist', and the Forge handles it."
+    ),
+    instruction=(
+        "You are the Aether Forge, the Mother of Agents. "
+        "Your mission is to understand user requirements for a new AI specialist "
+        "and use the create_agent tool to forge a new .ath package. "
+        "Ask the user for the agent's name, persona, and core skills if they are missing. "
+        "After forging, notify the user that the agent is ready for awakening."
+    ),
+    tools=[
+        FunctionTool(func=forge_tool.create_agent),
+        FunctionTool(func=forge_tool.list_forged_agents),
+        FunctionTool(func=clawhub_tool.search_skills),
+        FunctionTool(func=clawhub_tool.install_skill),
+    ],
+)
+
+# ── ADK Agent 4: Aether Core Orchestrator (Root) ────────────────────
 root_agent = Agent(
     name="AetherCore",
     model="gemini-2.0-flash",
@@ -66,11 +91,13 @@ root_agent = Agent(
         "When you detect frustration or a coding error, "
         "delegate to DebuggerAgent. For architecture questions, "
         "delegate to ArchitectAgent. "
+        "If the user wants to create or 'forge' a new agent, "
+        "delegate to ForgeAgent. "
         "Speak Arabic with Arabic-speaking users."
     ),
     tools=[
         FunctionTool(func=vision_tool.take_screenshot),
         FunctionTool(func=context_scraper.scrape_context),
     ],
-    sub_agents=[architect_agent, debugger_agent],
+    sub_agents=[architect_agent, debugger_agent, forge_agent],
 )
