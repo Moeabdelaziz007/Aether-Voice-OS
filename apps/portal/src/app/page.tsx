@@ -55,6 +55,7 @@ import RealmController from "@/components/realms/RealmController";
 
 // Store
 import { useAetherStore } from "@/store/useAetherStore";
+import { useForgeStore } from "@/store/useForgeStore";
 import { useVoiceCommands } from "@/hooks/useVoiceCommands";
 import { useUIStateSync } from "@/hooks/useUIStateSync";
 
@@ -99,13 +100,16 @@ export default function AetherPortal() {
     const agentDNA = useForgeStore((s) => s.dna);
     const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
 
-    // Onboarding Logic: If agent is not forged, force the Forge as the main phase
+    // E2E Onboarding: If agent is not forged, force the Forge; if forged, go to dashboard
     useEffect(() => {
         if (!agentDNA.isForged) {
             setActivePanel('hub');
-            useAetherStore.getState().setActiveHubView('forge');
+            useAetherStore.getState().setActiveHubView?.('forge');
         } else {
-            setActivePanel('dashboard');
+            // Agent is primed — transition to the Permanent Workspace
+            if (activePanel === 'hub') {
+                setActivePanel('dashboard');
+            }
         }
     }, [agentDNA.isForged]);
 

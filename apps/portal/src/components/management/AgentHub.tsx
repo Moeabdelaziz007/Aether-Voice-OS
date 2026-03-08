@@ -4,7 +4,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAetherStore } from '@/store/useAetherStore';
 import { Globe, Users, Zap, Search, TrendingUp, ShieldCheck, Mic, Box, ExternalLink } from 'lucide-react';
-import ForgeWizard from './ForgeWizard';
+import ForgeWizard from '../forge/ForgeWizard';
 
 export default function AgentHub() {
     const activeHubView = useAetherStore((s) => s.activeHubView);
