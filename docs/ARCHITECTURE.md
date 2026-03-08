@@ -55,9 +55,10 @@ graph TB
 
 ```python
 core/audio/
-├── capture.py          # Mic → Queue (C-level callback)
-├── playback.py         # Queue → Speaker (C-level callback)
-└── thalamic_gate.py    # RMS energy thresholding + hysteresis
+├── capture.py             # Mic → Queue (C-level callback)
+├── playback.py            # Queue → Speaker (C-level callback)
+├── dynamic_aec.py         # Dynamic Acoustic Echo Cancellation
+└── paralinguistics.py     # Emotion processing & CADENCE detection
 ```
 
 #### Key Features
@@ -530,7 +531,7 @@ class GravityRouter:
 - [Galaxy Orchestration](./GALAXY_ORCHESTRATION.md) - Detailed galaxy system guide
 - [Testing Strategy](./TESTING.md) - Comprehensive testing documentation
 - [Main README](../README.md) - Project overview
-- [Thalamic Gate Implementation](../core/ai/thalamic.py) - Source code
+- [Paralinguistics Implementation](../core/audio/paralinguistics.py) - Emotion & Acoustic processing
 
 ---
 

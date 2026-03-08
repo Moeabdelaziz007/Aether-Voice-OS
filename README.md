@@ -215,7 +215,7 @@ graph LR
 |:---:|:---|:---|
 | 🎤 | `core/audio/capture.py` | Mic → Queue (C-level Callback + Thalamic Gate v2) |
 | 🔊 | `core/audio/playback.py` | Queue → Speaker (C-level Callback) |
-| ❤️ | `core/ai/thalamic.py` | Emotion processing & proactive barge-in logic |
+| ❤️ | `core/audio/paralinguistics.py` | Emotion processing & proactive barge-in logic |
 | 🧠 | `core/ai/session.py` | Gemini Live bidirectional session orchestrator |
 | 🌌 | `core/ai/orchestrator/` | **Galaxy orchestration: gravity routing, fallback, policy** |
 | 🛰️ | `core/transport/gateway.py`| WebSocket server for Next.js MVP Dashboard |
@@ -265,7 +265,7 @@ python -m venv venv && source venv/bin/activate
 pip install -r requirements.txt
 
 # Dashboard Setup
-cd web/dashboard && npm install && cd ../../
+cd apps/portal && npm install && cd ../../
 ```
 
 ### 2. Configure Environment
@@ -285,7 +285,7 @@ EOF
 python -m core.engine
 
 # In another terminal — Start the Cyberpunk Dashboard
-cd web/dashboard && npm run dev
+cd apps/portal && npm run dev
 ```
 
 ---
