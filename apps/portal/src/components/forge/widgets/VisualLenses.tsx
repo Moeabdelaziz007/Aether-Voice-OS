@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Eye, CheckCircle2 } from 'lucide-react';
 import { useForgeStore, AVAILABLE_LENSES } from '@/store/useForgeStore';
@@ -14,6 +14,14 @@ const CATEGORY_COLORS: Record<string, string> = {
 
 export default function VisualLenses() {
     const { dna, selectLens } = useForgeStore();
+    
+    const handleSelectLens = useCallback((lensId: string | null) => {
+        selectLens(lensId);
+    }, [selectLens]);
+    
+    const selectedLensDetail = useMemo(() => {
+        return AVAILABLE_LENSES.find((l) => l.id === dna.selectedLens);
+    }, [dna.selectedLens]);
 
     return (
         <div className="space-y-5">
@@ -43,7 +51,7 @@ export default function VisualLenses() {
                             key={lens.id}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => selectLens(isSelected ? null : lens.id)}
+                            onClick={() => handleSelectLens(isSelected ? null : lens.id)}
                             className={`relative p-4 rounded-2xl border text-left transition-all ${
                                 isSelected
                                     ? `bg-${color}-500/[0.08] border-${color}-500/30 shadow-[0_0_15px_rgba(245,158,11,0.1)]`
@@ -73,7 +81,7 @@ export default function VisualLenses() {
             </div>
 
             {/* Selected Lens Info */}
-            {dna.selectedLens && (
+            {selectedLensDetail && (
                 <motion.div
                     initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -81,7 +89,7 @@ export default function VisualLenses() {
                 >
                     <Eye className="w-4 h-4 text-amber-400" />
                     <span className="text-[10px] font-bold text-amber-300 uppercase tracking-wider flex-1">
-                        Lens Active: {AVAILABLE_LENSES.find((l) => l.id === dna.selectedLens)?.name}
+                        Lens Active: {selectedLensDetail.name}
                     </span>
                     <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse shadow-[0_0_8px_rgba(245,158,11,0.6)]" />
                 </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plug, CheckCircle2, Loader2, Unplug } from 'lucide-react';
 import { useForgeStore, AVAILABLE_PLUGS } from '@/store/useForgeStore';
@@ -9,19 +9,20 @@ export default function NeuralPlugs() {
     const { dna, connectPlug, disconnectPlug } = useForgeStore();
     const [connecting, setConnecting] = useState<string | null>(null);
 
-    const handleTogglePlug = (plugId: string) => {
+    const handleTogglePlug = useCallback((plugId: string) => {
         const isConnected = dna.neuralPlugs.includes(plugId);
         if (isConnected) {
             disconnectPlug(plugId);
         } else {
             setConnecting(plugId);
             // Simulate connection delay
-            setTimeout(() => {
+            const timer = setTimeout(() => {
                 connectPlug(plugId);
                 setConnecting(null);
             }, 1200);
+            return () => clearTimeout(timer);
         }
-    };
+    }, [dna.neuralPlugs, connectPlug, disconnectPlug]);
 
     return (
         <div className="space-y-5">
