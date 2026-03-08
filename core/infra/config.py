@@ -138,10 +138,22 @@ class AudioConfig(BaseModel):
 
 
 class GeminiModel(str, Enum):
-    """Model IDs for Gemini Live/Native Audio used by AIConfig."""
+    """Model IDs for Gemini 2.5 specialized intelligence matrix."""
 
-    FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
-    LIVE_FLASH = "gemini-live-2.5-flash-preview"
+    # Real-time Voice & Audio Reasoning
+    LIVE_FLASH = "gemini-2.5-flash-live-preview-03-2026"
+    FLASH_TTS = "gemini-2.5-flash-tts-preview"
+
+    # Multi-step Reasoning & Coding
+    PRO = "gemini-2.5-pro-preview-03-2026"
+    FLASH = "gemini-2.5-flash-preview-09-2025"
+    LITE = "gemini-2.5-flash-lite-preview"
+
+    # Agentic & Specialized Models
+    COMPUTER_USE = "gemini-2.5-computer-use-preview-10-2025"
+    DEEP_RESEARCH = "gemini-deep-research-preview"
+    EMBEDDINGS = "text-embedding-004"
+    ROBOTICS = "gemini-robotics-er-1.5-preview"
 
 
 def _get_env_file():
