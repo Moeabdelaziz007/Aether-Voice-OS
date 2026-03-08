@@ -173,6 +173,22 @@ class AetherRegistry:
 
         raise PackageNotFoundError(f"Package '{name}' not found")
 
+    def get_package_by_client_id(self, client_id: str) -> Optional[AthPackage]:
+        """Get a package by client_id, checking all loaded and discovered packages."""
+        # Check loaded packages
+        for pkg in self._packages.values():
+            if pkg.manifest.public_key == client_id:
+                return pkg
+
+        # Check lazy loaded packages (this requires loading them all unfortunately)
+        for name, path in self._discovered_paths.items():
+            if name not in self._packages:
+                pkg = self.load_package(path)
+                if pkg and pkg.manifest.public_key == client_id:
+                    return pkg
+
+        return None
+
     def initialize_vector_store(self, api_key: str) -> None:
         """Initialize the local vector store for semantic expert discovery."""
         from core.tools.vector_store import LocalVectorStore
