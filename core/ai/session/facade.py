@@ -18,8 +18,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+
+import jsonschema
 
 if TYPE_CHECKING:
     from core.ai.genetic import AgentDNA
@@ -30,9 +33,8 @@ from google import genai
 from google.genai import types
 from pydantic import BaseModel, Field
 
-from core.ai.generative_init import get_genai_client, get_base_config
-
 from core.ai.agents.proactive import VisionPulseAgent
+from core.ai.generative_init import get_genai_client
 from core.ai.handover_protocol import HandoverContext
 from core.ai.thalamic import ThalamicGate
 from core.demo.fallback import DemoFallback
@@ -53,6 +55,7 @@ from .handover_bridge import (
 from .io_loops import drain_output, handle_usage, receive_loop, send_loop
 from .tool_dispatch import handle_tool_call
 
+
 class OpenClaw(BaseModel):
     """Open a specialized tool interface."""
     tool_id: str = Field(..., description="The ID of the tool to open")
@@ -65,6 +68,8 @@ class DiagnoseStructure(BaseModel):
     """Diagnose the current system structure."""
     component: str = Field(..., description="The component to diagnose")
 
+
+
 class ToolRegistry:
     """Typed registry for declarative tools with response_schema enforcement."""
     def __init__(self):
@@ -75,13 +80,19 @@ class ToolRegistry:
         }
 
     def get_declarations(self) -> list[types.FunctionDeclaration]:
-        return [
-            types.FunctionDeclaration(
-                name=name,
-                description=model.__doc__,
-                parameters=model.model_json_schema()
-            ) for name, model in self.tools.items()
-        ]
+        declarations = []
+        for name, model in self.tools.items():
+            schema = model.model_json_schema()
+            # Enforce basic jsonschema validation strictly before sending to Gemini
+            jsonschema.Draft202012Validator.check_schema(schema)
+            declarations.append(
+                types.FunctionDeclaration(
+                    name=name,
+                    description=model.__doc__ or "",
+                    parameters=schema
+                )
+            )
+        return declarations
 
 logger = logging.getLogger(__name__)
 
@@ -150,8 +161,17 @@ class GeminiLiveSession:
         self._tokens_used = 0
         self._tool_registry = ToolRegistry()
         
-        # Firestore Evidence Logger (Mocked for patch)
-        self._db = None 
+        # Firestore Evidence Logger
+        try:
+            from google.cloud import firestore
+            self._db = firestore.Client(project=os.environ.get("FIRESTORE_PROJECT"))
+        except Exception as e:
+            logger.warning("Failed to initialize Firestore client: %s", e)
+            self._db = None
+
+    def is_ready(self) -> bool:
+        """Health-check call to verify session readiness."""
+        return self._running and self._session is not None
 
     def _build_session_config(self) -> types.LiveConnectConfig:
         """Build the LiveConnectConfig with tool declarations."""
@@ -399,14 +419,24 @@ class GeminiLiveSession:
         
         # Log evidence to Firestore (Structured Audit)
         if self._db:
-            self._db.collection("handover_traces").add({
-                "session_id": id(self),
-                "target_soul": context.target_soul,
-                "timestamp": datetime.now(),
-                "frame_count": len(visual_frames) if visual_frames else 0
-            })
+            try:
+                self._db.collection("handover_traces").add({
+                    "session_id": id(self),
+                    "target_soul": context.target_soul,
+                    "timestamp": datetime.now(),
+                    "frame_count": len(visual_frames) if visual_frames else 0,
+                    "tokens_used_at_handover": self._tokens_used
+                })
+            except Exception as e:
+                logger.error("Failed to log handover trace to Firestore: %s", e)
             
         return inject_handover_context(self, context)
+
+    def track_tokens(self, tokens: int) -> None:
+        """Token budget tracking."""
+        self._tokens_used += tokens
+        if self._tokens_used > self._token_budget:
+            logger.warning("Token budget exceeded: %d / %d", self._tokens_used, self._token_budget)
 
     async def _inject_frames(self, frames: List[bytes]):
         """Internal helper to stream frames to Gemini."""

@@ -300,6 +300,11 @@ export function useGeminiLive(): GeminiLiveReturn {
                 }
             }
 
+            // Frame ACK receipt
+            if (msg.clientContentId) {
+                console.log(`✅ Received Frame ACK: ${msg.clientContentId}`);
+            }
+
             // ─── Tool Calls from Gemini ─────────────────────────────
             const toolCallMsg = msg.toolCall as
                 | Record<string, unknown>
@@ -368,6 +373,9 @@ export function useGeminiLive(): GeminiLiveReturn {
         if (!ws || ws.readyState !== WebSocket.OPEN || !setupDone.current)
             return;
 
+        // Add a frameId to track the vision frame
+        const frameId = crypto.randomUUID();
+
         const msg = {
             realtimeInput: {
                 mediaChunks: [
@@ -376,10 +384,13 @@ export function useGeminiLive(): GeminiLiveReturn {
                         data: b64WebP,
                     },
                 ],
+                // Surface frame IDs in WS payload
+                clientContentId: frameId
             },
         };
 
         ws.send(JSON.stringify(msg));
+        console.log(`📸 Sent Vision Frame: ${frameId}`);
     }, []);
 
     /** Send a tool response back to Gemini after executing a tool call */

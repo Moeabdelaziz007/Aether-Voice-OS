@@ -1,10 +1,12 @@
-import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch
-from core.ai.session.facade import GeminiLiveSession, ToolRegistry, OpenClaw
-from core.infra.transport.gateway import AetherGateway
-from core.infra.config import AIConfig
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
+
 from core.ai.handover_protocol import HandoverContext
+from core.ai.session.facade import GeminiLiveSession, ToolRegistry
+from core.infra.transport.gateway import AetherGateway
+
 
 @pytest.fixture
 def mock_config():
@@ -34,6 +36,21 @@ def test_tool_registry_schemas():
     assert "diagnose_structure" in names
     
     # Check open_claw schema (Pydantic side)
+    schema = registry.tools["open_claw"].model_json_schema()
+    assert schema["properties"]["tool_id"]["type"] == "string"
+    assert "tool_id" in schema["required"]
+
+def test_tool_call_schema_enforcement():
+    """Verify that ToolRegistry properly enforces jsonschema validation."""
+    registry = ToolRegistry()
+    declarations = registry.get_declarations()
+
+    names = [d.name for d in declarations]
+    assert "open_claw" in names
+    assert "soul_swap" in names
+    assert "diagnose_structure" in names
+
+    # Check open_claw schema logic (jsonschema validation shouldn't raise errors here)
     schema = registry.tools["open_claw"].model_json_schema()
     assert schema["properties"]["tool_id"]["type"] == "string"
     assert "tool_id" in schema["required"]

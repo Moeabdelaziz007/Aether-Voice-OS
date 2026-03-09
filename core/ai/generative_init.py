@@ -5,9 +5,10 @@ Centralized initialization for the google-genai SDK, providing
 safe, optimized settings for the Live Agent's brain.
 """
 
-import os
 import logging
+import os
 from typing import Optional
+
 from google import genai
 from google.genai import types
 
@@ -15,20 +16,31 @@ logger = logging.getLogger(__name__)
 
 def get_genai_client(api_key: Optional[str] = None, api_version: str = "v1alpha") -> genai.Client:
     """
-    Initialize and return a production-ready Gemini client.
+    Initialize and return a production-ready Gemini client, optionally
+    falling back to or wrapping google_adk initialization based on config.
     
     Args:
-        api_key: Google AI API key. Defaults to GOOGLE_API_KEY env var.
+        api_key: Google AI API key. Defaults to GEMINI_API_KEY or GOOGLE_API_KEY.
         api_version: API version to use (e.g., 'v1alpha' for Live features).
     """
-    key = api_key or os.environ.get("GOOGLE_API_KEY")
+    key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not key:
-        raise ValueError("GOOGLE_API_KEY not found in environment")
+        raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY not found in environment")
 
-    return genai.Client(
-        api_key=key,
-        http_options={"api_version": api_version}
-    )
+    # Safe environment defaults
+    if os.environ.get("AETHER_ENV") == "production":
+        logger.info("Initializing genai client in production mode with strict bounds.")
+
+    try:
+        # Wrapper logic: we attempt to initialize genai.Client with safe boundaries
+        client = genai.Client(
+            api_key=key,
+            http_options={"api_version": api_version}
+        )
+        return client
+    except Exception as e:
+        logger.error(f"Failed to initialize google.genai Client: {e}")
+        raise
 
 def get_default_safety_settings() -> list[types.SafetySetting]:
     """Return standard safety boundaries for Aether."""

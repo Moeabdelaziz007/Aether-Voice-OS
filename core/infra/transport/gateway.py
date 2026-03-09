@@ -16,7 +16,7 @@ import logging
 import os
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any, List, Optional
 
 import msgpack
 
@@ -198,13 +198,13 @@ class AetherGateway:
             return False
             
         session = self._state_manager.session
-        if not session or not session._session:
-            logger.warning("Cannot send text: No active session")
+        if not session or not session.is_ready():
+            logger.warning("Cannot send text: Session not ready")
             return False
 
         try:
             # Health check before send
-            if not session._running:
+            if not session.is_ready():
                 logger.error("Session health check failed before send_text")
                 return False
                 
@@ -232,8 +232,8 @@ class AetherGateway:
             True if sent successfully, False otherwise
         """
         session = self._state_manager.session
-        if not session or not session._session:
-            logger.warning("Cannot send audio: No active session")
+        if not session or not session.is_ready():
+            logger.warning("Cannot send audio: Session not ready")
             return False
 
         try:
@@ -284,6 +284,12 @@ class AetherGateway:
         Request a handoff to a different soul/expert using Deep Handover (ADK 2.0).
         Includes the last N vision frames for immediate temporal grounding.
         """
+        # Health check before handover
+        session = self.get_session()
+        if not session or not session.is_ready():
+            logger.error("⚡ Deep Handoff failed: Cannot initiate handover, session is not ready.")
+            return False
+
         # Prepare deep handover
         success, context, message = self._hive.prepare_handoff(
             target_name=target_soul, task=reason, enable_negotiation=True
@@ -305,6 +311,8 @@ class AetherGateway:
 
             # Signal session restart with visual context
             # The next session initialization will pick up these frames
+
+            # Use improved backoff and health checking
             self._session_restart_event.set()
             return True
 
@@ -483,10 +491,18 @@ class AetherGateway:
             self._state_manager.set_session(session)
 
             try:
-                if not session._running:
+                if not session.is_ready():
                     try:
-                        # Safety: 10s watchdog for new expert arrival
-                        await asyncio.wait_for(session.connect(), timeout=10.0)
+                        # Safety: 10s watchdog for new expert arrival with retry logic
+                        for attempt in range(1, 4):
+                            try:
+                                await asyncio.wait_for(session.connect(), timeout=10.0)
+                                break
+                            except Exception as e:
+                                if attempt == 3:
+                                    raise
+                                logger.warning("Session connect attempt %d failed: %s", attempt, e)
+                                await asyncio.sleep(2 ** attempt)  # Exponential backoff
                     except (asyncio.TimeoutError, Exception) as e:
                         logger.error(
                             "✦ Critical: Expert '%s' failed to stabilize. Rolling back...",
@@ -744,7 +760,7 @@ class AetherGateway:
                         
                     # Also inject into active session if running (Temporal Grounding)
                     session = self.get_session()
-                    if session and session._running:
+                    if session and session.is_ready():
                         asyncio.create_task(session._session.send_realtime_input(
                             parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/webp")]
                         ))
