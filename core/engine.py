@@ -8,8 +8,9 @@ from core.ai.gws_bridge import gws_bridge
 from core.ai.scheduler import CognitiveScheduler
 from core.ai.session import GeminiLiveSession
 from core.ai.thalamic import ThalamicGate
-from core.infra.config import AetherConfig
+from core.infra.config import load_config
 from core.infra.event_bus import EventBus
+from core.infra.transport.gateway import AetherGateway
 from core.logic.managers.agents import AgentManager
 from core.logic.managers.audio import AudioManager
 from core.logic.managers.infra import InfraManager
@@ -39,7 +40,7 @@ class AetherEngine:
     """
 
     def __init__(self):
-        self._config = AetherConfig.load()
+        self._config = load_config()
         self._event_bus = EventBus()
 
         # Shared Tool Router
@@ -87,6 +88,15 @@ class AetherEngine:
 
         # 4. Control Interface
         self._admin_api = AdminAPIServer(port=self._config.admin_port or 18790)
+
+        # 5. External Gateway (WebSocket Bridge)
+        self._gateway = AetherGateway(
+            gateway_config=self._config.gateway,
+            ai_config=self._config.ai,
+            audio_config=self._config.audio,
+            tool_router=self._router,
+            hive=self._agents._hive,
+        )
 
         self._running = False
         self._shutdown_event = asyncio.Event()
@@ -161,7 +171,10 @@ class AetherEngine:
                 # 3. Start Watchdog (Self-Healing)
                 self._infra.start_watchdog()
 
-                # 4. Wait for shutdown signal
+                # 4. Run External Gateway
+                tg.create_task(self._gateway.run(), name="aether-gateway")
+
+                # 5. Wait for shutdown signal
                 await self._shutdown_event.wait()
                 logger.info("✦ Shutdown event received: Stopping core tasks...")
 

@@ -188,6 +188,7 @@ class AIConfig(BaseSettings):
     enable_search_grounding: bool = True
     enable_proactive_vision: bool = True
     thinking_budget: Optional[int] = None
+    voice_name: str = "Aoede"
     system_instruction: str = (
         "You are Aether Sovereign, the ultimate neural interface and Autonomous "
         "Site Reliability Architect (ASRA). Built on Google ADK and Gemini 2.5 "
@@ -241,6 +242,7 @@ class AetherConfig(BaseSettings):
 
     log_level: str = "INFO"
     log_file: Optional[str] = "logs/aether.log"
+    admin_port: int = 18790
     packages_dir: str = "packages"
 
     model_config = SettingsConfigDict(
