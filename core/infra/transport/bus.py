@@ -8,7 +8,6 @@ Enables real-time synchronization between multiple Aether Gateway nodes.
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from typing import Any, Callable, Dict, Optional, Set
 
@@ -18,6 +17,13 @@ try:
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
+
+try:
+    import msgpack
+
+    MSGPACK_AVAILABLE = True
+except ImportError:
+    MSGPACK_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -62,7 +68,7 @@ class GlobalBus:
                 port=self._port,
                 db=self._db,
                 password=self._password,
-                decode_responses=True,
+                decode_responses=False,
             )
             # Ping to verify with safety timeout
             await asyncio.wait_for(self._client.ping(), timeout=5.0)
@@ -99,7 +105,15 @@ class GlobalBus:
             return 0
 
         full_channel = f"{self._prefix}pubsub:{channel}"
-        payload = json.dumps(message)
+
+        # Use msgpack for binary serialization to reduce CPU overhead
+        if MSGPACK_AVAILABLE:
+            payload = msgpack.packb(message, use_bin_type=True)
+        else:
+            import json
+
+            payload = json.dumps(message).encode("utf-8")
+
         try:
             receivers = await self._client.publish(full_channel, payload)
             return receivers
@@ -137,9 +151,31 @@ class GlobalBus:
                 message = await self._pubsub.get_message(
                     ignore_subscribe_messages=True, timeout=1.0
                 )
-                if message and message["type"] == "message":
+                if message and message["type"] == b"message":
                     channel = message["channel"]
-                    data = json.loads(message["data"])
+                    if isinstance(channel, bytes):
+                        channel = channel.decode("utf-8")
+
+                    raw_data = message["data"]
+                    if MSGPACK_AVAILABLE:
+                        try:
+                            data = msgpack.unpackb(raw_data, raw=False)
+                        except msgpack.ExtraData:
+                            import json
+
+                            data = json.loads(raw_data.decode("utf-8"))
+                        except Exception:
+                            # Fallback if somehow it's json or plain text
+                            try:
+                                import json
+
+                                data = json.loads(raw_data.decode("utf-8"))
+                            except Exception:
+                                data = raw_data
+                    else:
+                        import json
+
+                        data = json.loads(raw_data.decode("utf-8"))
 
                     callbacks = self._subscriptions.get(channel, set())
                     for cb in callbacks:
@@ -165,7 +201,13 @@ class GlobalBus:
 
         full_key = f"{self._prefix}state:{key}"
         try:
-            payload = json.dumps(value)
+            if MSGPACK_AVAILABLE:
+                payload = msgpack.packb(value, use_bin_type=True)
+            else:
+                import json
+
+                payload = json.dumps(value).encode("utf-8")
+
             await self._client.set(full_key, payload, ex=ex)
             return True
         except Exception as e:
@@ -180,7 +222,19 @@ class GlobalBus:
         full_key = f"{self._prefix}state:{key}"
         try:
             data = await self._client.get(full_key)
-            return json.loads(data) if data else None
+            if not data:
+                return None
+
+            if MSGPACK_AVAILABLE:
+                try:
+                    return msgpack.unpackb(data, raw=False)
+                except Exception:
+                    pass
+
+            # Fallback for older JSON entries
+            import json
+
+            return json.loads(data.decode("utf-8"))
         except Exception as e:
             logger.error("A2A [BUS] State get error for %s: %s", full_key, e)
             return None

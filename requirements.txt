@@ -50,3 +50,4 @@ black
 isort
 pre-commit
 mss>=9.0.0
+msgpack>=1.0.5
