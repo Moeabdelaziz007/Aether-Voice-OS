@@ -81,6 +81,7 @@ async def test_watchdog_system_failure_flow(mock_diagnose, mock_firebase_cls):
             "status": "diagnosing",
             "message": "Initiating autonomous repair...",
             "log": "Timeout/Connection error detected.",
+            "signature": watchdog._generate_signature("diagnosing|Timeout/Connection error detected."),
         },
     )
 

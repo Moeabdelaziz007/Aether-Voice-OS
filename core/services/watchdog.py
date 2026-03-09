@@ -11,6 +11,8 @@ import re
 from datetime import datetime
 from typing import Any, Callable, Dict, Optional
 
+from core.ai.gws_bridge import gws_bridge
+from core.ai.memory.spine import neural_spine
 from core.audio.state import audio_state
 from core.infra.cloud.firebase.interface import FirebaseConnector
 from core.infra.transport.bus import GlobalBus
@@ -89,6 +91,7 @@ class SREWatchdog:
         self._is_running = False
         self._loop_task: Optional[asyncio.Task] = None
         self._log_handler = WatchdogLogHandler(self._on_log_error)
+        self._gws_bridge_failures = 0
 
         # Healing Registry: Pattern -> Action
         self._healing_registry: Dict[str, Callable] = {}
@@ -139,11 +142,81 @@ class SREWatchdog:
             try:
                 # Check system metrics (simulated for now)
                 await self._check_vitals()
+                await self._probe_gws_mcp()
                 await asyncio.sleep(10.0)
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 logger.error("SRE Watchdog loop error: %s", e)
+
+    async def _probe_gws_mcp(self):
+        """Active Probe: Check if GWS MCP daemon is responsive."""
+        try:
+            # We assume it is running if _is_running is True and session is active
+            # We can test by calling a fast tool or checking connection state
+            if not getattr(gws_bridge, "_is_running", False):
+                self._gws_bridge_failures += 1
+                if self._gws_bridge_failures >= 3:
+                    logger.warning(
+                        "SRE Watchdog: GWS MCP probe failed 3 times. Triggering autonomous repair."
+                    )
+                    await self._heal_gws_mcp()
+            else:
+                self._gws_bridge_failures = 0
+        except Exception as e:
+            logger.error("SRE Watchdog: Error probing GWS MCP: %s", e)
+
+    async def _heal_gws_mcp(self):
+        """Protocol: Restart GWS MCP daemon and inform via Spine."""
+        self._gws_bridge_failures = 0
+        logger.info("🛠️ [HEAL] Initiating autonomous restart of GWS MCP bridge...")
+
+        # Inject diagnostic trace into the Neural Spine for Gemini to see
+        trace_msg = "I noticed the Workspace link is lagging, I'm re-initializing the neural bridge now."
+        await neural_spine.inject_diagnostic_trace(trace_msg)
+
+        if self._bus:
+            await self._bus.publish(
+                "frontend_events",
+                {
+                    "type": "repair_state",
+                    "status": "diagnosing",
+                    "message": "Workspace link lagging. Re-initializing bridge...",
+                    "log": "GWS MCP daemon unresponsive. Restarting.",
+                    "signature": self._generate_signature(
+                        "diagnosing|GWS MCP daemon unresponsive."
+                    ),
+                },
+            )
+
+        try:
+            await gws_bridge.stop()
+            await gws_bridge.start()
+
+            if self._bus:
+                await self._bus.publish(
+                    "frontend_events",
+                    {
+                        "type": "repair_state",
+                        "status": "applied",
+                        "message": "Neural bridge restored.",
+                        "log": "GWS MCP daemon restarted successfully.",
+                    },
+                )
+
+        except Exception as e:
+            logger.error("Failed to restart GWS MCP: %s", e)
+            if self._bus:
+                await self._bus.publish(
+                    "frontend_events",
+                    {
+                        "type": "repair_state",
+                        "status": "failed",
+                        "message": f"Bridge restart failed: {e}",
+                        "log": f"Error: {e}",
+                        "signature": self._generate_signature(f"failed|Error: {e}"),
+                    },
+                )
 
     async def _check_vitals(self):
         """Simulate vitals check and publish to bus."""
