@@ -9,10 +9,12 @@ Welcome to the Aether OS documentation hub. This index provides quick access to 
 ## 📚 Core Documentation | الوثائق الأساسية
 
 ### [README.md](../README.md) | الرئيسية
+
 Project overview, features, status, and getting started guide.  
 نظرة عامة على المشروع والميزات والحالة ودليل البدء السريع.
 
 **Contents**:
+
 - Project description and vision
 - Key features (Thalamic Gate v2, Galaxy Orchestration, etc.)
 - Installation instructions
@@ -23,10 +25,12 @@ Project overview, features, status, and getting started guide.
 ---
 
 ### [ARCHITECTURE.md](ARCHITECTURE.md) | الهندسة المعمارية
+
 Complete system architecture documentation covering all layers.  
 توثيق كامل للهندسة المعمارية يغطي جميع الطبقات.
 
 **Sections**:
+
 1. Audio Capture & Playback (Thalamic Gate v2)
 2. Emotion Processing
 3. Gemini Live Session
@@ -35,6 +39,7 @@ Complete system architecture documentation covering all layers.
 6. Identity & Memory
 
 **Key Concepts**:
+
 - Pipeline architecture with independent layers
 - Thread-safe communication via queues
 - <2ms latency for audio processing
@@ -43,10 +48,12 @@ Complete system architecture documentation covering all layers.
 ---
 
 ### [GALAXY_ORCHESTRATION.md](GALAXY_ORCHESTRATION.md) | تنظيم المجرة
+
 Comprehensive guide to the Galaxy Orchestration System.  
 دليل شامل لنظام تنظيم المجرة.
 
 **Topics Covered**:
+
 - Gravity-based routing algorithm
 - Circuit breaker fallbacks
 - Policy enforcement
@@ -54,6 +61,7 @@ Comprehensive guide to the Galaxy Orchestration System.
 - Performance metrics
 
 **Formula**:
+
 ```
 score = 0.35*capability + 0.25*confidence 
         - 0.15*latency - 0.15*load + 0.10*continuity
@@ -62,16 +70,19 @@ score = 0.35*capability + 0.25*confidence
 ---
 
 ### [TESTING.md](TESTING.md) | الاختبار
+
 Complete testing strategy and how-to guide.  
 استراتيجية الاختبار الكاملة ودليل الإرشادات.
 
 **Test Types**:
+
 - Unit tests (Vitest + Pytest)
 - Integration tests
 - E2E tests (Playwright)
 - Performance benchmarks
 
 **Quick Start**:
+
 ```bash
 # Frontend
 npm run test
@@ -85,10 +96,12 @@ pytest tests/integration/
 ---
 
 ### [WORKSPACE_UPDATES.md](WORKSPACE_UPDATES.md) | تحديثات مساحة العمل
+
 Latest updates on avatar system, workspace enhancements, and galaxy orchestration.  
 آخر التحديثات على نظام الأفاتار، وتحسينات مساحة العمل، وتنظيم المجرة.
 
 **Recent Updates**:
+
 - Galaxy Orchestration complete ✅
 - Avatar mobility system (80% done)
 - Workspace canvas and app dock
@@ -97,36 +110,24 @@ Latest updates on avatar system, workspace enhancements, and galaxy orchestratio
 
 ---
 
-## 🗂️ Planning Documents | وثائق التخطيط
-
-### [aether-v3-living-workspace-plan.md](../plans/aether-v3-living-workspace-plan.md)
-Detailed architecture plan for the Living Workspace.  
-خطة هندسية تفصيلية لمساحة العمل الحية.
-
-**Phases**:
-- Phase A-G: Foundation components
-- Phase H: Galaxy Orchestration ✅ Complete
-- Phase I: Testing and optimization ✅ Complete
-- Phase 10: Living Workspace Avatar 🔄 In Progress
-- Phase 11: Multi-Agent Collaboration ⏳ Planned
-
----
-
 ## 🧪 Technical Guides | الأدلة التقنية
 
 ### Configuration | الإعدادات
+
 - `.env.example` - Environment variables template
 - `apps/portal/.env.local.example` - Frontend environment
 - `tsconfig.json` - TypeScript configuration
 - `pyproject.toml` - Python project config
 
 ### Development | التطوير
+
 - `task_runner.py` - Task automation
 - `Dockerfile` - Container build instructions
 - `docker-compose.yml` - Multi-container setup
 - `.github/workflows/` - CI/CD pipelines
 
 ### Testing | الاختبار
+
 - `tests/unit/` - Unit tests
 - `tests/integration/` - Integration tests
 - `apps/portal/src/__tests__/` - Frontend tests
@@ -137,18 +138,22 @@ Detailed architecture plan for the Living Workspace.
 ## 📊 Project Status | حالة المشروع
 
 ### Current Version | الإصدار الحالي
+
 **3.0-Alpha** (March 2026)
 
 ### Completed Phases | المراحل المكتملة
+
 ✅ Phase H: Galaxy Orchestration  
 ✅ All foundation components (A-G)  
 ✅ Testing infrastructure  
 
 ### In Progress | قيد التنفيذ
+
 🔄 Phase 10: Living Workspace Avatar (80%)  
 🔄 Multi-agent collaboration framework  
 
 ### Next Release | الإصدار التالي
+
 **v3.1** - Voice Controls & Advanced Features  
 Expected: Q2 2026
 
@@ -199,12 +204,14 @@ Aether Live Agent/
 ### Key Components | المكونات الرئيسية
 
 **Backend**:
+
 - `core/engine.py` - Main orchestration engine
 - `core/server.py` - FastAPI server
 - `core/ai/handover/manager.py` - Multi-agent orchestrator
 - `core/audio/` - Audio capture and playback
 
 **Frontend**:
+
 - `apps/portal/src/app/` - Next.js pages
 - `apps/portal/src/components/` - React components
 - `apps/portal/src/store/` - Zustand state management
@@ -217,24 +224,28 @@ Aether Live Agent/
 ### For Developers | للمطورين
 
 1. **Setup Environment**
+
    ```bash
    cp .env.example .env
    cp apps/portal/.env.local.example apps/portal/.env.local
    ```
 
 2. **Install Dependencies**
+
    ```bash
    pip install -r requirements.txt
    cd apps/portal && npm install
    ```
 
 3. **Run Tests First**
+
    ```bash
    pytest
    npm run test
    ```
 
 4. **Start Development**
+
    ```bash
    python core/server.py
    cd apps/portal && npm run dev
@@ -253,16 +264,19 @@ Aether Live Agent/
 ## 📞 Support & Contribution | الدعم والمساهمة
 
 ### Questions | أسئلة
+
 - Check [FAQ section](../README.md#faq) in README
 - Review documentation guides
 - Search existing GitHub issues
 
 ### Contributing | المساهمة
+
 We welcome contributions! Please see our contribution guidelines (coming soon).
 
 نحن نرحب بالمساهمات! يرجى الاطلاع على إرشادات المساهمة (قريبًا).
 
 ### Contact | الاتصال
+
 - **GitHub**: [@Moeabdelaziz007](https://github.com/Moeabdelaziz007)
 - **Challenge**: [Gemini Live Agent 2026](https://geminiliveagentchallenge.devpost.com)
 - **License**: Apache 2.0
@@ -272,12 +286,14 @@ We welcome contributions! Please see our contribution guidelines (coming soon).
 ## 📈 Documentation Metrics | مقاييس الوثائق
 
 ### Coverage | التغطية
+
 - ✅ Architecture: 100% documented
 - ✅ Core APIs: Fully documented
 - ✅ Testing: Comprehensive guides
 - ✅ Examples: Code snippets for all features
 
 ### Languages | اللغات
+
 - 🇬🇧 English
 - 🇸🇦 Arabic (العربية)
 
