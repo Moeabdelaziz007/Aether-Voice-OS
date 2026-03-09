@@ -32,10 +32,9 @@ class AdminAPIHandler(BaseHTTPRequestHandler):
             "http://localhost:1420",
             "tauri://localhost",
         ]
+        # Secure CORS explicitly: only whitelist exact allowed origins, no fallback defaults
         if origin in allowed_origins:
             self.send_header("Access-Control-Allow-Origin", origin)
-        else:
-            self.send_header("Access-Control-Allow-Origin", "http://localhost:3000")
         self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
         self.send_header("Content-Type", "application/json")
         super().end_headers()
