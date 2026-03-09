@@ -37,7 +37,6 @@ from core.ai.agents.proactive import VisionPulseAgent
 from core.ai.generative_init import get_genai_client
 from core.ai.handover_protocol import HandoverContext
 from core.ai.thalamic import ThalamicGate
-from core.demo.fallback import DemoFallback
 from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
 from core.utils.errors import AIConnectionError, AISessionExpiredError
@@ -221,7 +220,6 @@ class GeminiLiveSession:
                 # Wire in Thalamic Gate V2
                 try:
                     self._thalamic_gate = ThalamicGate(session)
-                    self._demo_fallback = DemoFallback()
                     await self._thalamic_gate.start()
                 except Exception as e:
                     logger.error("Failed to wire Thalamic Gate: %s", e)

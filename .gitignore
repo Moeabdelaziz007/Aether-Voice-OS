@@ -61,6 +61,7 @@ Cargo.lock
 logs/
 
 # --- Aether Internal ---
+archive/
 brain/packages/*/secrets/
 .git_stuck_backup/
 dump.rdb

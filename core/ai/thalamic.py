@@ -1,45 +1,34 @@
 import asyncio
 import logging
+from typing import Optional
 
-from core.analytics.demo_metrics import DemoMetrics
 from core.audio.state import audio_state
-from core.emotion.calibrator import EmotionCalibrator
 
 logger = logging.getLogger(__name__)
 
 
 class ThalamicGate:
     """
-    Central routing hub for proactive interventions (Software-Defined AEC and
-    Emotional Triggering).
-    Monitors emotional indices (frustration) and decides when to trigger a barge-in.
+    Central routing hub for proactive interventions.
+    Simplified V3: Removed legacy emotion/analytics dependencies.
+    Monitors acoustic state to decide when to trigger a barge-in.
     """
 
     def __init__(self, gemini_session):
         self._gemini_session = gemini_session
-        self._calibrator = EmotionCalibrator()
-        self._metrics = DemoMetrics()
         self._frustration_streak = 0
         self._running = False
 
     async def start(self):
         self._running = True
-        logger.info("🧠 Thalamic Gate V2: Online and monitoring affective state.")
+        logger.info("🧠 Thalamic Gate V3: Online.")
         asyncio.create_task(self._monitor_loop())
 
     def stop(self):
         self._running = False
 
-    @property
-    def calibrator(self) -> EmotionCalibrator:
-        return self._calibrator
-
-    @property
-    def metrics(self) -> DemoMetrics:
-        return self._metrics
-
     async def _monitor_loop(self):
-        """Background loop monitoring frustration indices to trigger help."""
+        """Background loop monitoring acoustic indices to trigger help."""
         while self._running:
             await asyncio.sleep(0.1)
 
@@ -47,40 +36,24 @@ class ThalamicGate:
                 self._frustration_streak = 0
                 continue
 
-            # Record acoustic state for baseline generation
-            is_speaking = False
-            rms = getattr(audio_state, "last_rms", 0.0)
-
-            if hasattr(audio_state, "silence_type"):
-                is_speaking = audio_state.silence_type not in ["absolute", "breathing"]
-
-            self._calibrator.baseline_manager.record_acoustic_state(
-                rms=rms, is_speaking=is_speaking
-            )
-
-            # For the demo MVP, we synthesize a frustration score based on silence
+            # For the demo MVP, we synthesize a 'need-help' score based on silence
             # type and acoustic features.
-            frustration_score = self._compute_frustration_score()
+            need_help_score = self._compute_need_help_score()
 
-            if self._calibrator.should_intervene({"frustration": frustration_score}):
+            if need_help_score > 0.6:
                 self._frustration_streak += 1
-                if (
-                    self._frustration_streak >= 15
-                ):  # ~1.5 seconds of sustained frustration
+                if self._frustration_streak >= 15:  # ~1.5 seconds of sustained 'need-help'
                     logger.warning(
-                        "🚨 THALAMIC GATE: Proactive Intervention Triggered! "
-                        "(Score: %.2f)",
-                        frustration_score,
+                        "🚨 THALAMIC GATE: Proactive Intervention Triggered!"
                     )
-                    self._metrics.start_timer("intervention_latency")
                     await self._trigger_intervention()
                     self._frustration_streak = 0
             else:
                 self._frustration_streak = max(0, self._frustration_streak - 1)
 
-    def _compute_frustration_score(self) -> float:
+    def _compute_need_help_score(self) -> float:
         """
-        Calculates a metric for 'frustration' for demo purposes based on VAD properties.
+        Calculates a metric for 'need-help' based on VAD properties.
         """
         score = 0.0
         # If user is heavily "breathing" or "sighing" loudly
@@ -104,18 +77,22 @@ class ThalamicGate:
 
             # This triggers the prompt directly into the current Live Session
             # context window.
-            await self._gemini_session.send_realtime_input(
-                parts=[
-                    types.Part.from_text(
-                        text=(
-                            "[SYSTEM: User is highly frustrated. Proactively "
-                            "intervene immediately in Arabic. Read their screen/"
-                            "code and offer the exact fix with deep empathy.]"
+            if hasattr(self._gemini_session, "send_text"):
+                await self._gemini_session.send_text(
+                    "[SYSTEM: User needs assistance. Proactively intervene immediately. "
+                    "Read their screen/code and offer the exact fix with deep empathy.]"
+                )
+            else:
+                # Fallback to direct session injection
+                await self._gemini_session._session.send_realtime_input(
+                    parts=[
+                        types.Part(
+                            text=(
+                                "[SYSTEM: User needs assistance. Proactively intervene immediately. "
+                                "Read their screen/code and offer the exact fix with deep empathy.]"
+                            )
                         )
-                    )
-                ]
-            )
-            self._metrics.stop_timer("intervention_latency")
-            self._metrics.record_accuracy(True)
+                    ]
+                )
         except Exception as e:
             logger.error("Thalamic Gate intervention failed: %s", e)

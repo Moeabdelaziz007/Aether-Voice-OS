@@ -1,0 +1,8 @@
+archive/
+tests/
+node_modules/
+.next/
+dist/
+build/
+*.so
+*.pkl

@@ -81,24 +81,6 @@ export interface TranscriptMessage {
     timestamp: number;
 }
 
-export interface SilentHint {
-    id: string;
-    text: string;
-    code?: string;
-    explanation?: string;
-    priority: 'info' | 'warning' | 'suggestion';
-    type: 'hint' | 'code';
-    timestamp: number;
-}
-
-export interface NeuralEvent {
-    id: string;
-    fromAgent: string;
-    toAgent: string;
-    task: string;
-    status: 'active' | 'completed' | 'pending';
-}
-
 export type AvatarCinematicState =
     | 'IDLE'
     | 'SEARCHING'
@@ -150,14 +132,6 @@ export interface MirrorFrameEvent {
     x?: number;
     y?: number;
     latencyMs?: number;
-    timestamp: number;
-}
-
-export interface VoyagerLatencyRow {
-    id: string;
-    label: string;
-    latencyMs: number;
-    status: 'ok' | 'error';
     timestamp: number;
 }
 
