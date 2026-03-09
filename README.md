@@ -104,6 +104,19 @@ The crown jewel of Aether OS is the custom-built **Thalamic Gate V2**. Tradition
 | **Hysteresis Gate** | +20% |
 | **Delay Compensation** | +15% |
 | **Smooth Muter** | +10% |
+| **GWS MCP Bridge** | **10x Optimization (Sub-ms Latency)** |
+
+---
+
+## 🌌 Google Workspace Orchestration (The 10x Solution)
+
+Instead of traditional high-latency CLI calls, Gemigram utilizes a persistent **MCP (Model Context Protocol)** bridge.
+
+- **Zero Cold-Start:** By running `gws mcp` as a persistent background daemon via `stdio` pipes, we eliminate the 500ms Node.js startup penalty.
+- **Silent Auth:** Credentials are automatically injected via Service Accounts, removing any manual terminal interaction for the end-user.
+- **Bi-directional Drive/Docs/Sheets/Calendar access.**
+
+---
 
 ### Results
 

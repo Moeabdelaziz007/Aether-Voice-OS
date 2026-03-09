@@ -30,12 +30,19 @@ RUN cp core/audio/cortex/target/release/libaether_cortex.so /build/aether_cortex
 # ── Stage 2: Python runtime ─────────────────────────────
 FROM python:3.11-slim-bookworm AS runtime
 
-# System deps for PyAudio (compilation and runtime)
+# System deps for PyAudio (compilation and runtime) + Node.js
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     portaudio19-dev \
     libasound2-dev \
+    curl \
+    ca-certificates \
+    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Google Workspace CLI (gws)
+RUN npm install -g @googleworkspace/cli
 
 WORKDIR /app
 

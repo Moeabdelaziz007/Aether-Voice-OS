@@ -4,9 +4,9 @@ import signal
 import sys
 from typing import Any, Dict
 
+from core.ai.gws_bridge import gws_bridge
 from core.ai.scheduler import CognitiveScheduler
 from core.ai.session import GeminiLiveSession
-from core.ai.skills import calendar_tools, gmail_tools
 from core.ai.thalamic import ThalamicGate
 from core.infra.config import AetherConfig
 from core.infra.event_bus import EventBus
@@ -45,9 +45,8 @@ class AetherEngine:
         # Shared Tool Router
         self._router = ToolRouter()
 
-        # Register core skills
-        self._router.register_module(gmail_tools)
-        self._router.register_module(calendar_tools)
+        # Register core skills (MCP Bridge)
+        self._router.register_module(gws_bridge)
 
         # 1. Specialized Managers
         # Agents: Registry + Hive
@@ -127,6 +126,9 @@ class AetherEngine:
         # Initialize Infrastructure
         await self._infra.initialize()
 
+        # Start GWS MCP Daemon (Silent Auth)
+        await gws_bridge.start()
+
         # Start Admin API
         self._admin_api.start()
 
@@ -175,6 +177,7 @@ class AetherEngine:
         self._running = False
         logger.info("Starting graceful shutdown...")
 
+        await gws_bridge.stop()
         await self._thalamic.stop()
         await self._pulse.stop()
         await self._audio.stop()
