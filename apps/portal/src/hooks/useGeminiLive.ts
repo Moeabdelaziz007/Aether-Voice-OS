@@ -230,105 +230,72 @@ export function useGeminiLive(): GeminiLiveReturn {
     }, []);
 
     const handleTextMessage = useCallback(
-        (msg: Record<string, unknown>) => {
-            // Setup complete acknowledgement
-            if (msg.setupComplete) {
-                console.log("✦ Gemini Live session ready");
-                setStatus("listening");
-                setupDone.current = true;
-                return;
-            }
-
-            // Server content with audio/text data
-            const sc = msg.serverContent as
-                | Record<string, unknown>
-                | undefined;
-            if (sc) {
-                const modelTurn = sc.modelTurn as
-                    | Record<string, unknown>
-                    | undefined;
-                if (modelTurn?.parts) {
-                    setStatus("speaking");
-                    const parts = modelTurn.parts as Array<
-                        Record<string, unknown>
-                    >;
-
-                    for (const part of parts) {
-                        // Handle audio data
-                        const inlineData = part.inlineData as
-                            | Record<string, unknown>
-                            | undefined;
-                        if (inlineData?.data) {
-                            measureLatency();
-                            const b64 = inlineData.data as string;
-                            const binary = atob(b64);
-                            const bytes = new Uint8Array(binary.length);
-                            for (let i = 0; i < binary.length; i++) {
-                                bytes[i] = binary.charCodeAt(i);
-                            }
-                            if (onAudioResponse.current) {
-                                onAudioResponse.current(bytes.buffer);
-                            }
-                        }
-
-                        // Handle text transcript
-                        if (part.text && typeof part.text === "string") {
-                            if (onTranscript.current) {
-                                onTranscript.current(
-                                    part.text as string,
-                                    "ai"
-                                );
-                            }
-                        }
-                    }
-                }
-
-                // Turn complete — back to listening
-                if (sc.turnComplete) {
+        (msg: Record<string, any>) => {
+            const messageHandlers: Record<string, (data: any) => void> = {
+                setupComplete: () => {
+                    console.log("✦ Gemini Live session ready");
                     setStatus("listening");
-                    waitingForResponse.current = false;
-                }
-
-                // Interrupted (barge-in)
-                if (sc.interrupted) {
-                    console.log("⚡ Barge-in detected");
-                    setStatus("listening");
-                    waitingForResponse.current = false;
-                    if (onInterrupt.current) {
-                        onInterrupt.current();
-                    }
-                }
-            }
-
-            // Frame ACK receipt
-            if (msg.clientContentId) {
-                console.log(`✅ Received Frame ACK: ${msg.clientContentId}`);
-            }
-
-            // ─── Tool Calls from Gemini ─────────────────────────────
-            const toolCallMsg = msg.toolCall as
-                | Record<string, unknown>
-                | undefined;
-            if (toolCallMsg) {
-                const functionCalls = toolCallMsg.functionCalls as
-                    | Array<Record<string, unknown>>
-                    | undefined;
-                if (functionCalls) {
-                    for (const fc of functionCalls) {
-                        const call: GeminiToolCall = {
-                            name: fc.name as string,
-                            args: (fc.args as Record<string, unknown>) || {},
-                            id: (fc.id as string) || crypto.randomUUID(),
-                        };
-                        console.log("🔧 Tool call:", call.name, call.args);
-                        if (onToolCall.current) {
-                            onToolCall.current(call);
+                    setupDone.current = true;
+                },
+                serverContent: (sc: any) => {
+                    if (sc.modelTurn?.parts) {
+                        setStatus("speaking");
+                        for (const part of sc.modelTurn.parts) {
+                            if (part.inlineData?.data) {
+                                measureLatency();
+                                const b64 = part.inlineData.data;
+                                const binary = atob(b64);
+                                const bytes = new Uint8Array(binary.length);
+                                for (let i = 0; i < binary.length; i++) {
+                                    bytes[i] = binary.charCodeAt(i);
+                                }
+                                onAudioResponse.current?.(bytes.buffer);
+                            }
+                            if (part.text && onTranscript.current) {
+                                onTranscript.current(part.text, "ai");
+                            }
                         }
                     }
+                    if (sc.turnComplete) {
+                        setStatus("listening");
+                        waitingForResponse.current = false;
+                    }
+                    if (sc.interrupted) {
+                        console.log("⚡ Barge-in detected");
+                        setStatus("listening");
+                        waitingForResponse.current = false;
+                        onInterrupt.current?.();
+                    }
+                },
+                toolCall: (tc: any) => {
+                    if (tc.functionCalls) {
+                        for (const fc of tc.functionCalls) {
+                            const call: GeminiToolCall = {
+                                name: fc.name,
+                                args: fc.args || {},
+                                id: fc.id || crypto.randomUUID(),
+                            };
+                            console.log("🔧 Tool call:", call.name, call.args);
+                            onToolCall.current?.(call);
+                        }
+                    }
+                },
+                clientContentId: (id: string) => {
+                    console.log(`✅ Received Frame ACK: ${id}`);
+                }
+            };
+
+            // O(1) Dispatch
+            for (const [key, handler] of Object.entries(messageHandlers)) {
+                if (msg[key]) {
+                    handler(msg[key]);
+                    return;
                 }
             }
+
+            logger.debug("Unhandled text message:", msg);
         },
-        []
+        [measureLatency]
     );
 
     const sendAudio = useCallback((pcm: ArrayBuffer) => {

@@ -152,6 +152,15 @@ class AetherGateway:
         self._frame_buffer_cache: List[bytes] = []
         self._max_frame_cache = 5
 
+        # O(1) Message Routers
+        self._msg_routers = {
+            MessageType.PONG.value: self._handle_pong,
+            "INTENT": self._handle_intent_msg,
+            "UI_STATE_SYNC": self._handle_ui_sync,
+            "VISION_FRAME": self._handle_vision_frame,
+            MessageType.DISCONNECT.value: self._handle_disconnect,
+        }
+
     @property
     def audio_in_queue(self) -> asyncio.Queue[dict[str, object]]:
         """Input audio queue (mic → Gemini)."""
@@ -731,50 +740,49 @@ class AetherGateway:
             logger.error("Error routing binary audio: %s", exc)
 
     async def _route_message(self, client_id: str, msg: dict[str, Any]) -> None:
-        """Route incoming messages by type."""
+        """Route incoming messages by type via O(1) dispatch table."""
         msg_type = msg.get("type", "")
-
-        if msg_type == MessageType.PONG.value:
-            async with self._lock:
-                if client_id in self._clients:
-                    self._clients[client_id].last_pong = time.monotonic()
-
-        elif msg_type == "INTENT":
-            # Phase A: Handle V1.1 Intent Schema
-            await self._handle_intent(client_id, msg)
-
-        elif msg_type == "UI_STATE_SYNC":
-            widgets = msg.get("payload", {}).get("active_widgets", [])
-            self._state_manager.update_active_widgets(widgets)
-
-        elif msg_type == "VISION_FRAME":
-            # Backpressure: Only buffer if bridge is healthy
-            frame_b64 = msg.get("payload", {}).get("frame")
-            if frame_b64:
-                try:
-                    import base64
-                    frame_bytes = base64.b64decode(frame_b64)
-                    self._frame_buffer_cache.append(frame_bytes)
-                    if len(self._frame_buffer_cache) > self._max_frame_cache:
-                        self._frame_buffer_cache.pop(0)
-                        
-                    # Also inject into active session if running (Temporal Grounding)
-                    session = self.get_session()
-                    if session and session.is_ready():
-                        asyncio.create_task(session._session.send_realtime_input(
-                            parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/webp")]
-                        ))
-                except Exception as e:
-                    logger.error("Failed to process VISION_FRAME: %s", e)
-
-        elif msg_type == MessageType.DISCONNECT.value:
-            async with self._lock:
-                session = self._clients.pop(client_id, None)
-            if session:
-                await session.ws.close()
-
+        handler = self._msg_routers.get(msg_type)
+        if handler:
+            await handler(client_id, msg)
         else:
             logger.debug("Unhandled message type: %s from %s", msg_type, client_id)
+
+    async def _handle_pong(self, client_id: str, msg: dict) -> None:
+        async with self._lock:
+            if client_id in self._clients:
+                self._clients[client_id].last_pong = time.monotonic()
+
+    async def _handle_intent_msg(self, client_id: str, msg: dict) -> None:
+        await self._handle_intent(client_id, msg)
+
+    async def _handle_ui_sync(self, client_id: str, msg: dict) -> None:
+        widgets = msg.get("payload", {}).get("active_widgets", [])
+        self._state_manager.update_active_widgets(widgets)
+
+    async def _handle_vision_frame(self, client_id: str, msg: dict) -> None:
+        frame_b64 = msg.get("payload", {}).get("frame")
+        if frame_b64:
+            try:
+                import base64
+                frame_bytes = base64.b64decode(frame_b64)
+                self._frame_buffer_cache.append(frame_bytes)
+                if len(self._frame_buffer_cache) > self._max_frame_cache:
+                    self._frame_buffer_cache.pop(0)
+
+                session = self.get_session()
+                if session and session.is_ready():
+                    asyncio.create_task(session._session.send_realtime_input(
+                        parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/webp")]
+                    ))
+            except Exception as e:
+                logger.error("Failed to process VISION_FRAME: %s", e)
+
+    async def _handle_disconnect(self, client_id: str, msg: dict) -> None:
+        async with self._lock:
+            session = self._clients.pop(client_id, None)
+        if session:
+            await session.ws.close()
 
     async def _handle_intent(self, client_id: str, msg: dict[str, Any]) -> None:
         """Process structured intent via IntentBroker."""

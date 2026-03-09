@@ -22,15 +22,16 @@ async def handle_tool_call(session_facade, session, tool_call) -> None:
     calls = tool_call.function_calls or []
 
     async def _dispatch_with_timeout(fc):
-        timeout_s = 25.0
-        latency_tier = "medium"
-
-        if fc.name in ("discovery_tool", "search_tool"):
-            timeout_s = 8.0
-            latency_tier = "fast"
-        elif fc.name in ("vision_tool", "camera_tool", "hive_tool"):
-            timeout_s = 18.0
-            latency_tier = "slow"
+        # O(1) Tool Latency Config
+        latency_config = {
+            "discovery_tool": (8.0, "fast"),
+            "search_tool": (8.0, "fast"),
+            "vision_tool": (18.0, "slow"),
+            "camera_tool": (18.0, "slow"),
+            "hive_tool": (18.0, "slow"),
+        }
+        
+        timeout_s, latency_tier = latency_config.get(fc.name, (25.0, "medium"))
 
         if session_facade._scheduler:
             session_facade._scheduler.on_tool_start(fc.name, fc.args)

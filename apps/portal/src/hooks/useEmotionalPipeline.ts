@@ -140,31 +140,38 @@ function classifyEmotionFromState(
     arousal: number,
     dominance: number
 ): EmotionType {
-    // Decision tree based on Russell's circumplex model
+    const rules: Array<{
+        condition: () => boolean;
+        emotion: EmotionType | ((dom: number) => EmotionType);
+    }> = [
+            {
+                condition: () => arousal > 0.7 && valence < -0.2,
+                emotion: (dom: number) => (dom > 0.5 ? "stressed" : "frustrated"),
+            },
+            {
+                condition: () => arousal > 0.6 && valence > 0.2,
+                emotion: (dom: number) => (dom > 0.6 ? "flow_state" : "excited"),
+            },
+            {
+                condition: () => arousal > 0.3 && arousal <= 0.6 && valence > 0,
+                emotion: valence > 0.3 ? "curious" : "focused",
+            },
+            {
+                condition: () => arousal <= 0.3 && valence > 0,
+                emotion: "calm",
+            },
+            {
+                condition: () => arousal <= 0.4 && valence < -0.2,
+                emotion: "frustrated",
+            },
+        ];
 
-    // High arousal + negative valence = stress/frustration
-    if (arousal > 0.7 && valence < -0.2) {
-        return dominance > 0.5 ? "stressed" : "frustrated";
-    }
-
-    // High arousal + positive valence = excited/flow
-    if (arousal > 0.6 && valence > 0.2) {
-        return dominance > 0.6 ? "flow_state" : "excited";
-    }
-
-    // Moderate arousal + positive valence = curious/focused
-    if (arousal > 0.3 && arousal <= 0.6 && valence > 0) {
-        return valence > 0.3 ? "curious" : "focused";
-    }
-
-    // Low arousal + positive valence = calm
-    if (arousal <= 0.3 && valence > 0) {
-        return "calm";
-    }
-
-    // Low arousal + negative valence = frustrated
-    if (arousal <= 0.4 && valence < -0.2) {
-        return "frustrated";
+    for (const rule of rules) {
+        if (rule.condition()) {
+            return typeof rule.emotion === "function"
+                ? rule.emotion(dominance)
+                : rule.emotion;
+        }
     }
 
     return "neutral";
@@ -227,79 +234,82 @@ export function useEmotionalPipeline(options: UseEmotionalPipelineOptions = {}) 
             const prevType = lastEmotionType.current;
             const now = Date.now();
 
-            // Frustration spike detection
-            if (
-                (newState.type === "frustrated" || newState.type === "stressed") &&
-                prevType !== "frustrated" &&
-                prevType !== "stressed"
-            ) {
-                frustrationStartTime.current = now;
+            const eventDetectors = [
+                {
+                    // Frustration spike
+                    condition: () => (newState.type === "frustrated" || newState.type === "stressed") &&
+                        prevType !== "frustrated" && prevType !== "stressed",
+                    action: () => {
+                        frustrationStartTime.current = now;
+                        onEmotionalEvent?.({
+                            type: "frustration_spike",
+                            emotion: newState.type,
+                            intensity: 1 - newState.valence,
+                            timestamp: now,
+                        });
+                    }
+                },
+                {
+                    // Stress (prolonged frustration)
+                    condition: () => frustrationStartTime.current && (now - frustrationStartTime.current > 10000) &&
+                        (newState.type === "frustrated" || newState.type === "stressed"),
+                    action: () => {
+                        onEmotionalEvent?.({
+                            type: "stress_detected",
+                            emotion: newState.type,
+                            intensity: 1 - newState.valence,
+                            timestamp: now,
+                        });
+                        frustrationStartTime.current = null;
+                    }
+                },
+                {
+                    // Flow Enter
+                    condition: () => newState.type === "flow_state" && prevType !== "flow_state",
+                    action: () => {
+                        flowStateStartTime.current = now;
+                        onEmotionalEvent?.({
+                            type: "flow_enter",
+                            emotion: "flow_state",
+                            intensity: newState.arousal,
+                            timestamp: now,
+                        });
+                    }
+                },
+                {
+                    // Flow Exit
+                    condition: () => newState.type !== "flow_state" && prevType === "flow_state",
+                    action: () => {
+                        const flowDuration = flowStateStartTime.current ? now - flowStateStartTime.current : 0;
+                        onEmotionalEvent?.({
+                            type: "flow_exit",
+                            emotion: prevType,
+                            intensity: flowDuration / 1000,
+                            timestamp: now,
+                        });
+                        flowStateStartTime.current = null;
+                    }
+                },
+                {
+                    // Excitement peak
+                    condition: () => newState.type === "excited" && newState.arousal > 0.8 && prevType !== "excited",
+                    action: () => {
+                        onEmotionalEvent?.({
+                            type: "excitement_peak",
+                            emotion: "excited",
+                            intensity: newState.arousal,
+                            timestamp: now,
+                        });
+                    }
+                }
+            ];
 
-                onEmotionalEvent?.({
-                    type: "frustration_spike",
-                    emotion: newState.type,
-                    intensity: 1 - newState.valence,
-                    timestamp: now,
-                });
-            }
+            // Execute matching detectors
+            eventDetectors.forEach(detector => {
+                if (detector.condition()) detector.action();
+            });
 
-            // Stress detection (prolonged frustration)
-            if (
-                frustrationStartTime.current &&
-                now - frustrationStartTime.current > 10000 && // 10 seconds
-                (newState.type === "frustrated" || newState.type === "stressed")
-            ) {
-                onEmotionalEvent?.({
-                    type: "stress_detected",
-                    emotion: newState.type,
-                    intensity: 1 - newState.valence,
-                    timestamp: now,
-                });
-                frustrationStartTime.current = null; // Reset to prevent repeated events
-            }
-
-            // Flow state enter
-            if (newState.type === "flow_state" && prevType !== "flow_state") {
-                flowStateStartTime.current = now;
-
-                onEmotionalEvent?.({
-                    type: "flow_enter",
-                    emotion: "flow_state",
-                    intensity: newState.arousal,
-                    timestamp: now,
-                });
-            }
-
-            // Flow state exit
-            if (newState.type !== "flow_state" && prevType === "flow_state") {
-                const flowDuration = flowStateStartTime.current
-                    ? now - flowStateStartTime.current
-                    : 0;
-
-                onEmotionalEvent?.({
-                    type: "flow_exit",
-                    emotion: prevType,
-                    intensity: flowDuration / 1000, // Duration in seconds
-                    timestamp: now,
-                });
-                flowStateStartTime.current = null;
-            }
-
-            // Excitement peak
-            if (
-                newState.type === "excited" &&
-                newState.arousal > 0.8 &&
-                prevType !== "excited"
-            ) {
-                onEmotionalEvent?.({
-                    type: "excitement_peak",
-                    emotion: "excited",
-                    intensity: newState.arousal,
-                    timestamp: now,
-                });
-            }
-
-            // Clear frustration timer if emotion improves
+            // Cleanup frustration timer if emotion improves
             if (newState.type !== "frustrated" && newState.type !== "stressed") {
                 frustrationStartTime.current = null;
             }
@@ -420,20 +430,20 @@ export function useEmotionalPipeline(options: UseEmotionalPipelineOptions = {}) 
     return {
         // Current state
         emotionalState: smoothedState,
-        
+
         // Processing functions
         processEmotionalFeatures,
-        
+
         // Analysis functions
         getEmotionalTrend,
         getFrustrationScore,
-        
+
         // State checks
         isFrustrated: smoothedState.type === "frustrated" || smoothedState.type === "stressed",
         isFlowState: smoothedState.type === "flow_state",
         isHighEnergy: smoothedState.arousal > 0.6,
         isPositive: smoothedState.valence > 0.2,
-        
+
         // History
         stateHistory: stateHistory.current,
     };
