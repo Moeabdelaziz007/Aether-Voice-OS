@@ -9,15 +9,15 @@ Redis-backed sliding window of interaction frames via GlobalBus.
 from __future__ import annotations
 
 import asyncio
-import logging
 import time
 from typing import Any, Dict, List, Optional
 
+from core.utils.logging import logger
 from google import genai
 from pydantic import BaseModel
 
 from core.infra.transport.bus import GlobalBus
-from core.utils.logging import logger
+
 
 class NeuralSnapshot(BaseModel):
     summary: str

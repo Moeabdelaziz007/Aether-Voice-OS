@@ -19,6 +19,7 @@ import uuid
 from typing import TYPE_CHECKING, Any, Optional
 
 import msgpack
+
 from core.ai.agents.forge import AgentForge
 from core.ai.agents.registry import AgentRegistry
 
