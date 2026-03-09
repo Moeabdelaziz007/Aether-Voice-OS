@@ -1,6 +1,5 @@
 import logging
-import json
-from typing import Any, Dict
+
 from core.ai.agents.registry import AgentMetadata
 from core.infra.config import GeminiModel
 

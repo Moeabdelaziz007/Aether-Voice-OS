@@ -58,9 +58,13 @@ async def gateway(gateway_config):
     hive.get_pending_handover_for_target.return_value = None
 
     # Also fix Signature verification so it passes with dummy 0*128 signature
-    import core.utils.security as sec
+    # Since AuthService relies on verify_signature, we mock it via patch
+    from unittest.mock import patch
+    patcher1 = patch('core.utils.security.verify_signature', return_value=True)
+    patcher2 = patch('core.infra.transport.auth.AuthService.verify_signature', return_value=True)
 
-    sec.verify_signature = MagicMock(return_value=True)
+    patcher1.start()
+    patcher2.start()
 
     gw = AetherGateway(gateway_config, ai_config, audio_config, tool_router, hive)
 
@@ -74,6 +78,9 @@ async def gateway(gateway_config):
     yield gw
     await gw.stop()
     task.cancel()
+
+    patcher1.stop()
+    patcher2.stop()
     try:
         await task
     except asyncio.CancelledError:

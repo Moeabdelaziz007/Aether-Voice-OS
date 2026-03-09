@@ -129,8 +129,8 @@ async def test_audio_capture_playback():
     logger.info("\n🧪 TEST 2: Audio Capture & Playback Pipeline")
     
     try:
-        import pyaudio
         import numpy as np
+        import pyaudio
         
         p = pyaudio.PyAudio()
         
