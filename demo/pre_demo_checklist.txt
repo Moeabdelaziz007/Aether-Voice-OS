@@ -1,0 +1,21 @@
+# Aether-Voice-OS: Pre-Demo Checklist (Firebase Optimized)
+# ════════════════════════════════════════════════════════════
+# Verify all steps 30 minutes before the live demo.
+
+[ ] 1. ENVIRONMENT: Ensure .env contains GOOGLE_API_KEY and AETHER_JWT_SECRET.
+[ ] 2. AUTH: Login to Firebase CLI.
+    `firebase login`
+[ ] 3. PROJECT: Set active project to Aether/Gemigram.
+    `firebase use --add`
+[ ] 4. BACKEND: Build and Deploy Firebase Functions (AetherGateway).
+    `cd functions && npm run build && firebase deploy --only functions`
+[ ] 5. FRONTEND: Build and Deploy Portal.
+    `cd apps/portal && npm run build && firebase deploy --only hosting`
+[ ] 6. FIRESTORE: Verify 'audit_logs' collection exists and is writable.
+    `gcloud firestore documents list --collection=audit_logs --limit=1`
+[ ] 7. LOCAL SMOKE: Run the mission-critical smoke test.
+    `./scripts/smoke_gemini_live.sh`
+[ ] 8. PERMISSIONS: Ensure service account has 'Cloud Datastore User' role.
+    `gcloud projects get-iam-policy [PROJECT_ID] --filter="user:[SERVICE_ACCOUNT_EMAIL]"`
+[ ] 9. MEDIA: Grant Chrome 'Always Allow' for Camera/Mic on the demo domain.
+[ ] 10. RECOVERY: Keep `demo/recovery_snippets.sh` open in a side terminal.

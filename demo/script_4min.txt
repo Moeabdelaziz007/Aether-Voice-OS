@@ -1,0 +1,88 @@
+# Aether-Voice-OS: Gemini Live — 4-Minute Judge Demo Script
+# Version: 1.0 (Production Ready)
+# ═══════════════════════════════════════════════════════════════════
+
+[00:00 — 00:15] INTRODUCTION
+Audio: "Hello Judges. This is Aether-Voice-OS: the world's first native multimodal operating system powered by Gemini 2.0 Flash."
+Visual: Show Chrome at `localhost:3000`. Highlight the Quantum Avatar.
+Stage Direction: Hover over the avatar. Point to `apps/portal/src/components/QuantumNeuralAvatarScene.tsx`.
+
+[00:15 — 00:30] SESSION START
+Audio: "I'll initiate the session via voice. 'Aether, wake up.'"
+Visual: Waveform reacts. Avatar transitions from IDLE to LISTENING (Line 254 of `QuantumNeuralAvatarScene.tsx`).
+Action: Open DevTools → Network → WS. Show the `GENAI_SESSION_START` frame.
+
+[00:30 — 00:50] VISION PULSE & GROUNDING
+Audio: "Notice the Vision Pulse. Every 10 seconds, Aether captures my screen or camera to ground itself in my reality."
+Visual: Open `apps/portal/src/hooks/useGeminiLive.ts`. Point to `sendVisionFrame` (Line 365).
+Action: Drag a terminal with a Python error into view.
+
+[00:50 — 01:10] THE WOW MOMENT (PART 1)
+Audio: "Aether, I have a bug in my repository. Can you help me fix the CI/CD error?"
+Gemini Logic: `core/ai/session/facade.py::_receive_loop` processes the vision frame.
+Visual: Toggle to `core/ai/session/facade.py`. Highlight the `ToolRegistry` (Line 35).
+
+[01:10 — 01:30] TOOL CALL TRIGGER (PART 2)
+Audio: "Aether sees the terminal. Gemini triggers a 'diagnose_structure' tool call."
+Visual: Watch the console. Gemini JSON: `{"tool_id": "expert_audit", "path": "./.github/workflows"}`.
+Action: Highlight `core/ai/session/facade.py` Line 140 (Strict response_schema).
+
+[01:30 — 01:50] BARGE-IN & EMOTION
+Audio: (Interrupt Gemini mid-sentence) "Wait, focus on the Rust module instead!"
+Visual: Avatar flashes CRIMSON. `QuantumNeuralAvatarScene.tsx` Line 270 (INTERRUPTING state).
+Action: `AetherGateway.py::interrupt()` (Line 188) drains the buffer immediately.
+
+[01:50 — 02:15] FIRESTORE WRITE
+Audio: "Aether executes the fix and logs it to our neural audit trail in Firestore."
+Visual: Open Firebase Console or run `gcloud firestore documents list --collection=audit_logs`.
+Action: Point to the entry with the field `source_agent: "GeminiLive"`.
+
+[02:15 — 02:40] AUDIT TRAIL LOGS
+Audio: "We can see the write in the gateway logs. Every tool call is authenticated and traced."
+Visual: Scroll terminal logs. Check `AetherGateway.py` Line 451: `Tool call authenticated via VoiceAuthGuard`.
+Stage Direction: Hover over the Firestore timestamp.
+
+[02:40 — 03:10] SPECIALIST HANDOFF
+Audio: "The task is complex. Aether now hands me over to the 'Elite Coder' expert soul."
+Visual: Open `core/infra/transport/gateway.py`. Highlight `request_handoff` (Line 261).
+Action: Avatar color shifts to Neon Green. `HandoverContext` injected with 5 frames.
+
+[03:10 — 03:40] TEMPORAL GROUNDING (EXPERT)
+Audio: "The new expert doesn't ask 'What's the issue?'. It says: 'I see the Rust error. Let's fix the memory leak.'"
+Visual: Point to `facade.py::inject_handover_context` (Line 113).
+Gemini Logic: New session initialized with `visual_frames` buffer.
+
+[03:40 — 04:00] CONCLUSION & CALL TO ACTION
+Audio: "Aether-Voice-OS isn't just an assistant; it's a team of specialist souls in one interface. Thank you."
+Visual: Pull up `docs/ARCHITECTURE.md`. Final shot of the Gemigram logo.
+Stage Direction: Close session. Avatar returns to IDLE.
+
+# 💡 JUDGE TIPS:
+- If they ask about latency: "Current glass-to-ear latency is ~400ms, optimized via `types.Blob` in `facade.py`."
+- If they ask about security: "We use the `VoiceAuthGuard` in the `ToolRouter` for OS-level writes."
+
+# 🌟 THE ONE-MINUTE "WOW" MOMENT (00:50–01:50)
+- **Voice Trigger**: "Aether, analyze my current workspace. I have a CI/CD failure in the Rust module. Fix it and log the audit entry."
+- **Expected Gemini Tool Call (JSON)**:
+  ```json
+  {
+    "call": "diagnose_structure",
+    "args": {
+      "path": "core/cortex/audio",
+      "focus": "ci_cd_failure"
+    }
+  }
+  ```
+- **Receiving Function**: `core/ai/session/facade.py::GeminiLiveSession._handle_tool_call`
+- **Firestore Verification Command**:
+  ```bash
+  gcloud firestore documents list --collection=audit_logs \
+    --filter="payload.action='diagnose_structure'" \
+    --order-by="timestamp" --limit=1
+  ```
+
+# 👨‍⚖️ JUDGE Q&A GUIDANCE (Code Hotspots)
+- **Multimodal Logic**: Point to `core/ai/session/facade.py` lines 113-140 where `visual_frames` are injected.
+- **Barge-in Logic**: Point to `core/infra/transport/gateway.py` line 188 (`interrupt()`) which clears the buffer.
+- **UI Reactivity**: Show `apps/portal/src/components/QuantumNeuralAvatarScene.tsx` lines 240-275 for state-based color shifts (Neon -> Gold -> Crimson).
+- **Handoff Logic**: Point to `core/infra/transport/gateway.py` line 261 (`request_handoff()`) and its interaction with `inject_handover_context`.
