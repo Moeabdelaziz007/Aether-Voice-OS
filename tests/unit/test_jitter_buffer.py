@@ -5,6 +5,7 @@ import pytest
 pytest.skip("AdaptiveJitterBuffer was removed and replaced by AudioJitterBuffer", allow_module_level=True)
 
 import numpy as np
+
 from core.audio.capture import AdaptiveJitterBuffer
 
 

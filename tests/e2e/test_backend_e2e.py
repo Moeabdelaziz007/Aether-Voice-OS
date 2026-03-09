@@ -1,8 +1,6 @@
 import asyncio
 import json
 import logging
-import os
-import threading
 import time
 from unittest.mock import MagicMock
 
@@ -13,9 +11,6 @@ import websockets
 from core.infra.config import AIConfig, AudioConfig, GatewayConfig
 from core.infra.transport.gateway import AetherGateway
 from core.services.admin_api import AdminAPIServer
-import core.utils.security as sec
-import core.infra.transport.auth as auth_mod
-
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -73,10 +68,10 @@ async def aether_services():
     patcher3 = patch('core.ai.session.facade.GeminiLiveSession.connect', return_value=asyncio.sleep(0))
     patcher4 = patch('core.ai.session.facade.GeminiLiveSession.run', return_value=asyncio.sleep(1000)) # Block run loop
     
-    mock_sec = patcher1.start()
-    mock_auth = patcher2.start()
-    mock_connect = patcher3.start()
-    mock_run = patcher4.start()
+    patcher1.start()
+    patcher2.start()
+    patcher3.start()
+    patcher4.start()
 
     gw = AetherGateway(gateway_config, ai_config, audio_config, tool_router, hive)
     gw._bus.connect = MagicMock(return_value=asyncio.sleep(0, result=True))

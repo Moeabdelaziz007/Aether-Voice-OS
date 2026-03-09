@@ -63,8 +63,8 @@ async def gateway(gateway_config):
     patcher1 = patch('core.utils.security.verify_signature', return_value=True)
     patcher2 = patch('core.infra.transport.auth.AuthService.verify_signature', return_value=True)
 
-    mock_sec = patcher1.start()
-    mock_auth = patcher2.start()
+    patcher1.start()
+    patcher2.start()
 
     gw = AetherGateway(gateway_config, ai_config, audio_config, tool_router, hive)
 
