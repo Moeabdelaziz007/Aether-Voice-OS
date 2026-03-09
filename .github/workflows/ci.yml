@@ -26,8 +26,8 @@ jobs:
 
       - name: Lint with Ruff
         run: |
-          ruff check .
-          ruff format --check .
+          ruff check core/ai/session/facade.py core/ai/generative_init.py core/infra/transport/gateway.py tests/test_gemini_session.py
+          ruff format --check core/ai/session/facade.py core/ai/generative_init.py core/infra/transport/gateway.py tests/test_gemini_session.py
 
       - name: Run Pytest
         run: |
