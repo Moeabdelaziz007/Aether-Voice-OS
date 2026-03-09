@@ -157,7 +157,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set, get) => ({
             set((state) => ({
                 terminalLogs: [...state.terminalLogs, {
                     id: crypto.randomUUID(),
-                    level: 'SUCCESS',
+                    level: 'SUCCESS' as const,
                     message: `💎 Crystal Absorbed: ${crystal.label}`,
                     timestamp: Date.now()
                 }].slice(-50),

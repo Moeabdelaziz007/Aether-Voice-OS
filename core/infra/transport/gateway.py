@@ -18,6 +18,7 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Optional
 
+import msgpack
 from core.ai.agents.forge import AgentForge
 from core.ai.agents.registry import AgentRegistry
 
@@ -356,7 +357,7 @@ class AetherGateway:
             logger.error(f"❌ Gateway: Agent forging failed: {e}")
             await self.broadcast("AGENT_FORGE_FAILED", {"error": str(e)})
 
-    async def inject_dna_update(self, dna: AgentDNA, rationales: List[str]) -> None:
+    async def inject_dna_update(self, dna: Any, rationales: list[str]) -> None:
         """
         Push a mid-session behavioral update to the active Gemini Live session.
         This provides zero-latency neural mutation by injecting instructions mid-stream.
@@ -581,13 +582,33 @@ class AetherGateway:
     async def _handle_connection(self, ws: ServerConnection) -> None:
         """Handle a new WebSocket connection."""
         client_id: Optional[str] = None
+        use_msgpack = False
         try:
-            client_id = await self._handshake(ws)
-            logger.info("Client authenticated: %s", client_id)
+            client_id, use_msgpack = await self._handshake(ws)
+            logger.info("Client: %s (Msgpack: %s)", client_id, use_msgpack)
+            async with self._lock:
+                if client_id in self._clients:
+                    self._clients[client_id].use_msgpack = use_msgpack
 
             async for raw_msg in ws:
                 if isinstance(raw_msg, bytes):
-                    await self._route_binary(client_id, raw_msg)
+                    # Binary multiplexed protocol placeholder
+                    # If msgpack negotiated, try decoding first
+                    # If pure audio, fallback to routing
+                    # Assume msgpack if decodes to dict
+                    # Fallback to audio on unpack fail
+                    is_audio = True
+                    if use_msgpack:
+                        try:
+                            msg = msgpack.unpackb(raw_msg)
+                            if isinstance(msg, dict) and "type" in msg:
+                                await self._route_message(client_id, msg)
+                                is_audio = False
+                        except Exception:
+                            # Fallback to audio
+                            pass
+                    if is_audio:
+                        await self._route_binary(client_id, raw_msg)
                 else:
                     try:
                         msg = json.loads(raw_msg)
@@ -608,7 +629,7 @@ class AetherGateway:
                 async with self._lock:
                     self._clients.pop(client_id, None)
 
-    async def _handshake(self, ws: ServerConnection) -> str:
+    async def _handshake(self, ws: ServerConnection) -> tuple[str, bool]:
         """Challenge-response authentication delegated to AuthService."""
         challenge_bytes = os.urandom(32)
         challenge = ChallengeMessage(challenge=challenge_bytes.hex())
@@ -626,6 +647,8 @@ class AetherGateway:
         token = resp.get("token")
         id_token = resp.get("id_token")
         signature = resp.get("signature")
+        capabilities = resp.get("capabilities", [])
+        use_msgpack = "msgpack" in capabilities
 
         if id_token:
             decoded = self._auth.verify_firebase_token(id_token)
@@ -646,8 +669,9 @@ class AetherGateway:
             raise HandshakeError("No authentication provided")
 
         session = ClientSession(
-            client_id=client_id, ws=ws, capabilities=resp.get("capabilities", [])
+            client_id=client_id, ws=ws, capabilities=capabilities
         )
+        session.use_msgpack = use_msgpack
         async with self._lock:
             self._clients[client_id] = session
 
@@ -657,7 +681,7 @@ class AetherGateway:
             tick_interval_s=self._gateway_config.tick_interval_s,
         )
         await ws.send(ack.model_dump_json())
-        return client_id
+        return client_id, use_msgpack
 
     # Removed: Internal Auth methods replaced by AuthService delegate.
 
@@ -738,13 +762,14 @@ class AetherGateway:
 
                     # Send tick
                     try:
-                        tick_msg = json.dumps(
-                            {
-                                "type": MessageType.TICK.value,
-                                "timestamp": now,
-                            }
-                        )
-                        await session.ws.send(tick_msg)
+                        payload_dict = {
+                            "type": MessageType.TICK.value,
+                            "timestamp": now,
+                        }
+                        if getattr(session, 'use_msgpack', False):
+                            await session.ws.send(msgpack.packb(payload_dict))
+                        else:
+                            await session.ws.send(json.dumps(payload_dict))
                     except websockets.exceptions.ConnectionClosed:
                         dead_clients.append(cid)
 
@@ -755,7 +780,9 @@ class AetherGateway:
 
     async def broadcast(self, msg_type: str, payload: dict) -> None:
         """Broadcast a message to all connected clients."""
-        data = json.dumps({"type": msg_type, "payload": payload})
+        msg_dict = {"type": msg_type, "payload": payload}
+        json_data = json.dumps(msg_dict)
+        msgpack_data = msgpack.packb(msg_dict)
 
         async with self._lock:
             active_sessions = list(self._clients.values())
@@ -765,7 +792,10 @@ class AetherGateway:
 
         async def _send(session):
             try:
-                await session.ws.send(data)
+                if getattr(session, 'use_msgpack', False):
+                    await session.ws.send(msgpack_data)
+                else:
+                    await session.ws.send(json_data)
                 return None
             except websockets.exceptions.ConnectionClosed:
                 return session.client_id

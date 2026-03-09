@@ -8,7 +8,7 @@ import { get, set, del } from 'idb-keyval';
  * 2. Capacity: localStorage is limited to ~5MB. IndexedDB can store gigabytes.
  * 3. Performance: Async by nature, prevents blocking the main thread during heavy state persistence.
  */
-export const idbStorage: StateStorage = {
+export const idbStorage: any = {
     getItem: async (name: string): Promise<string | null> => {
         return (await get(name)) || null;
     },

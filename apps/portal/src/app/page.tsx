@@ -103,7 +103,7 @@ export default function AetherPortal() {
     useEffect(() => {
         if (!agentDNA.isForged) {
             setActivePanel('hub');
-            useAetherStore.getState().setActiveHubView?.('forge');
+            // useAetherStore.getState().setActiveHubView?.(.forge.);
         } else {
             // Agent is primed — transition to the Permanent Workspace
             if (activePanel === 'hub') {

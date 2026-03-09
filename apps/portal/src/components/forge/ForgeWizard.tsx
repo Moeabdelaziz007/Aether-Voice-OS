@@ -84,7 +84,7 @@ export default function ForgeWizard() {
     };
 
     const goToDashboard = () => {
-        useAetherStore.getState().setActiveHubView?.('discovery');
+        // useAetherStore.getState().setActiveHubView?.(.discovery.);
     };
 
     return (

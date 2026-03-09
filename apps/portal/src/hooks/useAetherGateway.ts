@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import nacl from "tweetnacl";
+import { encode, decode } from "@msgpack/msgpack";
 import { useAetherStore } from "../store/useAetherStore";
 
 export type GatewayStatus = "disconnected" | "connecting" | "handshaking" | "connected" | "reconnecting" | "error";
@@ -33,11 +34,26 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
             ws.onopen = () => { rm.current.reset(); setStatus("handshaking"); };
             ws.onmessage = async (e) => {
                 if (sig.aborted) return;
-                if (e.data instanceof ArrayBuffer) return onAudioResponse.current?.(e.data);
-                const m = JSON.parse(e.data);
+
+                let m;
+                if (e.data instanceof ArrayBuffer) {
+                    try {
+                        m = decode(new Uint8Array(e.data));
+                        // If it successfully decodes and has a type, it's a msgpack event, not raw audio
+                        if (!m || typeof m !== 'object' || !("type" in m)) {
+                            return onAudioResponse.current?.(e.data);
+                        }
+                    } catch (err) {
+                        // Decoding failed, so it must be raw audio
+                        return onAudioResponse.current?.(e.data);
+                    }
+                } else {
+                    m = JSON.parse(e.data);
+                }
+
                 if (m.type === "connect.challenge") {
                     const auth = hk.generateResponse(m.challenge);
-                    ws.send(JSON.stringify({ type: "connect.response", client_id: auth.client_id, signature: auth.signature, id_token: token, capabilities: ["audio_streaming"] }));
+                    ws.send(JSON.stringify({ type: "connect.response", client_id: auth.client_id, signature: auth.signature, id_token: token, capabilities: ["audio_streaming", "msgpack"] }));
                 } else if (m.type === "connect.ack") { setStatus("connected"); store.setSessionStartTime(Date.now()); }
                 else processEvent(m as GatewayEvent, store, setLatencyMs);
             };
@@ -50,10 +66,10 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
     const sendAudio = useCallback((pcm: Uint8Array | ArrayBuffer) => batcher.current?.add(pcm instanceof ArrayBuffer ? new Uint8Array(pcm) : pcm), []);
     const sendIntent = useCallback(async (raw_input: string, level = 1) => {
         const ws = wsRef.current; if (ws?.readyState !== 1) return;
-        ws.send(JSON.stringify({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature: new HandshakeManager().signIntent(raw_input) }));
+        ws.send(encode({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature: new HandshakeManager().signIntent(raw_input) }));
     }, []);
-    const sendUIStateSync = useCallback((w: any[]) => wsRef.current?.readyState === 1 && wsRef.current.send(JSON.stringify({ type: "UI_STATE_SYNC", payload: { active_widgets: w } })), []);
-    const sendVisionFrame = useCallback((f: string) => wsRef.current?.readyState === 1 && wsRef.current.send(JSON.stringify({ type: "VISION_FRAME", payload: { frame: f } })), []);
+    const sendUIStateSync = useCallback((w: any[]) => wsRef.current?.readyState === 1 && wsRef.current.send(encode({ type: "UI_STATE_SYNC", payload: { active_widgets: w } })), []);
+    const sendVisionFrame = useCallback((f: string) => wsRef.current?.readyState === 1 && wsRef.current.send(encode({ type: "VISION_FRAME", payload: { frame: f } })), []);
 
     useEffect(() => () => disconnect(), [disconnect]);
     return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, onAudioResponse, isConnected: status === "connected" };
