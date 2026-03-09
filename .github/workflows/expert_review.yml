@@ -35,7 +35,8 @@ jobs:
                   script: |
                       const fs = require('fs');
                       const report = fs.readFileSync('audit_report.txt', 'utf8');
-                      const status = ${{ steps.audit.outputs.exit_code }} == 0 ? "✅ **Expert Level Check Passed**" : "❌ **Action Required: Expert Audit Failed**";
+                      const exitCode = '${{ steps.audit.outputs.exit_code }}';
+                      const status = exitCode === '0' ? "✅ **Expert Level Check Passed**" : "❌ **Action Required: Expert Audit Failed**";
 
                       const body = `${status}\n\n### 🛡️ Neural Guardian Audit Report\n\n\`\`\`\n${report}\n\`\`\`\n\n*This is an automated review for the Aether Voice OS Expert-Level standards.*`;
 
