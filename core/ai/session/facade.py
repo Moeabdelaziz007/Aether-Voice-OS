@@ -69,13 +69,16 @@ class DiagnoseStructure(BaseModel):
 
 
 
+from core.ai.tools.visual_diagnose import VisualDiagnoseInput
+
 class ToolRegistry:
     """Typed registry for declarative tools with response_schema enforcement."""
     def __init__(self):
         self.tools = {
             "open_claw": OpenClaw,
             "soul_swap": SoulSwap,
-            "diagnose_structure": DiagnoseStructure
+            "diagnose_structure": DiagnoseStructure,
+            "visual_diagnose": VisualDiagnoseInput
         }
 
     def get_declarations(self) -> list[types.FunctionDeclaration]:
@@ -88,7 +91,8 @@ class ToolRegistry:
                 types.FunctionDeclaration(
                     name=name,
                     description=model.__doc__ or "",
-                    parameters=schema
+                    parameters=schema,
+                    response_schema={"type": "object", "properties": {"success": {"type": "boolean"}, "message": {"type": "string"}}, "required": ["success"]}
                 )
             )
         return declarations

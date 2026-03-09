@@ -3,6 +3,7 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import AuthGuard from "@/components/auth/AuthGuard";
 import AetherBrain from "@/components/AetherBrain";
 import { TelemetryProvider } from "@/hooks/useTelemetry";
+import SREHeartbeat from "@/components/shared/SREHeartbeat";
 import "./globals.css";
 
 const inter = Inter({
@@ -51,6 +52,7 @@ export default function RootLayout({
                 <TelemetryProvider>
                     <AuthGuard>
                         <AetherBrain />
+                        <SREHeartbeat />
                         {children}
                     </AuthGuard>
                 </TelemetryProvider>

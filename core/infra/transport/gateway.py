@@ -21,7 +21,9 @@ from typing import TYPE_CHECKING, Any, List, Optional
 import msgpack
 
 from core.ai.agents.forge import AgentForge
-from core.ai.agents.registry import AgentRegistry
+from core.ai.agents.registry import AgentRegistry, get_default_agents
+from core.ai.agents.spatial_cortex import SpatialCortexAgent
+from core.ai.tools.visual_diagnose import VisualDiagnoseTool
 
 if TYPE_CHECKING:
     from core.ai.hive import HiveCoordinator
@@ -99,6 +101,9 @@ class AetherGateway:
 
         # 1. Specialized Managers
         self._registry = AgentRegistry()
+        for agent in get_default_agents():
+            self._registry.register_agent(agent)
+            
         self._forge = AgentForge(api_key=self._ai_config.api_key)
         self._hive = hive
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
@@ -137,6 +142,16 @@ class AetherGateway:
         self._session_manager = SessionManager(
             engine_session=None  # Will be set during loop
         )
+        
+        # 3. Register specialized diagnostic tools
+        self._visual_diagnose = VisualDiagnoseTool(gateway=self)
+        self._tool_router.register(
+            name="visual_diagnose",
+            description="Aether V3 Visual-Spatial Diagnostic Tool. Correlates Pulse Vision with system logs.",
+            parameters=VisualDiagnoseInput.model_json_schema(),
+            handler=self._visual_diagnose.run,
+            latency_tier="p95_sub_2s"
+        )
 
         # Client management
         self._clients: dict[str, ClientSession] = {}
@@ -145,6 +160,9 @@ class AetherGateway:
         # Speculative Pre-warming Lock
         self._pre_warm_lock = asyncio.Lock()
         self._pre_warmed_session: Optional[GeminiLiveSession] = None
+        
+        # 2. Spatial Intelligence
+        self._spatial_cortex = SpatialCortexAgent()
         
         # Rate Limiting & Backpressure
         self._last_text_time = 0.0
@@ -397,9 +415,13 @@ class AetherGateway:
         if session:
             await session.inject_dna_update(dna, rationales)
 
+    async def _health_check_handler(self, path, request_headers):
+        if path == "/health":
+            return (200, [("Content-Type", "text/plain")], b"OK\n")
+        return None
+
     async def run(self) -> None:
         """Start the WebSocket server and the main session management loop."""
-
         # Connect to Global Bus
         await self._bus.connect()
 
@@ -417,6 +439,7 @@ class AetherGateway:
             self._handle_connection,
             self._gateway_config.host,
             self._gateway_config.port,
+            process_request=self._health_check_handler
         )
         logger.info(
             "Gateway listening on ws://%s:%d",
@@ -773,8 +796,23 @@ class AetherGateway:
                 session = self.get_session()
                 if session and session.is_ready():
                     asyncio.create_task(session._session.send_realtime_input(
-                        parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/webp")]
+                        parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/jpeg")]
                     ))
+                
+                # 2. Process for Spatial Gaze (Ambient Awareness)
+                # Map 2D vision frame to 3D spatial intent
+                spatial_pulse = await self._spatial_cortex.map_vision_to_spatial({
+                    "timestamp": time.time(),
+                    "client_id": client_id
+                })
+                
+                # 3. Synchronize Avatar Gaze (Broadcast to UI)
+                await self.broadcast("GAZE_SYNC", {
+                    "vector": spatial_pulse["focus_vector"],
+                    "intent": spatial_pulse["avatar_gaze"],
+                    "confidence": spatial_pulse["intentionality_score"]
+                })
+                
             except Exception as e:
                 logger.error("Failed to process VISION_FRAME: %s", e)
 

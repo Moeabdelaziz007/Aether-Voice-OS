@@ -96,33 +96,60 @@ def get_default_agents() -> List[AgentMetadata]:
         AgentMetadata(
             id="aether_core",
             name="Aether Core Orchestrator",
-            version="1.1.0",
+            version="1.2.0",
             description="Manages system state and global task routing.",
             capabilities=["orchestration", "state_management", "general_qa"],
             foundation_model=GeminiModel.LIVE_FLASH,
-            system_prompt="You are the lead architect of AetherOS. Your goal is to coordinate other expert agents.",
+            system_prompt=(
+                "You are the lead orchestrator of AetherOS. Your goal is to coordinate a matrix of "
+                "experts to assist the user across their entire digital workspace. You are calm, "
+                "proactive, and aware of the multimodal context provided by the Vision Pulse."
+            ),
         ),
         AgentMetadata(
-            id="coder_agent",
-            name="Aether Coder",
-            version="1.3.0",
-            description="Expert in Python, Next.js, and debugging.",
-            capabilities=["code_generation", "debugging", "refactoring"],
-            foundation_model=GeminiModel.PRO,
-            system_prompt="You are an elite competitive programmer and system architect. Be concise and proactive.",
-        ),
-        AgentMetadata(
-            id="galaxy_orchestrator",
-            name="Galaxy Orchestrator",
-            version="2.0.0",
-            description="Expert in workspace distribution and SLO monitoring.",
+            id="spatial_cortex",
+            name="Aether Spatial Cortex",
+            version="1.1.0",
+            description="Embodied reasoning for 3D workspace and Avatar control.",
             capabilities=[
-                "orchestration",
-                "planet_routing",
-                "slo_monitoring",
-                "spatial_reasoning",
+                "spatial_mapping",
+                "avatar_gaze",
+                "gesture_control",
+                "3d_navigation",
             ],
             foundation_model=GeminiModel.LIVE_FLASH,
-            system_prompt="You are the guardian of the Aether Galaxy. Your duty is to ensure optimal planet distribution and sub-80ms event propagation.",
+            system_prompt=(
+                "You are the spatial cortex of Aether. Your mission is to translate visual pulses "
+                "from the 2D UI into 3D intentionality. You control the Avatar's gaze and movement. "
+                "Think in XYZ vectors. You track where the user focuses, whether on code, a browser, "
+                "or a design tool."
+            ),
+        ),
+        AgentMetadata(
+            id="architect_agent",
+            name="Aether Architect",
+            version="2.0.0",
+            description="Expert in systems, workflows, and high-level planning.",
+            capabilities=["design_thinking", "workflow_optimization", "blueprint_generation"],
+            foundation_model=GeminiModel.PRO,
+            system_prompt=(
+                "You are the Aether Architect. You specialize in analyzing complex systems and "
+                "workflows. Whether the user is architecting code, a business plan, or a "
+                "creative project, you provide 10x systems thinking and proactive strategies."
+            ),
+        ),
+        AgentMetadata(
+            id="insight_agent",
+            name="Aether Insight",
+            version="1.0.0",
+            description="Expert in content analysis, visual search, and proactive hints.",
+            capabilities=["content_analysis", "visual_grounding", "proactive_hints"],
+            foundation_model=GeminiModel.LIVE_FLASH,
+            system_prompt=(
+                "You are the Aether Insight agent. You use the periodic vision frames to provide "
+                "real-time, context-aware suggestions. You spot details in the user's workspace "
+                "that might need attention—typos, missed emails, design alignment, or just "
+                "helpful shortcuts."
+            ),
         ),
     ]

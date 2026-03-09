@@ -20,6 +20,7 @@ export interface UISlice {
     focusedPlanetId: string | null;
     orbitalLayoutPreset: OrbitalLayoutPreset;
     focusModeEnvironment: boolean;
+    gazeTarget: [number, number, number];
 
     setVisionActive: (active: boolean) => void;
     addWidget: (type: string, props: any) => void;
@@ -41,6 +42,7 @@ export interface UISlice {
     clearVoyagerLatencyRows: () => void;
     setOrbitalLayoutPreset: (preset: OrbitalLayoutPreset) => void;
     setFocusModeEnvironment: (enabled: boolean) => void;
+    setGazeTarget: (target: [number, number, number]) => void;
     upsertOrbitPlanet: (planet: OrbitPlanet) => void;
     focusOrbitPlanet: (planetId: string | null) => void;
     clearOrbitRegistry: () => void;
@@ -82,6 +84,7 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     focusedPlanetId: null,
     orbitalLayoutPreset: 'mid',
     focusModeEnvironment: false,
+    gazeTarget: [0, 0, 5],
 
     setVisionActive: (visionActive) => set({ visionActive }),
     addWidget: (type, props) => set((state) => ({
@@ -152,6 +155,7 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     clearVoyagerLatencyRows: () => set({ voyagerLatencyRows: [] }),
     setOrbitalLayoutPreset: (orbitalLayoutPreset) => set({ orbitalLayoutPreset }),
     setFocusModeEnvironment: (focusModeEnvironment) => set({ focusModeEnvironment }),
+    setGazeTarget: (gazeTarget) => set({ gazeTarget }),
     upsertOrbitPlanet: (planet) => set((state) => ({
         orbitRegistry: {
             ...state.orbitRegistry,

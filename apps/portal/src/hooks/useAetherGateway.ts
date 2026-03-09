@@ -5,6 +5,7 @@ import { encode, decode } from "@msgpack/msgpack";
 import { useAetherStore } from "../store/useAetherStore";
 
 export type GatewayStatus = "disconnected" | "connecting" | "handshaking" | "connected" | "reconnecting" | "error";
+export type GazeVector = [number, number, number];
 export interface GatewayAPI {
     status: GatewayStatus; latencyMs: number; connect: (t?: string) => Promise<void>; disconnect: () => void;
     sendAudio: (pcm: Uint8Array | ArrayBuffer) => void; sendIntent: (i: string, l?: 1 | 2 | 3) => Promise<void>;
@@ -14,7 +15,8 @@ export interface GatewayAPI {
 type GatewayEvent = { type: "tick"; timestamp: number } | { type: "engine_state"; payload: { state: string } }
     | { type: "transcript"; payload: { role: string; text: string } } | { type: "affective_score"; payload: { frustration: number; valence: number; arousal: number; engagement: number } }
     | { type: "vision_pulse"; payload: { timestamp: string } } | { type: "tool_result"; payload: { tool_name: string; status: string } }
-    | { type: "task_pulse"; payload: { taskId: string; phase: string } } | { type: "repair_state"; payload: { status: any; message: string; log: string } };
+    | { type: "task_pulse"; payload: { taskId: string; phase: string } } | { type: "repair_state"; payload: { status: any; message: string; log: string } }
+    | { type: "GAZE_SYNC"; payload: { vector: GazeVector; intent: string } };
 
 export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_URL || "ws://localhost:18789"): GatewayAPI {
     const [status, setStatus] = useState<GatewayStatus>("disconnected");
@@ -114,6 +116,7 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void) {
         case "tool_result": s.addToolCall({ toolName: p.tool_name, status: p.status }); break;
         case "task_pulse": s.setTaskPulse({ ...p, timestamp: Date.now() }); break;
         case "repair_state": s.setRepairState({ ...p, timestamp: Date.now() }); break;
+        case "GAZE_SYNC": s.setGazeTarget(p.vector); break;
     }
 }
 

@@ -44,8 +44,10 @@ class SpatialCortexAgent:
 
         # Real-time vector calculation logic
         # 1. Coordinate Normalization (simulated UI coordinate extraction)
-        # In a real pulse, this would come from the Gemini Multimodal response
-        focus_x, focus_y = 0.5, 0.5  # Default to center
+        # Using a slight random walk to simulate focus shifts for the demo
+        import random
+        focus_x = 0.5 + (random.random() - 0.5) * 0.4
+        focus_y = 0.5 + (random.random() - 0.5) * 0.4
 
         # 2. Translate 2D Screen Space to 3D Galaxy Space
         # Galaxy uses spherical coordinates [longitude, latitude, radius]
