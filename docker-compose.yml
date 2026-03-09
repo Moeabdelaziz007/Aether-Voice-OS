@@ -8,6 +8,8 @@ services:
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - PORT=18789
+      - AETHER_JWT_SECRET=${AETHER_JWT_SECRET}
+      - FIRESTORE_PROJECT=${FIRESTORE_PROJECT}
     ports:
       - "18789:18789"
       - "18790:18790"

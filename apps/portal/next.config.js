@@ -6,6 +6,10 @@ const withBundleAnalyzer = require('@next/bundle-analyzer')({
 const nextConfig = {
   transpilePackages: ['three'],
   productionBrowserSourceMaps: false,
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
 }
 
 module.exports = withBundleAnalyzer(nextConfig)
