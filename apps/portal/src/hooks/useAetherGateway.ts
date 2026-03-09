@@ -69,11 +69,33 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
         ws.send(encode({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature: new HandshakeManager().signIntent(raw_input) }));
     }, []);
     const sendUIStateSync = useCallback((w: any[]) => wsRef.current?.readyState === 1 && wsRef.current.send(encode({ type: "UI_STATE_SYNC", payload: { active_widgets: w } })), []);
+
+    // Add vision uploader with backoff mechanism to prevent flooding connection
+    const visionBackoff = useRef(0);
+    const lastVisionSent = useRef(0);
     const sendVisionFrame = useCallback((f: string) => {
-        if (wsRef.current?.readyState === 1) {
-            wsRef.current.send(encode({ type: "VISION_FRAME", payload: { frame: f } }));
+        if (wsRef.current?.readyState !== 1) return;
+
+        const now = Date.now();
+        if (now - lastVisionSent.current < visionBackoff.current) {
+            // Drop frame if we are within the backoff period
+            return;
+        }
+
+        try {
+            // Buffer size check could go here if using BackpressureController for vision too
+            wsRef.current.send(encode({ type: "VISION_FRAME", payload: { frame: f, id: crypto.randomUUID() } }));
+            lastVisionSent.current = now;
+
+            // Success, reduce backoff down to 1s minimum
+            visionBackoff.current = Math.max(1000, visionBackoff.current * 0.8);
+
             // Pre-emptively update store for immediate UI feedback
             store.setVisionActive(true);
+        } catch (e) {
+            // On failure, increase backoff up to 10s maximum
+            visionBackoff.current = Math.min(10000, Math.max(2000, visionBackoff.current * 1.5));
+            console.warn("Vision upload failed, increasing backoff to", visionBackoff.current);
         }
     }, [store]);
 

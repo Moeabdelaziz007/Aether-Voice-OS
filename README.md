@@ -4,6 +4,15 @@
   <img src="./docs/images/landing.png" width="800" alt="Gemigram Landing Page"/>
 </p>
 
+## Quick Start & Spin-Up
+
+To spin up the hardened Gemini Live session environment:
+1. **Configure Environment:** Copy `.env.example` to `.env` and fill in `GEMINI_API_KEY`, `FIRESTORE_PROJECT`, and Firebase credentials.
+2. **Install Backend Dependencies:** `pip install -r requirements.txt`
+3. **Run Backend:** `python -m core.main`
+4. **Run Frontend:** `cd apps/portal && npm ci && npm run dev`
+5. **Deploy:** Run `bash infra/deploy_cloudrun.sh` to build and deploy to Firebase.
+
 <p align="center">
   <strong>The Voice-First AI Agent Operating System</strong><br/>
   <em>منصة "جيميجرام": نظام تشغيل وكلاء الذكاء الاصطناعي القائم على الصوت</em>
