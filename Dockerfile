@@ -17,17 +17,14 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
-COPY cortex/ ./cortex/
+COPY core/audio/cortex/ ./core/audio/cortex/
 
-# Ensure we use release profile for max performance
-RUN cd cortex && \
+# Build the consolidated cortex
+RUN cd core/audio/cortex && \
     cargo build --release
 
-# We'll copy the cdylib
-RUN cp cortex/target/release/libaether_cortex.so /build/aether_cortex.so 2>/dev/null || \
-    cp cortex/target/release/libaether_cortex.dylib /build/aether_cortex.so 2>/dev/null || \
-    cp cortex/target/release/libcortex.so /build/aether_cortex.so 2>/dev/null || \
-    cp cortex/target/release/libcortex.dylib /build/aether_cortex.so 2>/dev/null || true
+# Copy the shared library
+RUN cp core/audio/cortex/target/release/libaether_cortex.so /build/aether_cortex.so
 
 
 # ── Stage 2: Python runtime ─────────────────────────────
