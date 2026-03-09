@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Volume2, Dna, CheckCircle2, Loader2 } from 'lucide-react';
 import { useForgeStore, VOICE_RESONATORS } from '@/store/useForgeStore';
@@ -8,6 +8,18 @@ import { useForgeStore, VOICE_RESONATORS } from '@/store/useForgeStore';
 export default function VocalDNA() {
     const { dna, updateVocalDNA, startVoiceCloning } = useForgeStore();
     const { vocalDNA } = dna;
+    
+    const handleVoiceSelect = useCallback((voiceId: string, provider: string, isCloneOption: boolean) => {
+        if (isCloneOption) {
+            startVoiceCloning();
+        } else {
+            updateVocalDNA({ voiceId, provider: provider as 'elevenlabs' | 'google' | 'custom' });
+        }
+    }, [updateVocalDNA, startVoiceCloning]);
+    
+    const selectedVoice = useMemo(() => {
+        return VOICE_RESONATORS.find((v) => v.id === vocalDNA.voiceId);
+    }, [vocalDNA.voiceId]);
 
     return (
         <div className="space-y-5">
@@ -33,13 +45,7 @@ export default function VocalDNA() {
                             key={voice.id}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => {
-                                if (isCloneOption) {
-                                    startVoiceCloning();
-                                } else {
-                                    updateVocalDNA({ voiceId: voice.id, provider: voice.provider });
-                                }
-                            }}
+                            onClick={() => handleVoiceSelect(voice.id, voice.provider, isCloneOption)}
                             className={`relative p-4 rounded-2xl border text-left transition-all overflow-hidden ${
                                 isSelected
                                     ? 'bg-purple-500/10 border-purple-500/30 shadow-[0_0_20px_rgba(168,85,247,0.15)]'
@@ -117,7 +123,7 @@ export default function VocalDNA() {
             </AnimatePresence>
 
             {/* Selected Voice Preview */}
-            {vocalDNA.voiceId && !vocalDNA.isCloning && (
+            {selectedVoice && !vocalDNA.isCloning && (
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -126,7 +132,7 @@ export default function VocalDNA() {
                     <Volume2 className="w-4 h-4 text-purple-400" />
                     <div className="flex-1">
                         <span className="text-[10px] font-bold text-purple-300 uppercase tracking-wider">
-                            Active Resonator: {vocalDNA.voiceId}
+                            Active Resonator: {selectedVoice.name}
                         </span>
                     </div>
                     <button className="px-3 py-1 bg-purple-500/10 rounded-lg text-[9px] font-bold text-purple-400 uppercase hover:bg-purple-500/20 transition-colors">

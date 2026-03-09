@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Brain, Trash2, Download, Search } from 'lucide-react';
 
@@ -29,14 +29,16 @@ export default function MemoryPanel() {
     const [memories, setMemories] = useState<MemoryEntry[]>(MOCK_MEMORIES);
     const [searchQuery, setSearchQuery] = useState('');
 
-    const filteredMemories = memories.filter(m =>
-        m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        m.category.toLowerCase().includes(searchQuery.toLowerCase())
+    const filteredMemories = useMemo(() => 
+        memories.filter(m =>
+            m.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            m.category.toLowerCase().includes(searchQuery.toLowerCase())
+        ), [memories, searchQuery]
     );
 
-    const deleteMemory = (id: string) => {
-        setMemories(memories.filter(m => m.id !== id));
-    };
+    const deleteMemory = useCallback((id: string) => {
+        setMemories(prev => prev.filter(m => m.id !== id));
+    }, []);
 
     return (
         <div className="flex flex-col h-full">

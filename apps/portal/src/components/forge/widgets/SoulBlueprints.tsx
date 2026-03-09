@@ -1,12 +1,20 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, CheckCircle2, Star } from 'lucide-react';
 import { useForgeStore, AVAILABLE_SOULS } from '@/store/useForgeStore';
 
 export default function SoulBlueprints() {
     const { dna, selectSoul } = useForgeStore();
+    
+    const handleSelectSoul = useCallback((soulId: string | null) => {
+        selectSoul(soulId);
+    }, [selectSoul]);
+    
+    const selectedSoulDetail = useMemo(() => {
+        return AVAILABLE_SOULS.find((s) => s.id === dna.selectedSoul);
+    }, [dna.selectedSoul]);
 
     return (
         <div className="space-y-5">
@@ -35,7 +43,7 @@ export default function SoulBlueprints() {
                             key={soul.id}
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            onClick={() => selectSoul(isSelected ? null : soul.id)}
+                            onClick={() => handleSelectSoul(isSelected ? null : soul.id)}
                             className={`relative p-4 rounded-2xl border text-left transition-all ${
                                 isSelected
                                     ? 'bg-pink-500/[0.08] border-pink-500/30 shadow-[0_0_15px_rgba(236,72,153,0.1)]'
@@ -68,32 +76,28 @@ export default function SoulBlueprints() {
             </div>
 
             {/* Selected Soul Detail */}
-            {dna.selectedSoul && (() => {
-                const soul = AVAILABLE_SOULS.find((s) => s.id === dna.selectedSoul);
-                if (!soul) return null;
-                return (
-                    <motion.div
-                        initial={{ opacity: 0, y: 5 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="p-4 bg-pink-500/[0.04] border border-pink-500/15 rounded-2xl space-y-3"
-                    >
-                        <div className="flex items-center gap-2">
-                            <span className="text-lg">{soul.icon}</span>
-                            <span className="text-[10px] font-black text-pink-300 uppercase tracking-wider">
-                                {soul.name} — Active Soul
-                            </span>
-                        </div>
-                        <div className="bg-black/30 rounded-xl p-3 border border-white/5">
-                            <p className="text-[10px] text-white/40 italic leading-relaxed">
-                                &quot;{soul.basePrompt}&quot;
-                            </p>
-                        </div>
-                        <p className="text-[9px] text-white/20">
-                            💡 Speak to the Forge to season this soul with your unique personality and preferences.
+            {selectedSoulDetail && (
+                <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 bg-pink-500/[0.04] border border-pink-500/15 rounded-2xl space-y-3"
+                >
+                    <div className="flex items-center gap-2">
+                        <span className="text-lg">{selectedSoulDetail.icon}</span>
+                        <span className="text-[10px] font-black text-pink-300 uppercase tracking-wider">
+                            {selectedSoulDetail.name} — Active Soul
+                        </span>
+                    </div>
+                    <div className="bg-black/30 rounded-xl p-3 border border-white/5">
+                        <p className="text-[10px] text-white/40 italic leading-relaxed">
+                            &quot;{selectedSoulDetail.basePrompt}&quot;
                         </p>
-                    </motion.div>
-                );
-            })()}
+                    </div>
+                    <p className="text-[9px] text-white/20">
+                        💡 Speak to the Forge to season this soul with your unique personality and preferences.
+                    </p>
+                </motion.div>
+            )}
         </div>
     );
 }
