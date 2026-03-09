@@ -241,6 +241,7 @@ python -m pytest tests/unit/test_galaxy_orchestration.py -v
 ```
 
 **Test Coverage:**
+
 - ✅ Gravity score calculation (7 tests)
 - ✅ Fallback strategy (6 tests)
 - ✅ Galaxy policy enforcement (7 tests)
@@ -255,6 +256,7 @@ python -m pytest tests/integration/test_galaxy_orchestration_flow.py -v
 ```
 
 **Test Scenarios:**
+
 - ✅ Handover with gravity scoring
 - ✅ Capability extraction
 - ✅ Task keyword mapping
@@ -296,11 +298,13 @@ Score Range     Frequency    Quality
 **Symptom:** All candidates score < 0.4
 
 **Causes:**
+
 - Missing required capabilities
 - High latency (>400ms)
 - Excessive load (>0.8)
 
 **Solution:**
+
 ```python
 # Check agent capabilities
 agent_caps = orchestrator._extract_agent_capabilities(target_agent)
@@ -320,11 +324,13 @@ if not all(cap in agent_caps for cap in required):
 **Symptom:** `is_circuit_open()` returns True often
 
 **Causes:**
+
 - Repeated hard failures
 - Network instability
 - Agent offline
 
 **Solution:**
+
 ```python
 # Check failure count
 failures = orchestrator.fallback_strategy._circuit_breakers.get(planet_id, 0)
@@ -345,11 +351,13 @@ print("Circuit reset successfully")
 **Symptom:** Handover fails with "Policy violations" error
 
 **Causes:**
+
 - Latency exceeds threshold
 - Load too high
 - Domain not allowed
 
 **Solution:**
+
 ```python
 # Check specific violations
 violations = orchestrator.policy_enforcer.validate_routing_decision(
@@ -546,10 +554,9 @@ tests/integration/
 
 ## Related Documentation | وثائق ذات صلة
 
-- [E2E Testing Guide](../../apps/portal/E2E_TESTING_GUIDE.md) - Browser testing
-- [Handover Protocol](../handover_protocol.py) - Deep handover details
-- [Living Workspace Plan](../../plans/aether-v3-living-workspace-plan.md) - Phase H plan
-- [Main README](../../README.md) - Project overview
+- [E2E Testing Guide](TESTING.md) - Browser testing
+- [Handover Protocol](../core/ai/handover_protocol.py) - Deep handover details
+- [Main README](../README.md) - Project overview
 
 ---
 

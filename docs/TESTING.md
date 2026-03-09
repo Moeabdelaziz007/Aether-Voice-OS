@@ -452,6 +452,7 @@ start htmlcov/index.html  # Windows
 #### Issue 1: Tests Fail with "Module Not Found"
 
 **Solution:**
+
 ```bash
 # Reinstall dependencies
 cd apps/portal
@@ -467,6 +468,7 @@ pip install -r requirements.txt
 #### Issue 2: Playwright Browsers Not Found
 
 **Solution:**
+
 ```bash
 # Install browsers
 npx playwright install
@@ -478,6 +480,7 @@ npx playwright install --with-deps
 #### Issue 3: Tests Timeout
 
 **Solution:**
+
 ```bash
 # Increase timeout
 npm test -- --testTimeout=30000
@@ -494,6 +497,7 @@ export default defineConfig({
 #### Issue 4: Coverage Report Empty
 
 **Solution:**
+
 ```bash
 # Ensure collect-from is set
 python -m pytest --cov=core --cov-report=html --cov-config=.coveragerc
@@ -511,6 +515,7 @@ branch = True
 ### Writing Effective Tests
 
 1. **Test Behavior, Not Implementation**
+
    ```typescript
    // ❌ Bad - tests implementation
    expect(component.state.count).toBe(5);
@@ -520,6 +525,7 @@ branch = True
    ```
 
 2. **Use Descriptive Test Names**
+
    ```typescript
    // ❌ Vague
    it('should work', () => { ... });
@@ -529,6 +535,7 @@ branch = True
    ```
 
 3. **Arrange-Act-Assert Pattern**
+
    ```typescript
    it('should increment counter', () => {
      // Arrange
@@ -544,6 +551,7 @@ branch = True
    ```
 
 4. **Keep Tests Independent**
+
    ```typescript
    // ✅ Each test sets up its own state
    beforeEach(() => {
@@ -553,6 +561,7 @@ branch = True
    ```
 
 5. **Test Edge Cases**
+
    ```python
    def test_empty_candidates():
        """Test handling of empty candidate list."""
@@ -584,7 +593,6 @@ branch = True
 ## Related Documentation | وثائق ذات صلة
 
 - [Galaxy Orchestration](./GALAXY_ORCHESTRATION.md) - Galaxy system testing
-- [E2E Testing Guide](../apps/portal/E2E_TESTING_GUIDE.md) - Detailed Playwright guide
 - [Architecture Overview](./ARCHITECTURE.md) - System architecture
 - [Main README](../README.md) - Project overview
 
