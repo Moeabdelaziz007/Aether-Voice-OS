@@ -32,7 +32,7 @@ class TestResamplingFix:
         
         # Verify correct output length
         expected_len = int(1024 * 16 / 24)
-        assert len(pcm_16k) == expected_len, f"Expected {expected_len}, got {len(pcm_16k)}"
+        assert len(pcm_16k) == expected_len
         assert len(pcm_16k) == 682, f"Expected 682 samples, got {len(pcm_16k)}"
         
         # Verify data type preserved
@@ -55,7 +55,7 @@ class TestResamplingFix:
             
             # Allow small rounding error
             assert abs(actual_ratio - expected_ratio) < 0.01, \
-                f"Ratio mismatch for length {orig_len}: {actual_ratio} vs {expected_ratio}"
+                f"Ratio mismatch for length {orig_len}"
     
     def test_old_vs_new_resampling(self):
         """Demonstrate the difference between old (wrong) and new (correct) approach."""
@@ -134,14 +134,14 @@ class TestExceptionHandling:
                 'defaultSampleRate': 16000
             }
             
-            capture = AudioCapture(config=config)
+            AudioCapture(config=config)
             
             # Mock spectral_denoise to raise exception
             with patch('core.audio.capture.spectral_denoise') as mock_denoise:
                 mock_denoise.side_effect = Exception("Rust backend error")
                 
                 # Simulate audio chunk
-                chunk = np.random.randint(-1000, 1000, 1024, dtype=np.int16)
+                np.random.randint(-1000, 1000, 1024, dtype=np.int16)
                 
                 # Should not crash - should handle exception gracefully
                 try:

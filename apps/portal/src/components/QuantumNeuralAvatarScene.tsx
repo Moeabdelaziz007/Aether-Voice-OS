@@ -40,14 +40,6 @@ const QUANTUM_COLORS = {
     medium: new THREE.Color("#1a1a1a"),
     light: new THREE.Color("#2d2d2d"),
   },
-  forge: {
-    purple: new THREE.Color("#bc13fe"),
-    deepPurple: new THREE.Color("#4a0e8f"),
-    neonPurple: new THREE.Color("#f0abff"),
-    gold: new THREE.Color("#ffd700"),
-    amber: new THREE.Color("#f59e0b"),
-    cyan: new THREE.Color("#00f3ff"),
-  },
   accent: {
     cyan: new THREE.Color("#00f3ff"),
     purple: new THREE.Color("#bc13fe"),
@@ -58,7 +50,7 @@ const QUANTUM_COLORS = {
 };
 
 // ═══════════════════════════════════════════════════════════════════
-// Custom Shaders — Quantum Field Effects (Cinematic Upgrade)
+// Custom Shaders — Quantum Field Effects (Optimized)
 // ═══════════════════════════════════════════════════════════════════
 
 const quantumFieldVertexShader = `
@@ -67,8 +59,8 @@ const quantumFieldVertexShader = `
   varying vec2 vUv;
   varying vec3 vPosition;
   varying vec3 vNormal;
-  varying float vDisplacement;
   
+  // Simplified noise function for better performance
   float hash(vec3 p) {
     p = fract(p * 0.3183099 + 0.1);
     p *= 17.0;
@@ -91,14 +83,11 @@ const quantumFieldVertexShader = `
     vUv = uv;
     vNormal = normalize(normalMatrix * normal);
     
-    float n = noise(position * 3.5 + uTime * 0.45);
-    float audioDisplacement = uAudioLevel * 0.35;
-    float d = n * 0.15 + audioDisplacement;
-    vDisplacement = d;
+    float n = noise(position * 2.0 + uTime * 0.3);
+    float audioDisplacement = uAudioLevel * 0.12;
+    vec3 displaced = position + normal * (n * 0.08 + audioDisplacement);
     
-    vec3 displaced = position + normal * d;
     vPosition = displaced;
-    
     gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
   }
 `;
@@ -113,26 +102,25 @@ const quantumFieldFragmentShader = `
   varying vec2 vUv;
   varying vec3 vPosition;
   varying vec3 vNormal;
-  varying float vDisplacement;
   
   void main() {
     vec3 viewDir = normalize(cameraPosition - vPosition);
-    float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.5);
+    float fresnel = pow(1.0 - max(dot(viewDir, vNormal), 0.0), 3.0);
     
-    // Volumetric plasma effect
-    float flow = sin(vPosition.y * 12.0 - uTime * 2.5) * 0.5 + 0.5;
-    float ripples = sin(vPosition.x * 20.0 + uTime * 3.0) * sin(vPosition.z * 18.0 + uTime * 2.2);
+    float pattern = sin(vPosition.x * 15.0 + uTime * 1.5) *
+                   sin(vPosition.y * 15.0 + uTime * 1.2) *
+                   sin(vPosition.z * 15.0 + uTime * 1.4);
+    pattern = smoothstep(0.3, 0.7, pattern * 0.5 + 0.5);
     
-    vec3 baseColor = mix(uSecondaryColor, uColor, vDisplacement * 4.0 + flow * 0.3);
+    vec3 baseColor = mix(uColor, uSecondaryColor, pattern);
+    vec3 glowColor = baseColor * (1.0 + fresnel * 1.5 + uAudioLevel * uStateIntensity);
     
-    // Add refractive glints
-    float glint = pow(max(dot(reflect(-viewDir, vNormal), vec3(0,1,0)), 0.0), 32.0);
+    float pulse = sin(uTime * 4.0 + length(vPosition) * 8.0) * 0.5 + 0.5;
+    pulse *= uAudioLevel;
     
-    vec3 finalColor = baseColor * (0.8 + fresnel * 2.5 + uAudioLevel * 1.5);
-    finalColor += uSecondaryColor * ripples * 0.25 * uStateIntensity;
-    finalColor += vec3(1.0) * glint * (0.5 + uAudioLevel);
+    vec3 finalColor = glowColor + vec3(0.2, 1.0, 0.3) * pulse * fresnel;
     
-    gl_FragColor = vec4(finalColor, 0.9 + fresnel * 0.1);
+    gl_FragColor = vec4(finalColor, 0.85 + fresnel * 0.15);
   }
 `;
 
@@ -240,37 +228,16 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
 }) {
   const coreRef = useRef<THREE.Group>(null);
   const innerRef = useRef<THREE.Mesh>(null);
-  const dodecaShellRef = useRef<THREE.Mesh>(null);
-  const frameRef = useRef<THREE.Mesh>(null);
+  const quantumShellRef = useRef<THREE.Mesh>(null);
   const materialRef = useRef<THREE.ShaderMaterial>(null);
 
   const colors = useMemo(() => {
     const stateColors = {
-      IDLE: {
-        primary: QUANTUM_COLORS.forge.purple,
-        secondary: QUANTUM_COLORS.forge.deepPurple,
-        intensity: 0.4
-      },
-      LISTENING: {
-        primary: QUANTUM_COLORS.forge.cyan,
-        secondary: QUANTUM_COLORS.forge.purple,
-        intensity: 1.0
-      },
-      THINKING: {
-        primary: QUANTUM_COLORS.forge.gold,
-        secondary: QUANTUM_COLORS.forge.amber,
-        intensity: 1.4
-      },
-      SPEAKING: {
-        primary: QUANTUM_COLORS.forge.neonPurple,
-        secondary: QUANTUM_COLORS.forge.purple,
-        intensity: 1.8
-      },
-      INTERRUPTING: {
-        primary: QUANTUM_COLORS.accent.crimson,
-        secondary: QUANTUM_COLORS.forge.gold,
-        intensity: 2.5
-      },
+      IDLE: { primary: QUANTUM_COLORS.neonGreen.dim, secondary: QUANTUM_COLORS.carbonFiber.medium, intensity: 0.3 },
+      LISTENING: { primary: QUANTUM_COLORS.neonGreen.primary, secondary: QUANTUM_COLORS.neonGreen.electric, intensity: 0.8 },
+      THINKING: { primary: QUANTUM_COLORS.accent.gold, secondary: QUANTUM_COLORS.neonGreen.bright, intensity: 1.2 },
+      SPEAKING: { primary: QUANTUM_COLORS.neonGreen.glow, secondary: QUANTUM_COLORS.neonGreen.plasma, intensity: 1.5 },
+      INTERRUPTING: { primary: QUANTUM_COLORS.accent.crimson, secondary: QUANTUM_COLORS.accent.amber, intensity: 2.0 },
     };
     return (stateColors[state as keyof typeof stateColors] || stateColors.IDLE) as any;
   }, [state]);
@@ -296,64 +263,60 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
     const cinematicState = useAetherStore.getState().avatarCinematicState;
 
     if (coreRef.current) {
-      coreRef.current.position.y = Math.sin(t * 0.45) * 0.15;
+      coreRef.current.position.y = Math.sin(t * 0.5) * 0.12;
       const rotSpeed =
-        cinematicState === "EUREKA" ? 0.05 : 0.008 + audioLevel * 0.02;
-      coreRef.current.rotation.y += lowMotionMode ? rotSpeed * 0.4 : rotSpeed;
-    }
-
-    if (dodecaShellRef.current) {
-      dodecaShellRef.current.rotation.x -= 0.005;
-      dodecaShellRef.current.rotation.z += 0.003;
-      const breathe = 1.0 + Math.sin(t * 1.2) * 0.03 + audioLevel * 0.2;
-      dodecaShellRef.current.scale.setScalar(breathe);
-    }
-
-    if (frameRef.current) {
-      frameRef.current.rotation.y += 0.012;
-      frameRef.current.rotation.z -= 0.008;
-      const scale = 1.1 + Math.cos(t * 2.0) * 0.05;
-      frameRef.current.scale.setScalar(scale);
+        cinematicState === "EUREKA"
+          ? 0.04
+          : cinematicState === "ERROR"
+            ? 0.01
+            : state === "THINKING"
+              ? 0.025
+              : state === "SPEAKING"
+                ? 0.015
+                : 0.006;
+      coreRef.current.rotation.y += lowMotionMode ? rotSpeed * 0.35 : rotSpeed;
     }
 
     if (innerRef.current) {
-      const pulse = 1.0 + Math.sin(t * 4.0) * 0.08 + audioLevel * 0.5;
+      const pulse = lowMotionMode
+        ? 1.0 + Math.sin(t * 1.1) * 0.02 + audioLevel * 0.08 * Math.sin(t * 3)
+        : 1.0 + Math.sin(t * 3) * 0.06 + audioLevel * 0.3 * Math.sin(t * 10);
       innerRef.current.scale.setScalar(pulse);
+    }
+
+    if (quantumShellRef.current) {
+      const breathe = lowMotionMode
+        ? 1.0 + Math.sin(t * 0.8) * 0.02 + audioLevel * 0.08
+        : 1.0 + Math.sin(t * 1.5) * 0.05 + audioLevel * 0.2;
+      quantumShellRef.current.scale.setScalar(breathe);
+      quantumShellRef.current.rotation.x += lowMotionMode ? 0.0007 : 0.002;
     }
   });
 
   return (
     <group ref={coreRef}>
-      {/* Cinematic Outer Dodecahedron Shell */}
-      <mesh ref={dodecaShellRef}>
-        <dodecahedronGeometry args={[1.7, 0]} />
-        <meshStandardMaterial
+      <mesh ref={quantumShellRef}>
+        <icosahedronGeometry args={[1.6, 2]} />
+        <meshBasicMaterial
           color={colors.primary}
           wireframe
           transparent
-          opacity={0.3}
-          emissive={colors.primary}
-          emissiveIntensity={0.8}
+          opacity={0.2} // Opacity also updated in frame if needed, but fixed is fine for wireframe
         />
       </mesh>
 
-      {/* Rotating Interior Frame */}
-      <mesh ref={frameRef} rotation={[Math.PI / 4, 0, Math.PI / 4]}>
-        <dodecahedronGeometry args={[1.5, 1]} />
-        <meshPhysicalMaterial
+      <mesh rotation={[Math.PI / 4, 0, Math.PI / 4]}>
+        <icosahedronGeometry args={[1.4, 1]} />
+        <meshBasicMaterial
           color={colors.secondary}
           wireframe
           transparent
-          opacity={0.2}
-          emissive={colors.secondary}
-          emissiveIntensity={1.2}
-          thickness={2.0}
+          opacity={0.12}
         />
       </mesh>
 
-      {/* Main Volumetric AI Core */}
       <mesh ref={innerRef}>
-        <sphereGeometry args={[0.95, 64, 64]} />
+        <sphereGeometry args={[0.9, 48, 48]} />
         <shaderMaterial
           ref={materialRef}
           vertexShader={quantumFieldVertexShader}
@@ -364,26 +327,23 @@ const QuantumConsciousnessCore = memo(function QuantumConsciousnessCore({
         />
       </mesh>
 
-      {/* Internal Hyper-Core */}
       <mesh>
-        <sphereGeometry args={[0.35, 32, 32]} />
+        <sphereGeometry args={[0.4, 24, 24]} />
         <MeshDistortMaterial
           color={colors.primary}
-          speed={lowMotionMode ? 1.5 : 5.0}
-          distort={0.45}
+          speed={4}
+          distort={0.35}
           radius={1}
           emissive={colors.primary}
-          emissiveIntensity={2.5}
-          metalness={1.0}
-          roughness={0}
+          emissiveIntensity={1.2}
         />
       </mesh>
 
       <pointLight
         color={colors.primary}
-        intensity={2.5}
-        distance={8}
-        decay={1.2}
+        intensity={1.5}
+        distance={6}
+        decay={2}
       />
     </group>
   );

@@ -531,7 +531,7 @@ class GravityRouter:
 - [Galaxy Orchestration](./GALAXY_ORCHESTRATION.md) - Detailed galaxy system guide
 - [Testing Strategy](./TESTING.md) - Comprehensive testing documentation
 - [Main README](../README.md) - Project overview
-- [Paralinguistics Implementation](../core/audio/paralinguistics.py) - Emotion & Acoustic processing
+- [Paralinguistics Implementation](#) - Emotion & Acoustic processing
 
 ---
 

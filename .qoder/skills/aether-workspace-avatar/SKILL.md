@@ -417,9 +417,9 @@ onAppDrop(app, position) {
 
 ## Related Resources
 
-- [Workspace Plan](plans/aether-v3-living-workspace-plan.md)
-- [Workspace Updates](docs/WORKSPACE_UPDATES.md)
-- [Avatar Implementation Guide](apps/portal/src/components/avatar/)
+- [Workspace Plan](#)
+- [Workspace Updates](#)
+- [Avatar Implementation Guide](#)
 
 ## Security Considerations
 

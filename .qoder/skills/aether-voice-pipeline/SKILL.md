@@ -336,9 +336,9 @@ def fuse_emotion_cues(audio_emotion, text_sentiment):
 
 ## Related Resources
 
-- [Architecture Guide](docs/ARCHITECTURE.md) - Complete pipeline documentation
-- [Audio Pipeline Benchmarks](tests/benchmarks/audio_pipeline.py)
-- [Gemini Live Integration](core/api/gemini_live.py)
+- [Architecture Guide](#) - Complete pipeline documentation
+- [Audio Pipeline Benchmarks](#)
+- [Gemini Live Integration](#)
 
 ## Security Considerations
 

@@ -36,10 +36,6 @@ const NAV_ITEMS: { id: SidebarPanel; icon: React.ReactNode; label: string; realm
     { id: 'terminal', icon: <Terminal className="w-5 h-5" />, label: 'Terminal' },
 ];
 
-import GemigramLogo from '@/components/shared/GemigramLogo';
-
-// ... (existing code)
-
 export default function Sidebar({ activePanel, onPanelChange, onOpenSettings }: SidebarProps) {
     const [isExpanded, setIsExpanded] = useState(false);
     const setRealm = useAetherStore((s) => s.setRealm);
@@ -53,17 +49,32 @@ export default function Sidebar({ activePanel, onPanelChange, onOpenSettings }: 
 
     return (
         <motion.aside
-            animate={{ width: isExpanded ? 240 : 64 }}
+            animate={{ width: isExpanded ? 200 : 56 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             className="fixed left-0 top-0 h-full z-50 flex flex-col
-                       bg-black/60 backdrop-blur-3xl border-r border-white/[0.08]"
+                       bg-black/40 backdrop-blur-xl border-r border-white/[0.06]"
         >
-            {/* Logo Area */}
-            <div className={`flex items-center justify-center h-16 border-b border-white/5 ${isExpanded ? 'px-4' : 'px-0'}`}>
-                <GemigramLogo size={isExpanded ? 'md' : 'sm'} className={isExpanded ? 'items-start' : 'items-center'} />
-                {isExpanded && (
-                    <div className="flex-1" />
-                )}
+            {/* Logo */}
+            <div className="flex items-center justify-center h-14 border-b border-white/[0.06]">
+                <motion.div
+                    className="w-7 h-7 rounded-lg bg-gradient-to-br from-cyan-500/30 to-purple-500/30
+                                flex items-center justify-center border border-white/10"
+                    whileHover={{ scale: 1.1 }}
+                >
+                    <Zap className="w-4 h-4 text-cyan-400" />
+                </motion.div>
+                <AnimatePresence>
+                    {isExpanded && (
+                        <motion.span
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: -10 }}
+                            className="ml-2.5 text-sm font-bold tracking-tight text-white/90 whitespace-nowrap"
+                        >
+                            GEMIGRAM
+                        </motion.span>
+                    )}
+                </AnimatePresence>
             </div>
 
             {/* Navigation */}

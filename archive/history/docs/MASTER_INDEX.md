@@ -4,33 +4,33 @@ Welcome to the AetherOS Master Index. This document serves as the central neural
 
 ## 🏗️ Core Architecture
 
-- [System Principles & Identity](../AGENTS.md)
+- [System Principles & Identity](#)
 - [Gemini Multimodal Integration](./ANALYSIS_REPORT.md)
-- [Neural Cortex & Event Bus](../AGENTS.md)
-- [Soul Manifest (Agent Personality)](../core/identity/package.py)
+- [Neural Cortex & Event Bus](#)
+- [Soul Manifest (Agent Personality)](#)
 
 ## 🎤 Audio & Signal Processing
 
-- [Thalamic Gate V2 Protocol](../core/audio/capture.py)
-- [Dynamic Echo Cancellation (AEC)](../core/audio/dynamic_aec.py)
-- [Paralinguistic Analytics](../core/audio/paralinguistics.py)
+- [Thalamic Gate V2 Protocol](#)
+- [Dynamic Echo Cancellation (AEC)](#)
+- [Paralinguistic Analytics](#)
 
 ## 🤖 Specialist Agents
 
-- [Multi-Agent Orchestrator](../core/ai/hive.py)
-- [Self-Improving Genetic Optimizer](../core/ai/genetic.py)
-- [Proactive SRE Watchdog](../core/services/watchdog.py)
+- [Multi-Agent Orchestrator](#)
+- [Self-Improving Genetic Optimizer](#)
+- [Proactive SRE Watchdog](#)
 
 ## 📊 Performance & Security
 
-- [Engineering Audit (12 Phases)](./audits/engineering_audit.md)
-- [Testing Matrix & Benchmarks](../best_practices.md)
-- [Security: Ed25519 Handshake Protocol](../core/infra/transport/gateway.py)
+- [Engineering Audit (12 Phases)](#)
+- [Testing Matrix & Benchmarks](#)
+- [Security: Ed25519 Handshake Protocol](#)
 
 ## 💻 Frontend Dashboard
 
-- [Next.js 15 Implementation](../apps/portal/package.json)
-- [Neural Web Visualization (React Three Fiber)](../apps/portal/src/components/NeuralWeb.tsx)
+- [Next.js 15 Implementation](#)
+- [Neural Web Visualization (React Three Fiber)](#)
 
 ---
 **[DOCUMENTATION STANDARDIZED V1.0]**

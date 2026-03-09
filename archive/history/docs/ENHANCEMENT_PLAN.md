@@ -54,15 +54,15 @@ This plan transforms Aether Voice OS from a technically excellent but fragmented
 ### 🎤 Audio Processing
 - [Thalamic Gate v2](./audio_architecture.md#thalamic-gate)
 - [Dynamic AEC](./audio_architecture.md#aec)
-- [Rust Cortex Integration](../cortex/README.md)
+- [Rust Cortex Integration](#)
 
 ### 🤖 Agent System
 - [Agent Registry](./HIVE.md#agent-registry)
 - [Deep Handover Protocol](./HIVE.md#deep-handover-protocol)
-- [Specialist Agents](./agents/)
+- [Specialist Agents](#)
 
 ### 🔧 Development Guide
-- [Getting Started](../README.md#getting-started)
+- [Getting Started](#)
 - [API Reference](./api_reference.md)
 - [Testing Matrix](./testing_matrix.md)
 ```

@@ -268,7 +268,7 @@ score = 0.35*capability + 0.25*confidence - 0.15*latency - 0.15*load + 0.10*cont
 - Average gravity score calculation: <50ms
 - Wrong-planet routing: ≤2.1%
 
-Learn more: [Galaxy Orchestration Guide](docs/GALAXY_ORCHESTRATION.md)
+Learn more: [Galaxy Orchestration Guide](#)
 
 ---
 
@@ -449,7 +449,7 @@ Implemented intelligent AI agent routing with gravity-based scoring, circuit bre
 - ✅ 25 passing tests (unit + integration)
 - ✅ Full documentation in Arabic/English
 
-Learn more: [Galaxy Orchestration Guide](docs/GALAXY_ORCHESTRATION.md)
+Learn more: [Galaxy Orchestration Guide](#)
 
 ---
 
@@ -461,25 +461,25 @@ Comprehensive guides and references for Aether OS.
 
 ### Core Documentation | الوثائق الأساسية
 
-- **[📖 Architecture Guide](docs/ARCHITECTURE.md)** - Complete system architecture (Pipeline layers, Thalamic Gate v2, Galaxy Orchestration)
-  - [دليل الهندسة المعمارية](docs/ARCHITECTURE.md) - توثيق كامل للهندسة المعمارية
+- **[📖 Architecture Guide](#)** - Complete system architecture (Pipeline layers, Thalamic Gate v2, Galaxy Orchestration)
+  - [دليل الهندسة المعمارية](#) - توثيق كامل للهندسة المعمارية
   
-- **[🌌 Galaxy Orchestration](docs/GALAXY_ORCHESTRATION.md)** - Gravity-based AI agent routing with API reference
-  - [تنظيم المجرة](docs/GALAXY_ORCHESTRATION.md) - توجيه وكلاء الذكاء الاصطناعي القائم على الجاذبية مع مرجع API
+- **[🌌 Galaxy Orchestration](#)** - Gravity-based AI agent routing with API reference
+  - [تنظيم المجرة](#) - توجيه وكلاء الذكاء الاصطناعي القائم على الجاذبية مع مرجع API
   
-- **[🧪 Testing Guide](docs/TESTING.md)** - How to run and write tests (Unit, Integration, E2E)
-  - [دليل الاختبار](docs/TESTING.md) - كيفية تشغيل وكتابة الاختبارات
+- **[🧪 Testing Guide](#)** - How to run and write tests (Unit, Integration, E2E)
+  - [دليل الاختبار](#) - كيفية تشغيل وكتابة الاختبارات
   
-- **[🚀 Workspace Updates](docs/WORKSPACE_UPDATES.md)** - Latest avatar & workspace enhancements (March 2026)
-  - [تحديثات مساحة العمل](docs/WORKSPACE_UPDATES.md) - آخر تحسينات الأفاتار ومساحة العمل
+- **[🚀 Workspace Updates](#)** - Latest avatar & workspace enhancements (March 2026)
+  - [تحديثات مساحة العمل](#) - آخر تحسينات الأفاتار ومساحة العمل
   
 - **[📑 Documentation Index](docs/index.md)** - Complete documentation hub
   - [فهرس الوثائق](docs/index.md) - مركز الوثائق الكامل
 
 ### Planning Documents | وثائق التخطيط
 
-- **V3 Living Workspace Plan** - Detailed architecture plan with implementation checklist
-  - خطة مساحة العمل الحية V3 - خطة هندسية تفصيلية مع قائمة التحقق
+- **[V3 Living Workspace Plan](#)** - Detailed architecture plan with implementation checklist
+  - [خطة مساحة العمل الحية V3](#) - خطة هندسية تفصيلية مع قائمة التحقق
 
 ---
 
@@ -522,7 +522,7 @@ Comprehensive guides and references for Aether OS.
 
 ## 📜 License | الرخصة
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache 2.0 License** — see the [LICENSE](#) file for details.
 
 ---
 

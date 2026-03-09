@@ -14,15 +14,15 @@
 - [Thalamic Gate v2](./audio_architecture.md#thalamic-gate)
 - [Thalamic Gate Reference](./THALAMIC_GATE.md)
 - [Dynamic AEC](./audio_architecture.md#aec)
-- [Rust Cortex Integration](../cortex/README.md)
+- [Rust Cortex Integration](#)
 - [Aether Cortex Reference](./CORTEX.md)
 
 ### 🤖 Agent System
 - [Agent Registry](./HIVE.md#agent-registry)
 - [Deep Handover Protocol](./HIVE.md#deep-handover-protocol)
-- [Specialist Agents](./agents/)
+- [Specialist Agents](#)
 
 ### 🔧 Development Guide
-- [Getting Started](../README.md#getting-started)
+- [Getting Started](#)
 - [API Reference](./api_reference.md)
 - [Testing Matrix](./testing_matrix.md)

@@ -241,10 +241,10 @@ context = HandoverContext(
 
 ## Related Resources
 
-- [Galaxy Orchestration Guide](docs/GALAXY_ORCHESTRATION.md)
-- [Architecture Documentation](docs/ARCHITECTURE.md)
-- [Testing Guide](docs/TESTING.md)
-- [Multi-Agent Collaboration Patterns](plans/aether-v3-living-workspace-plan.md)
+- [Galaxy Orchestration Guide](#)
+- [Architecture Documentation](#)
+- [Testing Guide](#)
+- [Multi-Agent Collaboration Patterns](#)
 
 ## Security Considerations
 

@@ -559,10 +559,10 @@ try {
 
 ## Related Resources
 
-- [Workspace Plan](plans/aether-v3-living-workspace-plan.md)
-- [Avatar Skill](.qoder/skills/aether-workspace-avatar/SKILL.md)
-- [Galaxy Orchestrator](.qoder/skills/aether-galaxy-orchestrator/SKILL.md)
-- [Voice Pipeline](.qoder/skills/aether-voice-pipeline/SKILL.md)
+- [Workspace Plan](#)
+- [Avatar Skill](#)
+- [Galaxy Orchestrator](#)
+- [Voice Pipeline](#)
 
 ## Security Considerations
 

@@ -311,10 +311,10 @@ graph TB
 
 ## Resources
 
-- **Workflow File:** [.github/workflows/firebase_deploy.yml](/.github/workflows/firebase_deploy.yml)
-- **Setup Guide:** [docs/FIREBASE_CI_CD_SETUP.md](/docs/FIREBASE_CI_CD_SETUP.md)
-- **Quick Reference:** [docs/DEPLOYMENT_QUICK_REF.md](/docs/DEPLOYMENT_QUICK_REF.md)
-- **Rollback Script:** [scripts/firebase_rollback.sh](/scripts/firebase_rollback.sh)
+- **Workflow File:** [.github/workflows/firebase_deploy.yml](#)
+- **Setup Guide:** [docs/FIREBASE_CI_CD_SETUP.md](#)
+- **Quick Reference:** [docs/DEPLOYMENT_QUICK_REF.md](#)
+- **Rollback Script:** [scripts/firebase_rollback.sh](#)
 - **Firebase Console:** https://console.firebase.google.com/project/notional-armor-456623-e8
 - **GitHub Actions:** https://github.com/YOUR_REPO/actions
 

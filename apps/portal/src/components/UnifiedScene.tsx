@@ -85,70 +85,63 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
     const audioLevel = state === "SPEAKING" ? speakerLevel : micLevel;
 
     if (bloomRef.current) {
-      let intensity = 1.0;
+      let intensity = 0.5;
       switch (state) {
-        case "SPEAKING": intensity = 1.8 + audioLevel * 0.5; break;
-        case "LISTENING": intensity = 1.2 + audioLevel * 0.3; break;
-        case "THINKING": intensity = 1.5; break;
-        case "INTERRUPTING": intensity = 2.2; break;
+        case "SPEAKING": intensity = 1.2 + audioLevel * 0.3; break;
+        case "LISTENING": intensity = 0.8 + audioLevel * 0.2; break;
+        case "THINKING": intensity = 1.0; break;
+        case "INTERRUPTING": intensity = 1.5; break;
       }
       if (lowMotionMode) {
-        intensity = Math.min(intensity, 0.75);
+        intensity = Math.min(intensity, 0.55);
       }
       if (focusModeEnvironment) {
-        intensity += 0.4;
+        intensity += 0.25;
       }
       bloomRef.current.intensity = intensity;
     }
   });
 
   return (
-    <AnimatePresence>
-      <EffectComposer disableNormalPass>
-        <Bloom
-          ref={bloomRef}
-          intensity={1.5}
-          luminanceThreshold={0.15}
-          luminanceSmoothing={0.85}
-          kernelSize={KernelSize.LARGE}
-        />
-        <ChromaticAberration
-          offset={new THREE.Vector2(0.002, 0.002)}
-          blendFunction={BlendFunction.NORMAL}
-        />
-        <Vignette
-          offset={0.35}
-          darkness={0.75}
-          blendFunction={BlendFunction.NORMAL}
-        />
-        <Noise
-          opacity={0.025}
-          blendFunction={BlendFunction.SOFT_LIGHT}
-        />
-      </EffectComposer>
-    </AnimatePresence>
+    <EffectComposer>
+      <Bloom
+        ref={bloomRef}
+        intensity={lowMotionMode ? 0.45 : 1.0}
+        luminanceThreshold={0.3}  // Raised from 0.2 for better performance
+        luminanceSmoothing={0.9}
+        kernelSize={KernelSize.MEDIUM}  // Changed from LARGE for performance
+      />
+      <ChromaticAberration
+        offset={new THREE.Vector2(
+          focusModeEnvironment ? 0.001 : 0.0015,
+          focusModeEnvironment ? 0.001 : 0.0015
+        )}
+        blendFunction={BlendFunction.NORMAL}
+      />
+      <Vignette
+        offset={focusModeEnvironment ? 0.42 : 0.3}
+        darkness={focusModeEnvironment ? 0.82 : 0.7}
+        blendFunction={BlendFunction.NORMAL}
+      />
+      <Noise
+        opacity={lowMotionMode ? 0.005 : 0.015}
+        blendFunction={BlendFunction.OVERLAY}
+      />
+    </EffectComposer>
   );
 });
 
 // ═══════════════════════════════════════════════════════════════════
-// Shared Lighting Setup (Forge Palette)
+// Shared Lighting Setup
 // ═══════════════════════════════════════════════════════════════════
 
 const SharedLighting = memo(function SharedLighting() {
   return (
     <>
-      <ambientLight intensity={0.2} />
-      <pointLight position={[10, 10, 10]} intensity={1.2} color="#bc13fe" />
-      <pointLight position={[-10, -10, -10]} intensity={0.8} color="#00f3ff" />
-      <pointLight position={[0, -10, 5]} intensity={0.5} color="#ffd700" />
-      <spotLight
-        position={[0, 5, 10]}
-        angle={0.3}
-        penumbra={1}
-        intensity={2.0}
-        color="#bc13fe"
-        castShadow
-      />
+      <ambientLight intensity={0.12} />
+      <pointLight position={[10, 10, 10]} intensity={0.45} color="#39ff14" />
+      <pointLight position={[-10, -10, -10]} intensity={0.25} color="#00ff41" />
+      <pointLight position={[0, -10, 5]} intensity={0.15} color="#1a5c1a" />
     </>
   );
 });

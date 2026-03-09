@@ -91,7 +91,7 @@ bash scripts/firebase_rollback.sh
 ### Monitoring Tools
 - [Firebase Status Dashboard](https://status.firebase.google.com/)
 - [GitHub Actions Status](https://www.githubstatus.com/)
-- [Lighthouse CI Results](.lighthouseci/)
+- [Lighthouse CI Results](#)
 
 ### Emergency Contacts
 - **On-Call:** Check Discord #deployments channel

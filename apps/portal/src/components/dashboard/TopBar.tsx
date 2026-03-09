@@ -12,41 +12,43 @@ interface TopBarProps {
     onToggleOmnibar: () => void;
 }
 
-import GemigramLogo from '@/components/shared/GemigramLogo';
-
-// ... (existing code)
-
 export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps) {
     const engineState = useAetherStore((s) => s.engineState);
     const latencyMs = useAetherStore((s) => s.latencyMs);
+    const editMode = useWidgetStore((s) => s.editMode);
+    const setEditMode = useWidgetStore((s) => s.setEditMode);
+    const setStoreOpen = useWidgetStore((s) => s.setStoreOpen);
 
-    // ... (existing constants)
+    const stateColor = {
+        IDLE: '#4b5563',
+        LISTENING: '#39ff14',
+        THINKING: '#ffd700',
+        SPEAKING: '#00ff88',
+        INTERRUPTING: '#ff1744',
+    }[engineState] || '#4b5563';
 
     return (
-        <header className="h-14 flex items-center justify-between px-6 border-b border-white/[0.05] bg-black/40 backdrop-blur-3xl">
-            {/* Left — Mission Status / Branding */}
-            <div className="flex items-center gap-6">
-                <GemigramLogo size="sm" className="hidden md:flex" />
-
-                <div className="flex items-center gap-4">
-                    {/* Telemetry Status Strip */}
-                    <div className="hidden lg:flex items-center gap-2 font-mono text-[9px] uppercase tracking-tighter">
-                        <span className="text-white/20">NETWORK:</span>
-                        <span className="text-cyan-400">STABLE</span>
-                        <span className="text-white/10 mx-1">|</span>
-                        <span className="text-white/20">LATENCY:</span>
-                        <span className={latencyMs > 100 ? 'text-amber-500' : 'text-emerald-400'}>
-                            {latencyMs > 0 ? `${latencyMs}MS` : 'N/A'}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse`} style={{ backgroundColor: stateColor }} />
-                        <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">
-                            CORE::{engineState}
-                        </span>
-                    </div>
+        <header className="h-12 flex items-center justify-between px-4 border-b border-white/[0.06] bg-black/20 backdrop-blur-xl">
+            {/* Left — Status */}
+            <div className="flex items-center gap-3">
+                {/* Engine state */}
+                {/* Platform ID */}
+                <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-black tracking-[0.2em] text-cyan-400 bg-cyan-400/10 px-2 py-0.5 rounded border border-cyan-400/20 uppercase">
+                        GEMIGRAM V2
+                    </span>
+                    <div className="w-px h-3 bg-white/10" />
+                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest leading-none">
+                        {engineState}
+                    </span>
                 </div>
+
+                {/* Latency */}
+                {latencyMs > 0 && (
+                    <span className="text-[9px] font-mono text-white/15">
+                        {latencyMs}ms
+                    </span>
+                )}
             </div>
 
             {/* Center — Search trigger */}
@@ -77,8 +79,8 @@ export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps)
                 <button
                     onClick={() => setEditMode(!editMode)}
                     className={`p-2 rounded-lg transition-all ${editMode
-                        ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
-                        : 'text-white/20 hover:text-white/40 hover:bg-white/5'
+                            ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
+                            : 'text-white/20 hover:text-white/40 hover:bg-white/5'
                         }`}
                     title={editMode ? 'Done editing' : 'Edit widgets'}
                 >

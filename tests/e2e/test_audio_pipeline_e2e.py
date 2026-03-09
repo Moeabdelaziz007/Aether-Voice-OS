@@ -58,7 +58,6 @@ def audio_config() -> AudioConfig:
 @pytest.fixture
 def sample_audio_chunk() -> np.ndarray:
     """Generate a sample audio chunk (sine wave at 440Hz)."""
-    sample_rate = 16000
     duration_ms = 16  # 256 samples at 16kHz
     t = np.linspace(0, duration_ms / 1000, 256, dtype=np.float32)
     frequency = 440  # A4 note
@@ -505,7 +504,7 @@ class TestDoubleTalkDetector:
         
         # Process multiple frames
         for _ in range(15):
-            is_dt = dtd.update(far_end, near_end, error)
+            dtd.update(far_end, near_end, error)
         
         # Should detect as double-talk or near-end speech
         # (depends on thresholds)

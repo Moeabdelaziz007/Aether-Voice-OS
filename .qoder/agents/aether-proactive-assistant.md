@@ -393,11 +393,11 @@ Want me to implement any of these?"
 
 ## Related Resources
 
-- [Aether Proactive Workspace Skill](.qoder/skills/aether-proactive-workspace/SKILL.md)
-- [ClawHub Research](docs/CLAWHUB_RESEARCH.md)
-- [Galaxy Orchestration Guide](docs/GALAXY_ORCHESTRATION.md)
-- [Workspace Plan](plans/aether-v3-living-workspace-plan.md)
-- [Architecture Docs](docs/ARCHITECTURE.md)
+- [Aether Proactive Workspace Skill](#)
+- [ClawHub Research](#)
+- [Galaxy Orchestration Guide](#)
+- [Workspace Plan](#)
+- [Architecture Docs](#)
 
 ## Activation Checklist
 
