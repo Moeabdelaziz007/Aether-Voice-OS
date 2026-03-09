@@ -46,8 +46,8 @@ def ensure_dirs():
 
 async def wait_for_server(url: str, timeout: float = 90.0) -> bool:
     """Wait for the Next.js dev server to be ready using urllib."""
-    import urllib.error
     import urllib.request
+    import urllib.error
 
     start = time.time()
     while time.time() - start < timeout:

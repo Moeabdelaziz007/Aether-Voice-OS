@@ -1,8 +1,6 @@
 import numpy as np
 import pytest
-
 from core.audio.capture import SmoothMuter
-
 
 def test_smooth_muter_linear_vs_exponential():
     """Verify that SmoothMuter applies an exponential-like ramp."""

@@ -9,11 +9,10 @@ This test suite validates all critical bug fixes implemented in Phase 1 & 2:
 - Buffer optimization
 """
 
-import asyncio
-from unittest.mock import Mock, patch
-
 import numpy as np
 import pytest
+from unittest.mock import Mock, patch, MagicMock
+import asyncio
 
 
 class TestResamplingFix:
@@ -121,9 +120,8 @@ class TestExceptionHandling:
     
     def test_rust_cortex_exception_handling(self):
         """Verify Rust cortex failures don't crash the pipeline."""
-        from core.audio.config import AudioConfig
-
         from core.audio.capture import AudioCapture
+        from core.audio.config import AudioConfig
         
         # Create mock config
         config = AudioConfig()
@@ -134,14 +132,14 @@ class TestExceptionHandling:
                 'defaultSampleRate': 16000
             }
             
-            AudioCapture(config=config)
+            capture = AudioCapture(config=config)
             
             # Mock spectral_denoise to raise exception
             with patch('core.audio.capture.spectral_denoise') as mock_denoise:
                 mock_denoise.side_effect = Exception("Rust backend error")
                 
                 # Simulate audio chunk
-                np.random.randint(-1000, 1000, 1024, dtype=np.int16)
+                chunk = np.random.randint(-1000, 1000, 1024, dtype=np.int16)
                 
                 # Should not crash - should handle exception gracefully
                 try:
@@ -154,9 +152,8 @@ class TestExceptionHandling:
     
     def test_playback_callback_exception_handler(self):
         """Verify playback callback has catch-all exception handler."""
-        from core.audio.config import AudioConfig
-
         from core.audio.playback import PlaybackEngine
+        from core.audio.config import AudioConfig
         
         config = AudioConfig()
         
@@ -196,9 +193,8 @@ class TestAsyncToSyncConversion:
     
     def test_pre_train_is_sync_function(self):
         """Verify pre_train is now a synchronous function."""
-        import inspect
-
         from core.audio.dynamic_aec import DynamicAEC
+        import inspect
         
         with patch('core.audio.dynamic_aec.AdaptiveFilter'):
             aec = DynamicAEC(sample_rate=16000, filter_length_ms=128)
@@ -275,10 +271,9 @@ class TestLoggerPattern:
     
     def test_update_config_uses_safe_logger(self):
         """Verify update_config uses logging.getLogger() pattern."""
-
-        from core.audio.config import AudioConfig
-
         from core.audio.capture import AudioCapture
+        from core.audio.config import AudioConfig
+        import logging
         
         config = AudioConfig()
         

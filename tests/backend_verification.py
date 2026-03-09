@@ -12,12 +12,12 @@ Comprehensive verification of backend systems:
 
 import asyncio
 import logging
-import os
 import sys
+import os
 import time
+from typing import List, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List
 
 # Add project root to Python path
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -141,8 +141,8 @@ class BackendVerifier:
         logger.info("🔍 Verifying Tick/Heartbeat Synchronization...")
         
         try:
-            from core.infra.config import load_config
             from core.infra.transport.gateway import AetherGateway
+            from core.infra.config import load_config
             
             # Test 1: Verify tick loop exists in gateway
             logger.info("  Testing AetherGateway tick loop...")

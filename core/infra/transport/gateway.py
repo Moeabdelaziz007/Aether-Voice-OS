@@ -18,8 +18,8 @@ import time
 import uuid
 from typing import TYPE_CHECKING, Any, Optional
 
+from core.ai.agents.registry import AgentRegistry, AgentMetadata
 from core.ai.agents.forge import AgentForge
-from core.ai.agents.registry import AgentRegistry
 
 if TYPE_CHECKING:
     from core.ai.hive import HiveCoordinator

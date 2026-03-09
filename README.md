@@ -478,8 +478,8 @@ Comprehensive guides and references for Aether OS.
 
 ### Planning Documents | وثائق التخطيط
 
-- **V3 Living Workspace Plan** - Detailed architecture plan with implementation checklist
-  - خطة مساحة العمل الحية V3 - خطة هندسية تفصيلية مع قائمة التحقق
+- **[V3 Living Workspace Plan](plans/aether-v3-living-workspace-plan.md)** - Detailed architecture plan with implementation checklist
+  - [خطة مساحة العمل الحية V3](plans/aether-v3-living-workspace-plan.md) - خطة هندسية تفصيلية مع قائمة التحقق
 
 ---
 
@@ -522,7 +522,7 @@ Comprehensive guides and references for Aether OS.
 
 ## 📜 License | الرخصة
 
-This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Apache 2.0 License** — see the [LICENSE](LICENSE) file for details.
 
 ---
 

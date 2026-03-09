@@ -8,10 +8,8 @@ Tests the complete handover flow with galaxy orchestration:
 - Cinematic event emission on rollbacks
 """
 
-from unittest.mock import AsyncMock, MagicMock, patch
-
 import pytest
-
+from unittest.mock import AsyncMock, MagicMock, patch
 from core.ai.handover.manager import MultiAgentOrchestrator
 from core.ai.handover_protocol import HandoverContext, IntentConfidence
 from core.ai.orchestrator.fallback_strategy import FailureCategory

@@ -52,8 +52,7 @@ def check_forbidden_files():
     found = []
     for root, dirs, files in os.walk(BASE_DIR):
         # Exclude common dirs
-        path_parts = root.split(os.sep)
-        if any(d in path_parts for d in [".git", "node_modules", ".venv", "venv", ".cargo_home", "target", "vendor", "__pycache__", "archive", ".idx", ".qoder", ".npm-cache"]):
+        if any(d in root for d in [".git", "node_modules", ".venv", ".cargo_home", "target", "vendor", "__pycache__"]):
             continue
             
         for name in files + dirs:
@@ -82,8 +81,7 @@ def main():
     print("\n--- 🔗 Markdown Link Integrity ---")
     all_md = []
     for root, _, files in os.walk(BASE_DIR):
-        path_parts = root.split(os.sep)
-        if any(d in path_parts for d in [".git", "node_modules", ".venv", "venv", ".cargo_home", "target", "vendor", "__pycache__", "archive", ".idx", ".qoder", ".npm-cache"]):
+        if any(d in root for d in [".git", "node_modules", ".venv", ".cargo_home", "target", "vendor", "__pycache__"]):
             continue
         for f in files:
             if f.endswith(".md"):
