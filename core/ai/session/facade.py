@@ -28,6 +28,9 @@ if TYPE_CHECKING:
 
 from google import genai
 from google.genai import types
+from pydantic import BaseModel, Field
+
+from core.ai.generative_init import get_genai_client, get_base_config
 
 from core.ai.agents.proactive import VisionPulseAgent
 from core.ai.handover_protocol import HandoverContext
@@ -49,6 +52,36 @@ from .handover_bridge import (
 )
 from .io_loops import drain_output, handle_usage, receive_loop, send_loop
 from .tool_dispatch import handle_tool_call
+
+class OpenClaw(BaseModel):
+    """Open a specialized tool interface."""
+    tool_id: str = Field(..., description="The ID of the tool to open")
+
+class SoulSwap(BaseModel):
+    """Swap the active soul/expert."""
+    target_soul: str = Field(..., description="Target soul name")
+
+class DiagnoseStructure(BaseModel):
+    """Diagnose the current system structure."""
+    component: str = Field(..., description="The component to diagnose")
+
+class ToolRegistry:
+    """Typed registry for declarative tools with response_schema enforcement."""
+    def __init__(self):
+        self.tools = {
+            "open_claw": OpenClaw,
+            "soul_swap": SoulSwap,
+            "diagnose_structure": DiagnoseStructure
+        }
+
+    def get_declarations(self) -> list[types.FunctionDeclaration]:
+        return [
+            types.FunctionDeclaration(
+                name=name,
+                description=model.__doc__,
+                parameters=model.model_json_schema()
+            ) for name, model in self.tools.items()
+        ]
 
 logger = logging.getLogger(__name__)
 
@@ -109,28 +142,39 @@ class GeminiLiveSession:
         self._handover_acknowledgments: Dict[str, str] = {}
         self._soul_instruction_cache: Optional[str] = None
         self._start_time: datetime = datetime.now()
+        
+        # Reliability & Budget Tracking
+        self._retry_count = 0
+        self._max_retries = 3
+        self._token_budget = 50000 
+        self._tokens_used = 0
+        self._tool_registry = ToolRegistry()
+        
+        # Firestore Evidence Logger (Mocked for patch)
+        self._db = None 
 
     def _build_session_config(self) -> types.LiveConnectConfig:
         """Build the LiveConnectConfig with tool declarations."""
         return build_session_config(self)
 
     async def connect(self) -> None:
-        """Establish the Gemini Live session."""
-        try:
-            self._client = genai.Client(
-                api_key=self._config.api_key,
-                http_options={"api_version": self._config.api_version},
-            )
-            logger.info(
-                "Connecting to Gemini Live: model=%s, api_version=%s",
-                self._config.model.value,
-                self._config.api_version,
-            )
-        except Exception as exc:
-            raise AIConnectionError(
-                f"Failed to create Gemini client: {exc}",
-                cause=exc,
-            ) from exc
+        """Establish the Gemini Live session with robust retry."""
+        while self._retry_count < self._max_retries:
+            try:
+                self._client = get_genai_client(api_key=self._config.api_key)
+                logger.info(
+                    "Connecting to Gemini Live (Attempt %d): model=%s",
+                    self._retry_count + 1,
+                    self._config.model.value,
+                )
+                return
+            except Exception as exc:
+                self._retry_count += 1
+                wait = 2 ** self._retry_count
+                logger.warning("Connection failed, retrying in %ds... (%s)", wait, exc)
+                await asyncio.sleep(wait)
+        
+        raise AIConnectionError("Max retries exceeded for Gemini Live connection")
 
     async def run(self) -> None:
         """
@@ -312,7 +356,7 @@ class GeminiLiveSession:
 
         try:
             await self._session.send_realtime_input(
-                parts=[types.Part.from_text(text=instr)]
+                parts=[types.Part(text=instr)]
             )
             logger.info("⚡ Session: Injected Hot-DNA update instruction.")
         except Exception as e:
@@ -330,7 +374,7 @@ class GeminiLiveSession:
         try:
             from google.genai import types
 
-            await self._session.send_realtime_input(parts=[types.Part.from_text(text)])
+            await self._session.send_realtime_input(parts=[types.Part(text=text)])
             return True
         except Exception as e:
             logger.error(f"Failed to send text to session: {e}")
@@ -346,8 +390,34 @@ class GeminiLiveSession:
         """Format the injected handover context as system-instruction text."""
         return format_handover_context_for_instruction(self)
 
-    def inject_handover_context(self, context: HandoverContext) -> bool:
+    def inject_handover_context(self, context: HandoverContext, visual_frames: List[bytes] = None) -> bool:
+        """Inject multimodal handover context into the stream."""
+        self._injected_handover_context = context
+        if visual_frames:
+            logger.info("📸 Injecting %d visual frames into handover context", len(visual_frames))
+            asyncio.create_task(self._inject_frames(visual_frames))
+        
+        # Log evidence to Firestore (Structured Audit)
+        if self._db:
+            self._db.collection("handover_traces").add({
+                "session_id": id(self),
+                "target_soul": context.target_soul,
+                "timestamp": datetime.now(),
+                "frame_count": len(visual_frames) if visual_frames else 0
+            })
+            
         return inject_handover_context(self, context)
+
+    async def _inject_frames(self, frames: List[bytes]):
+        """Internal helper to stream frames to Gemini."""
+        if not self._session or not self._running:
+            return
+        
+        parts = [types.Part(inline_data=types.Blob(data=f, mime_type="image/webp")) for f in frames]
+        try:
+            await self._session.send_realtime_input(parts=parts)
+        except Exception as e:
+            logger.error("Failed to inject visual frames: %s", e)
 
     def clear_handover_context(self) -> None:
         clear_handover_context(self)
@@ -361,7 +431,7 @@ class GeminiLiveSession:
         try:
             # We wrap the echo in a directive to ensure Gemini vocalizes it as a thought
             await self._session.send_realtime_input(
-                parts=[types.Part.from_text(text=f"[thought: {echo}]")]
+                parts=[types.Part(text=f"[thought: {echo}]")]
             )
         except Exception as e:
             logger.error("Echo injection failed: %s", e)

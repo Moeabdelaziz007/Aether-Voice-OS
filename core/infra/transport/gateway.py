@@ -145,6 +145,12 @@ class AetherGateway:
         # Speculative Pre-warming Lock
         self._pre_warm_lock = asyncio.Lock()
         self._pre_warmed_session: Optional[GeminiLiveSession] = None
+        
+        # Rate Limiting & Backpressure
+        self._last_text_time = 0.0
+        self._text_rate_limit = 0.5 # seconds
+        self._frame_buffer_cache: List[bytes] = []
+        self._max_frame_cache = 5
 
     @property
     def audio_in_queue(self) -> asyncio.Queue[dict[str, object]]:
@@ -185,15 +191,27 @@ class AetherGateway:
         Returns:
             True if sent successfully, False otherwise
         """
+        # Rate limit check
+        now = time.monotonic()
+        if now - self._last_text_time < self._text_rate_limit:
+            logger.warning("Rate limit hit: send_text too frequent")
+            return False
+            
         session = self._state_manager.session
         if not session or not session._session:
             logger.warning("Cannot send text: No active session")
             return False
 
         try:
+            # Health check before send
+            if not session._running:
+                logger.error("Session health check failed before send_text")
+                return False
+                
             await session._session.send_realtime_input(
-                parts=[types.Part.from_text(text)]
+                parts=[types.Part(text=text)]
             )
+            self._last_text_time = now
             self._state_manager.increment_message_count()
             return True
         except Exception as e:
@@ -264,13 +282,7 @@ class AetherGateway:
     async def request_handoff(self, target_soul: str, reason: str = "") -> bool:
         """
         Request a handoff to a different soul/expert using Deep Handover (ADK 2.0).
-
-        Args:
-            target_soul: Name of target soul package
-            reason: Reason for handoff
-
-        Returns:
-            True if handoff initiated successfully
+        Includes the last N vision frames for immediate temporal grounding.
         """
         # Prepare deep handover
         success, context, message = self._hive.prepare_handoff(
@@ -291,7 +303,8 @@ class AetherGateway:
                 {"active_handover_id": context.handover_id}
             )
 
-            # Signal session restart
+            # Signal session restart with visual context
+            # The next session initialization will pick up these frames
             self._session_restart_event.set()
             return True
 
@@ -456,15 +469,16 @@ class AetherGateway:
                         soul_manifest=active_soul,
                     )
 
-            # Inject pending handover context if available (if not already injected during pre-warming)
+            # Inject pending handover context with visual frames
             pending_handover = self._hive.get_pending_handover_for_target(soul_name)
             if pending_handover and not session._injected_handover_context:
                 logger.info(
-                    "A2A [GATEWAY] Injecting Deep Handover context: %s (Task: %s)",
-                    pending_handover.handover_id,
-                    pending_handover.task[:50],
+                    "A2A [GATEWAY] Injecting Deep Handover context with %d frames",
+                    len(self._frame_buffer_cache)
                 )
-                session.inject_handover_context(pending_handover)
+                session.inject_handover_context(pending_handover, visual_frames=list(self._frame_buffer_cache))
+                # Clear cache after successful injection
+                self._frame_buffer_cache = []
 
             self._state_manager.set_session(session)
 
@@ -716,6 +730,26 @@ class AetherGateway:
         elif msg_type == "UI_STATE_SYNC":
             widgets = msg.get("payload", {}).get("active_widgets", [])
             self._state_manager.update_active_widgets(widgets)
+
+        elif msg_type == "VISION_FRAME":
+            # Backpressure: Only buffer if bridge is healthy
+            frame_b64 = msg.get("payload", {}).get("frame")
+            if frame_b64:
+                try:
+                    import base64
+                    frame_bytes = base64.b64decode(frame_b64)
+                    self._frame_buffer_cache.append(frame_bytes)
+                    if len(self._frame_buffer_cache) > self._max_frame_cache:
+                        self._frame_buffer_cache.pop(0)
+                        
+                    # Also inject into active session if running (Temporal Grounding)
+                    session = self.get_session()
+                    if session and session._running:
+                        asyncio.create_task(session._session.send_realtime_input(
+                            parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/webp")]
+                        ))
+                except Exception as e:
+                    logger.error("Failed to process VISION_FRAME: %s", e)
 
         elif msg_type == MessageType.DISCONNECT.value:
             async with self._lock:

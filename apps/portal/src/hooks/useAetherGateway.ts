@@ -69,7 +69,13 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
         ws.send(encode({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature: new HandshakeManager().signIntent(raw_input) }));
     }, []);
     const sendUIStateSync = useCallback((w: any[]) => wsRef.current?.readyState === 1 && wsRef.current.send(encode({ type: "UI_STATE_SYNC", payload: { active_widgets: w } })), []);
-    const sendVisionFrame = useCallback((f: string) => wsRef.current?.readyState === 1 && wsRef.current.send(encode({ type: "VISION_FRAME", payload: { frame: f } })), []);
+    const sendVisionFrame = useCallback((f: string) => {
+        if (wsRef.current?.readyState === 1) {
+            wsRef.current.send(encode({ type: "VISION_FRAME", payload: { frame: f } }));
+            // Pre-emptively update store for immediate UI feedback
+            store.setVisionActive(true);
+        }
+    }, [store]);
 
     useEffect(() => () => disconnect(), [disconnect]);
     return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, onAudioResponse, isConnected: status === "connected" };
@@ -92,7 +98,12 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void) {
 class BackpressureController { HIGH = 65536; isThrottled(ba: number) { return ba > this.HIGH; } }
 class ReconnectionManager {
     attempt = 0; timer: any = null; constructor(private onR: () => void) { }
-    trigger() { this.stop(); this.timer = setTimeout(() => this.onR(), Math.min(250 * Math.pow(2, this.attempt++) + Math.random() * 300, 5000)); }
+    trigger() {
+        this.stop();
+        const delay = Math.min(1000 * Math.pow(1.5, this.attempt++) + Math.random() * 500, 15000);
+        console.log(`↻ Aether Gateway Reconnecting in ${Math.round(delay)}ms`);
+        this.timer = setTimeout(() => this.onR(), delay);
+    }
     stop() { if (this.timer) clearTimeout(this.timer); }
     reset() { this.attempt = 0; this.stop(); }
 }

@@ -59,8 +59,9 @@ const AETHER_GATEWAY_URL =
 const MODEL = "models/gemini-2.5-flash-preview-native-audio-dialog";
 
 // Reconnection constants
-const RECONNECT_DELAYS = [1000, 2000, 4000, 8000]; // Exponential backoff
-const MAX_RETRIES = 3;
+// Reconnection constants
+const RECONNECT_DELAYS = [1000, 2000, 5000, 15000, 30000]; // Exponential backoff
+const MAX_RETRIES = 5;
 
 export function useGeminiLive(): GeminiLiveReturn {
     const [status, setStatus] = useState<SessionStatus>("disconnected");
@@ -361,8 +362,8 @@ export function useGeminiLive(): GeminiLiveReturn {
         ws.send(JSON.stringify(msg));
     }, []);
 
-    /** Send a vision frame (JPEG base64) to Gemini */
-    const sendVisionFrame = useCallback((b64Jpeg: string) => {
+    /** Send a vision frame (WebP base64) to Gemini */
+    const sendVisionFrame = useCallback((b64WebP: string) => {
         const ws = wsRef.current;
         if (!ws || ws.readyState !== WebSocket.OPEN || !setupDone.current)
             return;
@@ -371,8 +372,8 @@ export function useGeminiLive(): GeminiLiveReturn {
             realtimeInput: {
                 mediaChunks: [
                     {
-                        mimeType: "image/jpeg",
-                        data: b64Jpeg,
+                        mimeType: "image/webp",
+                        data: b64WebP,
                     },
                 ],
             },
