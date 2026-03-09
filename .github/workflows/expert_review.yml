@@ -1,0 +1,47 @@
+name: "⚡ Expert PR Review"
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+
+jobs:
+    review:
+        name: "🧠 Neural Guardian Review"
+        runs-on: ubuntu-latest
+        permissions:
+            pull-requests: write
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Set up Python
+              uses: actions/setup-python@v5
+              with:
+                  python-version: "3.11"
+
+            - name: Run Expert Audit
+              id: audit
+              run: |
+                  python scripts/expert_audit.py > audit_report.txt 2>&1
+                  EXIT_CODE=$?
+                  echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+                  cat audit_report.txt
+                  exit $EXIT_CODE
+              continue-on-error: true
+
+            - name: Post Comment
+              uses: actions/github-script@v7
+              with:
+                  script: |
+                      const fs = require('fs');
+                      const report = fs.readFileSync('audit_report.txt', 'utf8');
+                      const status = ${{ steps.audit.outputs.exit_code }} == 0 ? "✅ **Expert Level Check Passed**" : "❌ **Action Required: Expert Audit Failed**";
+
+                      const body = `${status}\n\n### 🛡️ Neural Guardian Audit Report\n\n\`\`\`\n${report}\n\`\`\`\n\n*This is an automated review for the Aether Voice OS Expert-Level standards.*`;
+
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: body
+                      });

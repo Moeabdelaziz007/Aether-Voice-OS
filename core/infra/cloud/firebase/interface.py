@@ -215,32 +215,34 @@ class FirebaseConnector:
     async def get_session_affective_summary(self, session_id: str) -> dict:
         """
         Calculates fitness metrics for the genetic optimizer.
-        Aggregates valence/arousal from the 'metrics' subcollection.
+        Aggregates valence/arousal from the 'metrics' subcollection using 
+        Firestore AggregationQuery to avoid N+1 fetches.
         """
         if not self.is_connected or not self._db:
             return {"status": "error", "message": "Firebase disconnected"}
 
         try:
-
-            def _stream():
+            def _aggregate():
                 metrics_ref = (
                     self._db.collection("sessions")
                     .document(session_id)
                     .collection("metrics")
                 )
-                return list(metrics_ref.stream())
+                # Optimized: Aggregate on server-side
+                query = metrics_ref.aggregate([
+                    firestore.Aggregate.sum("valence", alias="valence_sum"),
+                    firestore.Aggregate.sum("arousal", alias="arousal_sum"),
+                    firestore.Aggregate.count(alias="count")
+                ])
+                return query.get()
 
-            docs = await asyncio.to_thread(_stream)
-
-            valence_sum = 0.0
-            arousal_sum = 0.0
-            count = 0
-
-            for doc in docs:
-                data = doc.to_dict()
-                valence_sum += data.get("valence", 0.0)
-                arousal_sum += data.get("arousal", 0.0)
-                count += 1
+            results = await asyncio.to_thread(_aggregate)
+            
+            # Extract aggregated values
+            res_dict = {res.alias: res.value for res in results}
+            count = res_dict.get("count", 0)
+            valence_sum = res_dict.get("valence_sum", 0.0)
+            arousal_sum = res_dict.get("arousal_sum", 0.0)
 
             if count == 0:
                 return {"status": "empty", "message": "No telemetry data found"}
