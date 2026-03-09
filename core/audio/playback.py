@@ -23,33 +23,17 @@ from core.audio.exceptions import (
 )
 from core.audio.state import audio_state
 from core.infra.config import AudioConfig
+from core.audio.jitter_buffer import AudioJitterBuffer
+from core.audio.opus_encoding import OpusDecoder
 
 logger = logging.getLogger(__name__)
 
 
 class AudioPlayback:
     """
-    asyncio.Queue (AI) → queue.Queue (Buffer) → Speaker (C-Callback).
+    asyncio.Queue (AI) → AdaptiveJitterBuffer → Speaker (C-Callback).
 
-    Supports instant interruption: when `interrupt()` is called,
-    both the asyncio and thread-safe queues are drained.
-
-    Architecture Decision Record:
-    -----------------------------
-    - Decision: Isolate playback in thread-safe queues with PyAudio C-callbacks.
-    - Rationale: C-callbacks prevent audio buffer underruns, maintaining stable audio.
-    - Trade-off: Requires thread-safe handoffs which add slight complexity.
-
-    Data Flow:
-    ----------
-    .. mermaid::
-       graph TD
-           A[asyncio.Queue (AI Audio)] --> B[queue.Queue Buffer]
-           B --> C[PyAudio Callback]
-           C --> D[Subliminal Heartbeat Mixing]
-           D --> E[Speaker Output]
-           C --> F[16kHz Resampling]
-           F --> G[AEC Far-End Reference]
+    Supports instant interruption and Opus decoding.
     """
 
     def __init__(
@@ -61,12 +45,16 @@ class AudioPlayback:
         self._config = config
         self._async_queue = input_queue
         self._on_audio_tx = on_audio_tx
-        self._buffer: queue.Queue[bytes] = queue.Queue(maxsize=100)
+        
+        # Enhanced Jitter Buffer (capacity=500ms, nominal=100ms)
+        self._jitter_buffer = AudioJitterBuffer(capacity_ms=1000, nominal_ms=120)
+        self._decoder = OpusDecoder(sample_rate=config.receive_sample_rate)
+        
         self._pya: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
-        self._gain = 1.0  # Linear gain for ducking (1.0 = Max, 0.2 = Ducked)
-        self._heartbeat_freq = 50.0  # Hz (Subliminal Hum)
+        self._gain = 1.0
+        self._heartbeat_freq = 50.0
         self._phase = 0.0
 
     def set_gain(self, gain: float) -> None:
@@ -85,9 +73,15 @@ class AudioPlayback:
         import numpy as np
 
         try:
-            data = self._buffer.get_nowait()
-            audio_state.set_playing(True)
+            # Pop from adaptive jitter buffer
+            data = self._jitter_buffer.pop()
+            
+            if data is None:
+                audio_state.set_playing(False)
+                # Return silence
+                return (b"\x00" * (frame_count * 2), pyaudio.paContinue)
 
+            audio_state.set_playing(True)
             pcm = np.frombuffer(data, dtype=np.int16).astype(np.float32)
 
             # 1. Apply linear gain for ducking
@@ -206,23 +200,13 @@ class AudioPlayback:
                     except Exception as e:
                         logger.debug("Failed to mirror audio to UI: %s", e)
 
-                # 2. Push to thread-safe buffer with lightweight async spinlock.
-                while self._running:
-                    try:
-                        self._buffer.put_nowait(audio_bytes)
-                        break
-                    except queue.Full:
-                        # Drop oldest to make room
-                        try:
-                            self._buffer.get_nowait()
-                            self._buffer.put_nowait(audio_bytes)
-                            logger.debug(
-                                "Playback buffer overflow, dropped oldest chunk"
-                            )
-                            break
-                        except queue.Empty:
-                            pass
-                        await asyncio.sleep(0.001)
+                # 2. Push to adaptive jitter buffer
+                # Automatic decompression if detecting Opus (simplified check or config)
+                if len(audio_bytes) < (self._config.chunk_size * 2) and len(audio_bytes) > 0:
+                    # Likely Opus packet (not full PCM frame)
+                    audio_bytes = self._decoder.decode(audio_bytes)
+
+                self._jitter_buffer.push(audio_bytes)
 
             except asyncio.CancelledError:
                 break
@@ -245,13 +229,8 @@ class AudioPlayback:
             except asyncio.QueueEmpty:
                 break
 
-        # 2. Drain thread-safe buffer
-        while not self._buffer.empty():
-            try:
-                self._buffer.get_nowait()
-                dropped += 1
-            except queue.Empty:
-                break
+        # 2. Drain jitter buffer
+        self._jitter_buffer.flush()
 
         audio_state.set_playing(False)
 

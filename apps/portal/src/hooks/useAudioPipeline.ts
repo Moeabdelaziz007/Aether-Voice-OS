@@ -171,6 +171,9 @@ export function useAudioPipeline(): AudioPipelineReturn {
             const gain = speakerGainRef.current;
             if (!ctx || !gain) return;
 
+            // SAFETY_MARGIN: 100ms of pre-roll to absorb network jitter
+            const SAFETY_MARGIN = 0.1;
+
             // Decode Int16 → Float32
             const pcm16 = new Int16Array(pcmData);
             const float32 = new Float32Array(pcm16.length);
@@ -190,12 +193,15 @@ export function useAudioPipeline(): AudioPipelineReturn {
             source.buffer = buffer;
             source.connect(gain);
 
-            // Schedule gaplessly
             const now = ctx.currentTime;
-            const startTime = Math.max(
-                now,
-                nextPlayTimeRef.current
-            );
+
+            // If the cursor is behind 'now', we've had a buffer underrun.
+            // Reset the cursor to now + safety margin to re-buffer.
+            if (nextPlayTimeRef.current < now) {
+                nextPlayTimeRef.current = now + SAFETY_MARGIN;
+            }
+
+            const startTime = nextPlayTimeRef.current;
             source.start(startTime);
 
             // Update cursor for next chunk

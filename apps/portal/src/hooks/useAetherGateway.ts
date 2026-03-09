@@ -57,6 +57,7 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
                     const auth = hk.generateResponse(m.challenge);
                     ws.send(JSON.stringify({ type: "connect.response", client_id: auth.client_id, signature: auth.signature, id_token: token, capabilities: ["audio_streaming", "msgpack"] }));
                 } else if (m.type === "connect.ack") { setStatus("connected"); store.setSessionStartTime(Date.now()); }
+                else if (m.type === "AUDIO_ACK") { bp.current.ack(); }
                 else processEvent(m as GatewayEvent, store, setLatencyMs);
             };
             ws.onclose = (ev) => { if (ev.code !== 1000 && ev.code !== 1001) { setStatus("reconnecting"); rm.current.trigger(); } else setStatus("disconnected"); };
@@ -120,7 +121,19 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void) {
     }
 }
 
-class BackpressureController { HIGH = 65536; isThrottled(ba: number) { return ba > this.HIGH; } }
+class BackpressureController {
+    HIGH = 65536;
+    MAX_UNACKED = 15;
+    unacked = 0;
+
+    isThrottled(ba: number) {
+        return ba > this.HIGH || this.unacked >= this.MAX_UNACKED;
+    }
+
+    send() { this.unacked++; }
+    ack() { this.unacked = Math.max(0, this.unacked - 1); }
+}
+
 class ReconnectionManager {
     attempt = 0; timer: any = null; constructor(private onR: () => void) { }
     trigger() {
@@ -132,6 +145,7 @@ class ReconnectionManager {
     stop() { if (this.timer) clearTimeout(this.timer); }
     reset() { this.attempt = 0; this.stop(); }
 }
+
 class HandshakeManager {
     private kp: nacl.SignKeyPair; constructor() {
         const k = "aether_ed25519_seed", s = localStorage.getItem(k);
@@ -144,6 +158,7 @@ class HandshakeManager {
     private th(d: Uint8Array) { return Array.from(d).map(b => b.toString(16).padStart(2, '0')).join(''); }
     private fh(h: string) { const b = new Uint8Array(h.length / 2); for (let i = 0; i < h.length; i += 2) b[i / 2] = parseInt(h.slice(i, i + 2), 16); return b; }
 }
+
 class PCMStreamBatcher {
     private b: Uint8Array[] = []; timer: any = null; constructor(private ws: WebSocket, private bp: BackpressureController) { }
     add(p: Uint8Array) { this.b.push(p); if (!this.timer) this.timer = setTimeout(() => this.flush(), 40); }
@@ -152,5 +167,6 @@ class PCMStreamBatcher {
         const merged = new Uint8Array(this.b.reduce((a, v) => a + v.length, 0)); let o = 0;
         for (const c of this.b) { merged.set(c, o); o += c.length; }
         this.ws.send(merged); this.b = [];
+        this.bp.send(); // Track unacked chunk
     }
 }

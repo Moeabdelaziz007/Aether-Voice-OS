@@ -751,6 +751,7 @@ class AetherGateway:
     async def _route_binary(self, client_id: str, data: bytes) -> None:
         """Route incoming binary audio chunks to the session's input queue."""
         try:
+            # Inject into Gemini's input queue
             await self._audio_in.put(
                 {
                     "data": data,
@@ -759,6 +760,17 @@ class AetherGateway:
                     ),
                 }
             )
+            
+            # Send ACK for backpressure management
+            async with self._lock:
+                if client_id in self._clients:
+                    client = self._clients[client_id]
+                    ack_msg = {"type": "AUDIO_ACK", "timestamp": time.time()}
+                    if client.use_msgpack:
+                        await client.ws.send(msgpack.packb(ack_msg))
+                    else:
+                        await client.ws.send(json.dumps(ack_msg))
+                        
         except Exception as exc:
             logger.error("Error routing binary audio: %s", exc)
 

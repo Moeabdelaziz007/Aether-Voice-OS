@@ -36,6 +36,14 @@ async def handle_tool_call(session_facade, session, tool_call) -> None:
         if session_facade._scheduler:
             session_facade._scheduler.on_tool_start(fc.name, fc.args)
 
+        # Strict JSONSchema & Pydantic Validation against Soul Manifest
+        if not session_facade._tool_registry.validate(fc.name, fc.args or {}):
+            return {
+                "status": "validation_failed",
+                "error": f"Tool '{fc.name}' failed structural validation. Hallucinated or malformed arguments detected.",
+                "retry_hint": "re-examine_tool_definition_and_fix_argument_structure"
+            }
+
         started = perf_counter()
         try:
             return await asyncio.wait_for(

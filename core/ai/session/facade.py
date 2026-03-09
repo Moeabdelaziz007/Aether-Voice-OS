@@ -97,6 +97,22 @@ class ToolRegistry:
             )
         return declarations
 
+    def validate(self, name: str, args: dict) -> bool:
+        """Validate tool call arguments against the registered Pydantic model."""
+        if name not in self.tools:
+            return True # Not managed by this registry (fallback to router)
+        
+        try:
+            model = self.tools[name]
+            # Use jsonschema validator for strict primitive check
+            jsonschema.validate(instance=args, schema=model.model_json_schema())
+            # Then use pydantic for deep typing
+            model(**args)
+            return True
+        except Exception as e:
+            logger.error("⚡ Tool Validation Error [%s]: %s", name, e)
+            return False
+
 logger = logging.getLogger(__name__)
 
 
