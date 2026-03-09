@@ -58,26 +58,27 @@ from .tool_dispatch import handle_tool_call
 
 class OpenClaw(BaseModel):
     """Open a specialized tool interface."""
+
     tool_id: str = Field(..., description="The ID of the tool to open")
+
 
 class SoulSwap(BaseModel):
     """Swap the active soul/expert."""
+
     target_soul: str = Field(..., description="Target soul name")
+
 
 class DiagnoseStructure(BaseModel):
     """Diagnose the current system structure."""
-    component: str = Field(..., description="The component to diagnose")
 
+    component: str = Field(..., description="The component to diagnose")
 
 
 class ToolRegistry:
     """Typed registry for declarative tools with response_schema enforcement."""
+
     def __init__(self):
-        self.tools = {
-            "open_claw": OpenClaw,
-            "soul_swap": SoulSwap,
-            "diagnose_structure": DiagnoseStructure
-        }
+        self.tools = {"open_claw": OpenClaw, "soul_swap": SoulSwap, "diagnose_structure": DiagnoseStructure}
 
     def get_declarations(self) -> list[types.FunctionDeclaration]:
         declarations = []
@@ -86,13 +87,10 @@ class ToolRegistry:
             # Enforce basic jsonschema validation strictly before sending to Gemini
             jsonschema.Draft202012Validator.check_schema(schema)
             declarations.append(
-                types.FunctionDeclaration(
-                    name=name,
-                    description=model.__doc__ or "",
-                    parameters=schema
-                )
+                types.FunctionDeclaration(name=name, description=model.__doc__ or "", parameters=schema)
             )
         return declarations
+
 
 logger = logging.getLogger(__name__)
 
@@ -138,9 +136,7 @@ class GeminiLiveSession:
         # Telemetry counters (best-effort; exposed via gateway.metrics when possible)
         self._output_queue_drops = 0
 
-        self._frame_buffer: list[
-            tuple[float, bytes]
-        ] = []  # Rolling history of screenshots
+        self._frame_buffer: list[tuple[float, bytes]] = []  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
         self._active_handoffs: dict[str, dict] = {}  # A2A V3 Handoff Tracking
 
@@ -153,17 +149,18 @@ class GeminiLiveSession:
         self._handover_acknowledgments: Dict[str, str] = {}
         self._soul_instruction_cache: Optional[str] = None
         self._start_time: datetime = datetime.now()
-        
+
         # Reliability & Budget Tracking
         self._retry_count = 0
         self._max_retries = 3
-        self._token_budget = 50000 
+        self._token_budget = 50000
         self._tokens_used = 0
         self._tool_registry = ToolRegistry()
-        
+
         # Firestore Evidence Logger
         try:
             from google.cloud import firestore
+
             self._db = firestore.Client(project=os.environ.get("FIRESTORE_PROJECT"))
         except Exception as e:
             logger.warning("Failed to initialize Firestore client: %s", e)
@@ -190,10 +187,10 @@ class GeminiLiveSession:
                 return
             except Exception as exc:
                 self._retry_count += 1
-                wait = 2 ** self._retry_count
+                wait = 2**self._retry_count
                 logger.warning("Connection failed, retrying in %ds... (%s)", wait, exc)
                 await asyncio.sleep(wait)
-        
+
         raise AIConnectionError("Max retries exceeded for Gemini Live connection")
 
     async def run(self) -> None:
@@ -281,16 +278,12 @@ class GeminiLiveSession:
             if stype in ("thinking", "breathing"):
                 thinking_streak += 1
                 if thinking_streak >= 25:  # ~5 seconds of cognitive load
-                    logger.info(
-                        "🧠 Empathy Trigger: User is thinking. Sending backchannel cue."
-                    )
+                    logger.info("🧠 Empathy Trigger: User is thinking. Sending backchannel cue.")
                     try:
                         # Sending a tiny text hint can encourage Gemini to
                         # give a soft vocal affirmative without fully taking the turn.
                         await session.send_realtime_input(
-                            parts=[
-                                types.Part.from_text(text="[user thinking, soft 'Mhm']")
-                            ]
+                            parts=[types.Part.from_text(text="[user thinking, soft 'Mhm']")]
                         )
                         thinking_streak = 0  # Reset to avoid spamming
                     except Exception as e:
@@ -318,11 +311,7 @@ class GeminiLiveSession:
 
                     # Inject into the realtime stream
                     await session.send_realtime_input(
-                        parts=[
-                            types.Part.from_bytes(
-                                data=image_bytes, mime_type="image/jpeg"
-                            )
-                        ]
+                        parts=[types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg")]
                     )
                     self._vision_pulse.record_pulse()
 
@@ -375,9 +364,7 @@ class GeminiLiveSession:
         )
 
         try:
-            await self._session.send_realtime_input(
-                parts=[types.Part(text=instr)]
-            )
+            await self._session.send_realtime_input(parts=[types.Part(text=instr)])
             logger.info("⚡ Session: Injected Hot-DNA update instruction.")
         except Exception as e:
             logger.error("Failed to inject DNA update: %s", e)
@@ -416,20 +403,22 @@ class GeminiLiveSession:
         if visual_frames:
             logger.info("📸 Injecting %d visual frames into handover context", len(visual_frames))
             asyncio.create_task(self._inject_frames(visual_frames))
-        
+
         # Log evidence to Firestore (Structured Audit)
         if self._db:
             try:
-                self._db.collection("handover_traces").add({
-                    "session_id": id(self),
-                    "target_soul": context.target_soul,
-                    "timestamp": datetime.now(),
-                    "frame_count": len(visual_frames) if visual_frames else 0,
-                    "tokens_used_at_handover": self._tokens_used
-                })
+                self._db.collection("handover_traces").add(
+                    {
+                        "session_id": id(self),
+                        "target_soul": context.target_soul,
+                        "timestamp": datetime.now(),
+                        "frame_count": len(visual_frames) if visual_frames else 0,
+                        "tokens_used_at_handover": self._tokens_used,
+                    }
+                )
             except Exception as e:
                 logger.error("Failed to log handover trace to Firestore: %s", e)
-            
+
         return inject_handover_context(self, context)
 
     def track_tokens(self, tokens: int) -> None:
@@ -442,7 +431,7 @@ class GeminiLiveSession:
         """Internal helper to stream frames to Gemini."""
         if not self._session or not self._running:
             return
-        
+
         parts = [types.Part(inline_data=types.Blob(data=f, mime_type="image/webp")) for f in frames]
         try:
             await self._session.send_realtime_input(parts=parts)
@@ -460,9 +449,7 @@ class GeminiLiveSession:
         logger.info("🔮 A2A [ECHO] Injecting thought: %s", echo)
         try:
             # We wrap the echo in a directive to ensure Gemini vocalizes it as a thought
-            await self._session.send_realtime_input(
-                parts=[types.Part(text=f"[thought: {echo}]")]
-            )
+            await self._session.send_realtime_input(parts=[types.Part(text=f"[thought: {echo}]")])
         except Exception as e:
             logger.error("Echo injection failed: %s", e)
 
@@ -495,9 +482,7 @@ class GeminiLiveSession:
         """Get the currently active (injected) handover context."""
         return self._injected_handover_context
 
-    def complete_handover_acknowledgment(
-        self, handover_id: str, success: bool, message: str = ""
-    ) -> bool:
+    def complete_handover_acknowledgment(self, handover_id: str, success: bool, message: str = "") -> bool:
         return complete_handover_acknowledgment(self, handover_id, success, message)
 
     def export_handover_state(self) -> Dict[str, Any]:
