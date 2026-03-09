@@ -21,7 +21,7 @@ export function useVoiceForge() {
         activeStep,
     } = useForgeStore();
 
-    const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const recognitionRef = useRef<any | null>(null);
 
     // Initialize Web Speech API
     useEffect(() => {
@@ -35,7 +35,7 @@ export function useVoiceForge() {
         recognition.interimResults = true;
         recognition.lang = 'en-US';
 
-        recognition.onresult = (event: SpeechRecognitionEvent) => {
+        recognition.onresult = (event: any) => {
             let finalTranscript = '';
             let interimTranscript = '';
 
