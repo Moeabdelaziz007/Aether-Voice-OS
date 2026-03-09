@@ -51,13 +51,11 @@ jobs:
           pip install ruff
 
       - name: Run ruff check
-        run: ruff check core/engine.py core/audio/capture.py core/audio/jitter_buffer.py core/ai/adk_agents.py core/infra/telemetry.py core/services/registry.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
-
+        run: ruff check core/ tests/
       - name: Run ruff format check
-        run: ruff format --check core/engine.py core/audio/capture.py core/audio/jitter_buffer.py core/ai/adk_agents.py core/infra/telemetry.py core/services/registry.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
-
+        run: ruff format --check core/ tests/
       - name: Run Python syntax check
-        run: python -m compileall core/engine.py core/ai/adk_agents.py core/ai/session.py core/audio/capture.py core/audio/jitter_buffer.py core/audio/playback.py core/infra/telemetry.py core/infra/transport/gateway.py core/tools/router.py core/tools/system_tool.py tests/test_system_tool.py tests/integration/test_gateway_e2e.py
+        run: python -m compileall core/ tests/
 
   # ─────────────────────────────────────────────────────────────────
   # Stage 2: Comprehensive Testing
@@ -93,7 +91,7 @@ jobs:
 
       - name: Run tests with coverage
         run: |
-          pytest tests/test_system_tool.py tests/integration/test_gateway_e2e.py -q --maxfail=1 --disable-warnings --cov=core.tools.system_tool --cov=core.infra.transport.gateway --cov=core.infra.transport.session_state --cov-report=xml --cov-report=term-missing --cov-fail-under=35
+          pytest tests/ -q --maxfail=5 --disable-warnings --cov=core --cov-report=xml --cov-report=term-missing --cov-fail-under=40
         env:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
 
