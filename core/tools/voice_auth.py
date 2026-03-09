@@ -66,7 +66,6 @@ async def verify_admin(**kwargs) -> dict:
 
 async def calibrate_admin_voice(**kwargs) -> dict:
     """
-    Tool: Calibrates the Administrator's voice biometric signature. 
     Tool: Calibrates the Administrator's voice biometric signature.
     The user should speak a neutral sentence while this is active.
     """
