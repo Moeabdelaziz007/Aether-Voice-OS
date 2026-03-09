@@ -109,12 +109,15 @@ class HiveCoordinator:
         # Reactive Kernel -> Affective Soul bridge
         if self._event_bus:
             from core.infra.event_bus import AcousticTraitEvent
+
             self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
             self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
 
         self._inject_dna_callback: Optional[Callable[[AgentDNA, List[str]], Any]] = None
 
-    def set_inject_dna_callback(self, callback: Callable[[AgentDNA, List[str]], Any]) -> None:
+    def set_inject_dna_callback(
+        self, callback: Callable[[AgentDNA, List[str]], Any]
+    ) -> None:
         """Register a callback for injecting DNA updates into the session."""
         self._inject_dna_callback = callback
 
@@ -132,7 +135,9 @@ class HiveCoordinator:
         try:
             if asyncio.iscoroutinefunction(self._on_handover):
                 try:
-                    await self._on_handover(from_agent, to_agent, task, callback_payload)
+                    await self._on_handover(
+                        from_agent, to_agent, task, callback_payload
+                    )
                 except TypeError:
                     await self._on_handover(from_agent, to_agent, task)
             else:
@@ -180,7 +185,9 @@ class HiveCoordinator:
     async def request_handoff(self, target_agent: str, task: str):
         """Standard request for any kind of handover."""
         logger.info(f"COORD: Requested handoff to {target_agent}")
-        await self._notify_handover("Hive", target_agent, task, {"galaxy_id": "Genesis"})
+        await self._notify_handover(
+            "Hive", target_agent, task, {"galaxy_id": "Genesis"}
+        )
 
     async def prepare_handoff(
         self,
@@ -221,13 +228,15 @@ class HiveCoordinator:
             payload_with_galaxy.setdefault("galaxy_id", "Genesis")
 
             # Create handover context
-            context = await self._handover_protocol.create_handover( # Await protocol call
-                source_agent=source_name,
-                target_agent=target_name,
-                task=task,
-                payload=payload_with_galaxy,
+            context = (
+                await self._handover_protocol.create_handover(  # Await protocol call
+                    source_agent=source_name,
+                    target_agent=target_name,
+                    task=task,
+                    payload=payload_with_galaxy,
+                )
             )
-            
+
             # Create snapshot for potential rollback
             context.create_snapshot()
 
@@ -247,7 +256,10 @@ class HiveCoordinator:
                 )
 
             # Pre-transfer validation
-            success, message = await self._handover_protocol.prepare_handoff( # Await protocol call
+            (
+                success,
+                message,
+            ) = await self._handover_protocol.prepare_handoff(  # Await protocol call
                 context.handover_id
             )
             if not success:
@@ -281,7 +293,9 @@ class HiveCoordinator:
                 context.negotiation = negotiation
             else:
                 # Speculative pre-warming for zero-friction handovers
-                await self._handover_protocol.pre_warm_target(context.handover_id) # Await protocol call
+                await self._handover_protocol.pre_warm_target(
+                    context.handover_id
+                )  # Await protocol call
                 if self._pre_warm_callback:
                     # Non-blocking trigger of gateway pre-warm
                     if asyncio.iscoroutinefunction(self._pre_warm_callback):
@@ -362,7 +376,7 @@ class HiveCoordinator:
         try:
             # Add validation checkpoint if provided
             if validation_results:
-                checkpoint = await self._handover_protocol.create_checkpoint( # Await protocol call
+                checkpoint = await self._handover_protocol.create_checkpoint(  # Await protocol call
                     handover_id=handover_id,
                     stage="post_transfer",
                     partial_output={"validation_results": validation_results},
@@ -378,7 +392,9 @@ class HiveCoordinator:
                     logger.warning("Handover %s has validation issues", handover_id)
 
             # Complete the handover
-            success, message = await self._handover_protocol.complete_handoff(handover_id) # Await protocol call
+            success, message = await self._handover_protocol.complete_handoff(
+                handover_id
+            )  # Await protocol call
 
             if success:
                 # Save checkpoints for potential future rollbacks (Safety Net)
@@ -450,20 +466,28 @@ class HiveCoordinator:
 
         try:
             # 1. Execute rollback in protocol
-            success, message = await self._handover_protocol.rollback_handover(handover_id)
+            success, message = await self._handover_protocol.rollback_handover(
+                handover_id
+            )
             if not success:
                 logger.error("Protocol-level rollback failed: %s", message)
                 return False, f"Protocol rollback failed: {message}"
 
             # 2. Restore context state from snapshot
             if context.restore_snapshot():
-                logger.info("A2A [HIVE] Context restored from snapshot for %s", handover_id)
+                logger.info(
+                    "A2A [HIVE] Context restored from snapshot for %s", handover_id
+                )
 
             # 3. Revert active soul to the last known-good expert
             if self._last_successful_soul:
-                from_name = self._active_soul.manifest.name if self._active_soul else "Unknown"
+                from_name = (
+                    self._active_soul.manifest.name if self._active_soul else "Unknown"
+                )
                 to_name = self._last_successful_soul.manifest.name
-                logger.info("A2A [HIVE] Reverting active expert: %s -> %s", from_name, to_name)
+                logger.info(
+                    "A2A [HIVE] Reverting active expert: %s -> %s", from_name, to_name
+                )
                 self._active_soul = self._last_successful_soul
 
             # 4. Record telemetry
@@ -624,7 +648,6 @@ class HiveCoordinator:
 
         return checkpoint
 
-
     def get_handover_context(self, handover_id: str) -> Optional[HandoverContext]:
         """Retrieve an active handover context by ID."""
         return self._active_handovers.get(handover_id)
@@ -726,13 +749,15 @@ class HiveCoordinator:
             if spatial_cortex:
                 # 2. Process vision -> 3D vectors
                 vision_data = {"b64": event.b64_data, "mime": event.mime_type}
-                spatial_intent = await spatial_cortex.agent.map_vision_to_spatial(vision_data)
-                
+                spatial_intent = await spatial_cortex.agent.map_vision_to_spatial(
+                    vision_data
+                )
+
                 # 3. Inject spatial intent into the active soul's working buffer
                 # This grounding allows the specialist to 'see' the UI state
                 logger.info(
-                    "👁️ Hive: Vision grounded. Spatial Intent: %s", 
-                    spatial_intent.get("avatar_gaze")
+                    "👁️ Hive: Vision grounded. Spatial Intent: %s",
+                    spatial_intent.get("avatar_gaze"),
                 )
         except Exception as e:
             logger.error("Spatial grounding failed in Hive: %s", e)

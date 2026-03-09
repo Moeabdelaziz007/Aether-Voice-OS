@@ -91,7 +91,7 @@ async def index_codebase() -> None:
             chunks = chunk_text(content)
             for i, chunk in enumerate(chunks):
                 key = f"{rel_path}:{i}"
-                chunk_header = f"File: {rel_path}\nChunk: {i+1}/{len(chunks)}\n---\n"
+                chunk_header = f"File: {rel_path}\nChunk: {i + 1}/{len(chunks)}\n---\n"
                 full_text = chunk_header + chunk
 
                 # We batch await for simplicity, but a Semaphore would be safer

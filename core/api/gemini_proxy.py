@@ -10,7 +10,7 @@ import os
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Request, WebSocket
 
 router = APIRouter(prefix="/api/gemini", tags=["gemini"])
 
@@ -68,11 +68,13 @@ async def proxy_live_websocket(websocket: WebSocket):
     This endpoint now serves as a stub for compatibility.
     """
     await websocket.accept()
-    await websocket.send_json({
-        "type": "error",
-        "message": "Direct Gemini Live WS Proxy is DISABLED. Use Aether Gateway Protocol on port 18789.",
-        "code": "WS_DISABLED_USE_GATEWAY"
-    })
+    await websocket.send_json(
+        {
+            "type": "error",
+            "message": "Direct Gemini Live WS Proxy is DISABLED. Use Aether Gateway Protocol on port 18789.",
+            "code": "WS_DISABLED_USE_GATEWAY",
+        }
+    )
     await websocket.close(code=1000)
 
 
@@ -92,6 +94,3 @@ async def health_check() -> dict[str, str]:
             return {"status": "degraded", "gemini": f"error_{response.status_code}"}
         except Exception as e:
             return {"status": "unhealthy", "error": str(e)}
-
-
-import asyncio  # noqa: E402

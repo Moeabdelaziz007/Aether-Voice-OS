@@ -17,8 +17,9 @@ from core.infra.transport.bus import GlobalBus
 from core.tools.healing_tool import diagnose_and_repair
 
 try:
-    from nacl.signing import SigningKey, VerifyKey
     from nacl.encoding import HexEncoder
+    from nacl.signing import SigningKey, VerifyKey
+
     HAS_NACL = True
 except ImportError:
     HAS_NACL = False
@@ -65,7 +66,7 @@ class SREWatchdog:
         self._gateway = gateway
         self._firebase = firebase_connector or FirebaseConnector()
         self._audio_manager = audio_manager
-        
+
         # Security: Ed25519 Signing for autonomous actions
         self._signing_key: Optional[Any] = None
         self._verify_key_hex: Optional[str] = None
@@ -73,10 +74,17 @@ class SREWatchdog:
             # In production, this would be loaded from a secure vault.
             # For the challenge MVP, we generate a session-bound key if not provided.
             self._signing_key = SigningKey.generate()
-            self._verify_key_hex = self._signing_key.verify_key.encode(encoder=HexEncoder).decode()
-            logger.info("🛡️ SRE Watchdog [SECURE]: Generated session signature key. Root: %s...", self._verify_key_hex[:12])
+            self._verify_key_hex = self._signing_key.verify_key.encode(
+                encoder=HexEncoder
+            ).decode()
+            logger.info(
+                "🛡️ SRE Watchdog [SECURE]: Generated session signature key. Root: %s...",
+                self._verify_key_hex[:12],
+            )
         else:
-            logger.warning("⚠️ SRE Watchdog [UNSECURE]: PyNaCl not found. Signatures disabled.")
+            logger.warning(
+                "⚠️ SRE Watchdog [UNSECURE]: PyNaCl not found. Signatures disabled."
+            )
 
         self._is_running = False
         self._loop_task: Optional[asyncio.Task] = None
@@ -88,15 +96,17 @@ class SREWatchdog:
 
     def _register_default_patterns(self):
         """Register default failure patterns."""
-        self._healing_registry.update({
-            r"Redis.*connection.*failed": self._heal_bus_failure,
-            r"timeout.*error": self._heal_system_failure,
-            r"connection.*error": self._heal_system_failure,
-            r"Audio device.*disconnected": self._recover_audio_device,
-            r"Audio.*capture.*error": self._recover_audio_device,
-            r"AEC.*diverged": self._reset_aec,
-            r"Queue.*overflow.*100": self._throttle_audio,
-        })
+        self._healing_registry.update(
+            {
+                r"Redis.*connection.*failed": self._heal_bus_failure,
+                r"timeout.*error": self._heal_system_failure,
+                r"connection.*error": self._heal_system_failure,
+                r"Audio device.*disconnected": self._recover_audio_device,
+                r"Audio.*capture.*error": self._recover_audio_device,
+                r"AEC.*diverged": self._reset_aec,
+                r"Queue.*overflow.*100": self._throttle_audio,
+            }
+        )
 
         # Failure counts for throttling
         self._failure_counts: Dict[str, int] = {}
@@ -204,13 +214,16 @@ class SREWatchdog:
             return
 
         try:
-            await self._firebase.log_event("audio_telemetry", {
-                "timestamp": datetime.now().isoformat(),
-                "rms": metrics.get("rms"),
-                "aec_erle": metrics.get("aec_erle"),
-                "aec_converged": metrics.get("aec_converged"),
-                "queue_drops": getattr(audio_state, "capture_queue_drops", 0),
-            })
+            await self._firebase.log_event(
+                "audio_telemetry",
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "rms": metrics.get("rms"),
+                    "aec_erle": metrics.get("aec_erle"),
+                    "aec_converged": metrics.get("aec_converged"),
+                    "queue_drops": getattr(audio_state, "capture_queue_drops", 0),
+                },
+            )
         except Exception as e:
             logger.error("Failed to log audio metrics: %s", e)
 
@@ -222,26 +235,35 @@ class SREWatchdog:
 
         # 1. Notify frontend
         if self._gateway:
-            await self._gateway.broadcast("repair_state", {
-                "status": "diagnosing",
-                "message": "Audio device failure detected. Restarting audio driver...",
-            })
+            await self._gateway.broadcast(
+                "repair_state",
+                {
+                    "status": "diagnosing",
+                    "message": "Audio device failure detected. Restarting audio driver...",
+                },
+            )
 
         # 2. Try to reinitialize
         try:
             if self._audio_manager:
                 await self._audio_manager.restart()
                 if self._gateway:
-                    await self._gateway.broadcast("repair_state", {
-                        "status": "applied",
-                        "message": "Audio driver reinitialized successfully.",
-                    })
+                    await self._gateway.broadcast(
+                        "repair_state",
+                        {
+                            "status": "applied",
+                            "message": "Audio driver reinitialized successfully.",
+                        },
+                    )
         except Exception as e:
             if self._gateway:
-                await self._gateway.broadcast("repair_state", {
-                    "status": "failed",
-                    "message": f"Audio recovery failed: {e}",
-                })
+                await self._gateway.broadcast(
+                    "repair_state",
+                    {
+                        "status": "failed",
+                        "message": f"Audio recovery failed: {e}",
+                    },
+                )
 
     async def _reset_aec(self, error_msg: str = ""):
         """Reset AEC when it diverges"""
@@ -254,10 +276,13 @@ class SREWatchdog:
         """Throttle audio when queue overflows"""
         logger.warning("Queue overflow detected, throttling audio...")
         if self._gateway:
-            await self._gateway.broadcast("repair_state", {
-                "status": "applied",
-                "message": "Audio buffer overflow detected. Throttling capture stream.",
-            })
+            await self._gateway.broadcast(
+                "repair_state",
+                {
+                    "status": "applied",
+                    "message": "Audio buffer overflow detected. Throttling capture stream.",
+                },
+            )
 
     async def _heal_bus_failure(self):
         """Protocol: Redis/Bus connection recovery."""
@@ -287,7 +312,9 @@ class SREWatchdog:
                     "status": "diagnosing",
                     "message": "Initiating autonomous repair...",
                     "log": "Timeout/Connection error detected.",
-                    "signature": self._generate_signature("diagnosing|Timeout/Connection error detected.")
+                    "signature": self._generate_signature(
+                        "diagnosing|Timeout/Connection error detected."
+                    ),
                 },
             )
 
@@ -329,7 +356,7 @@ class SREWatchdog:
                         "status": "failed",
                         "message": f"Repair failed: {e}",
                         "log": f"Error: {e}",
-                        "signature": self._generate_signature(f"failed|Error: {e}")
+                        "signature": self._generate_signature(f"failed|Error: {e}"),
                     },
                 )
 
@@ -346,16 +373,22 @@ class SREWatchdog:
 
     async def _trigger_find_and_extend(self, error_msg: str = ""):
         """Skill 3: Triggered when a non-existent tool or capability is requested."""
-        logger.info("🔍 Watchdog: Skill 3 (Find & Extend) triggered. Analyzing gap: %s", error_msg)
-        
+        logger.info(
+            "🔍 Watchdog: Skill 3 (Find & Extend) triggered. Analyzing gap: %s",
+            error_msg,
+        )
+
         # 1. Notify the user/system via the bus
         if self._bus:
-            await self._bus.publish("system_events", {
-                "type": "capability_gap_detected",
-                "details": error_msg,
-                "status": "drafting_blueprint"
-            })
+            await self._bus.publish(
+                "system_events",
+                {
+                    "type": "capability_gap_detected",
+                    "details": error_msg,
+                    "status": "drafting_blueprint",
+                },
+            )
 
-        # 2. In a real integration, this would trigger the 'Architect' expert 
+        # 2. In a real integration, this would trigger the 'Architect' expert
         # to write a new implementation_plan.md and register it in Skills.md.
         logger.info("📑 Architect: Drafting autonomous blueprint for new capability...")

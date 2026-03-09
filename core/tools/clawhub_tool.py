@@ -1,18 +1,17 @@
 """
 Aether Voice OS — ClawHub Skill Orchestrator.
 
-Provides a bridge to www.clawhub.ai to fetch, install, and 
+Provides a bridge to www.clawhub.ai to fetch, install, and
 inspect skills for newly forged AI agents.
 """
 
 import logging
 import subprocess
-import json
-import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
+
 
 def search_skills(query: str) -> List[Dict[str, str]]:
     """
@@ -33,6 +32,7 @@ def search_skills(query: str) -> List[Dict[str, str]]:
         logger.error("ClawHub Search failed: %s", e)
         return []
 
+
 def install_skill(slug: str, agent_name: str) -> Dict[str, Any]:
     """
     Installs a ClawHub skill into a specific agent package.
@@ -40,17 +40,20 @@ def install_skill(slug: str, agent_name: str) -> Dict[str, Any]:
     try:
         root_dir = Path(__file__).parent.parent.parent
         agent_dir = root_dir / "packages" / agent_name.lower().replace(" ", "_")
-        
+
         if not agent_dir.exists():
-            return {"status": "error", "message": f"Agent '{agent_name}' does not exist."}
+            return {
+                "status": "error",
+                "message": f"Agent '{agent_name}' does not exist.",
+            }
 
         # Run clawhub install in a temporary directory
         temp_dir = root_dir / "tmp" / f"clawhub_{slug}"
         temp_dir.mkdir(parents=True, exist_ok=True)
-        
+
         cmd = ["npx", "-y", "clawhub", "install", slug]
         subprocess.run(cmd, cwd=str(temp_dir), check=True)
-        
+
         # ClawHub skills typically include a SKILL.md.
         # Find all .md files and move them to the agent directory.
         skill_files = list(temp_dir.glob("*.md"))
@@ -61,16 +64,22 @@ def install_skill(slug: str, agent_name: str) -> Dict[str, Any]:
                 dest_path = agent_dir / f"skill_{slug}.md"
                 with open(dest_path, "w") as dest:
                     dest.write(content)
-        
+
         # Also check for any script directories if present
         # (Implementation details vary based on ClawHub skill structure)
-        
-        logger.info("✅ ClawHub: Skill '%s' installed into agent '%s'", slug, agent_name)
-        return {"status": "success", "message": f"Skill '{slug}' integrated successfully."}
-        
+
+        logger.info(
+            "✅ ClawHub: Skill '%s' installed into agent '%s'", slug, agent_name
+        )
+        return {
+            "status": "success",
+            "message": f"Skill '{slug}' integrated successfully.",
+        }
+
     except Exception as e:
         logger.error("ClawHub Install failed: %s", e)
         return {"status": "error", "message": str(e)}
+
 
 def inspect_skill(slug: str) -> str:
     """

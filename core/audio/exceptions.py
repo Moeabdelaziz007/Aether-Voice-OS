@@ -4,13 +4,16 @@ Aether Voice OS — Audio Exceptions.
 Centralized exception hierarchy for audio capture, playback, and processing.
 """
 
+
 class AudioError(Exception):
     """Base exception for all audio-related errors."""
+
     pass
 
 
 class AudioDeviceError(AudioError):
     """Base class for device-related errors."""
+
     pass
 
 
@@ -48,4 +51,5 @@ class AECConvergenceError(AudioError):
 
 class AudioPipelineError(AudioError):
     """Critical error in audio pipeline requiring restart."""
+
     pass

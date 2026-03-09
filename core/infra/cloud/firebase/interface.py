@@ -215,13 +215,14 @@ class FirebaseConnector:
     async def get_session_affective_summary(self, session_id: str) -> dict:
         """
         Calculates fitness metrics for the genetic optimizer.
-        Aggregates valence/arousal from the 'metrics' subcollection using 
+        Aggregates valence/arousal from the 'metrics' subcollection using
         Firestore AggregationQuery to avoid N+1 fetches.
         """
         if not self.is_connected or not self._db:
             return {"status": "error", "message": "Firebase disconnected"}
 
         try:
+
             def _aggregate():
                 metrics_ref = (
                     self._db.collection("sessions")
@@ -229,15 +230,17 @@ class FirebaseConnector:
                     .collection("metrics")
                 )
                 # Optimized: Aggregate on server-side
-                query = metrics_ref.aggregate([
-                    firestore.Aggregate.sum("valence", alias="valence_sum"),
-                    firestore.Aggregate.sum("arousal", alias="arousal_sum"),
-                    firestore.Aggregate.count(alias="count")
-                ])
+                query = metrics_ref.aggregate(
+                    [
+                        firestore.Aggregate.sum("valence", alias="valence_sum"),
+                        firestore.Aggregate.sum("arousal", alias="arousal_sum"),
+                        firestore.Aggregate.count(alias="count"),
+                    ]
+                )
                 return query.get()
 
             results = await asyncio.to_thread(_aggregate)
-            
+
             # Extract aggregated values
             res_dict = {res.alias: res.value for res in results}
             count = res_dict.get("count", 0)
@@ -284,6 +287,7 @@ class FirebaseConnector:
             return []
 
         try:
+
             def _read():
                 query = (
                     self._db.collection("knowledge")
@@ -310,7 +314,9 @@ class FirebaseConnector:
             dna["status"] = dna.get("status", "forged")
 
             def _write():
-                self._db.collection("agents").document(agent_name.lower()).set(dna, merge=True)
+                self._db.collection("agents").document(agent_name.lower()).set(
+                    dna, merge=True
+                )
 
             await asyncio.to_thread(_write)
             logger.info(f"🔥 Firebase: Agent DNA synced for {agent_name}")
@@ -319,7 +325,9 @@ class FirebaseConnector:
             logger.error(f"Failed to sync agent DNA for {agent_name}: {e}")
             return False
 
-    async def log_agent_memory(self, agent_id: str, entry: str, context: Optional[dict] = None) -> None:
+    async def log_agent_memory(
+        self, agent_id: str, entry: str, context: Optional[dict] = None
+    ) -> None:
         """
         Logs a memory entry for a specific agent.
         Ensures persistent 'consciousness' across sessions.

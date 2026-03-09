@@ -71,7 +71,7 @@ async def create_task(
     if not db:
         return {
             "status": "error",
-            "message": "Synapse Link Offline: Cannot save task to cloud. Local caching is disabled for security."
+            "message": "Synapse Link Offline: Cannot save task to cloud. Local caching is disabled for security.",
         }
 
     try:
@@ -206,7 +206,7 @@ async def add_note(content: str, tag: str = "general", **kwargs) -> dict:
     if not db:
         return {
             "status": "error",
-            "message": "Synapse Link Offline: Cannot save note to cloud."
+            "message": "Synapse Link Offline: Cannot save note to cloud.",
         }
 
     try:

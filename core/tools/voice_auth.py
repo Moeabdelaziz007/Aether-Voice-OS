@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 # Biometric State
 calibrated_pitch: float = 120.0  # Default fallback
-calibration_window: float = 20.0 # Tolerance (+/- Hz)
+calibration_window: float = 20.0  # Tolerance (+/- Hz)
 is_calibrated: bool = False
 
 
@@ -41,7 +41,11 @@ class VoiceAuthGuard:
             return 100 <= estimated_pitch <= 180
 
         # Authentic matching against calibrated soul fingerprint
-        return (calibrated_pitch - calibration_window) <= estimated_pitch <= (calibrated_pitch + calibration_window)
+        return (
+            (calibrated_pitch - calibration_window)
+            <= estimated_pitch
+            <= (calibrated_pitch + calibration_window)
+        )
 
     @staticmethod
     def calibrate(pitch: float):
@@ -71,21 +75,20 @@ async def calibrate_admin_voice(**kwargs) -> dict:
     """
     rms = audio_state.last_rms
     zcr = audio_state.last_zcr
-    
 
     if rms < 0.01:
         return {
             "status": "failure",
             "message": "No audio detected. Please ensure your microphone is active and speak clearly.",
         }
-    
+
     pitch = zcr * 8000
     if not (50 <= pitch <= 500):
         return {
             "status": "failure",
             "message": f"Detected pitch ({pitch:.1f}Hz) is outside human range. Noise detected?",
         }
-    
+
     VoiceAuthGuard.calibrate(pitch)
     return {
         "status": "success",
@@ -106,5 +109,5 @@ def get_tools() -> list[dict]:
             "description": "Calibrates the voice recognition system using the current speaker's voice.",
             "parameters": {},
             "handler": calibrate_admin_voice,
-        }
+        },
     ]

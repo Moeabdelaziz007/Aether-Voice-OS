@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any
 
 from core.infra.transport.bus import GlobalBus
 
 logger = logging.getLogger(__name__)
+
 
 async def get_active_widgets(**kwargs: Any) -> dict[str, Any]:
     """
@@ -14,14 +15,14 @@ async def get_active_widgets(**kwargs: Any) -> dict[str, Any]:
     """
     bus = GlobalBus()  # Uses default connection params
     connected = await bus.connect()
-    
+
     if not connected:
         return {
             "status": "error",
             "message": "Global Bus connection failed. Cannot retrieve workspace state.",
-            "active_widgets": []
+            "active_widgets": [],
         }
-    
+
     try:
         # Get the active session ID first
         active_session_id = await bus.get_state("active_session_id")
@@ -29,28 +30,29 @@ async def get_active_widgets(**kwargs: Any) -> dict[str, Any]:
             return {
                 "status": "ok",
                 "message": "No active session found in state bus.",
-                "active_widgets": []
+                "active_widgets": [],
             }
-        
+
         # Get the session metadata
         session_state = await bus.get_state(f"session:{active_session_id}")
         if not session_state or "metadata" not in session_state:
             return {
                 "status": "ok",
                 "message": "Session state found but metadata is missing.",
-                "active_widgets": []
+                "active_widgets": [],
             }
-        
+
         widgets = session_state["metadata"].get("active_widgets", [])
-        
+
         return {
             "status": "ok",
             "active_widgets": widgets,
             "session_id": active_session_id,
-            "timestamp": session_state["metadata"].get("last_activity")
+            "timestamp": session_state["metadata"].get("last_activity"),
         }
     finally:
         await bus.disconnect()
+
 
 def get_tools() -> list[dict[str, Any]]:
     return [

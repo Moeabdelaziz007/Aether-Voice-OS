@@ -1,14 +1,13 @@
 import os
-import json
 import time
-from typing import Any, Dict, List, Optional
+
 
 class WorkingBuffer:
     """
     Temporary buffer for raw exchanges in the 'Danger Zone' (>60% context).
     Ensures safe recovery during context compaction.
     """
-    
+
     def __init__(self, workspace_path: str):
         self.buffer_file = os.path.join(workspace_path, "WORKING-BUFFER.md")
         self.threshold = 0.6

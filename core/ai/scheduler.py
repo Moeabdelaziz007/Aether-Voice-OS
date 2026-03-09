@@ -4,8 +4,8 @@ import time
 from typing import Any, Dict, List, Optional
 
 from core.ai.echo import EchoGenerator
-from core.ai.memory.wal import WALProtocol
 from core.ai.memory.buffer import WorkingBuffer
+from core.ai.memory.wal import WALProtocol
 from core.infra.event_bus import AcousticTraitEvent, VisionPulseEvent
 
 logger = logging.getLogger("AetherOS.Cortex")
@@ -36,8 +36,12 @@ class CognitiveScheduler:
         self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
 
         # Proactive Neural OS protocols
-        self._wal = WALProtocol(workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace")
-        self._buffer = WorkingBuffer(workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace")
+        self._wal = WALProtocol(
+            workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace"
+        )
+        self._buffer = WorkingBuffer(
+            workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace"
+        )
         self._heartbeat_task: Optional[asyncio.Task] = None
 
     async def start_heartbeat(self):
@@ -61,7 +65,7 @@ class CognitiveScheduler:
     async def run_heartbeat_check(self):
         """Core heartbeat logic: Security, Self-Healing, and Proactive Builds."""
         logger.info("💓 Cortex: Running Heartbeat check...")
-        
+
         # 1. Memory Watchdog (WAL Sync)
         last_details = self._wal.get_last_critical_details()
         if last_details:
@@ -70,14 +74,20 @@ class CognitiveScheduler:
 
         # 2. Pattern Detector (Reverse Prompting)
         # Using simple frequency analysis on temporal memory
-        actions = [m.get("action") for m in self._temporal_memory[-20:] if "action" in m]
+        actions = [
+            m.get("action") for m in self._temporal_memory[-20:] if "action" in m
+        ]
         if actions:
             # Check for repetition
             for action in set(actions):
                 if actions.count(action) >= 3:
-                    logger.info(f"💡 Pattern Detected: Repeated action '{action}'. Preparing proactive proposal.")
+                    logger.info(
+                        f"💡 Pattern Detected: Repeated action '{action}'. Preparing proactive proposal."
+                    )
                     if self._echo_callback:
-                        await self._echo_callback(f"I've noticed you've done '{action}' several times. Should I automate this?")
+                        await self._echo_callback(
+                            f"I've noticed you've done '{action}' several times. Should I automate this?"
+                        )
 
         # 3. Security Scan
         # Scan for high-arousal states or suspicious command patterns

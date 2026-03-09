@@ -1,14 +1,13 @@
 import json
 import os
-import shutil
-import subprocess
-from typing import Dict, Any
+from typing import Any, Dict
+
 
 class PackageGenerator:
     """
     PackageGenerator — Synthesizes .ath agent packages and npx-installable modules.
     """
-    
+
     def __init__(self, base_path: str = "packages"):
         self.base_path = base_path
         os.makedirs(self.base_path, exist_ok=True)
@@ -44,7 +43,7 @@ class PackageGenerator:
             "provider": dna.get("provider"),
             "model": dna.get("model"),
             "memoryType": dna.get("memoryType"),
-            "schemaVersion": "2.0"
+            "schemaVersion": "2.0",
         }
         with open(os.path.join(package_dir, "manifest.json"), "w") as f:
             json.dump(manifest, f, indent=4)
@@ -61,20 +60,19 @@ class PackageGenerator:
         npx_data = {
             "name": f"@gemigram/{agent_id}",
             "version": "1.0.0",
-            "bin": {
-                agent_id: "index.js"
-            },
-            "dependencies": {}
+            "bin": {agent_id: "index.js"},
+            "dependencies": {},
         }
-        
+
         with open(os.path.join(package_dir, "package.json"), "w") as f:
             json.dump(npx_data, f, indent=4)
-            
+
         # Create an entry point
         with open(os.path.join(package_dir, "index.js"), "w") as f:
-            f.write(f"#!/usr/bin/env node\n")
+            f.write("#!/usr/bin/env node\n")
             f.write(f"console.log('Awakening Gemigram Agent: {agent_id}...');\n")
-            f.write(f"// Logic to bootstrap the agent via Aether engine\n")
+            f.write("// Logic to bootstrap the agent via Aether engine\n")
+
 
 if __name__ == "__main__":
     # Test generation
@@ -86,7 +84,7 @@ if __name__ == "__main__":
         "provider": "google",
         "model": "gemini-2.0-flash",
         "memoryType": "firebase",
-        "skills": ["sql_injection_defense", "network_auditing"]
+        "skills": ["sql_injection_defense", "network_auditing"],
     }
     path = gen.generate_ath_package(test_dna)
     gen.wrap_as_npx(path)

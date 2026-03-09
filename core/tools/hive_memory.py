@@ -64,7 +64,7 @@ async def read_collective_memory(key: str) -> dict[str, object]:
         return {
             "status": "error",
             "data": {"value": None},
-            "message": "Hive Memory offline"
+            "message": "Hive Memory offline",
         }
 
     try:
@@ -75,7 +75,7 @@ async def read_collective_memory(key: str) -> dict[str, object]:
         return {
             "status": "not_found",
             "data": {"value": None},
-            "message": f"Memory slot '{key}' is empty."
+            "message": f"Memory slot '{key}' is empty.",
         }
     except Exception as e:
         logger.error("Hive Memory read failed: %s", e)

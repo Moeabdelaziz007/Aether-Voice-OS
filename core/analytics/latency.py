@@ -194,7 +194,9 @@ class LatencyOptimizer:
         key = self._series_key(session, normalized_stage, model, region)
         state = self._series.get(key)
         if state is None:
-            state = _MetricState(sketch=_TDigestSketch(max_centroids=self._max_centroids))
+            state = _MetricState(
+                sketch=_TDigestSketch(max_centroids=self._max_centroids)
+            )
             self._series[key] = state
         state.add(latency_ms)
 

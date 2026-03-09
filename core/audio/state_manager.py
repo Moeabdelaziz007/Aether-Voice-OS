@@ -142,7 +142,7 @@ class AudioStateManager:
     @property
     def aec_state(self) -> AECState:
         with self._lock:
-            return AECState
+            return AECState(
                 converged=self._aec_state.converged,
                 convergence_progress=self._aec_state.convergence_progress,
                 erle_db=self._aec_state.erle_db,
@@ -321,4 +321,4 @@ class AudioStateProxy:
 
 
 # Global audio_state instance (backwards compatible)
-audio_state = AudioStateProxyaudio_state_manager)
+audio_state = AudioStateProxy(audio_state_manager)

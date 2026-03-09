@@ -2,11 +2,11 @@ import asyncio
 import logging
 import signal
 import sys
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
+from core.ai.scheduler import CognitiveScheduler
 from core.ai.session import GeminiLiveSession
 from core.ai.thalamic import ThalamicGate
-from core.ai.scheduler import CognitiveScheduler
 from core.infra.config import AetherConfig
 from core.infra.event_bus import EventBus
 from core.logic.managers.agents import AgentManager
@@ -121,7 +121,7 @@ class AetherEngine:
 
         # Initialize Infrastructure
         await self._infra.initialize()
-        
+
         # Start Admin API
         self._admin_api.start()
 
@@ -136,7 +136,7 @@ class AetherEngine:
 
         # Start Proactive Pulse
         await self._pulse.start()
-        
+
         # Start Thalamic Gate
         await self._thalamic.start()
 
@@ -147,7 +147,7 @@ class AetherEngine:
             async with asyncio.TaskGroup() as tg:
                 # 1. Run main brain session
                 tg.create_task(self._session.run(), name="genai-session")
-                
+
                 # 2. Run audio lifecycle
                 self._audio.run_tasks(tg)
 
@@ -190,21 +190,20 @@ class AetherEngine:
 
     def _on_affective_data(self, features: Any) -> None:
         """Bridge affective features to telemetry and UI."""
-        self.broadcast({
-            "type": "affective_pulse",
-            "engagement": features.engagement_score,
-            "latency": features.processing_ms or 0
-        })
+        self.broadcast(
+            {
+                "type": "affective_pulse",
+                "engagement": features.engagement_score,
+                "latency": features.processing_ms or 0,
+            }
+        )
 
     def _on_agent_handover(self, source: str, target: str, context: str) -> None:
         """Logged when the Hive Coordinator swaps expert souls."""
         logger.info("🤝 HANDOVER: %s -> %s | Context: %s", source, target, context)
-        self.broadcast({
-            "type": "agent_handover",
-            "from": source,
-            "to": target,
-            "reason": context
-        })
+        self.broadcast(
+            {"type": "agent_handover", "from": source, "to": target, "reason": context}
+        )
 
 
 def main() -> None:

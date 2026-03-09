@@ -42,8 +42,7 @@ async def run_phase_g_demo_script(
                 "task_id": "phase-g-showcase",
                 "title": "Mirror fallback path",
                 "detail": (
-                    "Used deterministic fallback mirror frame "
-                    "for demo continuity."
+                    "Used deterministic fallback mirror frame for demo continuity."
                 ),
                 "status": "completed",
                 "timestamp": _now_iso(),

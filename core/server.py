@@ -119,9 +119,9 @@ def main() -> None:
 
     from core.engine import AetherEngine
     from core.infra.service_container import Container
-    
+
     Container()
-    
+
     DIM = "\033[2m"
     CYAN = "\033[96m"
     RESET = "\033[0m"

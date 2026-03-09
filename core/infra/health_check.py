@@ -64,12 +64,13 @@ class HealthChecker:
         check_fn: Callable[[], Coroutine[None, None, tuple[bool, float, str]]],
     ) -> None:
         """Register a component for health monitoring."""
-        self._components[name] = ComponentHealth
+        self._components[name] = ComponentHealth(
             name=name,
             status=HealthStatus.UNKNOWN,
             last_check=0.0,
-            check_fn=check_fn,
+            # Note: check_fn is passed but not in dataclass, adding it via attribute
         )
+        setattr(self._components[name], "check_fn", check_fn)
 
     async def start(self) -> None:
         """Start health monitoring."""

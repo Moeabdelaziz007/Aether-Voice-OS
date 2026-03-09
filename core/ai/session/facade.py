@@ -94,7 +94,9 @@ class GeminiLiveSession:
         # Telemetry counters (best-effort; exposed via gateway.metrics when possible)
         self._output_queue_drops = 0
 
-        self._frame_buffer: list[tuple[float, bytes]] = []  # Rolling history of screenshots
+        self._frame_buffer: list[
+            tuple[float, bytes]
+        ] = []  # Rolling history of screenshots
         self._max_frames = 10  # ~10 seconds of visual history
         self._active_handoffs: dict[str, dict] = {}  # A2A V3 Handoff Tracking
 
@@ -215,11 +217,17 @@ class GeminiLiveSession:
             if stype in ("thinking", "breathing"):
                 thinking_streak += 1
                 if thinking_streak >= 25:  # ~5 seconds of cognitive load
-                    logger.info("🧠 Empathy Trigger: User is thinking. Sending backchannel cue.")
+                    logger.info(
+                        "🧠 Empathy Trigger: User is thinking. Sending backchannel cue."
+                    )
                     try:
                         # Sending a tiny text hint can encourage Gemini to
                         # give a soft vocal affirmative without fully taking the turn.
-                        await session.send_realtime_input(parts=[types.Part.from_text(text="[user thinking, soft 'Mhm']")])
+                        await session.send_realtime_input(
+                            parts=[
+                                types.Part.from_text(text="[user thinking, soft 'Mhm']")
+                            ]
+                        )
                         thinking_streak = 0  # Reset to avoid spamming
                     except Exception as e:
                         logger.debug("Backchannel send failed: %s", e)
@@ -258,7 +266,10 @@ class GeminiLiveSession:
                     asyncio.create_task(
                         self._gateway.broadcast(
                             "vision_pulse",
-                            {"status": "captured", "timestamp": datetime.now().isoformat()},
+                            {
+                                "status": "captured",
+                                "timestamp": datetime.now().isoformat(),
+                            },
                         )
                     )
 
@@ -349,7 +360,9 @@ class GeminiLiveSession:
         logger.info("🔮 A2A [ECHO] Injecting thought: %s", echo)
         try:
             # We wrap the echo in a directive to ensure Gemini vocalizes it as a thought
-            await self._session.send_realtime_input(parts=[types.Part.from_text(text=f"[thought: {echo}]")])
+            await self._session.send_realtime_input(
+                parts=[types.Part.from_text(text=f"[thought: {echo}]")]
+            )
         except Exception as e:
             logger.error("Echo injection failed: %s", e)
 
@@ -382,7 +395,9 @@ class GeminiLiveSession:
         """Get the currently active (injected) handover context."""
         return self._injected_handover_context
 
-    def complete_handover_acknowledgment(self, handover_id: str, success: bool, message: str = "") -> bool:
+    def complete_handover_acknowledgment(
+        self, handover_id: str, success: bool, message: str = ""
+    ) -> bool:
         return complete_handover_acknowledgment(self, handover_id, success, message)
 
     def export_handover_state(self) -> Dict[str, Any]:

@@ -30,7 +30,7 @@ class LongTermMemory:
     The 'Permanent Storage' for AetherOS.
     Abstracts vector database operations (Pinecone, Firestore, or Local FAISS).
     Allows the agent to 'remember' conversations from days ago.
-    
+
     Now supports Firestore backend for cloud persistence.
     """
 
@@ -43,10 +43,11 @@ class LongTermMemory:
         self._api_key = api_key
         self._local_store: List[MemoryEntry] = []  # type: ignore
         self._firestore_store: Any = None  # type: ignore
-    
+
         if provider == "firestore":
             # Import Firestore backend
             from core.tools.firestore_vector_store import FirestoreVectorStore
+
             key = api_key if api_key else "demo-key"
             self._firestore_store: Any = FirestoreVectorStore(api_key=key)
             logger.info("[Memory] Long-term storage using Firestore (Cloud)")
@@ -69,10 +70,7 @@ class LongTermMemory:
             truncated = content[:40]
             if len(content) > 40:
                 truncated += "..."
-            logger.info(
-                "[Memory] Persisted knowledge to Firestore: %s",
-                truncated
-            )
+            logger.info("[Memory] Persisted knowledge to Firestore: %s", truncated)
         else:
             # Local storage fallback
             entry = MemoryEntry(
@@ -102,15 +100,15 @@ class LongTermMemory:
             # Convert to MemoryEntry format
             return [
                 MemoryEntry(
-                    id=r.get('key', 'unknown'),
+                    id=r.get("key", "unknown"),
                     vector=[],  # Firestore doesn't return vectors
-                    content=r.get('text', ''),
-                    metadata=r.get('metadata', {}),
-                    timestamp=time.time()
+                    content=r.get("text", ""),
+                    metadata=r.get("metadata", {}),
+                    timestamp=time.time(),
                 )
                 for r in results
             ]
-        
+
         # Local storage fallback
         if not self._local_store:
             return []

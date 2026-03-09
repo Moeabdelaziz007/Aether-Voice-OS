@@ -1,9 +1,11 @@
 import logging
-from typing import Any, Dict, Optional
-from core.ai.agents.registry import AgentRegistry, AgentMetadata
+from typing import Any, Dict
+
+from core.ai.agents.registry import AgentRegistry
 from core.infra.config import GeminiModel
 
 logger = logging.getLogger("AetherOS.ModelRouter")
+
 
 class AgentModelRouter:
     """
@@ -20,10 +22,14 @@ class AgentModelRouter:
         """
         agent = self.registry.get_agent(agent_id)
         if not agent:
-            logger.warning(f"[ModelRouter] Agent {agent_id} not found. Defaulting to FLASH.")
+            logger.warning(
+                f"[ModelRouter] Agent {agent_id} not found. Defaulting to FLASH."
+            )
             return GeminiModel.FLASH
-        
-        logger.info(f"[ModelRouter] Agent {agent_id} mapped to {agent.foundation_model}")
+
+        logger.info(
+            f"[ModelRouter] Agent {agent_id} mapped to {agent.foundation_model}"
+        )
         return agent.foundation_model
 
     def get_dispatch_config(self, agent_id: str) -> Dict[str, Any]:
@@ -39,6 +45,10 @@ class AgentModelRouter:
         elif model in [GeminiModel.LIVE_FLASH, GeminiModel.FLASH]:
             return {"temperature": 0.7, "top_p": 0.9, "max_output_tokens": 4096}
         elif model == GeminiModel.ROBOTICS:
-            return {"temperature": 0.1, "top_p": 0.9, "response_mime_type": "application/json"}
-        
+            return {
+                "temperature": 0.1,
+                "top_p": 0.9,
+                "response_mime_type": "application/json",
+            }
+
         return {"temperature": 0.5}
