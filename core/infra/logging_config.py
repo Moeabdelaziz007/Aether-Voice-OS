@@ -47,17 +47,27 @@ def configure_logging(log_level: str = "INFO", log_file: Optional[str] = None):
     handlers = [console_handler]
 
     if log_file:
-        log_path = Path(log_file)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            log_path = Path(log_file)
+            # In CI or sandbox environments, we may not have permissions for the desired path.
+            # Fallback to /tmp if the initial path fails.
+            if os.getenv("CI") or os.getenv("GITHUB_ACTIONS"):
+                log_file = f"/tmp/{log_path.name}"
+                log_path = Path(log_file)
+                print(f"CI detected: Redirecting logs to {log_file}")
 
-        file_handler = logging.FileHandler(log_file)
-        file_handler.setFormatter(
-            structlog.stdlib.ProcessorFormatter(
-                processor=file_renderer,
-                foreign_pre_chain=shared_processors,
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+
+            file_handler = logging.FileHandler(log_file)
+            file_handler.setFormatter(
+                structlog.stdlib.ProcessorFormatter(
+                    processor=file_renderer,
+                    foreign_pre_chain=shared_processors,
+                )
             )
-        )
-        handlers.append(file_handler)
+            handlers.append(file_handler)
+        except (PermissionError, OSError) as e:
+            print(f"Warning: Failed to initialize file logging at {log_file} ({e}). Falling back to console only.")
 
     root_logger = logging.getLogger()
 

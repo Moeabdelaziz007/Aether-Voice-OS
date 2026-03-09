@@ -16,6 +16,13 @@ from core.infra.cloud.firebase.interface import FirebaseConnector
 from core.infra.transport.bus import GlobalBus
 from core.tools.healing_tool import diagnose_and_repair
 
+try:
+    from nacl.signing import SigningKey, VerifyKey
+    from nacl.encoding import HexEncoder
+    HAS_NACL = True
+except ImportError:
+    HAS_NACL = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -58,6 +65,18 @@ class SREWatchdog:
         self._gateway = gateway
         self._firebase = firebase_connector or FirebaseConnector()
         self._audio_manager = audio_manager
+        
+        # Security: Ed25519 Signing for autonomous actions
+        self._signing_key: Optional[Any] = None
+        self._verify_key_hex: Optional[str] = None
+        if HAS_NACL:
+            # In production, this would be loaded from a secure vault.
+            # For the challenge MVP, we generate a session-bound key if not provided.
+            self._signing_key = SigningKey.generate()
+            self._verify_key_hex = self._signing_key.verify_key.encode(encoder=HexEncoder).decode()
+            logger.info("🛡️ SRE Watchdog [SECURE]: Generated session signature key. Root: %s...", self._verify_key_hex[:12])
+        else:
+            logger.warning("⚠️ SRE Watchdog [UNSECURE]: PyNaCl not found. Signatures disabled.")
 
         self._is_running = False
         self._loop_task: Optional[asyncio.Task] = None
@@ -268,6 +287,7 @@ class SREWatchdog:
                     "status": "diagnosing",
                     "message": "Initiating autonomous repair...",
                     "log": "Timeout/Connection error detected.",
+                    "signature": self._generate_signature("diagnosing|Timeout/Connection error detected.")
                 },
             )
 
@@ -309,8 +329,20 @@ class SREWatchdog:
                         "status": "failed",
                         "message": f"Repair failed: {e}",
                         "log": f"Error: {e}",
+                        "signature": self._generate_signature(f"failed|Error: {e}")
                     },
                 )
+
+    def _generate_signature(self, message: str) -> Optional[str]:
+        """Generate an Ed25519 signature for a message."""
+        if not self._signing_key:
+            return None
+        try:
+            signed = self._signing_key.sign(message.encode())
+            return signed.signature.hex()
+        except Exception as e:
+            logger.error("Failed to sign SRE command: %s", e)
+            return None
 
     async def _trigger_find_and_extend(self, error_msg: str = ""):
         """Skill 3: Triggered when a non-existent tool or capability is requested."""

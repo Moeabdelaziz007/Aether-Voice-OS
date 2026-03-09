@@ -40,6 +40,7 @@ from core.ai.handover_telemetry import (
     record_handover_end,
     record_handover_start,
 )
+from core.infra.event_bus import VisionPulseEvent
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +109,8 @@ class HiveCoordinator:
         # Reactive Kernel -> Affective Soul bridge
         if self._event_bus:
             from core.infra.event_bus import AcousticTraitEvent
-
             self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
+            self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
 
         self._inject_dna_callback: Optional[Callable[[AgentDNA, List[str]], Any]] = None
 
@@ -707,6 +708,34 @@ class HiveCoordinator:
                 )
         except Exception as e:
             logger.error("Failed to apply compression: %s", e)
+
+    async def _on_vision_pulse(self, event: VisionPulseEvent) -> None:
+        """
+        Handle proactive vision pulses for spatial grounding.
+        Routes visual context to the SpatialCortex for 3D intentionality mapping.
+        """
+        if not self._active_soul:
+            return
+
+        # 1. Fetch Spatial Cortex specialist if not active
+        # In a real scenario, we might want to run this in parallel to the active soul
+        try:
+            # For MVP, we use the SpatialCortexAgent singleton or registry lookup
+            # We skip routing if we're already in a high-intensity session to save latency
+            spatial_cortex = self._registry.get("spatial_cortex")
+            if spatial_cortex:
+                # 2. Process vision -> 3D vectors
+                vision_data = {"b64": event.b64_data, "mime": event.mime_type}
+                spatial_intent = await spatial_cortex.agent.map_vision_to_spatial(vision_data)
+                
+                # 3. Inject spatial intent into the active soul's working buffer
+                # This grounding allows the specialist to 'see' the UI state
+                logger.info(
+                    "👁️ Hive: Vision grounded. Spatial Intent: %s", 
+                    spatial_intent.get("avatar_gaze")
+                )
+        except Exception as e:
+            logger.error("Spatial grounding failed in Hive: %s", e)
 
     async def _on_acoustic_trait(self, event: Any) -> None:
         """

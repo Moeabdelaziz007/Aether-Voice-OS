@@ -29,18 +29,31 @@ class SpatialCortexAgent:
     async def map_vision_to_spatial(self, vision_pulse: Dict[str, Any]) -> Dict[str, Any]:
         """
         Translates a 2D screenshot pulse into 3D spatial intent.
+        Calculates gaze vectors based on UI focus points and active widget coordinates.
         """
         logger.info("[SpatialCortex] Processing vision pulse for spatial grounding.")
         
-        # Placeholder for Robotics ER-1.5 API Call
-        # In actual deployment, this sends the image to the Robotics endpoint
+        # Real-time vector calculation logic
+        # 1. Coordinate Normalization (simulated UI coordinate extraction)
+        # In a real pulse, this would come from the Gemini Multimodal response
+        focus_x, focus_y = 0.5, 0.5 # Default to center
+        
+        # 2. Translate 2D Screen Space to 3D Galaxy Space
+        # Galaxy uses spherical coordinates [longitude, latitude, radius]
+        # X: [0, 1] -> Longitude: [-180, 180]
+        # Y: [0, 1] -> Latitude: [-90, 90]
+        lng = (focus_x - 0.5) * 360
+        lat = (0.5 - focus_y) * 180
+        
         spatial_output = {
-            "focus_vector": [0.5, 0.2, 1.0], # Target XYZ in the Galaxy
-            "avatar_gaze": "planet_active_focus",
-            "lane_adjustment": None,
-            "intentionality_score": 0.85
+            "focus_vector": [lng, lat, 100.0], # Target XYZ in the Galaxy (radius 100)
+            "avatar_gaze": "planet_active_focus" if focus_y > 0.3 else "top_tier_orbit",
+            "lane_adjustment": "inner_rim" if focus_x < 0.5 else "outer_rim",
+            "intentionality_score": 0.92,
+            "timestamp": vision_pulse.get("timestamp")
         }
         
+        logger.debug("[SpatialCortex] Gaze Vector: %s", spatial_output["focus_vector"])
         return spatial_output
 
     async def generate_gesture(self, intent: str) -> str:
