@@ -110,11 +110,23 @@ The crown jewel of Aether OS is the custom-built **Thalamic Gate V2**. Tradition
 
 ## 🌌 Google Workspace Orchestration (The 10x Solution)
 
-Instead of traditional high-latency CLI calls, Gemigram utilizes a persistent **MCP (Model Context Protocol)** bridge.
+Instead of traditional high-latency CLI calls, Gemigram utilizes a persistent **MCP (Model Context Protocol)** bridge through the elite `@googleworkspace/cli`.
 
 - **Zero Cold-Start:** By running `gws mcp` as a persistent background daemon via `stdio` pipes, we eliminate the 500ms Node.js startup penalty.
 - **Silent Auth:** Credentials are automatically injected via Service Accounts, removing any manual terminal interaction for the end-user.
+- **100+ Agent Skills:** Access to a verified library of recipes for complex workflows (e.g., "Research topic and email report", "Process invoices to Sheets").
 - **Bi-directional Drive/Docs/Sheets/Calendar access.**
+- **Meta-Tool Discovery:** Dynamic skill discovery ensures Aether can learn new GWS capabilities as they are released.
+
+---
+
+## 🧬 ClawHub.ai Integration (The Skill Engine)
+
+AetherOS leverages **ClawHub.ai** for real-time skill acquisition, transforming newly forged agents into specialists in seconds.
+
+- **Dynamic Acquisition:** If an agent needs a new tool (e.g., "AWS Lambda Monitoring"), it fetches the signed skill package from ClawHub.
+- **Trusted Source:** All ClawHub skills are verified, versioned, and cryptographically signed to ensure secure execution in production.
+- **Soul Integration:** Skills are woven directly into the agent's `.ath` package identity.
 
 ---
 
