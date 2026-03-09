@@ -3,7 +3,7 @@ testpaths = ["tests"]
 asyncio_mode = "auto"
 
 [tool.ruff]
-line-length = 88
+line-length = 120
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
@@ -15,4 +15,4 @@ indent-style = "space"
 
 [tool.isort]
 profile = "black"
-line_length = 88
+line_length = 120

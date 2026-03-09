@@ -69,8 +69,14 @@ async def aether_services():
     patcher1 = patch('core.utils.security.verify_signature', return_value=True)
     patcher2 = patch('core.infra.transport.auth.AuthService.verify_signature', return_value=True)
 
+    # Mock Gemini connection to avoid real API Calls / 404 errors in tests
+    patcher3 = patch('core.ai.session.facade.GeminiLiveSession.connect', return_value=asyncio.sleep(0))
+    patcher4 = patch('core.ai.session.facade.GeminiLiveSession.run', return_value=asyncio.sleep(1000)) # Block run loop
+    
     mock_sec = patcher1.start()
     mock_auth = patcher2.start()
+    mock_connect = patcher3.start()
+    mock_run = patcher4.start()
 
     gw = AetherGateway(gateway_config, ai_config, audio_config, tool_router, hive)
     gw._bus.connect = MagicMock(return_value=asyncio.sleep(0, result=True))
@@ -86,6 +92,8 @@ async def aether_services():
 
     patcher1.stop()
     patcher2.stop()
+    patcher3.stop()
+    patcher4.stop()
 
     try:
         await task
