@@ -37,72 +37,95 @@ export const MemoryCrystal: React.FC<MemoryCrystalProps> = ({
 
     // Generate random facets for the refractive effect
     const facets = useMemo(() => {
-        return Array.from({ length: 6 }).map((_, i) => ({
+        return Array.from({ length: 8 }).map((_, i) => ({
             id: i,
-            rotateZ: i * 60,
-            opacity: 0.1 + Math.random() * 0.2,
+            rotateZ: i * 45,
+            opacity: 0.15 + (i % 3) * 0.1,
+            scale: 0.8 + Math.random() * 0.4,
         }));
     }, []);
 
     return (
         <motion.div
             layoutId={`crystal-${id}`}
-            whileHover={{ scale: 1.1, rotateY: 15 }}
-            whileTap={{ scale: 0.95 }}
-            className="relative w-20 h-24 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing group"
-            style={{ perspective: '800px' }}
+            whileHover={{
+                scale: 1.15,
+                rotateY: 25,
+                rotateX: -10,
+                z: 50
+            }}
+            whileTap={{ scale: 0.9, z: 0 }}
+            className="relative w-24 h-32 flex flex-col items-center justify-center cursor-grab active:cursor-grabbing group preserve-3d"
+            style={{ perspective: '1200px' }}
         >
-            {/* Crystal Core */}
-            <div className="relative w-12 h-16 flex items-center justify-center">
-                {/* Refractive Facets */}
+            {/* The Refractive Diamond Body */}
+            <div className="relative w-16 h-20 flex items-center justify-center preserve-3d">
+
+                {/* Magnetic Aura Pulse */}
+                <motion.div
+                    animate={{
+                        scale: [1, 1.4, 1],
+                        opacity: [0.2, 0.5, 0.2]
+                    }}
+                    transition={{ duration: 4, repeat: Infinity }}
+                    className="absolute inset-0 blur-3xl rounded-full -z-10"
+                    style={{ backgroundColor: color }}
+                />
+
+                {/* Crystal Facets Layering */}
                 {facets.map((facet) => (
                     <motion.div
                         key={facet.id}
-                        className="absolute inset-0 bg-white"
+                        className="absolute inset-0"
                         style={{
                             clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
                             rotateZ: facet.rotateZ,
+                            scale: facet.scale,
                             opacity: facet.opacity,
-                            background: `linear-gradient(135deg, ${color}33, transparent 80%)`,
+                            background: `linear-gradient(135deg, ${color}, transparent 60%)`,
+                            border: `1px solid ${color}44`,
                         }}
                         animate={{
                             rotateY: [0, 360],
-                            opacity: [facet.opacity, facet.opacity * 1.5, facet.opacity],
+                            rotateX: [0, 180, 0],
+                            opacity: [facet.opacity, facet.opacity * 1.8, facet.opacity],
                         }}
                         transition={{
-                            duration: 10 + Math.random() * 10,
+                            duration: 12 + Math.random() * 8,
                             repeat: Infinity,
-                            ease: "linear"
+                            ease: "easeInOut"
                         }}
                     />
                 ))}
 
-                {/* Glassy Overlay */}
+                {/* Main Glass Prism */}
                 <div
-                    className="absolute inset-0 border border-white/20 backdrop-blur-[2px]"
+                    className="absolute inset-0 border border-white/30 backdrop-blur-[6px] shadow-[inset_0_0_20px_rgba(255,255,255,0.2)]"
                     style={{
                         clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
-                        background: `radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2) 0%, transparent 70%)`
+                        background: `radial-gradient(circle at 20% 20%, rgba(255,255,255,0.4) 0%, transparent 80%), 
+                                     linear-gradient(to bottom, ${color}22, ${color}66)`
                     }}
                 />
 
-                {/* Inner Icon */}
+                {/* Semantic Icon Core */}
                 <Icon
-                    size={20}
-                    className="relative z-10 text-white/80 group-hover:text-white transition-colors duration-300"
-                    style={{ filter: `drop-shadow(0 0 8px ${color})` }}
+                    size={24}
+                    className="relative z-10 text-white group-hover:drop-shadow-[0_0_12px_rgba(255,255,255,0.8)] transition-all duration-300"
+                    style={{ filter: `drop-shadow(0 0 10px ${color})` }}
                 />
             </div>
 
-            {/* Label */}
-            <span className="mt-2 text-[10px] font-mono uppercase tracking-widest text-white/40 group-hover:text-white/80 transition-colors truncate max-w-full px-1">
-                {label}
-            </span>
+            {/* Glowing Tag */}
+            <div className="mt-4 px-2 py-0.5 rounded-full bg-black/40 border border-white/5 backdrop-blur-md">
+                <span className="text-[9px] font-black font-mono uppercase tracking-[0.2em] text-white/50 group-hover:text-white transition-colors">
+                    {label}
+                </span>
+            </div>
 
-            {/* Ambient Glow */}
+            {/* Floor Projection Shadow */}
             <div
-                className="absolute inset-0 -z-10 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity"
-                style={{ backgroundColor: color }}
+                className="absolute -bottom-4 w-12 h-2 blur-xl opacity-40 rounded-full bg-black"
             />
         </motion.div>
     );

@@ -14,29 +14,24 @@ Test Categories:
 
 from __future__ import annotations
 
-import asyncio
 import time
-from typing import Generator
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import numpy as np
 import pytest
 
 from core.audio.capture import (
     AdaptiveJitterBuffer,
-    AudioCapture,
     SmoothMuter,
 )
 from core.audio.dynamic_aec import (
     AECState,
+    DelayEstimator,
+    DoubleTalkDetector,
     DynamicAEC,
     FrequencyDomainNLMS,
-    DoubleTalkDetector,
-    DelayEstimator,
 )
 from core.audio.state import HysteresisGate, audio_state
 from core.infra.config import AudioConfig
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # FIXTURES

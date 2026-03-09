@@ -7,18 +7,16 @@ Tests cover:
 - Galaxy Policy Enforcer validation
 """
 
-import pytest
-from core.ai.orchestrator.gravity_router import (
-    GravityRouter,
-    PlanetCandidate,
-)
 from core.ai.orchestrator.fallback_strategy import (
-    FallbackStrategy,
     FailureCategory,
+    FallbackStrategy,
 )
 from core.ai.orchestrator.galaxy_policy import (
     GalaxyPolicyEnforcer,
-    GalaxyPolicy,
+)
+from core.ai.orchestrator.gravity_router import (
+    GravityRouter,
+    PlanetCandidate,
 )
 
 
