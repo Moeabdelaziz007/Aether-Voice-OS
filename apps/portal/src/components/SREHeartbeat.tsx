@@ -20,6 +20,13 @@ import { useAetherStore } from '../store/useAetherStore';
 interface SystemMetrics {
     activeConnections: number;
     interruptLatency: number; // ms
+    cpu: number;
+    memory: number;
+    networkIn: number;
+    networkOut: number;
+    latency: number;
+    errorRate: number;
+    uptime: number;
 }
 
 interface ServiceStatus {

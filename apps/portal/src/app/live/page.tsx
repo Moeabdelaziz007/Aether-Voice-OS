@@ -1,4 +1,6 @@
 "use client";
+import React, { useState, useEffect, useRef } from "react";
+import { useAudioPipeline } from "@/hooks/useAudioPipeline";
 /**
  * Aether Voice OS — Live Agent Page.
  *
@@ -42,7 +44,7 @@ export default function LivePage() {
     const hasStarted = useRef(false);
     const lastLatency = useRef(0);
 
-    const lineStatus = toLineStatus(gateway.status, engineState, audio.state);
+    const lineStatus = toLineStatus(gateway.status, engineState, "starting");
 
     // Auto-launch on page load
     useEffect(() => {
@@ -52,7 +54,7 @@ export default function LivePage() {
         const init = async () => {
             try {
                 // Start audio pipeline (requests mic)
-                await audio.start();
+                await await audio.start();
                 // Connect to Aether Gateway
                 await gateway.connect();
                 setInitialized(true);
@@ -91,7 +93,7 @@ export default function LivePage() {
                 }
             }
         };
-    }, [gemini]);
+    }, [gateway]);
 
     // Vision Capture Loop
     useEffect(() => {

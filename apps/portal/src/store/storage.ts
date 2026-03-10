@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { StateStorage } from 'zustand/middleware';
 import { get, set, del } from 'idb-keyval';
 

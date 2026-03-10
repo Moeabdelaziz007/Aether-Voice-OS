@@ -67,6 +67,9 @@ export interface ThemeConfig {
 }
 
 export interface VisualSettings {
+    particlesEnabled: boolean;
+    bloomIntensity: number;
+    reflectionOpacity: number;
     blurLight: number;
     blurHeavy: number;
     glowColor: string;
@@ -267,4 +270,42 @@ export interface DragState {
     activeData: any;
     type: 'crystal' | 'file' | 'data' | 'skill';
     sourceId?: string;
+}
+
+export type AvatarState = 'IDLE' | 'Listening' | 'ListeningActive' | 'ListeningWaiting' | 'Speaking' | 'Thinking' | 'Error' | 'SEARCHING' | 'LOOKING_AT_SCREEN' | 'POINTING' | 'TYPING' | 'EXECUTING' | 'EUREKA' | 'ERROR';
+
+export interface NeuralEvent {
+    id: string;
+    type: string;
+    payload: any;
+    timestamp: number;
+}
+
+export interface SilentHint {
+    id: string;
+    content: string;
+    context: string;
+    timestamp: number;
+    text?: string;
+    priority?: string;
+    type?: string;
+    code?: string;
+    explanation?: string;
+}
+
+export interface VoyagerLatencyRow {
+    id: string;
+    node: string;
+    latency: number;
+    latencyMs?: number;
+    timestamp: number;
+    label?: string;
+    status?: string;
+}
+
+export interface TranscriptStream {
+    interim: string;
+    final: string;
+    confidence: number;
+    latencyMs: number;
 }

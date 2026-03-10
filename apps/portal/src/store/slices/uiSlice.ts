@@ -29,7 +29,7 @@ export interface UISlice {
     };
 
     // ─── Transcript & Real-time Text ────────────────────────
-    transcript: string;
+    transcriptString: string;
     transcriptStream: TranscriptStream;
     isListening: boolean;
     // ─── Original UI State ───────────────────────────────────
@@ -53,7 +53,7 @@ export interface UISlice {
     toggleSidebar: () => void;
     setActiveTab: (tab: 'terminal' | 'files' | 'dna' | 'network' | 'telemetry') => void;
     setAvatarState: (state: AvatarState) => void;
-    setTranscript: (transcript: string) => void;
+    setTranscriptString: (transcriptString: string) => void;
     setTranscriptStream: (stream: Partial<TranscriptStream>) => void;
     setIsListening: (isListening: boolean) => void;
     // ─── Original Actions ────────────────────────────────────
@@ -118,7 +118,7 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     },
 
     // ─── Transcript & Real-time Text ────────────────────────
-    transcript: '',
+    transcriptString: '',
     transcriptStream: {
         interim: '',
         final: '',
@@ -147,7 +147,7 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
     setActiveTab: (tab) => set({ activeTab: tab }),
     setAvatarState: (state) => set({ avatarState: state }),
-    setTranscript: (transcript) => set({ transcript }),
+    setTranscriptString: (transcriptString) => set({ transcriptString }),
     setTranscriptStream: (stream) => set((state) => ({
         transcriptStream: { ...state.transcriptStream, ...stream }
     })),

@@ -28,7 +28,7 @@ export default function QuantumNeuralAvatar({
   showConnections = true,
 }: AvatarProps) {
   const { mouthOpenness, engineState } = useAvatarVisemes();
-  const cinematicState = useAetherStore((s) => s.avatarCinematicState);
+  const cinematicState = useAetherStore((s) => s.avatarState);
   const gazeTarget = useAetherStore((s) => s.gazeTarget);
 
   // Size mapping
@@ -78,7 +78,7 @@ export default function QuantumNeuralAvatar({
         <AvatarSceneContent
           mouthOpenness={mouthOpenness}
           state={engineState}
-          cinematicState={cinematicState}
+          cinematicState={cinematicState as any}
           variant={variant}
           showConnections={showConnections && variant !== "minimal"}
           lowMotionMode={false}

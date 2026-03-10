@@ -4,20 +4,20 @@ import React, { useRef, useMemo, memo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { Float } from "@react-three/drei";
-import { type EngineState, type AvatarCinematicState } from "@/store/useAetherStore";
+import { type EngineState, type AvatarState } from "@/store/useAetherStore";
 
 // Internal Sub-Components (Ideally these would be in separate files too, 
 // but for the sake of 'Fission' we keep the Controller clean)
-import { QuantumConsciousnessCore } from "./QuantumConsciousnessCore";
-import { HolographicVoiceRings } from "./HolographicVoiceRings";
-import { NeuralSynapticMesh } from "./NeuralSynapticMesh";
-import { QuantumParticleField } from "./QuantumParticleField";
-import { OrbitingEnergyTrails } from "./OrbitingEnergyTrails";
+import { QuantumConsciousnessCore } from "./avatar/QuantumConsciousnessCore";
+import { HolographicVoiceRings } from "./avatar/AvatarSubComponents";
+import { NeuralSynapticMesh } from "./avatar/AvatarSubComponents";
+import { QuantumParticleField } from "./avatar/AvatarSubComponents";
+import { OrbitingEnergyTrails } from "./avatar/AvatarSubComponents";
 
 interface AvatarSceneProps {
   mouthOpenness: number;
   state: EngineState;
-  cinematicState: AvatarCinematicState;
+  cinematicState: AvatarState;
   variant: string;
   showConnections: boolean;
   lowMotionMode: boolean;
@@ -70,7 +70,7 @@ export const AvatarSceneContent = memo(function AvatarSceneContent({
       <HolographicVoiceRings
         state={state}
         audioLevel={mouthOpenness}
-        cinematicState={cinematicState}
+        cinematicState={cinematicState as any}
       />
 
       {showConnections && (

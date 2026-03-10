@@ -112,6 +112,9 @@ export const DEFAULT_THEME_CONFIG: ThemeConfig = {
 };
 
 export const DEFAULT_VISUAL_SETTINGS: VisualSettings = {
+    particlesEnabled: true,
+    bloomIntensity: 1.5,
+    reflectionOpacity: 0.5,
     blurLight: 12,
     blurHeavy: 24,
     glowColor: '#00FF41',

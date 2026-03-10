@@ -41,7 +41,7 @@ export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps)
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse`} style={{ backgroundColor: stateColor }} />
+                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse`} style={{ backgroundColor: "#06b6d4" }} />
                         <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">
                             CORE::{engineState}
                         </span>
@@ -64,7 +64,7 @@ export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps)
             <div className="flex items-center gap-2">
                 {/* Add Widget */}
                 <button
-                    onClick={() => setStoreOpen(true)}
+                    onClick={() => useWidgetStore.getState().setStoreOpen(true)}
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-mono
                                text-white/30 hover:text-cyan-400 hover:bg-cyan-500/5 border border-transparent
                                hover:border-cyan-500/20 transition-all uppercase tracking-wider"
@@ -75,14 +75,14 @@ export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps)
 
                 {/* Edit mode toggle */}
                 <button
-                    onClick={() => setEditMode(!editMode)}
-                    className={`p-2 rounded-lg transition-all ${editMode
+                    onClick={() => useWidgetStore.getState().setEditMode(!useWidgetStore.getState().editMode)}
+                    className={`p-2 rounded-lg transition-all ${useWidgetStore.getState().editMode
                         ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20'
                         : 'text-white/20 hover:text-white/40 hover:bg-white/5'
                         }`}
-                    title={editMode ? 'Done editing' : 'Edit widgets'}
+                    title={useWidgetStore.getState().editMode ? 'Done editing' : 'Edit widgets'}
                 >
-                    {editMode ? <Check className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
+                    {useWidgetStore.getState().editMode ? <Check className="w-3.5 h-3.5" /> : <Edit3 className="w-3.5 h-3.5" />}
                 </button>
 
                 {/* Divider */}

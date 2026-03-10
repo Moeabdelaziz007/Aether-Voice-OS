@@ -9,6 +9,7 @@
  */
 
 import React, { memo, useEffect, useMemo, useRef, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { EffectComposer, Bloom, ChromaticAberration, Vignette, Noise } from "@react-three/postprocessing";
@@ -28,7 +29,7 @@ import { ParticleSceneContent } from "./FluidThoughtParticlesScene";
 // ═══════════════════════════════════════════════════════════════════
 
 const useEngineState = () => useAetherStore((s) => s.engineState);
-const useAvatarCinematicState = () => useAetherStore((s) => s.avatarCinematicState);
+const useAvatarCinematicState = () => useAetherStore((s) => s.avatarState);
 const useFocusModeEnvironment = () => useAetherStore((s) => s.focusModeEnvironment);
 const useTaskPulse = () => useAetherStore((s) => s.taskPulse);
 const useFocusedPlanetId = () => useAetherStore((s) => s.focusedPlanetId);
@@ -36,13 +37,13 @@ const useOrbitRegistry = () => useAetherStore((s) => s.orbitRegistry);
 const usePreferences = () => useAetherStore((s) => s.preferences);
 
 const mapCinematicToVisualState = (
-  cinematicState: AvatarCinematicState,
+  cinematicState: any,
   engineState: EngineState
 ): EngineState => {
   if (cinematicState === "IDLE") {
     return engineState;
   }
-  const cinematicMap: Record<AvatarCinematicState, EngineState> = {
+  const cinematicMap: Record<string, EngineState> = {
     IDLE: engineState,
     SEARCHING: "THINKING",
     LOOKING_AT_SCREEN: "LISTENING",
@@ -104,7 +105,7 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
 
   return (
     <AnimatePresence>
-      <EffectComposer disableNormalPass>
+      <EffectComposer>
         <Bloom
           ref={bloomRef}
           intensity={1.5}
@@ -239,10 +240,10 @@ function UnifiedSceneContent({
       {/* Quantum Neural Avatar Scene */}
       {showAvatar && (
         <AvatarSceneContent
-          size={cameraZ}
+          mouthOpenness={0}
           showConnections={showConnections && avatarConfig.variant !== "minimal"}
           state={visualState}
-          cinematicState={avatarCinematicState}
+          cinematicState={avatarCinematicState as any}
           variant={avatarConfig.variant}
           gazeTarget={gazeTarget}
           lowMotionMode={lowMotionMode}

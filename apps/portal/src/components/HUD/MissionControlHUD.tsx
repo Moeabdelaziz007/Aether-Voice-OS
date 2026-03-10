@@ -130,7 +130,7 @@ export default function MissionControlHUD() {
                       row.status === "ok" ? "text-emerald-300" : "text-rose-300"
                     }`}
                   >
-                    {Math.round(row.latencyMs)}ms
+                    {Math.round(row.latencyMs || row.latency || 0)}ms
                   </span>
                 </div>
               ))

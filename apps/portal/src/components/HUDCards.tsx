@@ -15,7 +15,8 @@
 
 import React, { useMemo, useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAetherStore, type SilentHint } from "@/store/useAetherStore";
+import { useAetherStore } from "@/store/useAetherStore";
+import { type SilentHint } from "@/store/types";
 
 interface CardData {
     id: string;
