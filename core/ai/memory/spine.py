@@ -12,7 +12,8 @@ import asyncio
 import time
 from typing import Any, Dict, List, Optional
 
-from core.utils.logging import logger
+import logging
+logger = logging.getLogger(__name__)
 from google import genai
 from pydantic import BaseModel
 

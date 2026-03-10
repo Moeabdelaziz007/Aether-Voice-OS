@@ -101,6 +101,18 @@ class CognitiveScheduler:
                 "⚡ Cortex: High arousal detected. Prioritizing Reactive Specialists."
             )
 
+    async def _on_vision_pulse(self, event: VisionPulseEvent):
+        """Update temporal memory with vision context for spatial grounding."""
+        logger.debug("👁️ Cortex: Vision Pulse received.")
+        # Store Pulse in temporal memory
+        self._temporal_memory.append({
+            "type": "vision",
+            "timestamp": time.time(),
+            "metadata": event.metadata
+        })
+        if len(self._temporal_memory) > 100:
+            self._temporal_memory.pop(0)
+
     def speculate(self, prompt_fragment: str):
         """
         Speculative Execution: Trigger tools based on incomplete user input.

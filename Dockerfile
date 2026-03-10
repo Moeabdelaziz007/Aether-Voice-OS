@@ -54,7 +54,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy Rust shared library from builder
-COPY --from=rust-builder /build/aether_cortex.so /app/core/audio/aether_cortex.so
+# Ensure it lands in the correct package directory for the import to work
+COPY --from=rust-builder /build/aether_cortex.so /app/core/audio/cortex/aether_cortex.so
 
 # Copy application code
 COPY core/ ./core/
