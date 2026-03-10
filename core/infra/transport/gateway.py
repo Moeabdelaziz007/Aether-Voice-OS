@@ -24,6 +24,7 @@ from core.ai.agents.forge import AgentForge
 from core.ai.agents.registry import AgentRegistry, get_default_agents
 from core.ai.agents.spatial_cortex import SpatialCortexAgent
 from core.ai.tools.visual_diagnose import VisualDiagnoseTool
+from core.tools.forge_tool import create_agent
 
 if TYPE_CHECKING:
     from core.ai.hive import HiveCoordinator
@@ -177,6 +178,7 @@ class AetherGateway:
             "INTENT": self._handle_intent_msg,
             "UI_STATE_SYNC": self._handle_ui_sync,
             "VISION_FRAME": self._handle_vision_frame,
+            "FORGE_COMMIT": self._handle_forge_commit,
             MessageType.DISCONNECT.value: self._handle_disconnect,
         }
         
@@ -856,6 +858,47 @@ class AetherGateway:
                 
             except Exception as e:
                 logger.error("Failed to process VISION_FRAME: %s", e)
+    
+    async def _handle_forge_commit(self, client_id: str, msg: dict) -> None:
+        """Process agent creation request from the ForgeWizard."""
+        payload = msg.get("payload", {})
+        dna = payload.get("dna", {})
+        
+        if not dna:
+            logger.warning("Empty DNA in FORGE_COMMIT from %s", client_id)
+            return
+
+        name = dna.get("name", "Unnamed Agent")
+        role = dna.get("role", "General Purpose Assistant")
+        tone = dna.get("tone", "Professional")
+        
+        # Synthesize instructions from tone + role
+        instructions = f"Role: {role}\nTone: {tone}\n"
+        if dna.get("selectedSoul"):
+            instructions += f"Soul Blueprint: {dna['selectedSoul']}\n"
+            
+        expertise = {skill: 0.8 for skill in dna.get("skills", [])}
+        if not expertise:
+            expertise = {"general": 0.5}
+
+        logger.info("🔨 Gateway: Forging agent '%s' via forge_tool", name)
+        
+        # Offload to thread since create_agent is synchronous and does I/O
+        result = await asyncio.to_thread(
+            create_agent,
+            name=name,
+            description=role,
+            instructions=instructions,
+            expertise=expertise,
+            suggested_tools=dna.get("skills", [])
+        )
+
+        # Broadcast result to client
+        await self.broadcast("tool_result", {
+            "tool_name": "AgentForge",
+            "status": result["status"],
+            "message": result["message"]
+        })
 
     async def _handle_disconnect(self, client_id: str, msg: dict) -> None:
         async with self._lock:
