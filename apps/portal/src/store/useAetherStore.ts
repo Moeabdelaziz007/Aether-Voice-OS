@@ -14,18 +14,27 @@ export * from './types';
 export * from './constants';
 
 // ─── Combined State Interface ──────────────────────────────
-export type AetherState = AuthSlice & TelemetrySlice & DataSlice & UISlice & ErrorSlice & PreferencesSlice;
+export type AetherState = AuthSlice & TelemetrySlice & DataSlice & UISlice & ErrorSlice & PreferencesSlice & {
+    isListening: boolean;
+    animationTrigger: string | null;
+    setAnimationTrigger: (t: string | null) => void;
+    setListening: (l: boolean) => void;
+};
 
 // ─── Root Store ───────────────────────────────────────────
 export const useAetherStore = create<AetherState>()(
     persist(
-        (...a) => ({
-            ...createAuthSlice(...a),
-            ...createTelemetrySlice(...a),
-            ...createDataSlice(...a),
-            ...createUISlice(...a),
-            ...createErrorSlice(...a),
-            ...createPreferencesSlice(...a),
+        (set, get, ...a) => ({
+            ...createAuthSlice(set, get, ...a),
+            ...createTelemetrySlice(set, get, ...a),
+            ...createDataSlice(set, get, ...a),
+            ...createUISlice(set, get, ...a),
+            ...createErrorSlice(set, get, ...a),
+            ...createPreferencesSlice(set, get, ...a),
+            isListening: false,
+            animationTrigger: null,
+            setAnimationTrigger: (t) => set({ animationTrigger: t }),
+            setListening: (l) => set({ isListening: l }),
         }),
         {
             name: 'aether-neural-vault', // Rename for the new persistence layer

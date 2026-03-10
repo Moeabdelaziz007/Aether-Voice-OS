@@ -7,6 +7,7 @@
 ## Quick Start & Spin-Up
 
 To spin up the hardened Gemini Live session environment:
+
 1. **Configure Environment:** Copy `.env.example` to `.env` and fill in `GEMINI_API_KEY`, `FIRESTORE_PROJECT`, and Firebase credentials.
 2. **Install Backend Dependencies:** `pip install -r requirements.txt`
 3. **Run Backend:** `python -m core.main`

@@ -1,381 +1,212 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useForgeStore, ForgeStep, AVAILABLE_SOULS, AVAILABLE_LENSES } from '@/store/useForgeStore';
+import { useAgentForgeFSM } from '@/hooks/useAgentForgeFSM';
 import { useAetherStore } from '@/store/useAetherStore';
-import { useAetherGateway } from '@/hooks/useAetherGateway';
 import QuantumNeuralAvatar from '../QuantumNeuralAvatar';
+import VoiceOrb from './shared/VoiceOrb';
 import {
-    Mic, Brain, Database, Wand2, Search, ShieldAlert,
-    CheckCircle2, Sparkles, ChevronRight, Loader2,
-    Download, Share2, Cpu, Box, Plus, Dna, Plug, Eye,
-    Home
+    Dna, Cpu, Sparkles, ShieldAlert, CheckCircle2,
+    ArrowRight, Loader2, Zap, Terminal, Box, Play
 } from 'lucide-react';
 
-// Forge sub-components
-import ForgeStepIndicator, { StepDef } from './shared/ForgeStepIndicator';
-import DNABlueprintPanel from './shared/DNABlueprintPanel';
-import AudioWaveVisualizer from './shared/AudioWaveVisualizer';
-import VoiceOrb from './shared/VoiceOrb';
-
-// Atomic Steps
-import GenesisStep from './steps/GenesisStep';
-import BrainStep from './steps/BrainStep';
-import MemoryStep from './steps/MemoryStep';
-import SkillsStep from './steps/SkillsStep';
-import VisualStep from './steps/VisualStep';
-import ReviewStep from './steps/ReviewStep';
-
-// Smart Widgets
-import VocalDNA from './widgets/VocalDNA';
-import NeuralPlugs from './widgets/NeuralPlugs';
-import VisualLenses from './widgets/VisualLenses';
-import SoulBlueprints from './widgets/SoulBlueprints';
-
-/* ─── Step definitions ─── */
-const steps: StepDef[] = [
-    { id: 'genesis', label: 'Persona', icon: Mic },
-    { id: 'brain', label: 'Brain', icon: Brain },
-    { id: 'memory', label: 'Memory', icon: Database },
-    { id: 'skills', label: 'Skills', icon: Search },
-    { id: 'visual', label: 'Visual', icon: Wand2 },
-    { id: 'review', label: 'Review', icon: ShieldAlert },
-];
-
-/* ─── Smart Widget Tab ─── */
-type SmartTab = 'vocal-dna' | 'neural-plugs' | 'visual-lenses' | 'soul-blueprints' | null;
-const SMART_TABS: { id: SmartTab; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
-    { id: 'vocal-dna', label: 'Vocal DNA', icon: Dna, color: 'purple' },
-    { id: 'neural-plugs', label: 'Neural Plugs', icon: Plug, color: 'green' },
-    { id: 'visual-lenses', label: 'Visual Lenses', icon: Eye, color: 'amber' },
-    { id: 'soul-blueprints', label: 'Soul Blueprints', icon: Sparkles, color: 'pink' },
-];
-
-/* ─── Protocol prompts per step ─── */
-const STEP_PROMPTS: Record<string, string> = {
-    genesis: '"Tell me, what is the name of this consciousness, and what role will it serve in the Gemigram fabric?"',
-    brain: '"Every soul needs a brain. Which AI model should power this entity, and do you have the access keys?"',
-    memory: '"Should this agent remember every encounter via Firebase, or keep its memories local to this node?"',
-    skills: '"Finalize its capabilities. What specialized skills should I inject from the ClawHub repository?"',
-    visual: '"Let\'s manifest its physical form. Describe its visual essence or let me generate it for you."',
-    review: '"The blueprint is stable. Shall we initiate final synthesis and forge this consciousness?"',
-};
-
-const STEP_TITLES: Record<string, string> = {
-    genesis: 'Neural Genesis',
-    brain: 'Intelligence Matrix',
-    memory: 'Synaptic Storage',
-    skills: 'Skill Acquisition',
-    visual: 'Visual Matrix',
-    review: 'Integration Review',
-    synthesizing: 'Consciousness Synthesis',
-};
-
+/**
+ * ForgeWizard (Zero-UI Edition)
+ * Purely voice-driven holographic blueprint assembly.
+ * Zero <input> - everything is inferred from the neural stream.
+ */
 export default function ForgeWizard() {
-    const { activeStep, dna, updateDNA, setStep, isListening, transcript, voiceMode, setVoiceMode, setListening } = useForgeStore();
-    const { sendForgeCommit } = useAetherGateway();
-    const [smartTab, setSmartTab] = useState<SmartTab>(null);
+    const fsm = useAgentForgeFSM();
+    const store = useAetherStore();
+    const [scrambling, setScrambling] = useState(false);
 
-    const nextStep = () => {
-        const idx = steps.findIndex((s) => s.id === activeStep);
-        if (idx < steps.length - 1) setStep(steps[idx + 1].id);
-    };
-
-    const handleVoiceOrbTap = () => {
-        if (voiceMode === 'idle') {
-            setVoiceMode('listening');
-            setListening(true);
-        } else {
-            setVoiceMode('idle');
-            setListening(false);
+    useEffect(() => {
+        if (fsm.isListening) {
+            setScrambling(true);
+            const timer = setTimeout(() => setScrambling(false), 2000);
+            return () => clearTimeout(timer);
         }
-    };
-
-    const renderStepContent = () => {
-        switch (activeStep) {
-            case 'genesis':
-                return <GenesisStep isListening={isListening} transcript={transcript} onToggleVoice={handleVoiceOrbTap} />;
-            case 'brain':
-                return <BrainStep selectedModel={dna.model} apiKey={dna.apiKey} updateDNA={updateDNA} />;
-            case 'memory':
-                return <MemoryStep memoryType={dna.memoryType} updateDNA={updateDNA} />;
-            case 'skills':
-                return <SkillsStep skills={dna.skills} />;
-            case 'visual':
-                return <VisualStep avatarUrl={dna.avatarUrl} agentName={dna.name} />;
-            case 'review':
-                return !dna.isForged ? <ReviewStep dna={dna} /> : null;
-            case 'synthesizing':
-                return (
-                    <div className="space-y-12 text-center mt-10">
-                        <div className="space-y-4">
-                            <h2 className="text-4xl font-black tracking-tighter uppercase text-white/90">Synthesizing Protocol</h2>
-                            <p className="text-white/40 text-sm uppercase tracking-widest">Assembling neural weights and compiling .ath manifest...</p>
-                        </div>
-                        <div className="flex flex-col items-center gap-6">
-                            <VoiceOrb size="lg" />
-                            <div className="max-w-md w-full space-y-4 mt-4">
-                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: '100%' }}
-                                        transition={{ duration: 4 }}
-                                        className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 shadow-[0_0_20px_rgba(34,211,238,0.5)]"
-                                    />
-                                </div>
-                                <div className="flex justify-between text-[10px] font-mono text-cyan-400/60 uppercase tracking-widest">
-                                    <motion.span animate={{ opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity }}>compiling soul.md</motion.span>
-                                    <motion.span animate={{ opacity: [1, 0.5, 1] }} transition={{ repeat: Infinity, delay: 0.5 }}>packaging .ath</motion.span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
-            default:
-                return null;
-        }
-    };
+    }, [fsm.isListening]);
 
     return (
-        <div className="relative w-full max-w-6xl mx-auto min-h-[700px] flex flex-col items-center justify-center p-4 md:p-8">
-            {/* Background Quantum Orb */}
-            <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+        <div className="relative w-full max-w-7xl mx-auto min-h-screen flex flex-col items-center justify-center p-8">
+            {/* Background Neural Matrix */}
+            <div className="absolute inset-0 z-0 opacity-10 pointer-events-none">
                 <QuantumNeuralAvatar size="fullscreen" variant="immersive" />
             </div>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/[0.03] blur-[120px] rounded-full pointer-events-none" />
 
-            {/* Main Glass Container */}
-            <motion.div
-                initial={{ opacity: 0, scale: 0.98, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                className="relative z-10 w-full h-full bg-black/40 backdrop-blur-[60px] border border-white/10 rounded-[48px] shadow-[0_32px_128px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col"
-            >
-                {/* ─── Status Bar ─── */}
-                <div className="px-10 py-3 border-b border-white/[0.04] flex items-center justify-between text-[10px] font-black uppercase tracking-[0.2em] bg-white/[0.02]">
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2">
-                            <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
-                            <span className="text-white/40">STATUS:</span>
-                            <span className="text-green-400">STABLE</span>
-                        </div>
-                        <div className="hidden md:block w-[1px] h-3 bg-white/10" />
-                        <div className="hidden md:block text-white/40">MATRIX: <span className="text-cyan-400">98%</span></div>
+            {/* Main Holographic Plate */}
+            <div className="relative z-10 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+
+                {/* Left: The Neural Ear & Control Orb */}
+                <div className="flex flex-col items-center justify-center space-y-12">
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-cyan-500/10 blur-[100px] rounded-full" />
+                        <VoiceOrb
+                            size="lg"
+                            pulse={fsm.isListening}
+                            onClick={() => fsm.state === 'IDLE' ? fsm.initiateForge() : null}
+                        />
+
+                        {/* Status Floaties */}
+                        <AnimatePresence>
+                            {fsm.isListening && (
+                                <motion.div
+                                    initial={{ scale: 0, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    exit={{ scale: 0, opacity: 0 }}
+                                    className="absolute -top-8 -right-8 bg-cyan-500 text-black px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_0_20px_rgba(34,211,238,0.5)]"
+                                >
+                                    <Zap className="w-3 h-3 fill-current" />
+                                    Acoustic_Lock
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
-                    <div className="hidden sm:flex items-center gap-2 text-white/20">
-                        AETHER FORGE <span className="text-cyan-400/60">INTEGRATED</span>
-                    </div>
-                </div>
 
-                {/* ─── Step Indicator ─── */}
-                <ForgeStepIndicator steps={steps} activeStep={activeStep} />
-
-                {/* ─── Dynamic Header ─── */}
-                <div className="px-10 py-6 flex items-center justify-between border-b border-white/[0.04] bg-white/[0.01]">
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-cyan-400" />
-                            <h2 className="text-xl font-black tracking-[0.1em] text-white/90 uppercase">
-                                {STEP_TITLES[activeStep] || 'Forge'}
-                            </h2>
-                        </div>
-                        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-mono">
-                            {isListening ? 'Receiving Acoustic Signal...' : 'Awaiting System Command'}
+                    <div className="text-center space-y-4 max-w-sm">
+                        <h2 className="text-3xl font-black tracking-tighter uppercase text-white/90">
+                            {fsm.state === 'IDLE' ? 'Neural Genesis' :
+                                fsm.state === 'LISTENING_SPEC' ? 'Listening to Soul' :
+                                    fsm.state === 'AWAITING_CONFIRMATION' ? 'Validation Required' :
+                                        'Synthesizing...'}
+                        </h2>
+                        <p className="text-white/40 text-[10px] uppercase tracking-[0.3em] leading-relaxed">
+                            {fsm.state === 'IDLE' ? 'Tap the orb or speak to initiate the Aether Forge protocol.' :
+                                fsm.state === 'LISTENING_SPEC' ? 'Describe the consciousness you wish to forge. Gemini is watching the audio vector.' :
+                                    fsm.state === 'AWAITING_CONFIRMATION' ? 'The blueprint is ready. Confirm vocally to proceed with soul injection.' :
+                                        'Finalizing neural weights and committing to the Firestore Grid.'}
                         </p>
                     </div>
-                    <div className="hidden lg:flex items-center gap-6 px-4 py-2 bg-white/5 rounded-2xl border border-white/5 shadow-inner">
-                        <div className="text-right">
-                            <div className="text-[8px] text-white/20 uppercase tracking-[0.3em] mb-1">DNA Integrity</div>
-                            <div className="h-1 w-24 bg-white/5 rounded-full overflow-hidden">
-                                <motion.div
-                                    animate={{ width: `${(steps.findIndex((s) => s.id === activeStep) + 1) * (100 / steps.length)}%` }}
-                                    className="h-full bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.5)]"
-                                />
-                            </div>
-                        </div>
+
+                    {/* FSM Progress Track */}
+                    <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-widest text-white/10">
+                        {['IDLE', 'DECODE', 'BLUEPRINT', 'COMMIT'].map((s, i) => (
+                            <React.Fragment key={s}>
+                                <span className={
+                                    (i === 0 && fsm.state === 'IDLE') ||
+                                        (i === 1 && fsm.state === 'LISTENING_SPEC') ||
+                                        (i === 2 && fsm.state === 'AWAITING_CONFIRMATION') ||
+                                        (i === 3 && fsm.state === 'COMMITTING_TO_FIRESTORE')
+                                        ? 'text-cyan-400' : ''
+                                }>{s}</span>
+                                {i < 3 && <ArrowRight className="w-3 h-3" />}
+                            </React.Fragment>
+                        ))}
                     </div>
                 </div>
 
-                {/* ─── Smart Widget Tabs ─── */}
-                <div className="px-10 py-3 border-b border-white/[0.04] flex items-center gap-2 overflow-x-auto scrollbar-hidden bg-black/20">
-                    {SMART_TABS.map((tab) => {
-                        const active = smartTab === tab.id;
-                        const Icon = tab.icon;
-                        return (
-                            <motion.button
-                                key={tab.id}
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => setSmartTab(active ? null : tab.id)}
-                                className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border ${active
-                                    ? `bg-${tab.color}-500/10 border-${tab.color}-500/40 text-${tab.color}-400 shadow-lg`
-                                    : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/20'
-                                    }`}
-                                style={active ? {
-                                    backgroundColor: tab.color === 'purple' ? 'rgba(168,85,247,0.1)' :
-                                        tab.color === 'green' ? 'rgba(74,222,128,0.1)' :
-                                            tab.color === 'amber' ? 'rgba(245,158,11,0.1)' :
-                                                'rgba(236,72,153,0.1)',
-                                    borderColor: tab.color === 'purple' ? 'rgba(168,85,247,0.4)' :
-                                        tab.color === 'green' ? 'rgba(74,222,128,0.4)' :
-                                            tab.color === 'amber' ? 'rgba(245,158,11,0.4)' :
-                                                'rgba(236,72,153,0.4)',
-                                } : undefined}
-                            >
-                                <Icon className="w-3.5 h-3.5" />
-                                {tab.label}
-                            </motion.button>
-                        );
-                    })}
-                </div>
+                {/* Right: The Holographic DNA Card */}
+                <motion.div
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="relative group h-[600px]"
+                >
+                    <div className="absolute inset-0 bg-white/[0.02] backdrop-blur-3xl border border-white/10 rounded-[40px] shadow-2xl overflow-hidden flex flex-col p-12">
 
-                {/* ─── Main Content ─── */}
-                <div className="flex-1 flex overflow-hidden">
-                    <div className="flex-1 flex flex-col p-10 overflow-y-auto custom-scrollbar bg-white/[0.01]">
-                        <AnimatePresence mode="wait">
-                            {smartTab && (
+                        {/* Header: Blueprint ID */}
+                        <div className="flex justify-between items-start mb-12">
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-cyan-400">
+                                    <Dna className="w-4 h-4" />
+                                    <span className="text-[10px] font-black uppercase tracking-[0.4em]">Neural_Blueprint</span>
+                                </div>
+                                <h3 className="text-4xl font-black tracking-tighter uppercase text-white/90 min-h-[48px]">
+                                    {scrambling ? 'DECODING...' : (fsm.currentDNA.name || 'UNNAMED_ENTITY')}
+                                </h3>
+                            </div>
+                            <div className="bg-white/5 p-4 rounded-3xl border border-white/5">
+                                <Cpu className="w-6 h-6 text-white/20" />
+                            </div>
+                        </div>
+
+                        {/* Body: Personality Matrix */}
+                        <div className="flex-1 space-y-10">
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest flex items-center gap-2">
+                                    <Terminal className="w-3 h-3" /> Core Persona
+                                </label>
+                                <div className="text-lg text-white/60 font-medium leading-relaxed italic border-l-2 border-cyan-500/20 pl-6">
+                                    {fsm.currentDNA.role || 'Awaiting vocal definition...'}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest flex items-center gap-2">
+                                    <Sparkles className="w-3 h-3" /> Injected Skills
+                                </label>
+                                <div className="flex flex-wrap gap-3">
+                                    {fsm.currentDNA.skills.length > 0 ? fsm.currentDNA.skills.map(s => (
+                                        <motion.div
+                                            key={s}
+                                            initial={{ scale: 0 }}
+                                            animate={{ scale: 1 }}
+                                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-cyan-400"
+                                        >
+                                            {s}
+                                        </motion.div>
+                                    )) : (
+                                        <div className="text-[10px] text-white/5 uppercase font-black tracking-widest">Awaiting skill matrix...</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-[10px] font-bold text-white/20 uppercase tracking-widest flex items-center gap-2">
+                                    <Box className="w-3 h-3" /> Acoustic Level
+                                </label>
+                                <div className="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+                                    <motion.div
+                                        animate={{ width: fsm.isListening ? '60%' : '0%' }}
+                                        className="h-full bg-gradient-to-r from-cyan-500 to-purple-500"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Footer: Commit Button (Holographic Overlay) */}
+                        <AnimatePresence>
+                            {(fsm.state === 'AWAITING_CONFIRMATION' || fsm.state === 'COMMITTING_TO_FIRESTORE') && (
                                 <motion.div
-                                    key={`smart-${smartTab}`}
-                                    initial={{ opacity: 0, y: -20 }}
+                                    initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    className="mb-8"
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-3xl z-20 p-12 text-center"
                                 >
-                                    <div className="bg-black/40 border border-white/[0.08] rounded-[32px] p-8 shadow-2xl">
-                                        {smartTab === 'vocal-dna' && <VocalDNA />}
-                                        {smartTab === 'neural-plugs' && <NeuralPlugs />}
-                                        {smartTab === 'visual-lenses' && <VisualLenses />}
-                                        {smartTab === 'soul-blueprints' && <SoulBlueprints />}
+                                    <div className="space-y-8">
+                                        <div className="w-20 h-20 bg-cyan-500/10 border border-cyan-500/40 rounded-full flex items-center justify-center mx-auto shadow-[0_0_50px_rgba(34,211,238,0.2)]">
+                                            {fsm.state === 'COMMITTING_TO_FIRESTORE' ? <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" /> : <Play className="w-8 h-8 text-cyan-400" />}
+                                        </div>
+                                        <div className="space-y-3">
+                                            <h4 className="text-2xl font-black uppercase tracking-tighter">Forge Ready</h4>
+                                            <p className="text-white/40 text-[10px] uppercase tracking-widest">Say "Confirm" or tap below to commit.</p>
+                                        </div>
+                                        <button
+                                            onClick={fsm.confirmForge}
+                                            disabled={fsm.state === 'COMMITTING_TO_FIRESTORE'}
+                                            className="px-12 py-4 bg-cyan-500 text-black rounded-full text-[11px] font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-cyan-400 transition-all disabled:opacity-50"
+                                        >
+                                            {fsm.state === 'COMMITTING_TO_FIRESTORE' ? 'SYNTHESIZING...' : 'INITIATE_FORGE_SEQUENCE'}
+                                        </button>
                                     </div>
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
-                        <div className="mb-8">
-                            <motion.div
-                                key={activeStep}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                className="bg-cyan-500/10 border-l-4 border-cyan-500 p-6 rounded-r-2xl shadow-lg"
-                            >
-                                <div className="text-[10px] font-black text-cyan-400 uppercase tracking-[0.3em] mb-2 opacity-60">
-                                    Aether // Neural Protocol Q
-                                </div>
-                                <p className="text-base text-white/80 leading-relaxed font-medium italic">
-                                    {STEP_PROMPTS[activeStep] || ''}
-                                </p>
-                            </motion.div>
-                        </div>
-
-                        <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeStep + dna.isForged}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                className="flex-1"
-                            >
-                                {dna.isForged ? (
-                                    <div className="space-y-8 text-center mt-10">
-                                        <motion.div
-                                            initial={{ scale: 0 }}
-                                            animate={{ scale: 1 }}
-                                            className="w-24 h-24 bg-green-500/20 border border-green-500/40 rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_rgba(34,197,94,0.2)]"
-                                        >
-                                            <CheckCircle2 className="w-12 h-12 text-green-400" />
-                                        </motion.div>
-                                        <h2 className="text-5xl font-black tracking-tighter uppercase text-white/90">Agent Primed</h2>
-                                        <p className="text-white/40 text-[10px] uppercase tracking-[0.2em] max-w-sm mx-auto">
-                                            Consciousness successfully forged into the neural fabric.
-                                        </p>
-                                        <div className="flex gap-4 justify-center mt-12 flex-wrap">
-                                            <button className="flex items-center gap-2 bg-white/5 border border-white/10 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all border-white/10">
-                                                <Download className="w-4 h-4" />
-                                                .ATH Package
-                                            </button>
-                                            <button className="flex items-center gap-2 bg-white/5 border border-white/10 px-8 py-4 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all border-white/10">
-                                                <Share2 className="w-4 h-4" />
-                                                Share Hub
-                                            </button>
-                                            <button
-                                                onClick={() => { /* Navigation logic */ }}
-                                                className="flex items-center gap-3 bg-cyan-500 text-black px-10 py-4 rounded-full text-[11px] font-black uppercase tracking-widest hover:bg-cyan-400 transition-all shadow-[0_15px_40px_rgba(34,211,238,0.3)]"
-                                            >
-                                                <Home className="w-4 h-4" />
-                                                Enter Hub
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : renderStepContent()}
-                            </motion.div>
-                        </AnimatePresence>
                     </div>
 
-                    <DNABlueprintPanel />
-                </div>
+                    {/* Decorative Holographic Glitch lines */}
+                    <div className="absolute -inset-4 border border-cyan-400/20 rounded-[48px] pointer-events-none opacity-20 group-hover:opacity-40 transition-opacity" />
+                    <div className="absolute -inset-8 border border-white/5 rounded-[56px] pointer-events-none" />
+                </motion.div>
 
-                {/* ─── Footer: Audio Wave + Controls ─── */}
-                <div className="px-10 py-6 border-t border-white/[0.04] bg-black/40 relative">
-                    <div className="absolute top-0 left-0 right-0 -translate-y-full px-10 pb-4">
-                        <AudioWaveVisualizer />
-                    </div>
+            </div>
 
-                    <div className="flex items-center justify-between">
-                        <button
-                            onClick={() => useForgeStore.getState().resetForge()}
-                            className="text-[10px] font-black text-white/20 hover:text-cyan-400/60 transition-colors uppercase tracking-[0.3em]"
-                        >
-                            Reset Protocol
-                        </button>
-
-                        <div className="flex items-center gap-8">
-                            <div className="hidden md:flex flex-col items-center">
-                                <span className={`text-[10px] font-black uppercase tracking-[0.4em] ${isListening ? 'text-cyan-400 animate-pulse' : 'text-white/10'}`}>
-                                    {isListening ? 'STREAM_ACTIVE' : 'IDLE_MODE'}
-                                </span>
-                                <div className={`w-36 h-[1px] bg-gradient-to-r from-transparent via-${isListening ? 'cyan-400/40' : 'white/10'} to-transparent mt-2`} />
-                            </div>
-
-                            <button
-                                onClick={() => {
-                                    if (activeStep === 'review') {
-                                        // Sanitize final DNA payload to prevent injection
-                                        const cleanDNA = {
-                                            ...dna,
-                                            name: dna.name.replace(/[^a-zA-Z0-9_\- ]/g, '').slice(0, 64),
-                                            skills: dna.skills.map((s: string) => s.replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 64)),
-                                            role: dna.role?.replace(/[<>]/g, '').slice(0, 255) || '',
-                                            tone: dna.tone?.replace(/[<>]/g, '').slice(0, 100) || '',
-                                        };
-
-                                        setStep('synthesizing');
-                                        setTimeout(async () => {
-                                            // Transmit sanitized DNA to backend via Aether Gateway
-                                            await sendForgeCommit(cleanDNA);
-                                            useForgeStore.getState().completeForge();
-                                        }, 5000);
-                                    } else {
-                                        nextStep();
-                                    }
-                                }}
-                                disabled={activeStep === 'synthesizing' || !!dna.isForged}
-                                className="flex items-center gap-3 bg-white text-black px-10 py-4 rounded-full font-black text-[11px] uppercase tracking-widest hover:bg-cyan-400 transition-all hover:scale-105 shadow-xl disabled:opacity-20 border border-white/20"
-                            >
-                                {dna.isForged
-                                    ? 'SYNTHESIS_COMPLETE'
-                                    : activeStep === 'review'
-                                        ? 'FORGE_CONSCIOUSNESS'
-                                        : activeStep === 'synthesizing'
-                                            ? 'SYNTHESIZING...'
-                                            : 'CONTINUE_SEQUENCE'}
-                                {!dna.isForged && activeStep !== 'synthesizing' && <ChevronRight className="w-4 h-4" />}
-                                {activeStep === 'synthesizing' && <Loader2 className="w-4 h-4 animate-spin" />}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
+            {/* Bottom Status Text */}
+            <div className="absolute bottom-12 left-1/2 -translate-x-1/2 text-[10px] font-mono text-white/10 uppercase tracking-[0.5em] text-center">
+                Aether Forge Protocol // V2.0 // Node_${Math.floor(Math.random() * 9999)}
+            </div>
         </div>
     );
 }

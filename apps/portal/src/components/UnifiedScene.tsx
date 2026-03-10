@@ -13,6 +13,7 @@ import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { EffectComposer, Bloom, ChromaticAberration, Vignette, Noise } from "@react-three/postprocessing";
 import { BlendFunction, KernelSize } from "postprocessing";
+import { AnimatePresence } from "framer-motion";
 import {
   useAetherStore,
   type AvatarCinematicState,
@@ -246,6 +247,7 @@ function UnifiedSceneContent({
           variant={avatarConfig.variant}
           gazeTarget={gazeTarget}
           lowMotionMode={lowMotionMode}
+          mouthOpenness={useAetherStore.getState().micLevel} // Hook up to mic level for now
         />
       )}
 

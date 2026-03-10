@@ -25,7 +25,7 @@ import EdgeGlow from "@/components/shared/EdgeGlow";
 import ParticleField from "@/components/shared/ParticleField";
 import SilentHintsOverlay from "@/components/shared/SilentHintsOverlay";
 import PoweredByStrip from "@/components/shared/PoweredByStrip";
-import Omnibar from "@/components/shared/Omnibar";
+import VoiceIntentBar from "@/components/shared/VoiceIntentBar";
 import NeuralBackground from "@/components/shared/NeuralBackground";
 import { EmotionalAtmosphere, useEmotionalState } from "@/components/EmotionalAtmosphere";
 import NotificationCenter from "@/components/NotificationCenter";
@@ -50,7 +50,15 @@ import MissionControlHUD from "@/components/HUD/MissionControlHUD";
 import OrbitalWorkspaceOverlay from "@/components/HUD/OrbitalWorkspaceOverlay";
 import MirrorInteractionOverlay from "@/components/HUD/MirrorInteractionOverlay";
 import SystemFailure from "@/components/HUD/SystemFailure";
+// Landing components
+import GemiGramHeader from "@/components/landing/GemiGramHeader";
+import GemiGramFooter from "@/components/landing/GemiGramFooter";
+import GemiGramSplash from "@/components/landing/GemiGramSplash";
+import NeuralIdentityGrid from "@/components/landing/NeuralIdentityGrid";
+import VoiceSynthesisDashboard from "@/components/landing/VoiceSynthesisDashboard";
+
 import RealmController from "@/components/realms/RealmController";
+import SoulSwapAnimation from "@/components/SoulSwapAnimation";
 
 // Store
 import { useAetherStore } from "@/store/useAetherStore";
@@ -98,6 +106,7 @@ export default function AetherPortal() {
     const pushToFeed = useAetherStore((s) => s.pushToFeed);
 
     const agentDNA = useForgeStore((s) => s.dna);
+    const [viewMode, setViewMode] = useState<'landing' | 'portal'>('landing');
     const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
 
     // E2E Onboarding: If agent is not forged, force the Forge; if forged, go to dashboard
@@ -135,255 +144,275 @@ export default function AetherPortal() {
 
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [omnibarOpen, setOmnibarOpen] = useState(false);
+    const [isSwapping, setIsSwapping] = useState(false);
 
-    // Wire voice commands & UI Sync
-    useVoiceCommands();
-    useUIStateSync();
-
-    // Get emotional state for atmosphere (only if emotionSense is enabled)
-    const emotionalState = useEmotionalState();
-
-    // Avatar config based on realm (optimized for unified scene)
-    const avatarConfig = useMemo(() => {
-        if (activePanel === 'voice' || activePanel === null) {
-            switch (currentRealm) {
-                case "void": return { size: "large" as const, variant: "immersive" as const };
-                case "neural": return { size: "fullscreen" as const, variant: "immersive" as const };
-                default: return { size: "medium" as const, variant: "detailed" as const };
-            }
-        }
-        return { size: "medium" as const, variant: "detailed" as const };
-    }, [currentRealm, activePanel]);
-
-    // ── Drive CSS custom properties from accent color and emotional state ────────
-    useEffect(() => {
-        const root = document.documentElement;
-        const rgb = ACCENT_RGB[preferences.accentColor] || ACCENT_RGB.green;
-
-        // Adjust intensity based on emotional state
-        let intensity = STATE_INTENSITY[engineState] ?? 0.2;
-        if (emotionSenseEnabled && emotionalState.intensity > 0.5) {
-            intensity = Math.min(1.5, intensity + emotionalState.intensity * 0.3);
-        }
-
-        root.style.setProperty("--accent-r", String(rgb[0]));
-        root.style.setProperty("--accent-g", String(rgb[1]));
-        root.style.setProperty("--accent-b", String(rgb[2]));
-        root.style.setProperty("--glow-intensity", String(intensity));
-
-        // Set emotional CSS variables
-        if (emotionSenseEnabled) {
-            root.style.setProperty("--emotion-valence", String(emotionalState.valence));
-            root.style.setProperty("--emotion-arousal", String(emotionalState.arousal));
-            root.style.setProperty("--emotion-intensity", String(emotionalState.intensity));
-        }
-    }, [preferences.accentColor, engineState, emotionSenseEnabled, emotionalState]);
-
-    // Audio level CSS vars
-    useEffect(() => {
-        const root = document.documentElement;
-        let rafId: number;
-        const loop = () => {
-            root.style.setProperty("--speaker-level", String(useAetherStore.getState().speakerLevel));
-            root.style.setProperty("--mic-level", String(useAetherStore.getState().micLevel));
-            rafId = requestAnimationFrame(loop);
-        };
-        rafId = requestAnimationFrame(loop);
-        return () => cancelAnimationFrame(rafId);
+    const handleEnterPortal = useCallback((targetPanel?: SidebarPanel) => {
+        setIsSwapping(true);
+        // Delay the actual view swap to allow the animation to flare
+        setTimeout(() => {
+            setViewMode('portal');
+            if (targetPanel) setActivePanel(targetPanel);
+        }, 800);
     }, []);
 
-    const toggleOmnibar = useCallback(() => setOmnibarOpen(prev => !prev), []);
-
-    // Determine if we show Voice Agent view or Dashboard view
-    const showVoiceView = activePanel === 'voice';
-    const showDashboard = activePanel === 'dashboard';
-    const showHub = activePanel === 'hub';
-    const showManagementPanel = ['memory', 'skills', 'persona'].includes(activePanel || '');
-    const showTerminal = activePanel === 'terminal';
-
     useEffect(() => {
-        if (!showVoiceView) return;
-        if (!orbitRegistry['planet-notes']) {
-            applyWorkspaceState({
-                action: 'materialize_app',
-                app_id: 'planet-notes',
-                x: 140,
-                y: 10,
-                orbit_lane: 'inner',
-            });
-        }
-        const hasNotesWidget = activeWidgets.some((widget) => widget.type === 'notes_planet');
-        if (!hasNotesWidget) {
-            addWidget('notes_planet', { appId: 'planet-notes' });
-        }
-    }, [showVoiceView, orbitRegistry, activeWidgets, applyWorkspaceState, addWidget]);
+        if (platformFeed.length === 0) {
 
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        const params = new URLSearchParams(window.location.search);
-        const compactHud = params.get("hud");
-        const motion = params.get("motion");
-        if (compactHud === "compact") {
-            setPreferences({ compactMissionHud: true });
-        }
-        if (compactHud === "full") {
-            setPreferences({ compactMissionHud: false });
-        }
-        if (motion === "low") {
-            setPreferences({ lowMotionMode: true });
-        }
-        if (motion === "full") {
-            setPreferences({ lowMotionMode: false });
-        }
-    }, [setPreferences]);
+            const toggleOmnibar = useCallback(() => setOmnibarOpen(prev => !prev), []);
 
-    return (
-        <EmotionalAtmosphere showDebugOverlay={false}>
-            <ThemeProvider>
-                <NotificationCenter />
-                <LayoutGroup>
-                    {/* Theme & Visual System */}
-                    <BackgroundEngine />
-                    <NeuralBackground />
-                    <ParticleField count={20} />
-                    <div className="carbon-fiber-overlay" />
+            // Determine if we show Voice Agent view or Dashboard view
+            const showVoiceView = activePanel === 'voice';
+            const showDashboard = activePanel === 'dashboard';
+            const showHub = activePanel === 'hub';
+            const showManagementPanel = ['memory', 'skills', 'persona'].includes(activePanel || '');
+            const showTerminal = activePanel === 'terminal';
 
-                    {/* Sidebar Navigation */}
-                    <Sidebar
-                        activePanel={activePanel}
-                        onPanelChange={setActivePanel}
-                        onOpenSettings={() => setSettingsOpen(true)}
-                    />
+            useEffect(() => {
+                if (!showVoiceView) return;
+                if (!orbitRegistry['planet-notes']) {
+                    applyWorkspaceState({
+                        action: 'materialize_app',
+                        app_id: 'planet-notes',
+                        x: 140,
+                        y: 10,
+                        orbit_lane: 'inner',
+                    });
+                }
+                const hasNotesWidget = activeWidgets.some((widget) => widget.type === 'notes_planet');
+                if (!hasNotesWidget) {
+                    addWidget('notes_planet', { appId: 'planet-notes' });
+                }
+            }, [showVoiceView, orbitRegistry, activeWidgets, applyWorkspaceState, addWidget]);
 
-                    {/* Main content area — offset by sidebar width */}
-                    <div className="ml-14 flex flex-col h-screen overflow-hidden">
-                        {/* Top Bar */}
-                        <TopBar
-                            onOpenSettings={() => setSettingsOpen(true)}
-                            onToggleOmnibar={toggleOmnibar}
-                        />
+            useEffect(() => {
+                if (typeof window === "undefined") return;
+                const params = new URLSearchParams(window.location.search);
+                const compactHud = params.get("hud");
+                const motion = params.get("motion");
+                if (compactHud === "compact") {
+                    setPreferences({ compactMissionHud: true });
+                }
+                if (compactHud === "full") {
+                    setPreferences({ compactMissionHud: false });
+                }
+                if (motion === "low") {
+                    setPreferences({ lowMotionMode: true });
+                }
+                if (motion === "full") {
+                    setPreferences({ lowMotionMode: false });
+                }
+            }, [setPreferences]);
 
-                        {/* Main content */}
-                        <main className="flex-1 overflow-y-auto overflow-x-hidden relative">
-                            <AnimatePresence mode="wait">
-                                {/* ── Dashboard View: Widget Grid ── */}
-                                {showDashboard && (
-                                    <motion.div
-                                        key="dashboard"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        exit={{ opacity: 0, y: -10 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="h-full"
-                                    >
-                                        <WidgetGrid />
-                                    </motion.div>
-                                )}
+            const themeClass = preferences.activeTheme === 'dark' ? 'theme-matrix-core' : 'theme-ghost-white';
+            const avatarState = useAetherStore((s) => s.avatarState);
 
-                                {/* ── Voice Agent View: Full Immersive 3D + Realms ── */}
-                                {showVoiceView && (
-                                    <motion.div
-                                        key="voice"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        transition={{ duration: 0.5 }}
-                                        className="fixed inset-0 ml-14"
-                                    >
-                                        {/* 3D Scene */}
-                                        <UnifiedScene
-                                            avatarConfig={avatarConfig}
-                                            showAvatar={true}
-                                            showParticles={true}
-                                            showConnections={true}
+            return (
+                <ThemeProvider>
+                    <EmotionalAtmosphere showDebugOverlay={false}>
+                        <AnimatePresence mode="wait">
+                            {/* Soul Swap Cinematic Transition */}
+                            <SoulSwapAnimation isVisible={isSwapping} onComplete={() => setIsSwapping(false)} />
+
+                            {viewMode === 'landing' ? (
+                                <motion.div
+                                    key="landing-view"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0, scale: 1.05, filter: 'blur(20px)' }}
+                                    transition={{ duration: 0.8 }}
+                                    className="relative min-h-screen bg-[#050505] text-white selection:bg-cyan-500/30 overflow-x-hidden"
+                                >
+                                    <BackgroundEngine />
+                                    <NeuralBackground />
+                                    <ParticleField count={40} />
+                                    <div className="carbon-fiber-overlay fixed inset-0 opacity-20 pointer-events-none" />
+
+                                    <GemiGramHeader />
+
+                                    <main className="relative z-10">
+                                        <GemiGramSplash
+                                            onConnect={() => handleEnterPortal('dashboard')}
+                                            onCreate={() => handleEnterPortal('hub')}
                                         />
 
-                                        {/* Edge Glow */}
-                                        <EdgeGlow />
+                                        <NeuralIdentityGrid />
 
-                                        {/* HUD Frame */}
-                                        <HUDContainer>
-                                            <div className="relative w-full h-screen overflow-hidden">
-                                                <OrbitalWorkspaceOverlay />
-                                                <MirrorInteractionOverlay />
-                                                <SystemFailure />
-                                                <RealmController />
-                                                <MissionControlHUD />
+                                        <div className="py-20">
+                                            <VoiceSynthesisDashboard />
+                                        </div>
+                                    </main>
+
+                                    <GemiGramFooter />
+                                </motion.div>
+                            ) : (
+                                <motion.div
+                                    key="portal-view"
+                                    initial={{ opacity: 0, scale: 0.95 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={{ duration: 0.8 }}
+                                    className={`portal ${themeClass}`}
+                                >
+                                    <BackgroundEngine />
+                                    <NeuralBackground />
+                                    <ParticleField count={40} />
+                                    <div className="carbon-fiber-overlay" />
+
+                                    <NotificationCenter />
+                                    {/* @ts-ignore */}
+                                    <LayoutGroup>
+                                        {/* Sidebar Navigation */}
+                                        <Sidebar
+                                            activePanel={activePanel}
+                                            onPanelChange={setActivePanel}
+                                            onOpenSettings={() => setSettingsOpen(true)}
+                                        />
+
+                                        <div className="ml-14 flex flex-col h-screen overflow-hidden">
+                                            {/* Top Bar with Logo/Back button */}
+                                            <div className="top-bar border-b border-white/5 bg-black/20 backdrop-blur-md flex justify-between items-center px-6 transition-all duration-300">
+                                                <div className="flex items-center gap-6">
+                                                    <button
+                                                        onClick={() => setViewMode('landing')}
+                                                        className="text-[10px] font-black uppercase tracking-[0.3em] text-white/30 hover:text-cyan-400 transition-all group flex items-center gap-2"
+                                                    >
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 opacity-0 group-hover:opacity-100 transition-all" />
+                                                        Exit Portal
+                                                    </button>
+                                                    <div className="h-4 w-px bg-white/10" />
+                                                    <div className="opacity-80 scale-90 origin-left">
+                                                        <GemiGramHeader hideNav />
+                                                    </div>
+                                                </div>
+
+                                                <div className="mode-indicators flex gap-2">
+                                                    <div className={`mode-dot ${avatarState === 'Listening' ? 'active' : ''}`} data-mode="vision" />
+                                                    <div className={`mode-dot ${avatarState === 'Speaking' ? 'active' : ''}`} data-mode="voice" />
+                                                    <div className={`mode-dot ${avatarState === 'Thinking' ? 'active' : ''}`} data-mode="code" />
+                                                </div>
+
+                                                <TopBar
+                                                    onOpenSettings={() => setSettingsOpen(true)}
+                                                    onToggleOmnibar={toggleOmnibar}
+                                                />
                                             </div>
-                                        </HUDContainer>
 
-                                        {/* Silent Hints */}
-                                        <SilentHintsOverlay />
+                                            {/* Main content area */}
+                                            <main className="flex-1 overflow-hidden relative">
+                                                <AnimatePresence mode="wait">
+                                                    {/* Unified 3D Scene (Always active in Portal) */}
+                                                    <motion.div
+                                                        key="unified-scene"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        className="fixed inset-0 pointer-events-none"
+                                                    >
+                                                        <UnifiedScene
+                                                            avatarConfig={avatarConfig}
+                                                            showAvatar={true}
+                                                            showParticles={true}
+                                                            showConnections={true}
+                                                        />
+                                                    </motion.div>
 
-                                        {/* Generative UI Widgets */}
-                                        <GenerativePortal />
-                                    </motion.div>
-                                )}
+                                                    {/* Dashboard Content */}
+                                                    {showDashboard && (
+                                                        <motion.div
+                                                            key="dashboard"
+                                                            initial={{ opacity: 0, y: 10 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: -10 }}
+                                                            transition={{ duration: 0.3 }}
+                                                            className="h-full overflow-y-auto relative z-10"
+                                                        >
+                                                            <WidgetGrid />
+                                                        </motion.div>
+                                                    )}
 
-                                {/* ── Management Panels: Memory / Skills / Persona ── */}
-                                {showManagementPanel && (
-                                    <motion.div
-                                        key={`panel-${activePanel}`}
-                                        initial={{ opacity: 0, x: 20 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -20 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="max-w-2xl mx-auto p-6 h-full"
-                                    >
-                                        {activePanel === 'memory' && <MemoryPanel />}
-                                        {activePanel === 'skills' && <SkillsPanel />}
-                                        {activePanel === 'persona' && <PersonaPanel />}
-                                    </motion.div>
-                                )}
+                                                    {/* Voice Agent View: Full Immersive */}
+                                                    {showVoiceView && (
+                                                        <motion.div
+                                                            key="voice"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            transition={{ duration: 0.5 }}
+                                                            className="h-full relative z-10"
+                                                        >
+                                                            <HUDContainer>
+                                                                <div className="relative w-full h-full overflow-hidden">
+                                                                    <OrbitalWorkspaceOverlay />
+                                                                    <MirrorInteractionOverlay />
+                                                                    <SystemFailure />
+                                                                    <RealmController />
+                                                                    <MissionControlHUD />
+                                                                </div>
+                                                            </HUDContainer>
+                                                            <SilentHintsOverlay />
+                                                            <GenerativePortal />
+                                                        </motion.div>
+                                                    )}
 
-                                {/* ── Agent Hub View: Social Fabric & Discovery ── */}
-                                {showHub && (
-                                    <motion.div
-                                        key="hub"
-                                        initial={{ opacity: 0, scale: 0.98 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        exit={{ opacity: 0, scale: 1.02 }}
-                                        transition={{ duration: 0.3 }}
-                                        className="h-full"
-                                    >
-                                        <AgentHub />
-                                    </motion.div>
-                                )}
+                                                    {/* Management Panels */}
+                                                    {showManagementPanel && (
+                                                        <motion.div
+                                                            key={`panel-${activePanel}`}
+                                                            initial={{ opacity: 0, x: 20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            exit={{ opacity: 0, x: -20 }}
+                                                            transition={{ duration: 0.3 }}
+                                                            className="max-w-2xl mx-auto p-6 h-full overflow-y-auto relative z-10"
+                                                        >
+                                                            {activePanel === 'memory' && <MemoryPanel />}
+                                                            {activePanel === 'skills' && <SkillsPanel />}
+                                                            {activePanel === 'persona' && <PersonaPanel />}
+                                                        </motion.div>
+                                                    )}
 
-                                {/* ── Terminal View ── */}
-                                {showTerminal && (
-                                    <motion.div
-                                        key="terminal"
-                                        initial={{ opacity: 0 }}
-                                        animate={{ opacity: 1 }}
-                                        exit={{ opacity: 0 }}
-                                        className="h-full"
-                                    >
-                                        <TerminalFeed />
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </main>
-                    </div>
+                                                    {/* Agent Hub */}
+                                                    {showHub && (
+                                                        <motion.div
+                                                            key="hub"
+                                                            initial={{ opacity: 0, scale: 0.98 }}
+                                                            animate={{ opacity: 1, scale: 1 }}
+                                                            exit={{ opacity: 0, scale: 1.02 }}
+                                                            transition={{ duration: 0.3 }}
+                                                            className="h-full relative z-10"
+                                                        >
+                                                            <AgentHub />
+                                                        </motion.div>
+                                                    )}
 
-                    {/* Voice Orb Mini — Floating button on dashboard view */}
-                    {!showVoiceView && (
-                        <VoiceOrbMini onActivate={() => setActivePanel('voice')} />
-                    )}
+                                                    {/* Terminal */}
+                                                    {showTerminal && (
+                                                        <motion.div
+                                                            key="terminal"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            exit={{ opacity: 0 }}
+                                                            className="h-full relative z-10"
+                                                        >
+                                                            <TerminalFeed />
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </main>
+                                        </div>
 
-                    {/* Powered By Strip */}
-                    <PoweredByStrip />
-
-                    {/* Omnibar — Global command entry */}
-                    <Omnibar />
-
-                    {/* Settings Hub Modal */}
-                    <SettingsHub isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
-
-                    {/* Widget Store Modal */}
-                    <WidgetStoreModal />
-                </LayoutGroup>
-            </ThemeProvider>
-        </EmotionalAtmosphere>
-    );
-}
+                                        {/* Shared Portal Elements */}
+                                        {!showVoiceView && (
+                                            <VoiceOrbMini onActivate={() => setActivePanel('voice')} />
+                                        )}
+                                        <PoweredByStrip />
+                                        <VoiceIntentBar />
+                                        <SettingsHub isOpen={settingsOpen} onClose={() => setSettingsOpen(false)} />
+                                        <WidgetStoreModal />
+                                        <EdgeGlow />
+                                    </LayoutGroup>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </EmotionalAtmosphere>
+                </ThemeProvider>
+            );
+        }

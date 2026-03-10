@@ -18,6 +18,8 @@ export interface GatewayAPI {
     onToolCall: React.MutableRefObject<((toolCall: any) => void) | null>;
     onInterrupt: React.MutableRefObject<(() => void) | null>;
     isConnected: boolean;
+    isAudioActive: boolean;
+    toggleAudio: () => void;
 }
 
 export type GatewayEvent =
@@ -131,6 +133,17 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
     // Add vision uploader with backoff mechanism to prevent flooding connection
     const visionBackoff = useRef(0);
     const lastVisionSent = useRef(0);
+    const [isAudioActive, setIsAudioActive] = useState(false);
+    const toggleAudio = useCallback(() => {
+        setIsAudioActive(prev => !prev);
+        // If we are starting audio, we might want to notify the engine
+        if (!isAudioActive) {
+            store.addTerminalLog('SYS', 'Neural Audio Stream Initialized.');
+        } else {
+            store.addTerminalLog('SYS', 'Neural Audio Stream Hibernated.');
+        }
+    }, [isAudioActive, store]);
+
     const sendVisionFrame = useCallback((f: string) => {
         if (wsRef.current?.readyState !== 1) return;
 
@@ -188,7 +201,7 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
     }, [store]);
 
     useEffect(() => () => disconnect(), [disconnect]);
-    return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, sendForgeCommit, sendClawInject, onAudioResponse, onTranscript, onToolCall, onInterrupt, isConnected: status === "connected" };
+    return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, sendForgeCommit, sendClawInject, onAudioResponse, onTranscript, onToolCall, onInterrupt, isConnected: status === "connected", isAudioActive, toggleAudio };
 }
 
 function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: React.MutableRefObject<((t: string, r: "user" | "ai") => void) | null>) {
@@ -198,6 +211,14 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: Rea
         case "engine_state": s.setEngineState(p.state); break;
         case "transcript":
             s.addTranscriptMessage({ role: p.role || "ai", content: p.text });
+            // Direct injection into Forge Store for zero-latency UI updates
+            try {
+                const { useForgeStore } = require("../store/useForgeStore");
+                if (useForgeStore.getState().activeStep !== 'review') {
+                    useForgeStore.getState().setTranscript(p.text);
+                }
+            } catch (e) { /* Forge store might not be loaded in all views */ }
+
             ot?.current?.(p.text, (p.role as "user" | "ai") || "ai");
             break;
         case "affective_score": s.setTelemetry(p, 0); break;
@@ -207,11 +228,13 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: Rea
         case "repair_state": s.setRepairState({ ...p, timestamp: Date.now() }); break;
         case "GAZE_SYNC": s.setGazeTarget(p.vector); break;
         case "vad":
-            if (p.active) {
-                s.setAvatarState('ListeningActive');
-            } else {
-                s.setAvatarState('ListeningWaiting');
-            }
+            s.setAvatarState(p.active ? 'ListeningActive' : 'ListeningWaiting');
+            // Notify Forge Store of VAD status
+            try {
+                const { useForgeStore } = require("../store/useForgeStore");
+                useForgeStore.getState().setListening(p.active);
+                if (p.active) useForgeStore.getState().setVoiceMode('listening');
+            } catch (e) { }
             break;
         case "interrupt_latency":
             s.setTelemetry({ ...s.telemetry, interruptLatency: p.ms }, 0);
