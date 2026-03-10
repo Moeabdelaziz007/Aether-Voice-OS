@@ -201,6 +201,7 @@ class GeminiLiveSession:
         while self._retry_count < self._max_retries:
             try:
                 self._client = get_genai_client(api_key=self._config.api_key)
+                self._config.model = self._config.model or types.GeminiModel.LIVE_FLASH
                 logger.info(
                     "Connecting to Gemini Live (Attempt %d): model=%s",
                     self._retry_count + 1,

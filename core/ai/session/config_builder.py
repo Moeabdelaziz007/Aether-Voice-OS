@@ -56,4 +56,8 @@ def build_session_config(session) -> types.LiveConnectConfig:
             thinking_budget=session._config.thinking_budget,
         )
 
+    # Required for real-time transcript overlay
+    config.input_audio_transcription = True
+    config.output_audio_transcription = True
+
     return config

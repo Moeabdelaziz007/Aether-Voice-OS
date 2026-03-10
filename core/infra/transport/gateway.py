@@ -34,6 +34,7 @@ from google.genai import types
 from websockets.asyncio.server import Server, ServerConnection
 
 from core.ai.session import GeminiLiveSession
+from core.audio.state import audio_state
 from core.infra.config import AIConfig, GatewayConfig
 from core.infra.telemetry import get_tracer
 
@@ -178,6 +179,9 @@ class AetherGateway:
             "VISION_FRAME": self._handle_vision_frame,
             MessageType.DISCONNECT.value: self._handle_disconnect,
         }
+        
+        # VAD State Tracking
+        self._last_vad_state = False
 
     @property
     def audio_in_queue(self) -> asyncio.Queue[dict[str, object]]:
@@ -450,8 +454,33 @@ class AetherGateway:
         async with asyncio.TaskGroup() as tg:
             tg.create_task(self._tick_loop())
             tg.create_task(self._session_loop())
+            tg.create_task(self._vad_loop())
             # Server runs until cancelled
             await asyncio.Future()  # Block forever
+
+    async def _vad_loop(self) -> None:
+        """Monitors local VAD state and broadcasts changes to clients."""
+        while self._running:
+            await asyncio.sleep(0.05) # 50ms polling for sub-100ms UI reactivity
+            
+            try:
+                # Use double_talk from AEC as the most reliable VAD signal 
+                # (since it accounts for playback echo)
+                current_vad = audio_state.aec_double_talk
+                
+                if current_vad != self._last_vad_state:
+                    self._last_vad_state = current_vad
+                    
+                    # Compute a rough energy dB for the UI visualizer
+                    energy_db = 20 * (0.0001 + audio_state.last_rms) # Prevent log(0)
+                    
+                    await self.broadcast("vad", {
+                        "active": current_vad,
+                        "energy_db": float(energy_db),
+                        "ts_ms": int(time.time() * 1000)
+                    })
+            except Exception as e:
+                logger.error("Error in VAD loop: %s", e)
 
     async def _session_loop(self) -> None:
         """Manages the Gemini session lifecycle and soul handoffs with state machine."""

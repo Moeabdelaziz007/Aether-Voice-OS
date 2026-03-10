@@ -15,6 +15,8 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAetherStore } from "../store/useAetherStore";
+import { GeminiToolCall } from "../store/types";
 
 export type SessionStatus =
     | "disconnected"
@@ -251,8 +253,29 @@ export function useGeminiLive(): GeminiLiveReturn {
                                 }
                                 onAudioResponse.current?.(bytes.buffer);
                             }
-                            if (part.text && onTranscript.current) {
-                                onTranscript.current(part.text, "ai");
+
+                            // ─── Real-time Transcript Overlay ────────────────
+                            if (part.text) {
+                                const setTranscriptStream = useAetherStore.getState().setTranscriptStream;
+                                // If turn is complete, this is likely a 'final' part
+                                if (sc.turnComplete) {
+                                    setTranscriptStream({
+                                        final: part.text,
+                                        interim: '',
+                                        confidence: sc.confidence || 1.0,
+                                        latencyMs: lastLatency.current
+                                    });
+                                } else {
+                                    setTranscriptStream({
+                                        interim: part.text,
+                                        confidence: sc.confidence || 1.0,
+                                        latencyMs: lastLatency.current
+                                    });
+                                }
+
+                                if (onTranscript.current) {
+                                    onTranscript.current(part.text, "ai");
+                                }
                             }
                         }
                     }

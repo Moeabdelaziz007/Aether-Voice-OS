@@ -16,7 +16,9 @@ type GatewayEvent = { type: "tick"; timestamp: number } | { type: "engine_state"
     | { type: "transcript"; payload: { role: string; text: string } } | { type: "affective_score"; payload: { frustration: number; valence: number; arousal: number; engagement: number } }
     | { type: "vision_pulse"; payload: { timestamp: string } } | { type: "tool_result"; payload: { tool_name: string; status: string } }
     | { type: "task_pulse"; payload: { taskId: string; phase: string } } | { type: "repair_state"; payload: { status: any; message: string; log: string } }
-    | { type: "GAZE_SYNC"; payload: { vector: GazeVector; intent: string } };
+    | { type: "GAZE_SYNC"; payload: { vector: GazeVector; intent: string } }
+    | { type: "vad"; payload: { active: boolean; energy_db: number; ts_ms: number } }
+    | { type: "interrupt_latency"; payload: { ms: number; ts_ms: number } };
 
 export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_URL || "ws://localhost:18789"): GatewayAPI {
     const [status, setStatus] = useState<GatewayStatus>("disconnected");
@@ -118,6 +120,16 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void) {
         case "task_pulse": s.setTaskPulse({ ...p, timestamp: Date.now() }); break;
         case "repair_state": s.setRepairState({ ...p, timestamp: Date.now() }); break;
         case "GAZE_SYNC": s.setGazeTarget(p.vector); break;
+        case "vad":
+            if (p.active) {
+                s.setAvatarState('ListeningActive');
+            } else {
+                s.setAvatarState('ListeningWaiting');
+            }
+            break;
+        case "interrupt_latency":
+            s.setTelemetry({ ...s.telemetry, interruptLatency: p.ms }, 0);
+            break;
     }
 }
 

@@ -64,6 +64,56 @@ export default function LivePage() {
         return () => clearTimeout(timer);
     }, []);
 
+    // ─── Adaptive Vision Pulse ───────────────────────────────────
+    const [visionInterval, setVisionInterval] = useState(1000); // 1 FPS default
+    const visionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Monitor transcripts for trigger words
+    useEffect(() => {
+        const originalTranscript = gemini.onTranscript.current;
+        gemini.onTranscript.current = (text, role) => {
+            if (originalTranscript) originalTranscript(text, role);
+
+            if (role === 'user') {
+                const lowerText = text.toLowerCase();
+                const triggers = ['look', 'see', 'this', 'show'];
+                if (triggers.some(t => lowerText.includes(t))) {
+                    console.log("🚀 Vision Pulse: Trigger detected! Increasing to 5 FPS.");
+                    setVisionInterval(200); // 5 FPS
+
+                    // Reset to 1 FPS after 10 seconds
+                    setTimeout(() => {
+                        console.log("🐢 Vision Pulse: Resetting to 1 FPS.");
+                        setVisionInterval(1000);
+                    }, 10000);
+                }
+            }
+        };
+    }, [gemini]);
+
+    // Vision Capture Loop
+    useEffect(() => {
+        if (gemini.status !== 'connected' && gemini.status !== 'listening' && gemini.status !== 'speaking') return;
+
+        const captureFrame = async () => {
+            // Note: In a production Electron app, this would call a native screenshot API.
+            // Here we simulate the capture and send it to Gemini.
+            try {
+                // gemini.sendVisionFrame(mockBase64); 
+            } catch (err) {
+                console.error("Vision capture failed:", err);
+            }
+
+            visionTimerRef.current = setTimeout(captureFrame, visionInterval);
+        };
+
+        captureFrame();
+
+        return () => {
+            if (visionTimerRef.current) clearTimeout(visionTimerRef.current);
+        };
+    }, [gemini.status, visionInterval]);
+
     // Wire PCM chunks from mic → Gemini
     useEffect(() => {
         audio.onPCMChunk.current = (pcm: ArrayBuffer) => {

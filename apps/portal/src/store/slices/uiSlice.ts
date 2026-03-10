@@ -5,12 +5,38 @@ import {
     WorkspaceStateEnvelope, OrbitLane
 } from '../types';
 
+export type AvatarState = 'Idle' | 'Listening' | 'ListeningActive' | 'ListeningWaiting' | 'Speaking' | 'Thinking' | 'Error';
+
+export interface TranscriptStream {
+    interim: string;
+    final: string;
+    confidence: number;
+    latencyMs: number;
+}
+
 export interface UISlice {
+    // ─── Neural UI State ─────────────────────────────────────
+    theme: 'dark' | 'light' | 'system';
+    sidebarOpen: boolean;
+    activeTab: 'terminal' | 'files' | 'dna' | 'network' | 'telemetry';
+
+    // ─── Avatar & Interaction ────────────────────────────────
+    avatarState: AvatarState;
+    visualSettings: {
+        particlesEnabled: boolean;
+        bloomIntensity: number;
+        reflectionOpacity: number;
+    };
+
+    // ─── Transcript & Real-time Text ────────────────────────
+    transcript: string;
+    transcriptStream: TranscriptStream;
+    isListening: boolean;
+    // ─── Original UI State ───────────────────────────────────
     visionActive: boolean;
     activeWidgets: { id: string; type: string; props: any }[];
     predictedGoal: string | null;
     workspaceGalaxy: string;
-    avatarCinematicState: AvatarCinematicState;
     taskPulse: TaskPulse | null;
     missionLog: MissionLogEntry[];
     notesPlanet: NotesPlanetEntry[];
@@ -22,13 +48,21 @@ export interface UISlice {
     focusModeEnvironment: boolean;
     gazeTarget: [number, number, number];
 
+    // ─── Actions ─────────────────────────────────────────────
+    setTheme: (theme: 'dark' | 'light' | 'system') => void;
+    toggleSidebar: () => void;
+    setActiveTab: (tab: 'terminal' | 'files' | 'dna' | 'network' | 'telemetry') => void;
+    setAvatarState: (state: AvatarState) => void;
+    setTranscript: (transcript: string) => void;
+    setTranscriptStream: (stream: Partial<TranscriptStream>) => void;
+    setIsListening: (isListening: boolean) => void;
+    // ─── Original Actions ────────────────────────────────────
     setVisionActive: (active: boolean) => void;
     addWidget: (type: string, props: any) => void;
     removeWidget: (id: string) => void;
     clearWidgets: () => void;
     setPredictedGoal: (goal: string | null) => void;
     setWorkspaceGalaxy: (galaxy: string) => void;
-    setAvatarCinematicState: (state: AvatarCinematicState) => void;
     setTaskPulse: (pulse: TaskPulse | null) => void;
     pushMissionLog: (entry: Omit<MissionLogEntry, 'id' | 'timestamp'>) => void;
     clearMissionLog: () => void;
@@ -70,11 +104,33 @@ const hashToOrbitSeed = (input: string): number => {
 };
 
 export const createUISlice: StateCreator<UISlice> = (set, get) => ({
+    // ─── Neural UI State ─────────────────────────────────────
+    theme: 'dark',
+    sidebarOpen: false,
+    activeTab: 'terminal',
+
+    // ─── Avatar & Interaction ────────────────────────────────
+    avatarState: 'Idle',
+    visualSettings: {
+        particlesEnabled: true,
+        bloomIntensity: 0.8,
+        reflectionOpacity: 0.5,
+    },
+
+    // ─── Transcript & Real-time Text ────────────────────────
+    transcript: '',
+    transcriptStream: {
+        interim: '',
+        final: '',
+        confidence: 1.0,
+        latencyMs: 0
+    },
+    isListening: false,
+    // ─── Original UI State ───────────────────────────────────
     visionActive: false,
     activeWidgets: [],
     predictedGoal: null,
     workspaceGalaxy: "Genesis",
-    avatarCinematicState: "IDLE",
     taskPulse: null,
     missionLog: [],
     notesPlanet: [],
@@ -86,6 +142,17 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     focusModeEnvironment: false,
     gazeTarget: [0, 0, 5],
 
+    // ─── Actions ─────────────────────────────────────────────
+    setTheme: (theme) => set({ theme }),
+    toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
+    setActiveTab: (tab) => set({ activeTab: tab }),
+    setAvatarState: (state) => set({ avatarState: state }),
+    setTranscript: (transcript) => set({ transcript }),
+    setTranscriptStream: (stream) => set((state) => ({
+        transcriptStream: { ...state.transcriptStream, ...stream }
+    })),
+    setIsListening: (isListening) => set({ isListening }),
+    // ─── Original Actions ────────────────────────────────────
     setVisionActive: (visionActive) => set({ visionActive }),
     addWidget: (type, props) => set((state) => ({
         activeWidgets: [...state.activeWidgets, { id: crypto.randomUUID(), type, props }]
@@ -96,7 +163,6 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     clearWidgets: () => set({ activeWidgets: [] }),
     setPredictedGoal: (predictedGoal) => set({ predictedGoal }),
     setWorkspaceGalaxy: (workspaceGalaxy) => set({ workspaceGalaxy }),
-    setAvatarCinematicState: (avatarCinematicState) => set({ avatarCinematicState }),
     setTaskPulse: (taskPulse) => set({ taskPulse }),
     pushMissionLog: (entry) => set((state) => ({
         missionLog: [...state.missionLog, {

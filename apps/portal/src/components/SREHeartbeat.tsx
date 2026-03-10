@@ -17,14 +17,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 
 interface SystemMetrics {
-    cpu: number; // 0-100%
-    memory: number; // 0-100%
-    networkIn: number; // Mbps
-    networkOut: number; // Mbps
-    latency: number; // ms
-    errorRate: number; // errors/min
-    uptime: number; // seconds
     activeConnections: number;
+    interruptLatency: number; // ms
 }
 
 interface ServiceStatus {
@@ -64,6 +58,7 @@ export function SREHeartbeat({
         errorRate: metrics.errorRate ?? 0.2,
         uptime: metrics.uptime ?? 86400,
         activeConnections: metrics.activeConnections ?? 142,
+        interruptLatency: metrics.interruptLatency ?? 0,
     };
 
     // Animate ECG heartbeat line
@@ -95,7 +90,7 @@ export function SREHeartbeat({
 
             // PQRST complex simulation (heartbeat spike pattern)
             const beatCycle = beatPhase % (Math.PI * 2);
-            
+
             if (beatCycle < 0.3) {
                 // P wave (small bump)
                 amplitude = Math.sin(beatCycle / 0.3 * Math.PI) * 8;
@@ -165,7 +160,7 @@ export function SREHeartbeat({
             // Draw moving dot at tip
             const tipX = width - 1;
             const tipY = dataPoints[dataPoints.length - 1];
-            
+
             ctx.beginPath();
             ctx.arc(tipX, tipY, 3, 0, Math.PI * 2);
             ctx.fillStyle = '#06B6D4';
@@ -243,7 +238,7 @@ export function SREHeartbeat({
                     </svg>
                     <h3 className="text-white/90 font-semibold text-lg">SRE Heartbeat Monitor</h3>
                 </div>
-                
+
                 <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                     <span className="text-green-400 text-sm font-medium">System Healthy</span>
@@ -312,6 +307,12 @@ export function SREHeartbeat({
                     icon="⏱️"
                     status="normal"
                 />
+                <MetricCard
+                    label="Interrupt Latency"
+                    value={`${systemMetrics.interruptLatency.toFixed(1)}ms`}
+                    icon="🔴"
+                    status={systemMetrics.interruptLatency > 150 ? 'critical' : systemMetrics.interruptLatency > 100 ? 'warning' : 'normal'}
+                />
             </div>
 
             {/* Service Status */}
@@ -331,7 +332,7 @@ export function SREHeartbeat({
                                     <div className={clsx(
                                         'w-2 h-2 rounded-full',
                                         service.status === 'healthy' ? 'bg-green-400 animate-pulse' :
-                                        service.status === 'degraded' ? 'bg-yellow-400' : 'bg-red-400'
+                                            service.status === 'degraded' ? 'bg-yellow-400' : 'bg-red-400'
                                     )} />
                                     <span className="text-sm font-medium">{service.name}</span>
                                 </div>

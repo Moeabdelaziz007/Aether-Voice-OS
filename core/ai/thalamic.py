@@ -18,6 +18,7 @@ class ThalamicGate:
         self._gemini_session = gemini_session
         self._frustration_streak = 0
         self._running = False
+        self._last_trigger_time: float = 0
 
     async def start(self):
         self._running = True
@@ -46,6 +47,7 @@ class ThalamicGate:
                     logger.warning(
                         "🚨 THALAMIC GATE: Proactive Intervention Triggered!"
                     )
+                    self._last_trigger_time = asyncio.get_event_loop().time()
                     await self._trigger_intervention()
                     self._frustration_streak = 0
             else:
@@ -96,3 +98,18 @@ class ThalamicGate:
                 )
         except Exception as e:
             logger.error("Thalamic Gate intervention failed: %s", e)
+        finally:
+            # Measure and emit latency to Gateway
+            if self._last_trigger_time > 0:
+                latency_ms = (asyncio.get_event_loop().time() - self._last_trigger_time) * 1000
+                logger.info("⚡ Intervention Latency: %.2fms", latency_ms)
+                
+                # Proactively emit to gateway if possible
+                if hasattr(self._gemini_session, "_gateway"):
+                    asyncio.create_task(
+                        self._gemini_session._gateway.broadcast("interrupt_latency", {
+                            "ms": float(latency_ms),
+                            "ts_ms": int(asyncio.get_event_loop().time() * 1000)
+                        })
+                    )
+                self._last_trigger_time = 0
