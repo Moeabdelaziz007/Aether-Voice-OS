@@ -449,24 +449,8 @@ class AetherGateway:
             await session.inject_dna_update(dna, rationales)
 
     async def _health_check_handler(self, path, request_headers):
-        # request_headers might be a Request object in newer websockets versions
-        headers = request_headers.headers if hasattr(request_headers, "headers") else request_headers
-
         if path == "/health":
             return (200, [("Content-Type", "text/plain")], b"OK\n")
-
-        # Origin verification for security
-        origin = headers.get("Origin")
-        allowed_origins = [
-            "http://localhost:3000",
-            "http://localhost:1420",
-            "tauri://localhost"
-        ]
-
-        if origin and origin not in allowed_origins:
-            logger.warning("Rejecting WebSocket connection from unauthorized origin: %s", origin)
-            return (403, [("Content-Type", "text/plain")], b"Forbidden: Invalid Origin\n")
-
         return None
 
     async def run(self) -> None:
@@ -516,11 +500,7 @@ class AetherGateway:
                     await asyncio.sleep(0.1)
                     continue
 
-                current_vad = (
-                    audio_state.aec_double_talk
-                    if hasattr(audio_state, "aec_double_talk")
-                    else audio_state.is_hard
-                )
+                current_vad = audio_state.aec_double_talk if hasattr(audio_state, "aec_double_talk") else audio_state.is_hard
                 
                 if current_vad != self._last_vad_state:
                     self._last_vad_state = current_vad
@@ -924,22 +904,8 @@ class AetherGateway:
     
     async def _handle_forge_commit(self, client_id: str, msg: dict) -> None:
         """Process agent creation request from the ForgeWizard."""
-        # 1. Ensure capability was granted
-        session = self._clients.get(client_id)
-        if not session or "forge_commit" not in session.capabilities:
-            logger.warning("Unauthorized FORGE_COMMIT attempt from %s", client_id)
-            await self._send_error(session.ws if session else None, 403, "Capability not granted")
-            return
-
-        # 2. Strict Payload Validation
-        try:
-            from core.infra.transport.messages import ForgeCommitPayload
-            payload_data = msg.get("payload", {})
-            payload = ForgeCommitPayload(**payload_data)
-            dna = payload.dna
-        except Exception as e:
-            logger.warning("Invalid FORGE_COMMIT payload from %s: %s", client_id, e)
-            return
+        payload = msg.get("payload", {})
+        dna = payload.get("dna", {})
 
         if not dna:
             logger.warning("Empty DNA in FORGE_COMMIT from %s", client_id)
@@ -982,28 +948,15 @@ class AetherGateway:
         Handles CLAW_INJECT messages to dynamically inject instructions into the active session.
         This is primarily for debugging and advanced control.
         """
-        # 1. Ensure capability was granted
-        session = self._clients.get(client_id)
-        if not session or "claw_inject" not in session.capabilities:
-            logger.warning("Unauthorized CLAW_INJECT attempt from %s", client_id)
-            await self._send_error(session.ws if session else None, 403, "Capability not granted")
-            return
-
-        # 2. Strict Payload Validation
-        try:
-            from core.infra.transport.messages import ClawInjectPayload
-            payload_data = msg.get("payload", {})
-            payload = ClawInjectPayload(**payload_data)
-            instructions = payload.instructions
-        except Exception as e:
-            logger.warning("Invalid CLAW_INJECT payload from %s: %s", client_id, e)
-            return
+        payload = msg.get("payload", {})
+        instructions = payload.get("instructions")
+        rationales = payload.get("rationales", ["CLAW_INJECT via Gateway"])
 
         if not instructions:
             logger.warning("CLAW_INJECT received with no instructions from %s", client_id)
             return
 
-        logger.info("CLAW_INJECT: Injecting instructions from %s", client_id)
+        logger.info("CLAW_INJECT: Injecting instructions from %s: %s", client_id, instructions[:100])
 
         session = self.get_session()
         if session:
@@ -1143,19 +1096,13 @@ class AetherGateway:
 
     async def _send_error(
         self,
-        ws: Optional[ServerConnection],
+        ws: ServerConnection,
         code: int,
         message: str,
         fatal: bool = False,
     ) -> None:
         """Send an error message to a client."""
-        if not ws:
-            return
-
-        # Standardize error messages to avoid leaking stack traces or internal details
-        safe_message = message if code < 500 else "Internal Server Error"
-
-        err = ErrorMessage(code=code, message=safe_message, fatal=fatal)
+        err = ErrorMessage(code=code, message=message, fatal=fatal)
         try:
             await ws.send(err.model_dump_json())
             if fatal:

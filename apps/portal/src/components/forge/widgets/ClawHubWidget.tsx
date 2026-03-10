@@ -60,18 +60,12 @@ export default function ClawHubWidget() {
     });
 
     const injectSkill = useCallback((skillId: string) => {
-        // Enforce basic injection sanitization to guard against XSS/Path Traversal
-        // passing through the widget. Skill IDs should strictly be alphanumeric/hyphens.
-        const cleanSkillId = skillId.replace(/[^a-zA-Z0-9-]/g, '').slice(0, 64);
-
-        if (!cleanSkillId) return;
-
-        setInjecting(cleanSkillId);
+        setInjecting(skillId);
         // Simulate injection with neural animation delay
         setTimeout(() => {
-            const exists = dna.skills.includes(cleanSkillId);
+            const exists = dna.skills.includes(skillId);
             if (!exists) {
-                updateDNA({ skills: [...dna.skills, cleanSkillId] });
+                updateDNA({ skills: [...dna.skills, skillId] });
             }
             setInjecting(null);
         }, 800);

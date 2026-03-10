@@ -104,10 +104,14 @@ async def test_multimodal_injection(mock_config, mock_gateway):
 async def test_gateway_rate_limiting(mock_config):
     """Verify that AetherGateway enforces text rate limits."""
     # AetherGateway init: gateway_config, ai_config, audio_config, tool_router, hive
+    audio_config = MagicMock()
+    audio_config.send_sample_rate = 16000
+    audio_config.chunk_size = 512
+
     gateway = AetherGateway(
         gateway_config=MagicMock(),
         ai_config=mock_config,
-        audio_config=MagicMock(),
+        audio_config=audio_config,
         tool_router=MagicMock(),
         hive=MagicMock()
     )

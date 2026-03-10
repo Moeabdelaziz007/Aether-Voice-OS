@@ -1,11 +1,6 @@
 /**
  * Aether Voice OS — PCM Encoder AudioWorklet.
  *
- * Security Posture:
- *   - Implements Temporal Data Zeroization
- *   - Frozen prototypes to prevent runtime prototype pollution
- *   - CSP Recommendation: `worker-src 'self' blob:;`
- *
  * Runs on the audio rendering thread (no main-thread blocking).
  * Converts Float32 mic samples to Int16 PCM and posts chunks
  * every ~256ms (4096 samples @ 16kHz) to the main thread.
@@ -78,15 +73,9 @@ class PCMEncoderProcessor extends AudioWorkletProcessor {
             [pcm.buffer]
         );
 
-        // 4. Secure buffer wipe to prevent cross-frame temporal data leakage
-        this._ring.fill(0);
-
-        // 5. Reset write position (reuse ring buffer — no allocation)
+        // 4. Reset write position (reuse ring buffer — no allocation)
         this._writePos = 0;
     }
 }
-
-// Ensure the worklet cannot be modified after registration
-Object.freeze(PCMEncoderProcessor.prototype);
 
 registerProcessor('pcm-encoder', PCMEncoderProcessor);

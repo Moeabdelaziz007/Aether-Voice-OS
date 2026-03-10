@@ -87,12 +87,13 @@ class ToolRegistry:
             schema = model.model_json_schema()
             # Enforce basic jsonschema validation strictly before sending to Gemini
             jsonschema.Draft202012Validator.check_schema(schema)
+            # Response schemas are not officially supported for Live function declarations yet,
+            # they apply to tool configuration in regular models.
             declarations.append(
                 types.FunctionDeclaration(
                     name=name,
                     description=model.__doc__ or "",
                     parameters=schema,
-                    response_schema={"type": "object", "properties": {"success": {"type": "boolean"}, "message": {"type": "string"}}, "required": ["success"]}
                 )
             )
         return declarations

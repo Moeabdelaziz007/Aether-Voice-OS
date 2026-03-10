@@ -340,19 +340,10 @@ export default function ForgeWizard() {
                             <button
                                 onClick={() => {
                                     if (activeStep === 'review') {
-                                        // Sanitize final DNA payload to prevent injection
-                                        const cleanDNA = {
-                                            ...dna,
-                                            name: dna.name.replace(/[^a-zA-Z0-9_\- ]/g, '').slice(0, 64),
-                                            skills: dna.skills.map((s: string) => s.replace(/[^a-zA-Z0-9_\-]/g, '').slice(0, 64)),
-                                            role: dna.role?.replace(/[<>]/g, '').slice(0, 255) || '',
-                                            tone: dna.tone?.replace(/[<>]/g, '').slice(0, 100) || '',
-                                        };
-
                                         setStep('synthesizing');
                                         setTimeout(async () => {
-                                            // Transmit sanitized DNA to backend via Aether Gateway
-                                            await sendForgeCommit(cleanDNA);
+                                            // Transmit DNA to backend via Aether Gateway
+                                            await sendForgeCommit(dna);
                                             useForgeStore.getState().completeForge();
                                         }, 5000);
                                     } else {
