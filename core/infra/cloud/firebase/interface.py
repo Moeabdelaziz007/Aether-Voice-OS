@@ -222,36 +222,39 @@ class FirebaseConnector:
             return {"status": "error", "message": "Firebase disconnected"}
 
         try:
+            metrics_ref = (
+                self._db.collection("sessions")
+                .document(session_id)
+                .collection("metrics")
+            )
 
-            def _aggregate():
-                metrics_ref = (
-                    self._db.collection("sessions")
-                    .document(session_id)
-                    .collection("metrics")
-                )
-                # Optimized: Aggregate on server-side
-                query = metrics_ref.aggregate(
-                    [
-                        firestore.Aggregate.sum("valence", alias="valence_sum"),
-                        firestore.Aggregate.sum("arousal", alias="arousal_sum"),
-                        firestore.Aggregate.count(alias="count"),
-                    ]
-                )
-                return query.get()
+            # Use Firestore Aggregation Queries to avoid N+1 and minimize memory usage
+            agg_query = (
+                metrics_ref.count(alias="count")
+                .avg("valence", alias="avg_valence")
+                .avg("arousal", alias="avg_arousal")
+            )
 
-            results = await asyncio.to_thread(_aggregate)
+            # Wrap the blocking aggregation call
+            agg_results = await asyncio.to_thread(agg_query.get)
 
-            # Extract aggregated values
-            res_dict = {res.alias: res.value for res in results}
-            count = res_dict.get("count", 0)
-            valence_sum = res_dict.get("valence_sum", 0.0)
-            arousal_sum = res_dict.get("arousal_sum", 0.0)
+            if not agg_results or not agg_results[0]:
+                return {"status": "empty", "message": "No telemetry data found"}
+
+            count = 0
+            avg_valence = 0.0
+            avg_arousal = 0.0
+
+            for agg in agg_results[0]:
+                if agg.alias == "count":
+                    count = agg.value
+                elif agg.alias == "avg_valence":
+                    avg_valence = agg.value or 0.0
+                elif agg.alias == "avg_arousal":
+                    avg_arousal = agg.value or 0.0
 
             if count == 0:
                 return {"status": "empty", "message": "No telemetry data found"}
-
-            avg_valence = valence_sum / count
-            avg_arousal = arousal_sum / count
 
             # Heuristic fitness matching GeneticOptimizer expectation
             summary = {
