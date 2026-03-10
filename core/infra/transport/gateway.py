@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import os
 import time
 import uuid
@@ -161,7 +162,7 @@ class AetherGateway:
 
         # Speculative Pre-warming Lock
         self._pre_warm_lock = asyncio.Lock()
-        self._pre_warmed_session: Optional[GeminiLiveSession] = None
+        self._warmed_souls: dict[str, GeminiLiveSession] = {}
         
         # 2. Spatial Intelligence
         self._spatial_cortex = SpatialCortexAgent()
@@ -358,13 +359,20 @@ class AetherGateway:
         This runs in the background to reduce latency during handoff.
         """
         async with self._pre_warm_lock:
-            if self._pre_warmed_session:
-                if self._pre_warmed_session._soul.name == soul_name:
-                    logger.debug(f"✦ Pre-warm: Soul {soul_name} already pre-warmed.")
-                    return
-                # Stop the existing one if it's the wrong soul
-                await self._pre_warmed_session.stop()
-                self._pre_warmed_session = None
+            if not self._running:
+                logger.warning("✦ Pre-warm aborted: Gateway is stopping.")
+                return
+            if soul_name in self._warmed_souls:
+                logger.debug(f"✦ Pre-warm: Soul {soul_name} already pre-warmed.")
+                return
+
+            # LRU Eviction: Limit to 5 pre-warmed sessions
+            if len(self._warmed_souls) >= 5:
+                # Evict the oldest (first inserted in Python 3.7+)
+                oldest_soul = next(iter(self._warmed_souls))
+                logger.info(f"LRU: Evicting pre-warmed soul '{oldest_soul}'")
+                old_session = self._warmed_souls.pop(oldest_soul)
+                await old_session.stop()
 
             logger.info(f"🚀 Gateway: Speculatively pre-warming Soul '{soul_name}'...")
             try:
@@ -380,12 +388,11 @@ class AetherGateway:
                     soul_manifest=target_soul,
                 )
                 await session.connect()
-                # We don't call session.run() yet, just connect()
-                self._pre_warmed_session = session
+                # FIXED: pre_warm_soul: Add warmed_souls, store result, add LRU eviction
+                self._warmed_souls[soul_name] = session
                 logger.info(f"✦ Pre-warm: Soul {soul_name} is CONNECTED and ready.")
             except Exception as e:
-                logger.error(f"✦ Pre-warm failed for {soul_name}: {e}")
-                self._pre_warmed_session = None
+                logger.error(f"✦ Pre-warm failed for {soul_name}: {e}", exc_info=True)
 
     async def forge_agent(self, description: str) -> None:
         """
@@ -473,8 +480,8 @@ class AetherGateway:
                 if current_vad != self._last_vad_state:
                     self._last_vad_state = current_vad
                     
-                    # Compute a rough energy dB for the UI visualizer
-                    energy_db = 20 * (0.0001 + audio_state.last_rms) # Prevent log(0)
+                    # FIXED: 1. _vad_loop: Correct energy_db log calculation
+                    energy_db = 20 * math.log10(max(0.0001, audio_state.last_rms))
                     
                     await self.broadcast("vad", {
                         "active": current_vad,
@@ -514,21 +521,13 @@ class AetherGateway:
 
             # Create session through state manager
             async with self._pre_warm_lock:
-                if (
-                    self._pre_warmed_session
-                    and self._pre_warmed_session._soul.name == soul_name
-                ):
+                if soul_name in self._warmed_souls:
                     logger.info(
                         "🚀 Using pre-warmed session for %s (Latency reduction: ~800ms)",
                         soul_name,
                     )
-                    session = self._pre_warmed_session
-                    self._pre_warmed_session = None
+                    session = self._warmed_souls.pop(soul_name)
                 else:
-                    if self._pre_warmed_session:
-                        await self._pre_warmed_session.stop()
-                        self._pre_warmed_session = None
-
                     session = GeminiLiveSession(
                         config=self._ai_config,
                         audio_in_queue=self._audio_in,
@@ -599,10 +598,11 @@ class AetherGateway:
                     session_metadata.session_id[:8],
                 )
 
+                # FIXED: 2. _session_loop: consolidated Gemini session loop directly
                 self._session_manager._session = session
                 async with asyncio.TaskGroup() as tg:
                     session_task = tg.create_task(
-                        self._session_manager.start_session_loop(),
+                        session.run(),
                         name="gemini-session",
                     )
                     restart_waiter = tg.create_task(
@@ -671,7 +671,7 @@ class AetherGateway:
                 logger.debug("Bridging frontend event: %s", event_type)
                 await self.broadcast(event_type, event_data)
         except Exception as e:
-            logger.error("Error bridging frontend event: %s", e)
+            logger.error("Error bridging frontend event: %s", e, exc_info=True)
 
     async def _handle_connection(self, ws: ServerConnection) -> None:
         """Handle a new WebSocket connection."""
@@ -686,23 +686,18 @@ class AetherGateway:
 
             async for raw_msg in ws:
                 if isinstance(raw_msg, bytes):
-                    # Binary multiplexed protocol placeholder
-                    # If msgpack negotiated, try decoding first
-                    # If pure audio, fallback to routing
-                    # Assume msgpack if decodes to dict
-                    # Fallback to audio on unpack fail
-                    is_audio = True
+                    # FIXED: 3. _handle_connection: is_audio assignment inside success branch
                     if use_msgpack:
                         try:
                             msg = msgpack.unpackb(raw_msg)
                             if isinstance(msg, dict) and "type" in msg:
                                 await self._route_message(client_id, msg)
-                                is_audio = False
-                        except Exception:
-                            # Fallback to audio
-                            pass
-                    if is_audio:
-                        await self._route_binary(client_id, raw_msg)
+                                continue # Msgpack handled
+                        except Exception as e:
+                            logger.error("Msgpack unpack failed: %s", e)
+                    
+                    # If not handled by msgpack or msgpack failed/skipped, treat as raw audio
+                    await self._route_binary(client_id, raw_msg)
                 else:
                     try:
                         msg = json.loads(raw_msg)
@@ -710,7 +705,7 @@ class AetherGateway:
                     except json.JSONDecodeError:
                         await self._send_error(ws, 400, "Invalid JSON")
                     except Exception as exc:
-                        logger.error("Message handling error: %s", exc)
+                        logger.error("Message handling error: %s", exc, exc_info=True)
                         await self._send_error(ws, 500, str(exc))
 
         except HandshakeError as exc:
@@ -803,7 +798,7 @@ class AetherGateway:
                         await client.ws.send(json.dumps(ack_msg))
                         
         except Exception as exc:
-            logger.error("Error routing binary audio: %s", exc)
+            logger.error("Error routing binary audio: %s", exc, exc_info=True)
 
     async def _route_message(self, client_id: str, msg: dict[str, Any]) -> None:
         """Route incoming messages by type via O(1) dispatch table."""
@@ -981,7 +976,7 @@ class AetherGateway:
             except websockets.exceptions.ConnectionClosed:
                 return session.client_id
             except Exception as e:
-                logger.debug("Broadcast error to %s: %s", session.client_id, e)
+                logger.error("Broadcast error to %s: %s", session.client_id, e, exc_info=True)
                 return session.client_id
 
         try:
@@ -995,7 +990,7 @@ class AetherGateway:
         except TimeoutError:
             logger.warning("Gateway broadcast timeout — skipped")
         except Exception as e:
-            logger.error(f"Broadcast failed: {e}")
+            logger.error(f"Broadcast failed: {e}", exc_info=True)
 
     async def broadcast_binary(self, data: bytes) -> None:
         """Broadcast raw binary data to all connected clients."""
@@ -1011,7 +1006,8 @@ class AetherGateway:
                 return None
             except websockets.exceptions.ConnectionClosed:
                 return session.client_id
-            except Exception:
+            except Exception as e:
+                logger.error("Broadcast binary error: %s", e, exc_info=True)
                 return session.client_id
 
         results = await asyncio.gather(*[_send(s) for s in active_sessions])
@@ -1044,6 +1040,10 @@ class AetherGateway:
         session = self.get_session()
         if session:
             await session.stop()
+        async with self._pre_warm_lock:
+            for soul_session in self._warmed_souls.values():
+                await soul_session.stop()
+            self._warmed_souls.clear()
         if self._server:
             self._server.close()
             await self._server.wait_closed()

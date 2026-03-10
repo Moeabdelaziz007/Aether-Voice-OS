@@ -6,6 +6,7 @@ import { useAetherStore } from "../store/useAetherStore";
 
 export type GatewayStatus = "disconnected" | "connecting" | "handshaking" | "connected" | "reconnecting" | "error";
 export type GazeVector = [number, number, number];
+
 export interface GatewayAPI {
     status: GatewayStatus; latencyMs: number; connect: (t?: string) => Promise<void>; disconnect: () => void;
     sendAudio: (pcm: Uint8Array | ArrayBuffer) => void; sendIntent: (i: string, l?: 1 | 2 | 3) => Promise<void>;
@@ -17,10 +18,16 @@ export interface GatewayAPI {
     onInterrupt: React.MutableRefObject<(() => void) | null>;
     isConnected: boolean;
 }
-type GatewayEvent = { type: "tick"; timestamp: number } | { type: "engine_state"; payload: { state: string } }
-    | { type: "transcript"; payload: { role: string; text: string } } | { type: "affective_score"; payload: { frustration: number; valence: number; arousal: number; engagement: number } }
-    | { type: "vision_pulse"; payload: { timestamp: string } } | { type: "tool_result"; payload: { tool_name: string; status: string } }
-    | { type: "task_pulse"; payload: { taskId: string; phase: string } } | { type: "repair_state"; payload: { status: any; message: string; log: string } }
+
+export type GatewayEvent =
+    | { type: "tick"; timestamp: number }
+    | { type: "engine_state"; payload: { state: string } }
+    | { type: "transcript"; payload: { role: string; text: string } }
+    | { type: "affective_score"; payload: { frustration: number; valence: number; arousal: number; engagement: number } }
+    | { type: "vision_pulse"; payload: { timestamp: string } }
+    | { type: "tool_result"; payload: { tool_name: string; status: string } }
+    | { type: "task_pulse"; payload: { taskId: string; phase: string } }
+    | { type: "repair_state"; payload: { status: any; message: string; log: string } }
     | { type: "GAZE_SYNC"; payload: { vector: GazeVector; intent: string } }
     | { type: "vad"; payload: { active: boolean; energy_db: number; ts_ms: number } }
     | { type: "interrupt_latency"; payload: { ms: number; ts_ms: number } };
