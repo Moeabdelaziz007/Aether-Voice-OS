@@ -149,11 +149,17 @@ class AudioCapture:
         self._last_pcm_chunk: Optional[np.ndarray] = None
         self._chunk_lock = threading.Lock()
 
-        from core.audio.leakage import LeakageDetector
+        # 3. Dynamic AEC Bridge (The 'Cortex' Integration)
+        from core.audio.dynamic_aec import DynamicAEC
         from core.audio.state import HysteresisGate
 
+        self._aec = DynamicAEC(
+            sample_rate=config.send_sample_rate,
+            frame_size=config.chunk_size,
+            filter_length_ms=100.0,
+            step_size=0.1
+        )
         self._hysteresis = HysteresisGate()
-        self._leakage = LeakageDetector()
         self._smooth_muter = SmoothMuter()
 
         # Delay Compensation Counters
@@ -184,13 +190,19 @@ class AudioCapture:
         """
         pcm_chunk = np.frombuffer(in_data, dtype=np.int16)
 
-        # 1. Leakage & Correlation check (is it just echo?)
-        # Store for background processing
-        with self._chunk_lock:
-            self._last_pcm_chunk = pcm_chunk
-
-        # Fetch pre-computed score from background pulse
-        is_user = self._leakage.last_score < 0.7
+        # 1. Dynamic AEC (The 'Cortex' Path)
+        # Pull reference signal (AI output) from shared far_end_pcm buffer
+        far_end_ref = audio_state.far_end_pcm.read_latest(frame_count)
+        
+        # Process through NLMS filter to subtract echo
+        processed_chunk, aec_state = self._aec.process_frame(pcm_chunk, far_end_ref)
+        
+        # Update shared state for telemetry/gateway
+        audio_state.aec_double_talk = aec_state.double_talk_detected
+        audio_state.aec_erle_db = aec_state.erle_db
+        
+        # SOTA VAD signal decided by AEC
+        is_user = aec_state.double_talk_detected
 
         # 2. Base Hysteresis update on AI state
         ai_playing_base = self._hysteresis.update(audio_state.is_playing)
@@ -226,7 +238,7 @@ class AudioCapture:
             self._smooth_muter.unmute()
 
         # Apply Graceful Ramp
-        processed_chunk = self._smooth_muter.process(pcm_chunk)
+        processed_chunk = self._smooth_muter.process(processed_chunk)
 
         # Update VAD logic
         if should_mute and self._smooth_muter._current_gain < 0.1:
@@ -320,24 +332,12 @@ class AudioCapture:
         self._leakage_task = asyncio.create_task(self._leakage_pulse_loop())
 
     async def _leakage_pulse_loop(self) -> None:
-        """Background loop to compute leakage scores without blocking audio IO."""
-        logger.debug("Leakage pulse loop started")
+        """Background loop to update AEC telemetry for UI."""
+        logger.debug("AEC telemetry loop started")
         while self._running:
-            # Sync spectrum from global state
-            if audio_state.ai_spectrum is not None:
-                self._leakage.capture_ai_spectrum(audio_state.ai_spectrum)
-
-            pcm = None
-            with self._chunk_lock:
-                if self._last_pcm_chunk is not None:
-                    pcm = self._last_pcm_chunk.copy()
-
-            if pcm is not None:
-                # Perform the heavy FFT + Correlation here
-                self._leakage.calculate_score(pcm)
-
-            # Pulse every 20ms or so (matches typical frame sizes)
-            await asyncio.sleep(0.02)
+            # AEC state is updated inside the process_frame callback
+            # We just need to ensure the UI gets the convergence progress
+            await asyncio.sleep(0.1)
 
     async def run(self) -> None:
         """

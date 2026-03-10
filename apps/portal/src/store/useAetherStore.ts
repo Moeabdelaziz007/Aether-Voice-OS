@@ -4,6 +4,7 @@ import { AuthSlice, createAuthSlice } from './slices/authSlice';
 import { TelemetrySlice, createTelemetrySlice } from './slices/telemetrySlice';
 import { DataSlice, createDataSlice } from './slices/dataSlice';
 import { UISlice, createUISlice } from './slices/uiSlice';
+import { ErrorSlice, createErrorSlice } from './slices/errorSlice';
 import { PreferencesSlice, createPreferencesSlice } from './slices/preferencesSlice';
 
 import { idbStorage } from './storage';
@@ -13,7 +14,7 @@ export * from './types';
 export * from './constants';
 
 // ─── Combined State Interface ──────────────────────────────
-export type AetherState = AuthSlice & TelemetrySlice & DataSlice & UISlice & PreferencesSlice;
+export type AetherState = AuthSlice & TelemetrySlice & DataSlice & UISlice & ErrorSlice & PreferencesSlice;
 
 // ─── Root Store ───────────────────────────────────────────
 export const useAetherStore = create<AetherState>()(
@@ -23,6 +24,7 @@ export const useAetherStore = create<AetherState>()(
             ...createTelemetrySlice(...a),
             ...createDataSlice(...a),
             ...createUISlice(...a),
+            ...createErrorSlice(...a),
             ...createPreferencesSlice(...a),
         }),
         {

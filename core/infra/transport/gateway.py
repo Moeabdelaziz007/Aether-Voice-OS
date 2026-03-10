@@ -121,17 +121,27 @@ class AetherGateway:
         )
 
         # Legacy session reference (now managed by state manager)
+        # 3. Dynamic AEC Bridge (The 'Cortex' Integration)
+        # We replace the legacy LeakageDetector with pro-grade NLMS filter
+        from core.audio.dynamic_aec import DynamicAEC
+        self._aec = DynamicAEC(
+            sample_rate=self._audio_config.send_sample_rate,
+            frame_size=self._audio_config.chunk_size,
+            filter_length_ms=100.0,
+            step_size=0.1
+        )
+        
+        self._leakage_task: Optional[asyncio.Task] = None
         self._server: Optional[Server] = None
         self._running = False
         self._shutdown_event = asyncio.Event()
         self._session_restart_event = asyncio.Event()
+        self._audio_initialized = False # NEW: Track audio engine state
 
         # Decentralized Logic Brackets
         self._auth = AuthService(
             registry=self._hive._registry,
-            secret_key=os.environ.get("AETHER_JWT_SECRET")
-            or os.environ.get("GOOGLE_API_KEY")
-            or "",
+            secret_key=os.environ.get("AETHER_JWT_SECRET"),
         )
         self._intent_broker = IntentBroker()
 
@@ -180,11 +190,16 @@ class AetherGateway:
             "UI_STATE_SYNC": self._handle_ui_sync,
             "VISION_FRAME": self._handle_vision_frame,
             "FORGE_COMMIT": self._handle_forge_commit,
+            "CLAW_INJECT": self._handle_claw_inject, # NEW: CLAW_INJECT handler
             MessageType.DISCONNECT.value: self._handle_disconnect,
         }
         
         # VAD State Tracking
         self._last_vad_state = False
+
+        # Audio processing effects
+        self._hysteresis = HysteresisGate()
+        self._smooth_muter = SmoothMuter()
 
     @property
     def audio_in_queue(self) -> asyncio.Queue[dict[str, object]]:
@@ -232,9 +247,6 @@ class AetherGateway:
             return False
             
         session = self._state_manager.session
-        if not session or not session.is_ready():
-            logger.warning("Cannot send text: Session not ready")
-            return False
 
         try:
             # Health check before send
@@ -417,7 +429,12 @@ class AetherGateway:
             
         except Exception as e:
             logger.error(f"❌ Gateway: Agent forging failed: {e}")
-            await self.broadcast("AGENT_FORGE_FAILED", {"error": str(e)})
+            await self.broadcast("error", {
+                "code": "AGENT_FORGE_FAILED",
+                "message": f"Failed to forge agent: {str(e)}",
+                "severity": "high",
+                "retryable": True
+            })
 
     async def inject_dna_update(self, dna: Any, rationales: list[str]) -> None:
         """
@@ -475,7 +492,12 @@ class AetherGateway:
             try:
                 # Use double_talk from AEC as the most reliable VAD signal 
                 # (since it accounts for playback echo)
-                current_vad = audio_state.aec_double_talk
+                # GUARD: Prevent null startup crash
+                if audio_state is None:
+                    await asyncio.sleep(0.1)
+                    continue
+
+                current_vad = audio_state.aec_double_talk if hasattr(audio_state, "aec_double_talk") else audio_state.is_hard
                 
                 if current_vad != self._last_vad_state:
                     self._last_vad_state = current_vad
@@ -493,161 +515,167 @@ class AetherGateway:
 
     async def _session_loop(self) -> None:
         """Manages the Gemini session lifecycle and soul handoffs with state machine."""
-        import uuid
-        from datetime import datetime
-
         # Start health monitoring
         await self._state_manager.start_health_monitoring()
 
         while self._running:
-            self._session_restart_event.clear()
-
-            active_soul = self._hive.active_soul
-            soul_name = active_soul.manifest.name if active_soul else "UnknownSoul"
-
-            # Initialize session metadata
-            session_metadata = SessionMetadata(
-                session_id=str(uuid.uuid4()),
-                soul_name=soul_name,
-                started_at=datetime.now(),
-            )
-
-            # Transition to INITIALIZING
-            await self._state_manager.transition_to(
-                SessionState.INITIALIZING,
-                f"Creating session for {soul_name}",
-                metadata=session_metadata,
-            )
-
-            # Create session through state manager
-            async with self._pre_warm_lock:
-                if soul_name in self._warmed_souls:
-                    logger.info(
-                        "🚀 Using pre-warmed session for %s (Latency reduction: ~800ms)",
-                        soul_name,
-                    )
-                    session = self._warmed_souls.pop(soul_name)
-                else:
-                    session = GeminiLiveSession(
-                        config=self._ai_config,
-                        audio_in_queue=self._audio_in,
-                        audio_out_queue=self._audio_out,
-                        gateway=self,
-                        on_interrupt=self._on_interrupt,
-                        on_tool_call=self._on_tool_call,
-                        tool_router=self._tool_router,
-                        soul_manifest=active_soul,
-                    )
-
-            # Inject pending handover context with visual frames
-            pending_handover = self._hive.get_pending_handover_for_target(soul_name)
-            if pending_handover and not session._injected_handover_context:
-                logger.info(
-                    "A2A [GATEWAY] Injecting Deep Handover context with %d frames",
-                    len(self._frame_buffer_cache)
-                )
-                session.inject_handover_context(pending_handover, visual_frames=list(self._frame_buffer_cache))
-                # Clear cache after successful injection
-                self._frame_buffer_cache = []
-
-            self._state_manager.set_session(session)
-
             try:
-                if not session.is_ready():
-                    try:
-                        # Safety: 10s watchdog for new expert arrival with retry logic
-                        for attempt in range(1, 4):
-                            try:
-                                await asyncio.wait_for(session.connect(), timeout=10.0)
-                                break
-                            except Exception as e:
-                                if attempt == 3:
-                                    raise
-                                logger.warning("Session connect attempt %d failed: %s", attempt, e)
-                                await asyncio.sleep(2 ** attempt)  # Exponential backoff
-                    except (asyncio.TimeoutError, Exception) as e:
-                        logger.error(
-                            "✦ Critical: Expert '%s' failed to stabilize. Rolling back...",
-                            soul_name,
-                        )
-
-                        # Recover last handover ID from hive for context restoration
-                        # We use the private access here as Gateway and Hive are tightly coupled in the core engine
-                        fail_handover_id = getattr(
-                            self._hive, "_last_handover_id", None
-                        )
-                        if fail_handover_id:
-                            self._hive.rollback_handover(fail_handover_id)
-
-                        await self._state_manager.transition_to(
-                            SessionState.ERROR, f"Expert handshake timeout: {str(e)}"
-                        )
-                        # Trigger restart which will now pick up the rolled-back 'last_successful_soul'
-                        self._session_restart_event.set()
-                        continue
-
-                # Transition to CONNECTED
-                await self._state_manager.transition_to(
-                    SessionState.CONNECTED, f"Session established for {soul_name}"
-                )
-
-                await self.broadcast("engine_state", {"state": "LISTENING"})
-                logger.info(
-                    "✦ Hive Active: Expert '%s' taking control (session: %s)",
-                    soul_name,
-                    session_metadata.session_id[:8],
-                )
-
-                # FIXED: 2. _session_loop: consolidated Gemini session loop directly
-                self._session_manager._session = session
-                async with asyncio.TaskGroup() as tg:
-                    session_task = tg.create_task(
-                        session.run(),
-                        name="gemini-session",
-                    )
-                    restart_waiter = tg.create_task(
-                        self._session_restart_event.wait(), name="restart-waiter"
-                    )
-
-                    done, pending = await asyncio.wait(
-                        [session_task, restart_waiter],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    for p in pending:
-                        p.cancel()
-
-                if self._session_restart_event.is_set():
-                    logger.info("🔄 Hive Handoff: Preparing next expert...")
-                    await self._state_manager.transition_to(
-                        SessionState.HANDING_OFF, "Soul handoff initiated"
-                    )
-                    await session.stop()
-                    await asyncio.sleep(1.0)  # Graceful cross-fade
-
-                    # Transition to RESTARTING
-                    await self._state_manager.transition_to(
-                        SessionState.RESTARTING, "Preparing for next soul"
-                    )
-                else:
-                    if not self._shutdown_event.is_set():
-                        logger.warning(
-                            "Session ended unexpectedly. Restarting in 5s..."
-                        )
-                        await self._state_manager.transition_to(
-                            SessionState.ERROR, "Unexpected session termination"
-                        )
-                        await asyncio.sleep(5.0)
-
+                await self._run_session_iteration()
             except Exception as e:
-                logger.error("Session loop error: %s", e, exc_info=True)
+                logger.error("Session iteration failed: %s", e, exc_info=True)
                 await self._state_manager.transition_to(
-                    SessionState.ERROR, f"Exception: {str(e)[:100]}"
+                    SessionState.ERROR, f"Iteration Error: {str(e)[:100]}"
                 )
                 if self._running:
-                    await asyncio.sleep(5)  # Backoff before retrying
-            finally:
-                # Clear session on exit
-                self._state_manager.set_session(None)
+                    await asyncio.sleep(5)  # Backoff
+
+    async def _run_session_iteration(self) -> None:
+        """Single iteration of the session lifecycle."""
+        self._hysteresis = HysteresisGate()
+        self._smooth_muter = SmoothMuter()
+        import uuid
+        from datetime import datetime
+
+        self._session_restart_event.clear()
+
+        active_soul = self._hive.active_soul
+        soul_name = active_soul.manifest.name if active_soul else "UnknownSoul"
+
+        # Initialize session metadata
+        session_metadata = SessionMetadata(
+            session_id=str(uuid.uuid4()),
+            soul_name=soul_name,
+            started_at=datetime.now(),
+        )
+
+        # Transition to INITIALIZING
+        await self._state_manager.transition_to(
+            SessionState.INITIALIZING,
+            f"Creating session for {soul_name}",
+            metadata=session_metadata,
+        )
+
+        # Create session through state manager
+        async with self._pre_warm_lock:
+            if soul_name in self._warmed_souls:
+                logger.info(
+                    "🚀 Using pre-warmed session for %s (Latency reduction: ~800ms)",
+                    soul_name,
+                )
+                session = self._warmed_souls.pop(soul_name)
+            else:
+                session = GeminiLiveSession(
+                    config=self._ai_config,
+                    audio_in_queue=self._audio_in,
+                    audio_out_queue=self._audio_out,
+                    gateway=self,
+                    on_interrupt=self._on_interrupt,
+                    on_tool_call=self._on_tool_call,
+                    tool_router=self._tool_router,
+                    soul_manifest=active_soul,
+                )
+
+        # Inject pending handover context with visual frames
+        pending_handover = self._hive.get_pending_handover_for_target(soul_name)
+        if pending_handover and not session._injected_handover_context:
+            logger.info(
+                "A2A [GATEWAY] Injecting Deep Handover context with %d frames",
+                len(self._frame_buffer_cache)
+            )
+            session.inject_handover_context(pending_handover, visual_frames=list(self._frame_buffer_cache))
+            # Clear cache after successful injection
+            self._frame_buffer_cache = []
+
+        self._state_manager.set_session(session)
+
+        try:
+            if not session.is_ready():
+                try:
+                    # Safety: 10s watchdog for new expert arrival with retry logic
+                    for attempt in range(1, 4):
+                        try:
+                            await asyncio.wait_for(session.connect(), timeout=10.0)
+                            break
+                        except Exception as e:
+                            if attempt == 3:
+                                raise
+                            logger.warning("Session connect attempt %d failed: %s", attempt, e)
+                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                except (asyncio.TimeoutError, Exception) as e:
+                    logger.error(
+                        "✦ Critical: Expert '%s' failed to stabilize. Rolling back...",
+                        soul_name,
+                    )
+
+                    # Recover last handover ID from hive for context restoration
+                    fail_handover_id = getattr(
+                        self._hive, "_last_handover_id", None
+                    )
+                    if fail_handover_id:
+                        self._hive.rollback_handover(fail_handover_id)
+
+                    await self._state_manager.transition_to(
+                        SessionState.ERROR, f"Expert handshake timeout: {str(e)}"
+                    )
+                    # Trigger restart which will now pick up the rolled-back 'last_successful_soul'
+                    self._session_restart_event.set()
+                    return
+
+            # Transition to CONNECTED
+            await self._state_manager.transition_to(
+                SessionState.CONNECTED, f"Session established for {soul_name}"
+            )
+
+            await self.broadcast("engine_state", {"state": "LISTENING"})
+            logger.info(
+                "✦ Hive Active: Expert '%s' taking control (session: %s)",
+                soul_name,
+                session_metadata.session_id[:8],
+            )
+
+            # Consolidated Gemini session loop directly
+            self._session_manager._session = session
+            async with asyncio.TaskGroup() as tg:
+                session_task = tg.create_task(
+                    session.run(),
+                    name="gemini-session",
+                )
+                restart_waiter = tg.create_task(
+                    self._session_restart_event.wait(), name="restart-waiter"
+                )
+
+                done, pending = await asyncio.wait(
+                    [session_task, restart_waiter],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+                for p in pending:
+                    p.cancel()
+
+            if self._session_restart_event.is_set():
+                logger.info("🔄 Hive Handoff: Preparing next expert...")
+                await self._state_manager.transition_to(
+                    SessionState.HANDING_OFF, "Soul handoff initiated"
+                )
+                await session.stop()
+                await asyncio.sleep(1.0)  # Graceful cross-fade
+
+                # Transition to RESTARTING
+                await self._state_manager.transition_to(
+                    SessionState.RESTARTING, "Preparing for next soul"
+                )
+            else:
+                if not self._shutdown_event.is_set():
+                    logger.warning(
+                        "Session ended unexpectedly. Restarting in 5s..."
+                    )
+                    await self._state_manager.transition_to(
+                        SessionState.ERROR, "Unexpected session termination"
+                    )
+                    await asyncio.sleep(5.0)
+
+        finally:
+            # Clear session on exit
+            self._state_manager.set_session(None)
 
         # Stop health monitoring on exit
         await self._state_manager.stop_health_monitoring()
@@ -740,21 +768,36 @@ class AetherGateway:
         use_msgpack = "msgpack" in capabilities
 
         if id_token:
-            decoded = self._auth.verify_firebase_token(id_token)
-            if not decoded:
-                raise HandshakeError("Invalid Firebase ID Token")
+            try:
+                decoded = self._auth.verify_firebase_token(id_token)
+                if not decoded:
+                    raise HandshakeError("Invalid Firebase ID Token")
+            except Exception as e:
+                logger.error("Firebase auth check failed: %s", e)
+                await ws.close(code=4001) # Authentication Failure
+                raise HandshakeError(f"Auth Service Failure: {e}")
+                
             # If client_id not provided, use Firebase UID
             if not client_id:
                 client_id = decoded.get("uid")
         elif token:
-            if not self._auth.verify_jwt(token):
-                raise HandshakeError("Invalid JWT")
+            try:
+                if not self._auth.verify_jwt(token):
+                    raise HandshakeError("Invalid JWT")
+            except Exception as e:
+                await ws.close(code=4001)
+                raise HandshakeError(f"JWT Validation Failure: {e}")
         elif signature:
-            if not self._auth.verify_signature(
-                challenge_bytes.hex(), signature, client_id
-            ):
-                raise HandshakeError("Invalid Signature")
+            try:
+                if not self._auth.verify_signature(
+                    challenge_bytes.hex(), signature, client_id
+                ):
+                    raise HandshakeError("Invalid Signature")
+            except Exception as e:
+                await ws.close(code=4001)
+                raise HandshakeError(f"Signature Verification Failure: {e}")
         else:
+            await ws.close(code=4001)
             raise HandshakeError("No authentication provided")
 
         session = ClientSession(
@@ -894,6 +937,35 @@ class AetherGateway:
             "status": result["status"],
             "message": result["message"]
         })
+
+    async def _handle_claw_inject(self, client_id: str, msg: dict) -> None:
+        """
+        Handles CLAW_INJECT messages to dynamically inject instructions into the active session.
+        This is primarily for debugging and advanced control.
+        """
+        payload = msg.get("payload", {})
+        instructions = payload.get("instructions")
+        rationales = payload.get("rationales", ["CLAW_INJECT via Gateway"])
+
+        if not instructions:
+            logger.warning("CLAW_INJECT received with no instructions from %s", client_id)
+            return
+
+        logger.info("CLAW_INJECT: Injecting instructions from %s: %s", client_id, instructions[:100])
+
+        session = self.get_session()
+        if session:
+            try:
+                # Use send_text for raw instruction injection as a system message
+                # This bypasses the need for a formal SoulDNA object
+                await session.send_text(f"[SYSTEM: CLAW_INJECT] {instructions}")
+                await self.broadcast("CLAW_INJECT_ACK", {"status": "success", "message": "Instructions injected."})
+            except Exception as e:
+                logger.error("CLAW_INJECT failed to inject instructions: %s", e)
+                await self.broadcast("CLAW_INJECT_ACK", {"status": "error", "message": str(e)})
+        else:
+            logger.warning("CLAW_INJECT: No active session to inject instructions into.")
+            await self.broadcast("CLAW_INJECT_ACK", {"status": "error", "message": "No active session."})
 
     async def _handle_disconnect(self, client_id: str, msg: dict) -> None:
         async with self._lock:
@@ -1048,3 +1120,5 @@ class AetherGateway:
             self._server.close()
             await self._server.wait_closed()
         logger.info("Gateway stopped")
+
+```

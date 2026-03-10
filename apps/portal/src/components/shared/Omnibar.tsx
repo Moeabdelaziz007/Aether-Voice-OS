@@ -56,14 +56,14 @@ export default function Omnibar() {
         if (!inputValue.trim()) return;
 
         const input = inputValue.toLowerCase();
-        
+
         // Intent parsing logic — detect which widget to inject
         const skillsKeywords = ["manage skills", "toggle skill", "skills", "sync skills", "what skills"];
         const personaKeywords = ["persona", "set tone", "change formality", "change verbosity", "preset", "analytical", "mentor", "assistant"];
         const themeKeywords = ["theme", "display settings", "change theme", "glow", "blur", "scanlines", "grain"];
-        
+
         let widgetToInject: string | null = null;
-        
+
         if (skillsKeywords.some(kw => input.includes(kw))) {
             widgetToInject = "skills_manager";
         } else if (personaKeywords.some(kw => input.includes(kw))) {
@@ -84,10 +84,30 @@ export default function Omnibar() {
         try {
             const personaConfig = useAetherStore.getState().personaConfig;
             const activeSkills = useAetherStore.getState().activeSkills.map(s => s.name);
-            await processIntent(inputValue, personaConfig, activeSkills);
+            const result = await processIntent(inputValue, personaConfig, activeSkills);
+
+            // Replay logs to store
+            result.logs.forEach(log => {
+                useAetherStore.getState().addTerminalLog(log.level, log.message);
+            });
+
+            if (!result.success) {
+                useAetherStore.getState().addError({
+                    code: "INTENT_PROCESS_ERROR",
+                    message: result.error || "Failed to process intent.",
+                    severity: "medium",
+                    retryable: true
+                });
+            }
         } catch (error) {
             console.error("[v0] Intent processing error:", error);
             useAetherStore.getState().addTerminalLog('ERROR', `Failed to process intent: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            useAetherStore.getState().addError({
+                code: "INTENT_CRASH",
+                message: "A fatal error occurred during intent analysis.",
+                severity: "high",
+                retryable: false
+            });
         }
 
         // Inject widget if detected
@@ -134,8 +154,9 @@ export default function Omnibar() {
                                             }
                                         }}
                                         onKeyDown={(e) => e.key === "Enter" && handleExecute()}
-                                        placeholder="Command or intent..."
-                                        className="flex-1 bg-transparent border-none outline-none text-white/90 font-sans text-base placeholder:text-white/20"
+                                        placeholder={status === "connected" ? "Command or intent..." : "Gateway offline - verifying..."}
+                                        disabled={status !== "connected" && status !== "handshaking"}
+                                        className={`flex-1 bg-transparent border-none outline-none text-white/90 font-sans text-base placeholder:text-white/20 ${status !== "connected" ? "opacity-50 cursor-not-allowed" : ""}`}
                                     />
 
                                     {/* Expert Soul Badge */}

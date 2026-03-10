@@ -12,6 +12,7 @@ export interface GatewayAPI {
     sendAudio: (pcm: Uint8Array | ArrayBuffer) => void; sendIntent: (i: string, l?: 1 | 2 | 3) => Promise<void>;
     sendUIStateSync: (w: any[]) => void; sendVisionFrame: (f: string) => void;
     sendForgeCommit: (dna: any) => Promise<void>;
+    sendClawInject: (instructions: string, rationales?: string[]) => Promise<void>;
     onAudioResponse: React.MutableRefObject<((a: ArrayBuffer) => void) | null>;
     onTranscript: React.MutableRefObject<((text: string, role: "user" | "ai") => void) | null>;
     onToolCall: React.MutableRefObject<((toolCall: any) => void) | null>;
@@ -78,6 +79,15 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
                 else if (m.type === "AUDIO_ACK") { bp.current.ack(); }
                 else if (m.type === "tool_call") { onToolCall.current?.(m.payload); }
                 else if (m.type === "interrupt") { onInterrupt.current?.(); }
+                else if (m.type === "error") {
+                    store.addError({
+                        code: m.payload.code || "UNKNOWN_ERROR",
+                        message: m.payload.message || "An unexpected error occurred in the gateway.",
+                        severity: m.payload.severity || "medium",
+                        retryable: m.payload.retryable ?? true
+                    });
+                    store.addTerminalLog('ERROR', `Gateway Error: ${m.payload.code} - ${m.payload.message}`);
+                }
                 else processEvent(m as GatewayEvent, store, setLatencyMs, onTranscript);
             };
             ws.onclose = (ev) => { if (ev.code !== 1000 && ev.code !== 1001) { setStatus("reconnecting"); rm.current.trigger(); } else setStatus("disconnected"); };
@@ -88,9 +98,27 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
     const disconnect = useCallback(() => { abortRef.current?.abort(); wsRef.current?.close(1000); wsRef.current = null; setStatus("disconnected"); rm.current.stop(); }, []);
     const sendAudio = useCallback((pcm: Uint8Array | ArrayBuffer) => batcher.current?.add(pcm instanceof ArrayBuffer ? new Uint8Array(pcm) : pcm), []);
     const sendIntent = useCallback(async (raw_input: string, level = 1) => {
-        const ws = wsRef.current; if (ws?.readyState !== 1) return;
-        ws.send(encode({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature: new HandshakeManager().signIntent(raw_input) }));
-    }, []);
+        const ws = wsRef.current;
+        if (ws?.readyState !== 1) {
+            store.addError({
+                code: "GATEWAY_DISCONNECTED",
+                message: "Cannot send intent. Gateway is not connected.",
+                severity: "high",
+                retryable: true
+            });
+            return;
+        }
+        try {
+            ws.send(encode({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature: new HandshakeManager().signIntent(raw_input) }));
+        } catch (e) {
+            store.addError({
+                code: "INTENT_SEND_FAILED",
+                message: "Failed to transmit intent through the gateway.",
+                severity: "medium",
+                retryable: true
+            });
+        }
+    }, [store]);
     const sendUIStateSync = useCallback((w: any[]) => wsRef.current?.readyState === 1 && wsRef.current.send(encode({ type: "UI_STATE_SYNC", payload: { active_widgets: w } })), []);
 
     // Add vision uploader with backoff mechanism to prevent flooding connection
@@ -119,15 +147,41 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
             // On failure, increase backoff up to 10s maximum
             visionBackoff.current = Math.min(10000, Math.max(2000, visionBackoff.current * 1.5));
             console.warn("Vision upload failed, increasing backoff to", visionBackoff.current);
+            store.addError({
+                code: "VISION_UPLOAD_FAILED",
+                message: "Failed to upload vision frame. Retrying with backoff.",
+                severity: "low",
+                retryable: true
+            });
         }
     }, [store]);
     const sendForgeCommit = useCallback(async (dna: any) => {
-        const ws = wsRef.current; if (ws?.readyState !== 1) return;
-        ws.send(encode({ type: "FORGE_COMMIT", payload: { dna, timestamp: Date.now() } }));
-    }, []);
+        const ws = wsRef.current;
+        if (ws?.readyState !== 1) {
+            store.addError({ code: "FORGE_OFFLINE", message: "Cannot commit DNA. Forge gateway is offline.", severity: "high", retryable: true });
+            return;
+        }
+        try {
+            ws.send(encode({ type: "FORGE_COMMIT", payload: { dna, timestamp: Date.now() } }));
+        } catch (e) {
+            store.addError({ code: "FORGE_COMMIT_FAILED", message: "Failed to transmit DNA blueprint.", severity: "medium", retryable: true });
+        }
+    }, [store]);
+    const sendClawInject = useCallback(async (instructions: string, rationales: string[] = []) => {
+        const ws = wsRef.current;
+        if (ws?.readyState !== 1) {
+            store.addError({ code: "CLAW_OFFLINE", message: "ClawHub injection failed: Gateway offline.", severity: "high", retryable: true });
+            return;
+        }
+        try {
+            ws.send(encode({ type: "CLAW_INJECT", payload: { instructions, rationales, timestamp: Date.now() } }));
+        } catch (e) {
+            store.addError({ code: "CLAW_INJECT_FAILED", message: "Failed to transmit ClawHub instructions.", severity: "medium", retryable: true });
+        }
+    }, [store]);
 
     useEffect(() => () => disconnect(), [disconnect]);
-    return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, sendForgeCommit, onAudioResponse, onTranscript, onToolCall, onInterrupt, isConnected: status === "connected" };
+    return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, sendForgeCommit, sendClawInject, onAudioResponse, onTranscript, onToolCall, onInterrupt, isConnected: status === "connected" };
 }
 
 function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: React.MutableRefObject<((t: string, r: "user" | "ai") => void) | null>) {
@@ -173,10 +227,15 @@ class BackpressureController {
 
 class ReconnectionManager {
     attempt = 0; timer: any = null; constructor(private onR: () => void) { }
+    MAX_ATTEMPTS = 10;
     trigger() {
         this.stop();
+        if (this.attempt >= this.MAX_ATTEMPTS) {
+            console.error("❌ Aether Gateway: Max reconnection attempts reached.");
+            return;
+        }
         const delay = Math.min(1000 * Math.pow(1.5, this.attempt++) + Math.random() * 500, 15000);
-        console.log(`↻ Aether Gateway Reconnecting in ${Math.round(delay)}ms`);
+        console.log(`↻ Aether Gateway Reconnecting in ${Math.round(delay)}ms (Attempt ${this.attempt}/${this.MAX_ATTEMPTS})`);
         this.timer = setTimeout(() => this.onR(), delay);
     }
     stop() { if (this.timer) clearTimeout(this.timer); }

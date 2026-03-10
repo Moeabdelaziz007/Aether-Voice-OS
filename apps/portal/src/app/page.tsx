@@ -28,6 +28,7 @@ import PoweredByStrip from "@/components/shared/PoweredByStrip";
 import Omnibar from "@/components/shared/Omnibar";
 import NeuralBackground from "@/components/shared/NeuralBackground";
 import { EmotionalAtmosphere, useEmotionalState } from "@/components/EmotionalAtmosphere";
+import NotificationCenter from "@/components/NotificationCenter";
 
 // Management panels
 import MemoryPanel from "@/components/management/MemoryPanel";
@@ -239,6 +240,7 @@ export default function AetherPortal() {
     return (
         <EmotionalAtmosphere showDebugOverlay={false}>
             <ThemeProvider>
+                <NotificationCenter />
                 <LayoutGroup>
                     {/* Theme & Visual System */}
                     <BackgroundEngine />

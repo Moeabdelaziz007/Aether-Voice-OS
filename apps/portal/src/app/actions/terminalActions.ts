@@ -11,39 +11,40 @@ export async function processIntent(
     personaConfig?: { tone: string; formality: string; verbosity: string },
     activeSkills?: string[]
 ) {
+    const logs: { level: any; message: string }[] = [];
     try {
-        // Add voice log entry
-        useAetherStore.getState().addTerminalLog('VOICE', userInput);
+        logs.push({ level: 'VOICE', message: userInput });
 
         // Simulate system processing
         await new Promise(resolve => setTimeout(resolve, 100));
-        useAetherStore.getState().addTerminalLog(
-            'SYS',
-            `Processing with ${personaConfig?.tone || 'analytical'} ${personaConfig?.formality || 'formal'} persona...`
-        );
+        logs.push({
+            level: 'SYS',
+            message: `Processing with ${personaConfig?.tone || 'analytical'} ${personaConfig?.formality || 'formal'} persona...`
+        });
 
         // Simulate skill sync if needed
         if (activeSkills && activeSkills.length > 0) {
             await new Promise(resolve => setTimeout(resolve, 50));
-            useAetherStore.getState().addTerminalLog(
-                'SKILLS',
-                `Syncing active skills: [${activeSkills.join(', ')}]...`
-            );
+            logs.push({
+                level: 'SKILLS',
+                message: `Syncing active skills: [${activeSkills.join(', ')}]...`
+            });
         }
 
-        // Simulate agent response (in production, this would call Gemini Live API)
+        // Simulate agent response
         await new Promise(resolve => setTimeout(resolve, 300));
-        useAetherStore.getState().addTerminalLog('AGENT', `Responding to: "${userInput}"`);
-        useAetherStore.getState().addTerminalLog('SUCCESS', 'Command executed successfully');
+        logs.push({ level: 'AGENT', message: `Responding to: "${userInput}"` });
+        logs.push({ level: 'SUCCESS', message: 'Command executed successfully' });
 
         return {
             success: true,
+            logs,
             message: 'Intent processed',
         };
     } catch (error) {
-        useAetherStore.getState().addTerminalLog('ERROR', `Failed to process intent: ${String(error)}`);
         return {
             success: false,
+            logs: [{ level: 'ERROR', message: `Failed to process intent: ${String(error)}` }],
             error: String(error),
         };
     }
@@ -55,7 +56,7 @@ export async function processIntent(
  */
 export async function* streamAgentResponse(prompt: string) {
     const mockResponse = `This is a simulated response to: "${prompt}". In production, this would be a real Gemini Live API stream.`;
-    
+
     for (const char of mockResponse) {
         yield char;
         // Add small delay for typewriter effect perception

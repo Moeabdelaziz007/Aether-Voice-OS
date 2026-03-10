@@ -15,6 +15,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
+import { useAetherStore } from '../store/useAetherStore';
 
 interface SystemMetrics {
     activeConnections: number;
@@ -48,6 +49,8 @@ export function SREHeartbeat({
     const [currentBeat, setCurrentBeat] = useState(0);
     const animationRef = useRef<number>(0);
 
+    const errors = useAetherStore((s) => s.errors);
+
     // Default metrics
     const systemMetrics: SystemMetrics = {
         cpu: metrics.cpu ?? 45,
@@ -55,7 +58,7 @@ export function SREHeartbeat({
         networkIn: metrics.networkIn ?? 12.5,
         networkOut: metrics.networkOut ?? 8.3,
         latency: metrics.latency ?? 24,
-        errorRate: metrics.errorRate ?? 0.2,
+        errorRate: errors.length > 0 ? errors.length : (metrics.errorRate ?? 0.2),
         uptime: metrics.uptime ?? 86400,
         activeConnections: metrics.activeConnections ?? 142,
         interruptLatency: metrics.interruptLatency ?? 0,
