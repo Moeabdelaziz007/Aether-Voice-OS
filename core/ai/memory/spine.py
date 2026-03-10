@@ -2,7 +2,7 @@
 Aether Voice OS — The Neural Spine.
 
 A distributed semantic memory layer that orchestrates "Warm Context" by periodically 
-summarizing the interaction stream using Gemini 2.0 Flash while maintaining a 
+summarizing the interaction stream using Gemini 2.5 Flash while maintaining a 
 Redis-backed sliding window of interaction frames via GlobalBus.
 """
 
@@ -149,7 +149,7 @@ class NeuralSpine:
             
             try:
                 response = self._client.models.generate_content(
-                    model="gemini-2.0-flash",
+                    model="gemini-2.5-flash-live-preview-03-2026",
                     contents=prompt
                 )
                 

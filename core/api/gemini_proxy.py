@@ -37,7 +37,7 @@ async def proxy_generate(request: Request) -> dict[str, Any]:
     api_key = get_api_key()
     data = await request.json()
 
-    model = data.get("model", "gemini-2.0-flash-exp")
+    model = data.get("model", "gemini-2.5-flash-live-preview-03-2026")
     url = f"{GEMINI_HTTP_URL}/v1beta/models/{model}:generateContent"
 
     async with httpx.AsyncClient(timeout=60.0) as client:

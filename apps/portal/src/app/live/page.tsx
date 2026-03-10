@@ -9,20 +9,20 @@
  * This is the Wispr Flow experience powered by Gemini.
  */
 
-import { useEffect, useRef, useState } from "react";
-import { useAudioPipeline } from "@/hooks/useAudioPipeline";
-import { useGeminiLive, type SessionStatus } from "@/hooks/useGeminiLive";
+import { useAetherGateway, type GatewayStatus } from "@/hooks/useAetherGateway";
+import { useAetherStore } from "@/store/useAetherStore";
 import AetherLine from "@/components/AetherLine";
 
 // Map session status to line status
 function toLineStatus(
-    session: SessionStatus,
+    status: GatewayStatus,
+    engineState: string,
     pipeline: string
 ): "idle" | "listening" | "speaking" | "connecting" | "error" {
-    if (session === "error" || pipeline === "error") return "error";
-    if (session === "connecting" || pipeline === "starting") return "connecting";
-    if (session === "speaking") return "speaking";
-    if (session === "listening" || session === "connected") return "listening";
+    if (status === "error" || pipeline === "error") return "error";
+    if (status === "connecting" || status === "handshaking" || pipeline === "starting") return "connecting";
+    if (engineState === "SPEAKING") return "speaking";
+    if (engineState === "LISTENING" || status === "connected") return "listening";
     return "idle";
 }
 
@@ -36,11 +36,13 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function LivePage() {
     const audio = useAudioPipeline();
-    const gemini = useGeminiLive();
+    const gateway = useAetherGateway();
+    const engineState = useAetherStore((s) => s.engineState);
     const [initialized, setInitialized] = useState(false);
     const hasStarted = useRef(false);
+    const lastLatency = useRef(0);
 
-    const lineStatus = toLineStatus(gemini.status, audio.state);
+    const lineStatus = toLineStatus(gateway.status, engineState, audio.state);
 
     // Auto-launch on page load
     useEffect(() => {
@@ -51,8 +53,8 @@ export default function LivePage() {
             try {
                 // Start audio pipeline (requests mic)
                 await audio.start();
-                // Connect to Gemini Live
-                await gemini.connect();
+                // Connect to Aether Gateway
+                await gateway.connect();
                 setInitialized(true);
             } catch (err) {
                 console.error("Init error:", err);
@@ -70,8 +72,8 @@ export default function LivePage() {
 
     // Monitor transcripts for trigger words
     useEffect(() => {
-        const originalTranscript = gemini.onTranscript.current;
-        gemini.onTranscript.current = (text, role) => {
+        const originalTranscript = gateway.onTranscript.current;
+        gateway.onTranscript.current = (text, role) => {
             if (originalTranscript) originalTranscript(text, role);
 
             if (role === 'user') {
@@ -93,13 +95,14 @@ export default function LivePage() {
 
     // Vision Capture Loop
     useEffect(() => {
-        if (gemini.status !== 'connected' && gemini.status !== 'listening' && gemini.status !== 'speaking') return;
+        if (gateway.status !== 'connected') return;
 
         const captureFrame = async () => {
             // Note: In a production Electron app, this would call a native screenshot API.
             // Here we simulate the capture and send it to Gemini.
+            // Use the consolidated gateway for vision frames
             try {
-                // gemini.sendVisionFrame(mockBase64); 
+                // gateway.sendVisionFrame(mockBase64); 
             } catch (err) {
                 console.error("Vision capture failed:", err);
             }
@@ -112,29 +115,29 @@ export default function LivePage() {
         return () => {
             if (visionTimerRef.current) clearTimeout(visionTimerRef.current);
         };
-    }, [gemini.status, visionInterval]);
+    }, [gateway.status, visionInterval]);
 
-    // Wire PCM chunks from mic → Gemini
+    // Wire PCM chunks from mic → Gateway
     useEffect(() => {
         audio.onPCMChunk.current = (pcm: ArrayBuffer) => {
-            gemini.sendAudio(pcm);
+            gateway.sendAudio(pcm);
         };
-    }, [audio, gemini]);
+    }, [audio, gateway]);
 
-    // Wire audio responses from Gemini → speaker
+    // Wire audio responses from Gateway → speaker
     useEffect(() => {
-        gemini.onAudioResponse.current = (audioData: ArrayBuffer) => {
+        gateway.onAudioResponse.current = (audioData: ArrayBuffer) => {
             audio.playPCM(audioData);
         };
-    }, [audio, gemini]);
+    }, [audio, gateway]);
 
     // Handle barge-in (interrupt)
     useEffect(() => {
-        gemini.onInterrupt.current = () => {
+        gateway.onInterrupt.current = () => {
             // Playback interruption is handled internally
             console.log("⚡ Interrupt — stopping playback");
         };
-    }, [gemini]);
+    }, [gateway]);
 
     return (
         <div

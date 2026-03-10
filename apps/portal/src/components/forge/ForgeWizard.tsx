@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useForgeStore, ForgeStep, AVAILABLE_SOULS, AVAILABLE_LENSES } from '@/store/useForgeStore';
 import { useAetherStore } from '@/store/useAetherStore';
+import { useAetherGateway } from '@/hooks/useAetherGateway';
 import QuantumNeuralAvatar from '../QuantumNeuralAvatar';
 import {
     Mic, Brain, Database, Wand2, Search, ShieldAlert,
@@ -73,6 +74,7 @@ const STEP_TITLES: Record<string, string> = {
 
 export default function ForgeWizard() {
     const { activeStep, dna, updateDNA, setStep, isListening, transcript, voiceMode, setVoiceMode, setListening } = useForgeStore();
+    const { sendForgeCommit } = useAetherGateway();
     const [smartTab, setSmartTab] = useState<SmartTab>(null);
 
     const nextStep = () => {
@@ -207,8 +209,8 @@ export default function ForgeWizard() {
                                 whileTap={{ scale: 0.95 }}
                                 onClick={() => setSmartTab(active ? null : tab.id)}
                                 className={`flex items-center gap-2 px-5 py-2 rounded-full text-[9px] font-black uppercase tracking-widest transition-all border ${active
-                                        ? `bg-${tab.color}-500/10 border-${tab.color}-500/40 text-${tab.color}-400 shadow-lg`
-                                        : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/20'
+                                    ? `bg-${tab.color}-500/10 border-${tab.color}-500/40 text-${tab.color}-400 shadow-lg`
+                                    : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/20'
                                     }`}
                                 style={active ? {
                                     backgroundColor: tab.color === 'purple' ? 'rgba(168,85,247,0.1)' :
@@ -339,7 +341,11 @@ export default function ForgeWizard() {
                                 onClick={() => {
                                     if (activeStep === 'review') {
                                         setStep('synthesizing');
-                                        setTimeout(() => useForgeStore.getState().completeForge(), 5000);
+                                        setTimeout(async () => {
+                                            // Transmit DNA to backend via Aether Gateway
+                                            await sendForgeCommit(dna);
+                                            useForgeStore.getState().completeForge();
+                                        }, 5000);
                                     } else {
                                         nextStep();
                                     }

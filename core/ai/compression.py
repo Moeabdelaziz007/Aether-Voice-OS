@@ -35,7 +35,7 @@ class NeuralSummarizer:
         self._config = config
         self._client = genai.Client(api_key=config.api_key)
         self._model_id = (
-            "gemini-2.0-flash-lite"  # Fast and inexpensive for compression tasks
+            "gemini-2.5-flash-lite-preview"  # Fast and inexpensive for compression tasks
         )
 
     async def compress(self, context: HandoverContext) -> Dict[str, Any]:

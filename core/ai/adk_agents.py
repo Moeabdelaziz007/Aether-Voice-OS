@@ -15,11 +15,12 @@ from core.tools import (
     system_tool,
     vision_tool,
 )
+from core.infra.config import GeminiModel
 
 # ── ADK Agent 1: The Architect ──────────────────────────────────────
 architect_agent = Agent(
     name="ArchitectAgent",
-    model="gemini-2.0-flash",
+    model=GeminiModel.LIVE_FLASH.value,
     description=(
         "A system architect specialist. "
         "Analyzes codebases, proposes architecture changes, "
@@ -41,7 +42,7 @@ architect_agent = Agent(
 # ── ADK Agent 2: The Debugger ────────────────────────────────────────
 debugger_agent = Agent(
     name="DebuggerAgent",
-    model="gemini-2.0-flash",
+    model=GeminiModel.LIVE_FLASH.value,
     description=(
         "A debugging specialist. Diagnoses runtime errors, "
         "reads terminal logs, and proposes exact fixes."
@@ -62,7 +63,7 @@ debugger_agent = Agent(
 # Implements the 'Coordinator/Factory' pattern for dynamic agent generation.
 forge_agent = Agent(
     name="ForgeAgent",
-    model="gemini-2.0-flash",
+    model=GeminiModel.LIVE_FLASH.value,
     description=(
         "The Aether Forge. Responsible for forging and coordinating new AI agent packages. "
         "Acts as a Coordinator to verify the health and persona of newly created specialists."
@@ -87,7 +88,7 @@ forge_agent = Agent(
 # ── ADK Agent 4: Aether Core Orchestrator (Root) ────────────────────
 root_agent = Agent(
     name="AetherCore",
-    model="gemini-2.0-flash",
+    model=GeminiModel.LIVE_FLASH.value,
     description="The primary voice interface. Orchestrates specialists.",
     instruction=(
         "You are Aether, a calm AI companion for developers. "

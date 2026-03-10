@@ -36,6 +36,8 @@ const ScanningLine = () => (
     />
 );
 
+import { LatencyHUD } from "./LatencyHUD";
+
 export default function HUDContainer({ children }: { children: React.ReactNode }) {
     return (
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
@@ -57,15 +59,19 @@ export default function HUDContainer({ children }: { children: React.ReactNode }
             <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_center,transparent_40%,rgba(0,0,0,0.8)_100%)] pointer-events-none" />
 
             {/* Tactical Grid/Readouts (Top Right) */}
-            <div className="absolute top-10 right-32 font-mono text-[9px] tracking-[0.2em] text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.3)] pointer-events-none text-right hidden lg:block uppercase">
-                <div className="flex flex-col gap-1">
-                    <div className="flex justify-end gap-4">
-                        <span>SYS_AUTH: VERIFIED</span>
-                        <span className="text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.6)]">LINK_STABLE</span>
+            <div className="absolute top-10 right-32 pointer-events-none hidden lg:block">
+                <div className="flex flex-col gap-4 items-end">
+                    <div className="font-mono text-[9px] tracking-[0.2em] text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.3)] uppercase">
+                        <div className="flex justify-end gap-4 mb-1">
+                            <span>SYS_AUTH: VERIFIED</span>
+                            <span className="text-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.6)]">LINK_STABLE</span>
+                        </div>
+                        <div>COORDS: {Math.floor(Math.random() * 1000)}.{Math.floor(Math.random() * 1000)}</div>
                     </div>
-                    <div>COORDS: {Math.floor(Math.random() * 1000)}.{Math.floor(Math.random() * 1000)}</div>
-                    <div className="bg-[rgba(var(--accent-r),var(--accent-g),var(--accent-b),0.1)] px-2 py-0.5 rounded">
-                        LATENCY: {"<"} 50MS
+
+                    {/* Real-time Latency HUD */}
+                    <div className="pointer-events-auto">
+                        <LatencyHUD />
                     </div>
                 </div>
             </div>

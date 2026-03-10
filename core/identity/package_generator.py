@@ -82,7 +82,7 @@ if __name__ == "__main__":
         "role": "Security Expert",
         "tone": "Stoic & Alert",
         "provider": "google",
-        "model": "gemini-2.0-flash",
+        "model": "gemini-2.5-flash-live-preview-03-2026",
         "memoryType": "firebase",
         "skills": ["sql_injection_defense", "network_auditing"],
     }

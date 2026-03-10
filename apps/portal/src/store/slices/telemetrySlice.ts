@@ -12,12 +12,15 @@ export interface TelemetrySlice {
     spectralCentroid: number;
     noiseFloor: number;
     latencyMs: number;
+    p50: number;
+    p95: number;
+    p99: number;
     lastMutation: string | null;
     lastVisionPulse: string | null;
 
     setAudioLevels: (mic: number, speaker: number) => void;
     setLatencyMs: (latencyMs: number) => void;
-    setTelemetry: (data: { frustration?: number; valence?: number; arousal?: number; engagement?: number; zen_mode?: boolean; pitch?: number; rate?: number; spectralCentroid?: number; noiseFloor?: number }, latency: number) => void;
+    setTelemetry: (data: { frustration?: number; valence?: number; arousal?: number; engagement?: number; zen_mode?: boolean; pitch?: number; rate?: number; spectralCentroid?: number; noiseFloor?: number; p50?: number; p95?: number; p99?: number }, latency: number) => void;
     setMutation: (mutation: string) => void;
     setVisionPulse: (lastVisionPulse: string) => void;
 }
@@ -34,6 +37,9 @@ export const createTelemetrySlice: StateCreator<TelemetrySlice> = (set) => ({
     spectralCentroid: 0,
     noiseFloor: 0,
     latencyMs: 0,
+    p50: 0,
+    p95: 0,
+    p99: 0,
     lastMutation: null,
     lastVisionPulse: null,
 
@@ -44,6 +50,9 @@ export const createTelemetrySlice: StateCreator<TelemetrySlice> = (set) => ({
         ...data,
         frustrationScore: data.frustration ?? state.frustrationScore,
         latencyMs,
+        p50: data.p50 ?? state.p50,
+        p95: data.p95 ?? state.p95,
+        p99: data.p99 ?? state.p99,
     })),
     setMutation: (lastMutation) => set({ lastMutation }),
     setVisionPulse: (lastVisionPulse) => set({ lastVisionPulse }),

@@ -10,7 +10,12 @@ export interface GatewayAPI {
     status: GatewayStatus; latencyMs: number; connect: (t?: string) => Promise<void>; disconnect: () => void;
     sendAudio: (pcm: Uint8Array | ArrayBuffer) => void; sendIntent: (i: string, l?: 1 | 2 | 3) => Promise<void>;
     sendUIStateSync: (w: any[]) => void; sendVisionFrame: (f: string) => void;
-    onAudioResponse: React.MutableRefObject<((a: ArrayBuffer) => void) | null>; isConnected: boolean;
+    sendForgeCommit: (dna: any) => Promise<void>;
+    onAudioResponse: React.MutableRefObject<((a: ArrayBuffer) => void) | null>;
+    onTranscript: React.MutableRefObject<((text: string, role: "user" | "ai") => void) | null>;
+    onToolCall: React.MutableRefObject<((toolCall: any) => void) | null>;
+    onInterrupt: React.MutableRefObject<(() => void) | null>;
+    isConnected: boolean;
 }
 type GatewayEvent = { type: "tick"; timestamp: number } | { type: "engine_state"; payload: { state: string } }
     | { type: "transcript"; payload: { role: string; text: string } } | { type: "affective_score"; payload: { frustration: number; valence: number; arousal: number; engagement: number } }
@@ -25,7 +30,11 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
     const [latencyMs, setLatencyMs] = useState(0);
     const store = useAetherStore(), wsRef = useRef<WebSocket | null>(null), abortRef = useRef<AbortController | null>(null);
     const bp = useRef(new BackpressureController()), rm = useRef(new ReconnectionManager(() => connect()));
-    const batcher = useRef<PCMStreamBatcher | null>(null), onAudioResponse = useRef<((a: ArrayBuffer) => void) | null>(null);
+    const batcher = useRef<PCMStreamBatcher | null>(null);
+    const onAudioResponse = useRef<((a: ArrayBuffer) => void) | null>(null);
+    const onTranscript = useRef<((text: string, role: "user" | "ai") => void) | null>(null);
+    const onToolCall = useRef<((toolCall: any) => void) | null>(null);
+    const onInterrupt = useRef<(() => void) | null>(null);
 
     const connect = useCallback(async (token?: string) => {
         if (wsRef.current?.readyState === 1) return;
@@ -60,7 +69,9 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
                     ws.send(JSON.stringify({ type: "connect.response", client_id: auth.client_id, signature: auth.signature, id_token: token, capabilities: ["audio_streaming", "msgpack"] }));
                 } else if (m.type === "connect.ack") { setStatus("connected"); store.setSessionStartTime(Date.now()); }
                 else if (m.type === "AUDIO_ACK") { bp.current.ack(); }
-                else processEvent(m as GatewayEvent, store, setLatencyMs);
+                else if (m.type === "tool_call") { onToolCall.current?.(m.payload); }
+                else if (m.type === "interrupt") { onInterrupt.current?.(); }
+                else processEvent(m as GatewayEvent, store, setLatencyMs, onTranscript);
             };
             ws.onclose = (ev) => { if (ev.code !== 1000 && ev.code !== 1001) { setStatus("reconnecting"); rm.current.trigger(); } else setStatus("disconnected"); };
             ws.onerror = () => setStatus("error");
@@ -103,17 +114,24 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
             console.warn("Vision upload failed, increasing backoff to", visionBackoff.current);
         }
     }, [store]);
+    const sendForgeCommit = useCallback(async (dna: any) => {
+        const ws = wsRef.current; if (ws?.readyState !== 1) return;
+        ws.send(encode({ type: "FORGE_COMMIT", payload: { dna, timestamp: Date.now() } }));
+    }, []);
 
     useEffect(() => () => disconnect(), [disconnect]);
-    return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, onAudioResponse, isConnected: status === "connected" };
+    return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, sendForgeCommit, onAudioResponse, onTranscript, onToolCall, onInterrupt, isConnected: status === "connected" };
 }
 
-function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void) {
+function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: React.MutableRefObject<((t: string, r: "user" | "ai") => void) | null>) {
     if (m.type === "tick") { const rtt = Math.abs(Date.now() - m.timestamp * 1000); sl(rtt); s.setLatencyMs(rtt); return; }
     const p = (m as any).payload; if (!p) return;
     switch (m.type) {
         case "engine_state": s.setEngineState(p.state); break;
-        case "transcript": s.addTranscriptMessage({ role: p.role, content: p.text }); break;
+        case "transcript":
+            s.addTranscriptMessage({ role: p.role || "ai", content: p.text });
+            ot?.current?.(p.text, (p.role as "user" | "ai") || "ai");
+            break;
         case "affective_score": s.setTelemetry(p, 0); break;
         case "vision_pulse": s.setVisionPulse(p.timestamp); s.setVisionActive(true); break;
         case "tool_result": s.addToolCall({ toolName: p.tool_name, status: p.status }); break;

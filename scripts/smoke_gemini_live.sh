@@ -20,7 +20,7 @@ fi
 # 3. Test Connectivity (Basic Ping)
 echo "📡 Pinging Aether Gateway..."
 # Assuming a local dev server is running on 8000
-curl -s -f http://localhost:8000/health || echo "⚠️ Warning: Local Aether Gateway not responding (Ignore if not running)."
+curl -s -f http://localhost:18789/health || echo "⚠️ Warning: Local Aether Gateway not responding (Ignore if not running)."
 
 # 4. Verify Tool Registry
 python3 -c "from core.ai.session.facade import ToolRegistry; r = ToolRegistry(); print('✅ Tool Registry OK: ' + str(len(r.tools)) + ' tools loaded.')"

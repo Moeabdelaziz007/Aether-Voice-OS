@@ -146,16 +146,16 @@ class TelemetryManager:
         session_id: str,
         prompt_tokens: int,
         completion_tokens: int,
-        model: str = "gemini-2.0-flash",
+        model: str = "gemini-2.5-flash-live-preview-03-2026",
     ):
         """Record token usage and estimate cost."""
-        # Pricing constants (approximate for Gemini 2.0 Flash)
+        # Pricing constants (approximate for Gemini 2.5)
         prices = {
-            "gemini-2.0-flash": {"input": 0.10 / 1_000_000, "output": 0.40 / 1_000_000},
-            "gemini-2.0-pro": {"input": 1.25 / 1_000_000, "output": 5.00 / 1_000_000},
+            "gemini-2.5-flash-live-preview-03-2026": {"input": 0.10 / 1_000_000, "output": 0.40 / 1_000_000},
+            "gemini-2.5-pro-preview-03-2026": {"input": 1.25 / 1_000_000, "output": 5.00 / 1_000_000},
         }
 
-        rates = prices.get(model, prices["gemini-2.0-flash"])
+        rates = prices.get(model, prices["gemini-2.5-flash-live-preview-03-2026"])
         cost = (prompt_tokens * rates["input"]) + (completion_tokens * rates["output"])
 
         logger.info(
@@ -191,7 +191,7 @@ def record_usage(
     session_id: str,
     prompt_tokens: int,
     completion_tokens: int,
-    model: str = "gemini-2.0-flash",
+    model: str = "gemini-2.5-flash-live-preview-03-2026",
 ):
     _manager.record_usage(session_id, prompt_tokens, completion_tokens, model)
 
