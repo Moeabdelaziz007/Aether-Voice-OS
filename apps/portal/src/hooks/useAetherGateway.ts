@@ -48,7 +48,8 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
         if (wsRef.current?.readyState === 1) return;
         abortRef.current?.abort(); abortRef.current = new AbortController();
         setStatus(rm.current.attempt > 0 ? "reconnecting" : "connecting");
-        const hk = new HandshakeManager(), sig = abortRef.current.signal;
+        const hk = new HandshakeManager();
+        const sig = abortRef.current.signal;
         try {
             const ws = new WebSocket(url); ws.binaryType = "arraybuffer"; wsRef.current = ws;
             batcher.current = new PCMStreamBatcher(ws, bp.current);
@@ -90,8 +91,11 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
                 }
                 else processEvent(m as GatewayEvent, store, setLatencyMs, onTranscript);
             };
-            ws.onclose = (ev) => { if (ev.code !== 1000 && ev.code !== 1001) { setStatus("reconnecting"); rm.current.trigger(); } else setStatus("disconnected"); };
-            ws.onerror = () => setStatus("error");
+            ws.onclose = (ev) => {
+                hk.zeroize();
+                if (ev.code !== 1000 && ev.code !== 1001) { setStatus("reconnecting"); rm.current.trigger(); } else setStatus("disconnected");
+            };
+            ws.onerror = () => { hk.zeroize(); setStatus("error"); };
         } catch { setStatus("error"); }
     }, [url, store]);
 
@@ -109,7 +113,10 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
             return;
         }
         try {
-            ws.send(encode({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature: new HandshakeManager().signIntent(raw_input) }));
+            const hk = new HandshakeManager();
+            const signature = hk.signIntent(raw_input);
+            ws.send(encode({ type: "INTENT", intent_id: crypto.randomUUID(), level, raw_input, signature }));
+            hk.zeroize();
         } catch (e) {
             store.addError({
                 code: "INTENT_SEND_FAILED",
@@ -243,14 +250,38 @@ class ReconnectionManager {
 }
 
 class HandshakeManager {
-    private kp: nacl.SignKeyPair; constructor() {
-        const k = "aether_ed25519_seed", s = localStorage.getItem(k);
-        const sd = s ? new Uint8Array(JSON.parse(s)) : nacl.randomBytes(32);
-        if (!s) localStorage.setItem(k, JSON.stringify(Array.from(sd)));
-        this.kp = nacl.sign.keyPair.fromSeed(sd);
+    private kp: nacl.SignKeyPair | null = null;
+
+    constructor() {
+        // Enforce ephemeral keys: generate a fresh keypair on every connection
+        // Do not persist Ed25519 seed in localStorage to avoid credential theft via XSS
+        const seed = nacl.randomBytes(32);
+        this.kp = nacl.sign.keyPair.fromSeed(seed);
+
+        // Zeroize the seed buffer immediately after usage
+        seed.fill(0);
     }
-    generateResponse(ch: string) { const sig = nacl.sign.detached(this.fh(ch), this.kp.secretKey); return { client_id: this.th(this.kp.publicKey), signature: this.th(sig) }; }
-    signIntent(i: string) { return this.th(nacl.sign.detached(new TextEncoder().encode(i), this.kp.secretKey)); }
+
+    generateResponse(ch: string) {
+        if (!this.kp) throw new Error("Keypair already zeroized");
+        const sig = nacl.sign.detached(this.fh(ch), this.kp.secretKey);
+        return { client_id: this.th(this.kp.publicKey), signature: this.th(sig) };
+    }
+
+    signIntent(i: string) {
+        if (!this.kp) throw new Error("Keypair already zeroized");
+        return this.th(nacl.sign.detached(new TextEncoder().encode(i), this.kp.secretKey));
+    }
+
+    zeroize() {
+        // Secure wipe of private key material
+        if (this.kp) {
+            const sk = this.kp.secretKey as Uint8Array;
+            sk.fill(0);
+            this.kp = null;
+        }
+    }
+
     private th(d: Uint8Array) { return Array.from(d).map(b => b.toString(16).padStart(2, '0')).join(''); }
     private fh(h: string) { const b = new Uint8Array(h.length / 2); for (let i = 0; i < h.length; i += 2) b[i / 2] = parseInt(h.slice(i, i + 2), 16); return b; }
 }

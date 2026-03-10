@@ -78,3 +78,18 @@ class ErrorMessage(BaseModel):
     code: int
     message: str
     fatal: bool = False
+
+
+class ForgeCommitPayload(BaseModel):
+    """Payload schema for agent forge commits."""
+
+    dna: dict[str, Any] = Field(default_factory=dict)
+    timestamp: Optional[float] = None
+
+
+class ClawInjectPayload(BaseModel):
+    """Payload schema for skill injections."""
+
+    instructions: str
+    rationales: list[str] = Field(default_factory=list)
+    timestamp: Optional[float] = None
