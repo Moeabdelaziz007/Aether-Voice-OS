@@ -17,6 +17,9 @@ import websockets
 # Standardizing configuration to match what AetherGateway and AI Session expect
 class MockAudioConfig:
     mic_queue_max = 5
+    send_sample_rate = 16000
+    receive_sample_rate = 24000
+    chunk_size = 512
 
 
 class MockModel:
@@ -53,6 +56,8 @@ class MockManifest:
         self.name = name
         self.persona = "You are the Aether Architect Expert."
         self.expertise = ["Cloud Architecture", "AI Systems"]
+        self.voice_id = "Aoide"
+        self.public_key = None
 
 
 class MockSoul:

@@ -121,6 +121,10 @@ class HiveCoordinator:
         """Register a callback for injecting DNA updates into the session."""
         self._inject_dna_callback = callback
 
+    def set_pre_warm_callback(self, callback: Callable[[str], Any]) -> None:
+        """Register a callback for pre-warming sessions during handover."""
+        self._pre_warm_callback = callback
+
     async def _notify_handover(
         self,
         from_agent: str,
