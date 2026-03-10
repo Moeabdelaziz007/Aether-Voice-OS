@@ -46,8 +46,7 @@ async def generate_system_audit(**kwargs) -> dict:
             ),
             "handover_count": (
                 len(_hive_coordinator._handover_callback_history)
-                if _hive_coordinator
-                and hasattr(_hive_coordinator, "_handover_callback_history")
+                if _hive_coordinator and hasattr(_hive_coordinator, "_handover_callback_history")
                 else 0
             ),
         },
@@ -71,8 +70,7 @@ def get_tools() -> list[dict]:
         {
             "name": "generate_system_audit",
             "description": (
-                "Perform a self-diagnostic audit of AetherOS internal systems, "
-                "metrics, and codebase integrity."
+                "Perform a self-diagnostic audit of AetherOS internal systems, metrics, and codebase integrity."
             ),
             "parameters": {
                 "type": "object",

@@ -33,9 +33,7 @@ class SpatialCortexAgent:
             ),
         )
 
-    async def map_vision_to_spatial(
-        self, vision_pulse: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def map_vision_to_spatial(self, vision_pulse: Dict[str, Any]) -> Dict[str, Any]:
         """
         Translates a 2D screenshot pulse into 3D spatial intent.
         Calculates gaze vectors based on UI focus points and active widget coordinates.
@@ -46,6 +44,7 @@ class SpatialCortexAgent:
         # 1. Coordinate Normalization (simulated UI coordinate extraction)
         # Using a slight random walk to simulate focus shifts for the demo
         import random
+
         focus_x = 0.5 + (random.random() - 0.5) * 0.4
         focus_y = 0.5 + (random.random() - 0.5) * 0.4
 

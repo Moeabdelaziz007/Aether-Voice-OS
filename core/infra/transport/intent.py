@@ -14,9 +14,7 @@ class IntentBroker:
     def __init__(self):
         self._schema_version = "1.1"
 
-    async def handle_intent(
-        self, client_id: str, msg_content: str, gateway: Any
-    ) -> bool:
+    async def handle_intent(self, client_id: str, msg_content: str, gateway: Any) -> bool:
         """
         Process an incoming intent message.
         Validates schema and triggers appropriate internal routing.
@@ -26,9 +24,7 @@ class IntentBroker:
             intent_type = payload.get("type")
 
             if not intent_type:
-                logger.warning(
-                    f"IntentBroker: Missing 'type' in payload from {client_id}"
-                )
+                logger.warning(f"IntentBroker: Missing 'type' in payload from {client_id}")
                 return False
 
             logger.info(f"✦ Intent Broker: Routing '{intent_type}' for {client_id}")
@@ -36,9 +32,7 @@ class IntentBroker:
             # Delegate to Gateway's broadcast or session injection
             # (Matches AetherGateway legacy logic)
             if intent_type == "UI_INTERACTION":
-                await gateway.broadcast(
-                    {"type": "STATE_UPDATE", "source": "broker", "intent": intent_type}
-                )
+                await gateway.broadcast({"type": "STATE_UPDATE", "source": "broker", "intent": intent_type})
                 return True
 
             elif intent_type == "SOUL_SHIFT":
@@ -57,7 +51,7 @@ class IntentBroker:
             elif intent_type == "CREATE_AGENT":
                 description = payload.get("description", "A helpful assistant")
                 logger.info(f"🎨 IntentBroker: Triggering Forge for '{description}'")
-                
+
                 if hasattr(gateway, "forge_agent"):
                     # Trigger the forge process
                     asyncio.create_task(gateway.forge_agent(description))

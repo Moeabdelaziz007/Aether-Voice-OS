@@ -70,9 +70,7 @@ class BoundedBuffer:
                 extracted = self._buf[read_start:end].copy()
             else:
                 first = self.max_samples - read_start
-                extracted = np.concatenate(
-                    [self._buf[read_start:], self._buf[: n - first]]
-                )
+                extracted = np.concatenate([self._buf[read_start:], self._buf[: n - first]])
             self._count -= n
             return extracted
 
@@ -147,9 +145,7 @@ class FrequencyDomainNLMS:
         self._E_cache = np.zeros(self.n_fft // 2 + 1, dtype=np.complex128)
         self._error_full = np.zeros(self.n_fft, dtype=np.float64)
 
-    def process(
-        self, far_end: np.ndarray, near_end: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def process(self, far_end: np.ndarray, near_end: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         """Process one block of audio through adaptive filter.
 
         Args:
@@ -188,9 +184,7 @@ class FrequencyDomainNLMS:
 
         # Update power estimate (smoothed)
         X_mag_sq = np.abs(X) ** 2
-        self.power_estimate = (
-            self.alpha * self.power_estimate + (1 - self.alpha) * X_mag_sq
-        )
+        self.power_estimate = self.alpha * self.power_estimate + (1 - self.alpha) * X_mag_sq
 
         # NLMS update with regularization
         mu = self.step_size / (self.power_estimate + self.regularization)
@@ -317,15 +311,9 @@ class DoubleTalkDetector:
             True if double-talk is detected
         """
         # Update energy estimates (exponential moving average)
-        self.far_end_energy = self.energy_alpha * self.far_end_energy + (
-            1 - self.energy_alpha
-        ) * np.mean(far_end**2)
-        self.near_end_energy = self.energy_alpha * self.near_end_energy + (
-            1 - self.energy_alpha
-        ) * np.mean(near_end**2)
-        self.error_energy = self.energy_alpha * self.error_energy + (
-            1 - self.energy_alpha
-        ) * np.mean(error_signal**2)
+        self.far_end_energy = self.energy_alpha * self.far_end_energy + (1 - self.energy_alpha) * np.mean(far_end**2)
+        self.near_end_energy = self.energy_alpha * self.near_end_energy + (1 - self.energy_alpha) * np.mean(near_end**2)
+        self.error_energy = self.energy_alpha * self.error_energy + (1 - self.energy_alpha) * np.mean(error_signal**2)
 
         # Method 1: Energy ratio test
         # If near-end has much more energy than far-end, it's near-end speech
@@ -344,9 +332,7 @@ class DoubleTalkDetector:
         coherence_test = False
         if len(self.far_end_history) >= 3:
             # Check coherence every few frames for efficiency
-            coherence = self.spectral_analyzer.compute_coherence(
-                far_end, near_end, n_frames=3
-            )
+            coherence = self.spectral_analyzer.compute_coherence(far_end, near_end, n_frames=3)
             # Low coherence suggests different signals (double-talk)
             coherence_test = coherence < self.coherence_threshold
 
@@ -416,9 +402,7 @@ class DelayEstimator:
         # Samples since last update
         self.samples_since_update = 0
 
-    def process(
-        self, far_end_chunk: np.ndarray, near_end_chunk: np.ndarray
-    ) -> tuple[int, float]:
+    def process(self, far_end_chunk: np.ndarray, near_end_chunk: np.ndarray) -> tuple[int, float]:
         """Process audio chunks and update delay estimate.
 
         Args:
@@ -457,8 +441,7 @@ class DelayEstimator:
             # Apply smoothing if confidence is good
             if confidence > 0.3:
                 smoothed_delay = int(
-                    self.smoothing_factor * self.estimated_delay_samples
-                    + (1 - self.smoothing_factor) * delay
+                    self.smoothing_factor * self.estimated_delay_samples + (1 - self.smoothing_factor) * delay
                 )
                 self.estimated_delay_samples = smoothed_delay
                 self.estimated_delay_ms = smoothed_delay * 1000.0 / self.sample_rate
@@ -578,9 +561,7 @@ class DynamicAEC:
 
         # Ring buffers for delay compensation
         self.far_end_ring_buffer: deque[np.ndarray] = deque(maxlen=20)
-        self.accumulated_far_end = BoundedBuffer(
-            max_samples=sample_rate * 5
-        )  # 5s limit
+        self.accumulated_far_end = BoundedBuffer(max_samples=sample_rate * 5)  # 5s limit
 
         self.near_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
         self.far_end_accumulator = BoundedBuffer(max_samples=self.block_size * 2)
@@ -637,9 +618,7 @@ class DynamicAEC:
         far_end_float = far_end.astype(np.float64) / 32768.0
 
         # Update delay estimation (using smaller chunks)
-        delay_samples, delay_confidence = self.delay_estimator.process(
-            far_end_float, near_end_float
-        )
+        delay_samples, delay_confidence = self.delay_estimator.process(far_end_float, near_end_float)
 
         # Store far-end in ring buffer for delay compensation
         self.far_end_ring_buffer.append(far_end_float.copy())
@@ -656,15 +635,11 @@ class DynamicAEC:
             far_block = self.far_end_accumulator.pop_left(self.block_size)
 
             # Get delay-compensated far-end signal
-            delay_frames = (
-                self.delay_estimator.estimated_delay_samples // self.frame_size
-            )
+            delay_frames = self.delay_estimator.estimated_delay_samples // self.frame_size
             compensated_far_end = self._get_delayed_block(far_block, delay_frames)
 
             # Process through adaptive filter
-            error_signal, estimated_echo = self.adaptive_filter.process(
-                compensated_far_end, near_block
-            )
+            error_signal, estimated_echo = self.adaptive_filter.process(compensated_far_end, near_block)
 
             # Update double-talk detection (use last frame of block)
             is_double_talk = self.double_talk_detector.update(
@@ -674,9 +649,7 @@ class DynamicAEC:
             )
 
             # Compute ERLE for the block
-            current_erle = erle(
-                near_block, error_signal, frame_size=self.block_size // 4
-            )
+            current_erle = erle(near_block, error_signal, frame_size=self.block_size // 4)
             self.erle_history.append(current_erle)
 
             # Update convergence status
@@ -705,9 +678,7 @@ class DynamicAEC:
 
         return cleaned_audio, self.state
 
-    def _get_delayed_block(
-        self, current_block: np.ndarray, delay_frames: int
-    ) -> np.ndarray:
+    def _get_delayed_block(self, current_block: np.ndarray, delay_frames: int) -> np.ndarray:
         """Get far-end block delayed by specified number of frames.
 
         Args:
@@ -733,9 +704,7 @@ class DynamicAEC:
             if 0 <= idx < buffer_len:
                 frame = self.far_end_ring_buffer[idx]
                 samples_to_copy = min(len(frame), samples_needed - result_idx)
-                result[result_idx : result_idx + samples_to_copy] = frame[
-                    :samples_to_copy
-                ]
+                result[result_idx : result_idx + samples_to_copy] = frame[:samples_to_copy]
                 result_idx += samples_to_copy
                 if result_idx >= samples_needed:
                     break
@@ -758,9 +727,7 @@ class DynamicAEC:
         Call this during session initialization with a short
         audio burst to accelerate convergence.
         """
-        return self.adaptive_filter.pre_train(
-            far_end_signal, near_end_signal, iterations
-        )
+        return self.adaptive_filter.pre_train(far_end_signal, near_end_signal, iterations)
 
     def _adaptive_step_size(self, current_erle: float) -> float:
         """Dynamically adjust NLMS step size based on convergence progress."""
@@ -821,13 +788,9 @@ class DynamicAEC:
             self.convergence_frame_count = max(0, self.convergence_frame_count - 1)
 
         # Exponential smoothing for progress
-        raw_progress = min(
-            1.0, self.convergence_frame_count / self.convergence_frames_needed
-        )
+        raw_progress = min(1.0, self.convergence_frame_count / self.convergence_frames_needed)
         smoothing = 0.9  # High smoothing for stability
-        self.state.convergence_progress = (
-            smoothing * self.state.convergence_progress + (1 - smoothing) * raw_progress
-        )
+        self.state.convergence_progress = smoothing * self.state.convergence_progress + (1 - smoothing) * raw_progress
 
         # Mark converged when sustained
         if self.state.convergence_progress >= 0.95:
@@ -899,9 +862,7 @@ class DynamicAEC:
         if filter_length_ms is not None:
             # Recalculate filter length
             new_filter_length = int(filter_length_ms * self.sample_rate / 1000)
-            new_filter_length = 2 ** int(
-                np.ceil(np.log2(max(new_filter_length, self.frame_size * 2)))
-            )
+            new_filter_length = 2 ** int(np.ceil(np.log2(max(new_filter_length, self.frame_size * 2))))
             new_filter_length = max(new_filter_length, 512)
 
             # Only recreate filter if length changed significantly
@@ -912,15 +873,11 @@ class DynamicAEC:
                     regularization=1e-4,
                     leakage=0.999,
                 )
-                logger.info(
-                    f"AEC filter length updated to: {new_filter_length} samples"
-                )
+                logger.info(f"AEC filter length updated to: {new_filter_length} samples")
 
         if convergence_threshold_db is not None:
             self.convergence_threshold_db = convergence_threshold_db
-            logger.info(
-                f"AEC convergence threshold updated to: {convergence_threshold_db}dB"
-            )
+            logger.info(f"AEC convergence threshold updated to: {convergence_threshold_db}dB")
 
     def reset(self) -> None:
         """Reset AEC system."""

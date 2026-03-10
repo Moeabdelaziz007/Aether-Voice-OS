@@ -37,15 +37,11 @@ async def test_hive_full_lifecycle():
     handoff.set_hive_params(hive, restart_event)
 
     # 3. Test Expertise Matching
-    coding_expert_name = await hive.evaluate_intent(
-        "Could you write a python script for me?"
-    )
+    coding_expert_name = await hive.evaluate_intent("Could you write a python script for me?")
     assert coding_expert_name == "CodingExpert"
 
     # Should be None because we are already in ArchitectExpert (the default)
-    arch_expert_name = await hive.evaluate_intent(
-        "What is the best architecture for this swarm?"
-    )
+    arch_expert_name = await hive.evaluate_intent("What is the best architecture for this swarm?")
     assert arch_expert_name is None
 
     # Should be CodingExpert because it differs from ArchitectExpert
@@ -55,9 +51,7 @@ async def test_hive_full_lifecycle():
     # 4. Test Handoff Execution
     assert hive.active_soul.manifest.name == "ArchitectExpert"
 
-    result = await handoff.delegate_to_agent(
-        target_agent_id="CodingExpert", task_description="Refactor engine.py"
-    )
+    result = await handoff.delegate_to_agent(target_agent_id="CodingExpert", task_description="Refactor engine.py")
 
     assert result["status"] == "handoff_initiated"
     assert hive.active_soul.manifest.name == "CodingExpert"
@@ -85,9 +79,7 @@ async def test_hive_full_lifecycle():
     hive_memory.set_firebase_connector(fb_mock)
 
     # Agent A writes memory
-    await hive_memory.write_collective_memory(
-        "last_plan", {"steps": [1, 2, 3]}, tags=["arch"]
-    )
+    await hive_memory.write_collective_memory("last_plan", {"steps": [1, 2, 3]}, tags=["arch"])
 
     # Verify mock call
     mock_db.collection.assert_called_with("hive_memory")

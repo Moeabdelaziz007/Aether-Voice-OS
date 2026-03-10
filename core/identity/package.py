@@ -43,9 +43,7 @@ class SoulManifest(BaseModel):
         description="Domain-specific expertise scores (0.0 to 1.0)",
     )
     author: Optional[str] = None
-    public_key: Optional[str] = Field(
-        None, description="Ed25519 public key (hex) for authentication"
-    )
+    public_key: Optional[str] = Field(None, description="Ed25519 public key (hex) for authentication")
     checksum: Optional[str] = Field(None, description="SHA256 of the package contents")
 
     @field_validator("capabilities")
@@ -125,8 +123,7 @@ class AthPackage:
             actual = package.compute_checksum()
             if actual != manifest.checksum:
                 raise PackageCorruptError(
-                    f"Checksum mismatch for {manifest.name}: "
-                    f"expected={manifest.checksum}, actual={actual}",
+                    f"Checksum mismatch for {manifest.name}: expected={manifest.checksum}, actual={actual}",
                     context={
                         "package": manifest.name,
                         "expected": manifest.checksum,
@@ -144,9 +141,7 @@ class AthPackage:
         Files are sorted alphabetically for deterministic output.
         """
         hasher = hashlib.sha256()
-        files = sorted(
-            f for f in self.path.rglob("*") if f.is_file() and f.name != "manifest.json"
-        )
+        files = sorted(f for f in self.path.rglob("*") if f.is_file() and f.name != "manifest.json")
         for file_path in files:
             hasher.update(file_path.read_bytes())
         return hasher.hexdigest()

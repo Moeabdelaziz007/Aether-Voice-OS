@@ -88,16 +88,12 @@ class GeneticOptimizer:
     Orchestrates the evolution of the Agent's soul.
     """
 
-    def __init__(
-        self, firebase: FirebaseConnector, api_key: str, ema_alpha: float = 0.3
-    ):
+    def __init__(self, firebase: FirebaseConnector, api_key: str, ema_alpha: float = 0.3):
         self._firebase = firebase
         self._api_key = api_key
         self._ema_alpha = ema_alpha  # Exponential Moving Average smoothing factor
 
-    async def evolve(
-        self, expert_id: str, current_dna: AgentDNA, session_id: Optional[str] = None
-    ) -> AgentDNA:
+    async def evolve(self, expert_id: str, current_dna: AgentDNA, session_id: Optional[str] = None) -> AgentDNA:
         """
         Perform a mutation or crossover step based on the last session's performance.
         """
@@ -168,12 +164,12 @@ class GeneticOptimizer:
             target_verbosity = max(0.2, new_dna_dict["verbosity"] - 0.2)
             target_empathy = min(1.0, new_dna_dict["empathy"] + 0.2)
             # Apply EMA smoothing: trait = (1-alpha)*current + alpha*target
-            new_dna_dict["verbosity"] = (1.0 - self._ema_alpha) * new_dna_dict[
-                "verbosity"
-            ] + (self._ema_alpha * target_verbosity)
-            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict[
-                "empathy"
-            ] + (self._ema_alpha * target_empathy)
+            new_dna_dict["verbosity"] = (1.0 - self._ema_alpha) * new_dna_dict["verbosity"] + (
+                self._ema_alpha * target_verbosity
+            )
+            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict["empathy"] + (
+                self._ema_alpha * target_empathy
+            )
             msg = "High Arousal detected. Transitioning to 'Calm Operator' state (Concise + High Empathy)."
             logger.info("🔥 Hot-Mutation (EMA): %s", msg)
             rationales.append(msg)
@@ -181,9 +177,9 @@ class GeneticOptimizer:
         # 2. Valence (Positive/Negative) -> Adjust Empathy
         if trait_name == "valence" and trait_value < 0.4:
             target_empathy = min(1.0, new_dna_dict["empathy"] + 0.3)
-            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict[
-                "empathy"
-            ] + (self._ema_alpha * target_empathy)
+            new_dna_dict["empathy"] = (1.0 - self._ema_alpha) * new_dna_dict["empathy"] + (
+                self._ema_alpha * target_empathy
+            )
             msg = "Negative Valence detected. Boosting Empathy level."
             logger.info("🔥 Hot-Mutation (EMA): %s", msg)
             rationales.append(msg)

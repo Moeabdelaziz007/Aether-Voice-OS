@@ -68,9 +68,7 @@ def configure_logging(log_level: str = "INFO", log_file: Optional[str] = None):
             )
             handlers.append(file_handler)
         except (PermissionError, OSError) as e:
-            print(
-                f"Warning: Failed to initialize file logging at {log_file} ({e}). Falling back to console only."
-            )
+            print(f"Warning: Failed to initialize file logging at {log_file} ({e}). Falling back to console only.")
 
     root_logger = logging.getLogger()
 

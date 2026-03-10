@@ -115,8 +115,7 @@ def get_tools() -> list[dict[str, Any]]:
         {
             "name": "voyager_browser_control",
             "description": (
-                "Browser control wrapper for Voyager actions. "
-                "Actions: open_url, click, type, scroll, capture_frame."
+                "Browser control wrapper for Voyager actions. Actions: open_url, click, type, scroll, capture_frame."
             ),
             "parameters": {
                 "type": "object",

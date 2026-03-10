@@ -18,9 +18,7 @@ class AetherContextScraper:
     def __init__(self):
         self.fetcher = Fetcher(auto_match=True) if Fetcher else None
 
-    async def search_solution(
-        self, query: str, platform: str = "stackoverflow"
-    ) -> List[Dict]:
+    async def search_solution(self, query: str, platform: str = "stackoverflow") -> List[Dict]:
         """
         Searches for a specific solution on StackOverflow or GitHub.
         """
@@ -50,16 +48,10 @@ class AetherContextScraper:
             for el in elements[:5]:
                 link = el.attrib.get("href", "")
                 if not link.startswith("http"):
-                    base = (
-                        "https://stackoverflow.com"
-                        if platform == "stackoverflow"
-                        else "https://github.com"
-                    )
+                    base = "https://stackoverflow.com" if platform == "stackoverflow" else "https://github.com"
                     link = f"{base}{link}"
 
-                results.append(
-                    {"title": el.text.strip(), "link": link, "platform": platform}
-                )
+                results.append({"title": el.text.strip(), "link": link, "platform": platform})
             return results
         except Exception as e:
             return [{"error": str(e)}]
@@ -72,10 +64,7 @@ class AetherContextScraper:
         try:
             response = await asyncio.to_thread(self.fetcher.get, url)
             titles = response.css(".titleline > a")
-            return [
-                {"title": t.text, "link": t.attrib.get("href"), "source": "HackerNews"}
-                for t in titles[:5]
-            ]
+            return [{"title": t.text, "link": t.attrib.get("href"), "source": "HackerNews"} for t in titles[:5]]
         except Exception:
             return []
 
@@ -118,16 +107,11 @@ def get_tools() -> list[dict]:
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": (
-                            "The technical issue or error message to search for"
-                        ),
+                        "description": ("The technical issue or error message to search for"),
                     },
                     "platform": {
                         "type": "string",
-                        "description": (
-                            "The platform to search on (stackoverflow, github, "
-                            "hackernews)"
-                        ),
+                        "description": ("The platform to search on (stackoverflow, github, hackernews)"),
                         "enum": ["stackoverflow", "github", "hackernews"],
                         "default": "stackoverflow",
                     },
@@ -144,9 +128,7 @@ if __name__ == "__main__":
     # Quick test
     async def main():
         scraper = AetherContextScraper()
-        res = await scraper.search_solution(
-            "Next.js 15 middleware error", "stackoverflow"
-        )
+        res = await scraper.search_solution("Next.js 15 middleware error", "stackoverflow")
         print(scraper.format_as_context(res))
 
     asyncio.run(main())

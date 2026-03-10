@@ -35,9 +35,7 @@ class LifecycleManager:
         await self.event_bus.start()
 
         # Mark as booting
-        await self.state_manager.request_transition(
-            SystemState.BOOTING, source="Lifecycle", reason="Initial Power On"
-        )
+        await self.state_manager.request_transition(SystemState.BOOTING, source="Lifecycle", reason="Initial Power On")
 
         # Simulation of component initialization (Audio, AI, Gateway)
         # We will add actual component registration here in later tasks
@@ -59,10 +57,7 @@ class LifecycleManager:
         Graceful Collapse Sequence.
         Ensures all audio buffers are flushed and AI streams are closed.
         """
-        if (
-            self.state_manager.current_state == SystemState.BOOTING
-            and not self.event_bus._running
-        ):
+        if self.state_manager.current_state == SystemState.BOOTING and not self.event_bus._running:
             # Already down or failed early
             return
 

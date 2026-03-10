@@ -23,9 +23,7 @@ class _FakeQuery:
 
     def where(self, field: str, op: str, value: str) -> "_FakeQuery":
         if field == "tag" and op == "==":
-            return _FakeQuery(
-                [doc for doc in self._docs if doc.to_dict().get("tag") == value]
-            )
+            return _FakeQuery([doc for doc in self._docs if doc.to_dict().get("tag") == value])
         return _FakeQuery(list(self._docs))
 
     async def stream(self):
@@ -53,9 +51,7 @@ class _FakeCollection:
 
     def where(self, field: str, op: str, value: str) -> _FakeQuery:
         if field == "tag" and op == "==":
-            return _FakeQuery(
-                [_FakeDoc(note) for note in self._bucket if note.get("tag") == value]
-            )
+            return _FakeQuery([_FakeDoc(note) for note in self._bucket if note.get("tag") == value])
         return _FakeQuery([_FakeDoc(note) for note in self._bucket])
 
     async def stream(self):

@@ -163,9 +163,7 @@ class SessionStateManager:
                 if self._broadcast:
                     await self._broadcast("engine_state", {"state": new_state.name})
         except (KeyError, ValueError):
-            logger.warning(
-                "A2A [STATE] Received invalid global state: %s", new_state_name
-            )
+            logger.warning("A2A [STATE] Received invalid global state: %s", new_state_name)
 
     @property
     def state(self) -> SessionState:
@@ -279,17 +277,11 @@ class SessionStateManager:
 
         snapshot = await self.create_snapshot()
         # Save by session ID
-        success = await self._bus.set_state(
-            f"session:{self._metadata.session_id}", snapshot, ex=3600
-        )  # 1hr TTL
+        success = await self._bus.set_state(f"session:{self._metadata.session_id}", snapshot, ex=3600)  # 1hr TTL
         if success:
             # Mark as active session for discovery
-            await self._bus.set_state(
-                "active_session_id", self._metadata.session_id, ex=3600
-            )
-            logger.debug(
-                "A2A [STATE] Persisted session %s to Redis", self._metadata.session_id
-            )
+            await self._bus.set_state("active_session_id", self._metadata.session_id, ex=3600)
+            logger.debug("A2A [STATE] Persisted session %s to Redis", self._metadata.session_id)
         return success
 
     async def restore_from_bus(self, session_id: str) -> bool:
@@ -299,22 +291,16 @@ class SessionStateManager:
 
         snapshot = await self._bus.get_state(f"session:{session_id}")
         if snapshot:
-            logger.info(
-                "A2A [STATE] Found persistent snapshot for %s, restoring...", session_id
-            )
+            logger.info("A2A [STATE] Found persistent snapshot for %s, restoring...", session_id)
             return await self.restore_from_snapshot(snapshot)
         return False
 
-    def _is_valid_transition(
-        self, from_state: SessionState, to_state: SessionState
-    ) -> bool:
+    def _is_valid_transition(self, from_state: SessionState, to_state: SessionState) -> bool:
         """Check if state transition is valid."""
         allowed = self._VALID_TRANSITIONS.get(from_state, [])
         return to_state in allowed
 
-    async def _broadcast_state_change(
-        self, old_state: SessionState, new_state: SessionState, reason: str
-    ) -> None:
+    async def _broadcast_state_change(self, old_state: SessionState, new_state: SessionState, reason: str) -> None:
         """Broadcast state change to all connected clients."""
         if not self._broadcast:
             return
@@ -333,9 +319,7 @@ class SessionStateManager:
         except Exception as e:
             logger.error("Failed to broadcast state change: %s", e)
 
-    async def wait_for_state(
-        self, target_states: list[SessionState], timeout: Optional[float] = None
-    ) -> bool:
+    async def wait_for_state(self, target_states: list[SessionState], timeout: Optional[float] = None) -> bool:
         """
         Wait for session to reach one of the target states.
 
@@ -392,9 +376,7 @@ class SessionStateManager:
         if self._health_check_task and not self._health_check_task.done():
             return
 
-        self._health_check_task = asyncio.create_task(
-            self._health_check_loop(check_interval)
-        )
+        self._health_check_task = asyncio.create_task(self._health_check_loop(check_interval))
 
     async def stop_health_monitoring(self) -> None:
         """Stop health monitoring task."""
@@ -431,18 +413,13 @@ class SessionStateManager:
                 await self.transition_to(SessionState.SHUTDOWN, "Max errors reached")
             else:
                 logger.info("Attempting recovery from error state")
-                await self.transition_to(
-                    SessionState.RECOVERING, "Auto-recovery triggered"
-                )
+                await self.transition_to(SessionState.RECOVERING, "Auto-recovery triggered")
 
         self._last_health_check = datetime.now()
 
     def should_trigger_reconnection(self) -> bool:
         """Determine if session needs reconnection based on error count."""
-        return (
-            self._consecutive_errors > 0
-            and self._consecutive_errors < self._max_consecutive_errors
-        )
+        return self._consecutive_errors > 0 and self._consecutive_errors < self._max_consecutive_errors
 
     async def create_snapshot(self) -> dict[str, Any]:
         """Create a snapshot of current session for crash recovery."""

@@ -205,11 +205,13 @@ async def run_browser_tests():
                     full_page=False,
                 )
 
-                results["tests"].append({
-                    "name": "Audio Pipeline Init",
-                    "status": "PASS",
-                    "details": {**audio_support, **media_support},
-                })
+                results["tests"].append(
+                    {
+                        "name": "Audio Pipeline Init",
+                        "status": "PASS",
+                        "details": {**audio_support, **media_support},
+                    }
+                )
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
@@ -244,11 +246,13 @@ async def run_browser_tests():
                     full_page=False,
                 )
 
-                results["tests"].append({
-                    "name": "UI Responsiveness",
-                    "status": "PASS",
-                    "details": perf_metrics,
-                })
+                results["tests"].append(
+                    {
+                        "name": "UI Responsiveness",
+                        "status": "PASS",
+                        "details": perf_metrics,
+                    }
+                )
                 results["passed"] += 1
             except Exception as e:
                 logger.error(f"  FAIL: {e}")
@@ -303,6 +307,7 @@ async def run_browser_tests():
 
         # Save results
         import json
+
         report_path = ROOT / "test-results" / "browser_e2e_report.json"
         with open(report_path, "w") as f:
             json.dump(results, f, indent=2, default=str)

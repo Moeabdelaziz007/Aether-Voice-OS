@@ -82,9 +82,7 @@ class HiveCoordinator:
         self._context_bridge: Dict[str, str] = {}
 
         # Deep Handover Protocol integration
-        self._handover_protocol = (
-            get_handover_protocol() if enable_deep_handover else None
-        )
+        self._handover_protocol = get_handover_protocol() if enable_deep_handover else None
         self._telemetry = get_telemetry() if enable_deep_handover else None
         self._active_handovers: Dict[str, HandoverContext] = {}
         self._handover_history: List[str] = []
@@ -93,9 +91,7 @@ class HiveCoordinator:
         self._summarizer = NeuralSummarizer(ai_config) if ai_config else None
 
         # Safety: Rollback and Checkpointing
-        self._last_successful_soul: Optional[AthPackage] = (
-            self._active_soul if hasattr(self, "_active_soul") else None
-        )
+        self._last_successful_soul: Optional[AthPackage] = self._active_soul if hasattr(self, "_active_soul") else None
         self._last_handover_id: Optional[str] = None
 
         # Genetic DNA Repository
@@ -115,9 +111,7 @@ class HiveCoordinator:
 
         self._inject_dna_callback: Optional[Callable[[AgentDNA, List[str]], Any]] = None
 
-    def set_inject_dna_callback(
-        self, callback: Callable[[AgentDNA, List[str]], Any]
-    ) -> None:
+    def set_inject_dna_callback(self, callback: Callable[[AgentDNA, List[str]], Any]) -> None:
         """Register a callback for injecting DNA updates into the session."""
         self._inject_dna_callback = callback
 
@@ -135,9 +129,7 @@ class HiveCoordinator:
         try:
             if asyncio.iscoroutinefunction(self._on_handover):
                 try:
-                    await self._on_handover(
-                        from_agent, to_agent, task, callback_payload
-                    )
+                    await self._on_handover(from_agent, to_agent, task, callback_payload)
                 except TypeError:
                     await self._on_handover(from_agent, to_agent, task)
             else:
@@ -168,9 +160,7 @@ class HiveCoordinator:
             self._dna_pool[soul_name] = AgentDNA()
         return self._dna_pool[soul_name]
 
-    async def evolve_soul(
-        self, soul_name: str, session_id: Optional[str] = None
-    ) -> None:
+    async def evolve_soul(self, soul_name: str, session_id: Optional[str] = None) -> None:
         """Trigger an evolutionary step for a specific soul."""
         if not self._genetic_optimizer:
             return
@@ -185,9 +175,7 @@ class HiveCoordinator:
     async def request_handoff(self, target_agent: str, task: str):
         """Standard request for any kind of handover."""
         logger.info(f"COORD: Requested handoff to {target_agent}")
-        await self._notify_handover(
-            "Hive", target_agent, task, {"galaxy_id": "Genesis"}
-        )
+        await self._notify_handover("Hive", target_agent, task, {"galaxy_id": "Genesis"})
 
     async def prepare_handoff(
         self,
@@ -221,20 +209,16 @@ class HiveCoordinator:
             return True, None, "Legacy handoff used"
 
         try:
-            source_name = (
-                self.active_soul.manifest.name if self._active_soul else "System"
-            )
+            source_name = self.active_soul.manifest.name if self._active_soul else "System"
             payload_with_galaxy = dict(payload or {})
             payload_with_galaxy.setdefault("galaxy_id", "Genesis")
 
             # Create handover context
-            context = (
-                await self._handover_protocol.create_handover(  # Await protocol call
-                    source_agent=source_name,
-                    target_agent=target_name,
-                    task=task,
-                    payload=payload_with_galaxy,
-                )
+            context = await self._handover_protocol.create_handover(  # Await protocol call
+                source_agent=source_name,
+                target_agent=target_name,
+                task=task,
+                payload=payload_with_galaxy,
             )
 
             # Create snapshot for potential rollback
@@ -275,9 +259,7 @@ class HiveCoordinator:
 
             # Trigger Neural Compression (Semantic Seed generation)
             if self._summarizer and self._summarizer.should_compress(context):
-                logger.info(
-                    "✦ Compressing context for handover %s", context.handover_id
-                )
+                logger.info("✦ Compressing context for handover %s", context.handover_id)
                 # Note: This is an async call in a potentially legacy sync context.
                 # In ADK 2.0, most Hive operations are transitioning to async.
                 # For now, we'll create a task to run it.
@@ -293,9 +275,7 @@ class HiveCoordinator:
                 context.negotiation = negotiation
             else:
                 # Speculative pre-warming for zero-friction handovers
-                await self._handover_protocol.pre_warm_target(
-                    context.handover_id
-                )  # Await protocol call
+                await self._handover_protocol.pre_warm_target(context.handover_id)  # Await protocol call
                 if self._pre_warm_callback:
                     # Non-blocking trigger of gateway pre-warm
                     if asyncio.iscoroutinefunction(self._pre_warm_callback):
@@ -323,9 +303,7 @@ class HiveCoordinator:
             logger.error("Prepare handoff failed: %s", e)
             return False, None, str(e)
 
-    def get_pending_handover_for_target(
-        self, target_name: str
-    ) -> Optional[HandoverContext]:
+    def get_pending_handover_for_target(self, target_name: str) -> Optional[HandoverContext]:
         """
         Retrieve the most recent pending handover for a specific target agent.
 
@@ -337,11 +315,7 @@ class HiveCoordinator:
         """
 
         # Include COMPLETED handovers so we can inject them immediately after the soul switch
-        pending = [
-            ctx
-            for ctx in self._active_handovers.values()
-            if ctx.target_agent == target_name
-        ]
+        pending = [ctx for ctx in self._active_handovers.values() if ctx.target_agent == target_name]
 
         if not pending:
             return None
@@ -392,9 +366,7 @@ class HiveCoordinator:
                     logger.warning("Handover %s has validation issues", handover_id)
 
             # Complete the handover
-            success, message = await self._handover_protocol.complete_handoff(
-                handover_id
-            )  # Await protocol call
+            success, message = await self._handover_protocol.complete_handoff(handover_id)  # Await protocol call
 
             if success:
                 # Save checkpoints for potential future rollbacks (Safety Net)
@@ -403,9 +375,7 @@ class HiveCoordinator:
 
                 # Switch the active soul
                 target = self._registry.get(context.target_agent)
-                from_name = (
-                    self.active_soul.manifest.name if self._active_soul else "System"
-                )
+                from_name = self.active_soul.manifest.name if self._active_soul else "System"
                 self._active_soul = target
 
                 # Add to history
@@ -466,28 +436,20 @@ class HiveCoordinator:
 
         try:
             # 1. Execute rollback in protocol
-            success, message = await self._handover_protocol.rollback_handover(
-                handover_id
-            )
+            success, message = await self._handover_protocol.rollback_handover(handover_id)
             if not success:
                 logger.error("Protocol-level rollback failed: %s", message)
                 return False, f"Protocol rollback failed: {message}"
 
             # 2. Restore context state from snapshot
             if context.restore_snapshot():
-                logger.info(
-                    "A2A [HIVE] Context restored from snapshot for %s", handover_id
-                )
+                logger.info("A2A [HIVE] Context restored from snapshot for %s", handover_id)
 
             # 3. Revert active soul to the last known-good expert
             if self._last_successful_soul:
-                from_name = (
-                    self._active_soul.manifest.name if self._active_soul else "Unknown"
-                )
+                from_name = self._active_soul.manifest.name if self._active_soul else "Unknown"
                 to_name = self._last_successful_soul.manifest.name
-                logger.info(
-                    "A2A [HIVE] Reverting active expert: %s -> %s", from_name, to_name
-                )
+                logger.info("A2A [HIVE] Reverting active expert: %s -> %s", from_name, to_name)
                 self._active_soul = self._last_successful_soul
 
             # 4. Record telemetry
@@ -524,9 +486,7 @@ class HiveCoordinator:
         logger.debug("Negotiation initiated for handover %s", context.handover_id)
         return negotiation
 
-    def _handle_negotiation_counter(
-        self, negotiation: HandoverNegotiation, **kwargs: Any
-    ) -> None:
+    def _handle_negotiation_counter(self, negotiation: HandoverNegotiation, **kwargs: Any) -> None:
         msg = negotiation.counter_terms(
             scope=kwargs.get("scope"),
             deliverables=kwargs.get("deliverables"),
@@ -534,18 +494,14 @@ class HiveCoordinator:
         )
         logger.debug("Counter offer sent: %s", msg.message_id)
 
-    def _handle_negotiation_accept(
-        self, handover_id: str, context: HandoverContext
-    ) -> None:
+    def _handle_negotiation_accept(self, handover_id: str, context: HandoverContext) -> None:
         if not context.negotiation:
             raise ValueError("No active negotiation found in context")
         context.negotiation.accept_terms()
         context.update_status(HandoverStatus.PREPARING)
         logger.info("Negotiation accepted for handover %s", handover_id)
 
-    def _handle_negotiation_reject(
-        self, handover_id: str, context: HandoverContext, **kwargs: Any
-    ) -> None:
+    def _handle_negotiation_reject(self, handover_id: str, context: HandoverContext, **kwargs: Any) -> None:
         if not context.negotiation:
             raise ValueError("No active negotiation found in context")
         reason = kwargs.get("reason", "Terms rejected")
@@ -561,9 +517,7 @@ class HiveCoordinator:
                 failure_reason=reason,
             )
 
-    def _handle_negotiation_clarify(
-        self, context: HandoverContext, **kwargs: Any
-    ) -> None:
+    def _handle_negotiation_clarify(self, context: HandoverContext, **kwargs: Any) -> None:
         if not context.negotiation:
             raise ValueError("No active negotiation found in context")
         question = kwargs.get("question", "Please clarify")
@@ -599,13 +553,9 @@ class HiveCoordinator:
 
         try:
             dispatcher = {
-                "counter": lambda: self._handle_negotiation_counter(
-                    negotiation, **kwargs
-                ),
+                "counter": lambda: self._handle_negotiation_counter(negotiation, **kwargs),
                 "accept": lambda: self._handle_negotiation_accept(handover_id, context),
-                "reject": lambda: self._handle_negotiation_reject(
-                    handover_id, context, **kwargs
-                ),
+                "reject": lambda: self._handle_negotiation_reject(handover_id, context, **kwargs),
                 "clarify": lambda: self._handle_negotiation_clarify(context, **kwargs),
             }
 
@@ -708,11 +658,7 @@ class HiveCoordinator:
         Returns the name of the better expert if found.
         """
         best_expert = await self._registry.find_expert(query)
-        if (
-            best_expert
-            and self.active_soul
-            and best_expert.manifest.name != self.active_soul.manifest.name
-        ):
+        if best_expert and self.active_soul and best_expert.manifest.name != self.active_soul.manifest.name:
             # Only suggest if the expertise score is significantly high
             return best_expert.manifest.name
         return None
@@ -726,9 +672,7 @@ class HiveCoordinator:
             seed = await self._summarizer.compress(context)
             if seed:
                 context.compressed_seed = seed
-                logger.info(
-                    "✦ Handover %s now has a Semantic Seed.", context.handover_id
-                )
+                logger.info("✦ Handover %s now has a Semantic Seed.", context.handover_id)
         except Exception as e:
             logger.error("Failed to apply compression: %s", e)
 
@@ -749,9 +693,7 @@ class HiveCoordinator:
             if spatial_cortex:
                 # 2. Process vision -> 3D vectors
                 vision_data = {"b64": event.b64_data, "mime": event.mime_type}
-                spatial_intent = await spatial_cortex.agent.map_vision_to_spatial(
-                    vision_data
-                )
+                spatial_intent = await spatial_cortex.agent.map_vision_to_spatial(vision_data)
 
                 # 3. Inject spatial intent into the active soul's working buffer
                 # This grounding allows the specialist to 'see' the UI state

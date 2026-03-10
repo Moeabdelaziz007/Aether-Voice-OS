@@ -110,10 +110,7 @@ class HealthChecker:
 
                         if component.consecutive_failures >= self._threshold:
                             component.status = HealthStatus.UNHEALTHY
-                            logger.error(
-                                f"❌ {name} unhealthy: {msg} "
-                                f"({component.consecutive_failures} failures)"
-                            )
+                            logger.error(f"❌ {name} unhealthy: {msg} ({component.consecutive_failures} failures)")
                             if self._on_unhealthy:
                                 self._on_unhealthy(name)
                         else:

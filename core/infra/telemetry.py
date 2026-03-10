@@ -29,9 +29,7 @@ class ToolTimeoutTelemetry:
         self._timeout_events: deque[dict[str, object]] = deque(maxlen=window_size)
         self._lock = threading.Lock()
 
-    def record_tool_dispatch(
-        self, tool_name: str, duration_ms: float, timed_out: bool
-    ) -> None:
+    def record_tool_dispatch(self, tool_name: str, duration_ms: float, timed_out: bool) -> None:
         with self._lock:
             self._durations_ms.append(duration_ms)
             if timed_out:
@@ -79,18 +77,14 @@ class TelemetryManager:
     Exports traces to Arize/Phoenix via OTLP.
     """
 
-    def __init__(
-        self, model_id: str = "AetherOS-Core", model_version: str = "v2.0-neuro"
-    ):
+    def __init__(self, model_id: str = "AetherOS-Core", model_version: str = "v2.0-neuro"):
         self.model_id = model_id
         self.model_version = model_version
         self._is_initialized = False
         self.tracer: Optional[trace_api.Tracer] = None
 
         # Arize/Phoenix Config
-        self.endpoint = os.getenv(
-            "ARIZE_ENDPOINT", "http://localhost:6006/v1/traces"
-        )  # Default to local Phoenix
+        self.endpoint = os.getenv("ARIZE_ENDPOINT", "http://localhost:6006/v1/traces")  # Default to local Phoenix
         self.space_id = os.getenv("ARIZE_SPACE_ID")
         self.api_key = os.getenv("ARIZE_API_KEY")
 
@@ -122,11 +116,7 @@ class TelemetryManager:
                 headers = {"space_id": self.space_id, "api_key": self.api_key}
 
             # Use BatchSpanProcessor for production, Simple for dev/debugging
-            processor_class = (
-                BatchSpanProcessor
-                if not os.getenv("DEBUG_OTEL")
-                else SimpleSpanProcessor
-            )
+            processor_class = BatchSpanProcessor if not os.getenv("DEBUG_OTEL") else SimpleSpanProcessor
 
             exporter = OTLPSpanExporter(endpoint=self.endpoint, headers=headers)
 

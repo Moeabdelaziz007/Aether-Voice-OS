@@ -94,9 +94,7 @@ class PythonASTExtractor:
             elif isinstance(node, ast.ClassDef):
                 classes.append(self._extract_class(node))
 
-            elif isinstance(node, ast.FunctionDef) or isinstance(
-                node, ast.AsyncFunctionDef
-            ):
+            elif isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
                 # Only top-level functions (not methods)
                 parent = self._find_parent(tree, node)
                 if parent is None or isinstance(parent, ast.Module):
@@ -157,9 +155,7 @@ class PythonASTExtractor:
             attributes=attributes,
         )
 
-    def _extract_function(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef, is_method: bool = False
-    ) -> FunctionInfo:
+    def _extract_function(self, node: ast.FunctionDef | ast.AsyncFunctionDef, is_method: bool = False) -> FunctionInfo:
         """Extract metadata from a function definition."""
 
         docstring = ast.get_docstring(node)

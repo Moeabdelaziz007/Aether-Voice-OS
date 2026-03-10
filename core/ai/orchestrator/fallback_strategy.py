@@ -97,11 +97,7 @@ class FallbackStrategy:
             Fallback planet ID or None if no eligible fallback
         """
         # Filter out planets with open circuits and the failed planet
-        eligible = [
-            p
-            for p in available_planets
-            if not self.is_circuit_open(p) and p != failed_planet
-        ]
+        eligible = [p for p in available_planets if not self.is_circuit_open(p) and p != failed_planet]
 
         if not eligible:
             logger.error("No eligible fallback planets for %s", failed_planet)

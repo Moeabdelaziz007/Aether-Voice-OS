@@ -23,10 +23,7 @@ try:
     logger.info("✦ Aether Cortex: Rust acceleration ARMED.")
 except ImportError as e:
     HAS_RUST_CORTEX = False
-    logger.warning(
-        f"✧ Aether Cortex: Rust acceleration not found ({e}). "
-        "Falling back to NumPy (Performance degraded)."
-    )
+    logger.warning(f"✧ Aether Cortex: Rust acceleration not found ({e}). Falling back to NumPy (Performance degraded).")
     import traceback
 
     logger.debug(traceback.format_exc())
@@ -76,9 +73,7 @@ class CochlearBuffer:
             if start + n <= self.capacity:
                 return self._buf[start : start + n].copy()
             else:
-                return np.concatenate(
-                    [self._buf[start:], self._buf[: n - (self.capacity - start)]]
-                )
+                return np.concatenate([self._buf[start:], self._buf[: n - (self.capacity - start)]])
 
     def clear(self) -> None:
         """Clear the buffer."""

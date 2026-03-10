@@ -34,9 +34,7 @@ class FirestoreVectorStore:
         """Initialize the Firebase connection."""
         return await self._connector.initialize()
 
-    async def add_text(
-        self, key: str, text: str, metadata: Optional[Dict[str, Any]] = None
-    ) -> None:
+    async def add_text(self, key: str, text: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Embed text and add to Firestore."""
         if not self._connector.is_connected:
             await self.initialize()
@@ -61,9 +59,7 @@ class FirestoreVectorStore:
             }
 
             if self._connector._db:
-                self._connector._db.collection(self._collection_name).document(
-                    safe_key
-                ).set(doc_data)
+                self._connector._db.collection(self._collection_name).document(safe_key).set(doc_data)
                 logger.info("Vector indexed in Firestore: %s", key)
             else:
                 logger.warning("Firestore not connected. Vector not saved to cloud.")
@@ -71,9 +67,7 @@ class FirestoreVectorStore:
         except Exception as e:
             logger.error("Failed to embed and upload text for %s: %s", key, e)
 
-    async def search(
-        self, query_vector: np.ndarray, limit: int = 5
-    ) -> List[Dict[str, Any]]:
+    async def search(self, query_vector: np.ndarray, limit: int = 5) -> List[Dict[str, Any]]:
         """
         Perform semantic search.
         Note: Firestore doesn't support vector search natively in all regions yet
@@ -99,9 +93,7 @@ class FirestoreVectorStore:
                     continue
 
                 # Cosine similarity = (A . B) / (||A|| * ||B||)
-                similarity = np.dot(query_vector, vector) / (
-                    np.linalg.norm(query_vector) * np.linalg.norm(vector)
-                )
+                similarity = np.dot(query_vector, vector) / (np.linalg.norm(query_vector) * np.linalg.norm(vector))
 
                 results.append(
                     {

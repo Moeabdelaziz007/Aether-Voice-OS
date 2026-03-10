@@ -98,11 +98,7 @@ class VoiceBenchmarkReport:
             status = "✅ PASS" if r.passed else "❌ FAIL"
             name = r.test_name[:28].ljust(28)
             val = f"{r.value:.1f}{r.unit}".ljust(9)
-            thr = (
-                f"<{r.threshold}{r.unit}".ljust(8)
-                if r.threshold > 0
-                else "N/A".ljust(8)
-            )
+            thr = f"<{r.threshold}{r.unit}".ljust(8) if r.threshold > 0 else "N/A".ljust(8)
             lines.append(f"│ {name} │ {val} │ {thr} │ {status} │")
 
         lines.append("└──────────────────────────────┴───────────┴──────────┴────────┘")
@@ -125,18 +121,14 @@ class VoiceBenchmarkReport:
 # ═══════════════════════════════════════════════════════════
 
 
-def generate_test_tone(
-    freq_hz: float = 440.0, duration_s: float = 1.0, sample_rate: int = 16000
-) -> bytes:
+def generate_test_tone(freq_hz: float = 440.0, duration_s: float = 1.0, sample_rate: int = 16000) -> bytes:
     """Generate a pure sine wave tone as PCM16 bytes."""
     t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
     samples = (np.sin(2 * np.pi * freq_hz * t) * 16000).astype(np.int16)
     return samples.tobytes()
 
 
-def generate_speech_like_signal(
-    duration_s: float = 2.0, sample_rate: int = 16000
-) -> bytes:
+def generate_speech_like_signal(duration_s: float = 2.0, sample_rate: int = 16000) -> bytes:
     """Generate a speech-like signal with formants for testing."""
     t = np.linspace(0, duration_s, int(sample_rate * duration_s), endpoint=False)
     # Simulate speech with multiple formants
@@ -158,9 +150,7 @@ def compute_snr(signal: np.ndarray, noise: np.ndarray) -> float:
     return 10 * np.log10(signal_power / noise_power)
 
 
-async def benchmark_round_trip_latency(
-    api_key: str, model: str = "models/gemini-2.0-flash-exp"
-) -> BenchmarkResult:
+async def benchmark_round_trip_latency(api_key: str, model: str = "models/gemini-2.0-flash-exp") -> BenchmarkResult:
     """
     Measure Round-Trip Latency: Send text → receive audio response.
     Target: < 500ms for first audio chunk.
@@ -175,18 +165,12 @@ async def benchmark_round_trip_latency(
                 response_modalities=["AUDIO"],
                 system_instruction="You are a voice latency benchmarking agent. Respond with exactly one word: 'acknowledged'. Be as fast as possible.",
                 speech_config=types.SpeechConfig(
-                    voice_config=types.VoiceConfig(
-                        prebuilt_voice_config=types.PrebuiltVoiceConfig(
-                            voice_name="Puck"
-                        )
-                    )
+                    voice_config=types.VoiceConfig(prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Puck"))
                 ),
             )
             async with client.aio.live.connect(model=model, config=config) as session:
                 start = time.perf_counter()
-                await session.send_client_content(
-                    turns=[types.Content(parts=[types.Part(text=f"Ping #{i + 1}")])]
-                )
+                await session.send_client_content(turns=[types.Content(parts=[types.Part(text=f"Ping #{i + 1}")])])
                 async for response in session.receive():
                     if response.data:
                         latency_ms = (time.perf_counter() - start) * 1000
@@ -334,9 +318,7 @@ def benchmark_aec_effectiveness() -> BenchmarkResult:
     noise = (np.random.randn(len(t)) * 200).astype(np.int16)
 
     mic_full = np.zeros_like(far_end_full)
-    mic_full[delay_samples:] = (far_end_full[:-delay_samples] * echo_gain).astype(
-        np.int16
-    )
+    mic_full[delay_samples:] = (far_end_full[:-delay_samples] * echo_gain).astype(np.int16)
     mic_full += noise
 
     erle_values = []
@@ -360,8 +342,7 @@ def benchmark_aec_effectiveness() -> BenchmarkResult:
         unit="dB",
         passed=avg_erle >= 12.0,
         threshold=12,
-        details=f"Converged frames: {len(converged_erle)}, "
-        f"peak={max(erle_values):.1f}dB",
+        details=f"Converged frames: {len(converged_erle)}, peak={max(erle_values):.1f}dB",
     )
 
 
@@ -432,12 +413,8 @@ def benchmark_thalamic_gate_latency() -> BenchmarkResult:
     )
 
     # Pre-generate test frames
-    mic_frames = [
-        (np.random.randn(frame_size) * 5000).astype(np.int16) for _ in range(100)
-    ]
-    ref_frames = [
-        (np.random.randn(frame_size) * 3000).astype(np.int16) for _ in range(100)
-    ]
+    mic_frames = [(np.random.randn(frame_size) * 5000).astype(np.int16) for _ in range(100)]
+    ref_frames = [(np.random.randn(frame_size) * 3000).astype(np.int16) for _ in range(100)]
 
     # Warmup
     for i in range(10):
@@ -494,11 +471,7 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         report.add(result)
     except Exception as e:
         logger.error(f"Latency benchmark failed: {e}")
-        report.add(
-            BenchmarkResult(
-                "Round-Trip Latency", "latency_ms", 9999, "ms", False, 500, str(e)
-            )
-        )
+        report.add(BenchmarkResult("Round-Trip Latency", "latency_ms", 9999, "ms", False, 500, str(e)))
 
     # 2. Voice Quality Analysis & Suggestions
     try:
@@ -523,9 +496,7 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         report.add(result)
     except Exception as e:
         logger.error(f"VAD benchmark failed: {e}")
-        report.add(
-            BenchmarkResult("VAD Accuracy", "accuracy_%", 0, "%", False, 85, str(e))
-        )
+        report.add(BenchmarkResult("VAD Accuracy", "accuracy_%", 0, "%", False, 85, str(e)))
 
     # 5. Thalamic Gate Latency
     try:
@@ -533,9 +504,7 @@ async def run_all_benchmarks() -> VoiceBenchmarkReport:
         report.add(result)
     except Exception as e:
         logger.error(f"Gate latency benchmark failed: {e}")
-        report.add(
-            BenchmarkResult("Gate Latency", "gate_ms", 999, "ms", False, 2, str(e))
-        )
+        report.add(BenchmarkResult("Gate Latency", "gate_ms", 999, "ms", False, 2, str(e)))
 
     report.total_duration_s = time.perf_counter() - start_time
 

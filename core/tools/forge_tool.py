@@ -85,16 +85,12 @@ def create_agent(
 
         # 5. Generate empty Skills.md and Heartbeat.md
         with open(agent_dir / "Skills.md", "w") as f:
-            f.write(
-                f"# Skills for {name}\n\nList of specialized procedural tools if any."
-            )
+            f.write(f"# Skills for {name}\n\nList of specialized procedural tools if any.")
 
         with open(agent_dir / "Heartbeat.md", "w") as f:
             f.write(f"# Heartbeat for {name}\n\nAutonomous background routines.")
 
-        logger.info(
-            "✨ Agent Forge: Successfully created agent '%s' at %s", name, agent_dir
-        )
+        logger.info("✨ Agent Forge: Successfully created agent '%s' at %s", name, agent_dir)
 
         # 6. Sync to Firebase (Autonomous Cloud Persistence)
         try:

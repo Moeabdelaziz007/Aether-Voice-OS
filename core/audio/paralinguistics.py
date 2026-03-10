@@ -116,11 +116,7 @@ class ParalinguisticAnalyzer:
         threshold = np.mean(envelope) * 1.5
         peaks = 0
         for i in range(1, len(envelope) - 1):
-            if (
-                envelope[i] > threshold
-                and envelope[i] > envelope[i - 1]
-                and envelope[i] > envelope[i + 1]
-            ):
+            if envelope[i] > threshold and envelope[i] > envelope[i - 1] and envelope[i] > envelope[i + 1]:
                 peaks += 1
 
         # 3. Normalize to Syllables per Second
@@ -129,17 +125,13 @@ class ParalinguisticAnalyzer:
 
         return float(rate)
 
-    def analyze(
-        self, pcm_chunk: NDArray[np.int16], current_rms: float
-    ) -> ParalinguisticFeatures:
+    def analyze(self, pcm_chunk: NDArray[np.int16], current_rms: float) -> ParalinguisticFeatures:
         """Full spectral-temporal emotive analysis."""
         if len(pcm_chunk) == 0:
             return ParalinguisticFeatures(0.0, 0.0, 0.0, 0.0, 0.5)
 
         frame_duration = len(pcm_chunk) / self.sample_rate
-        window_size = (
-            int(self._window_seconds / frame_duration) if frame_duration > 0 else 1
-        )
+        window_size = int(self._window_seconds / frame_duration) if frame_duration > 0 else 1
         if window_size < 5:
             window_size = 5
 
@@ -165,9 +157,7 @@ class ParalinguisticAnalyzer:
 
         # 4. RMS Variance (Expressiveness)
         # Higher variance usually means more emotive speech
-        rms_var = (
-            float(np.var(self._history_pitch)) if len(self._history_pitch) > 5 else 0.0
-        )
+        rms_var = float(np.var(self._history_pitch)) if len(self._history_pitch) > 5 else 0.0
 
         # 5. Spectral Centroid (Rough Brightness)
         fft = np.fft.rfft(pcm_chunk.astype(np.float32) / 32768.0)
@@ -194,9 +184,7 @@ class ParalinguisticAnalyzer:
 
         # 7. Zen Mode Detection (Neural Shield)
         # logic: high concentration detected if we see typing cadence and low speech
-        avg_transience = (
-            np.mean(self._history_transients) if self._history_transients else 0.0
-        )
+        avg_transience = np.mean(self._history_transients) if self._history_transients else 0.0
         transience_rate = avg_transience / frame_duration if frame_duration > 0 else 0.0
         is_zen = False
         if 0.001 < current_rms < 0.2 and pitch < 140:

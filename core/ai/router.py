@@ -40,9 +40,7 @@ class IntelligenceRouter:
         if embedding:
             agent, score = self._semantic_route(embedding)
             if agent and score > 0.8:
-                logger.info(
-                    f"[Router] 🧠 Semantic Route: {agent.name} (Conf: {score:.2f})"
-                )
+                logger.info(f"[Router] 🧠 Semantic Route: {agent.name} (Conf: {score:.2f})")
                 return agent, score
 
         # 3. LLM Fallback (Default Orchestrator)
@@ -52,9 +50,7 @@ class IntelligenceRouter:
             agents = self.registry.list_all_agents()
             orchestrator = agents[0] if agents else None
 
-        logger.info(
-            f"[Router] 🏁 Fallback Route: {orchestrator.name if orchestrator else 'None'}"
-        )
+        logger.info(f"[Router] 🏁 Fallback Route: {orchestrator.name if orchestrator else 'None'}")
         return orchestrator, 0.5
 
     def _rule_route(self, text: str) -> Optional[AgentMetadata]:
@@ -81,9 +77,7 @@ class IntelligenceRouter:
 
         return None
 
-    def _semantic_route(
-        self, intent_embedding: List[float]
-    ) -> Tuple[Optional[AgentMetadata], float]:
+    def _semantic_route(self, intent_embedding: List[float]) -> Tuple[Optional[AgentMetadata], float]:
         """Vector similarity search against registered specialists."""
         best_agent = None
         best_score = -1.0
@@ -94,9 +88,7 @@ class IntelligenceRouter:
             if agent.semantic_fingerprint:
                 agent_vec = np.array(agent.semantic_fingerprint)
                 # Cosine Similarity
-                score = np.dot(query_vec, agent_vec) / (
-                    np.linalg.norm(query_vec) * np.linalg.norm(agent_vec) + 1e-6
-                )
+                score = np.dot(query_vec, agent_vec) / (np.linalg.norm(query_vec) * np.linalg.norm(agent_vec) + 1e-6)
 
                 if score > best_score:
                     best_score = score

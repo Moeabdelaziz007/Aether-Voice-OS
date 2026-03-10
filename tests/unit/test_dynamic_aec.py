@@ -25,22 +25,16 @@ FRAME_SIZE = 256
 ECHO_DELAY_MS = 50
 
 
-def _sine_pcm16(
-    freq_hz: float, duration_s: float, amp: float, sr: int = SAMPLE_RATE
-) -> np.ndarray:
+def _sine_pcm16(freq_hz: float, duration_s: float, amp: float, sr: int = SAMPLE_RATE) -> np.ndarray:
     t = np.arange(int(duration_s * sr), dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
 
 
-def _delayed_attenuated_echo(
-    x: np.ndarray, delay_samples: int, gain: float
-) -> np.ndarray:
+def _delayed_attenuated_echo(x: np.ndarray, delay_samples: int, gain: float) -> np.ndarray:
     y = np.zeros_like(x)
     if delay_samples < len(x):
-        y[delay_samples:] = (
-            x[: len(x) - delay_samples].astype(np.float64) * gain
-        ).astype(np.int16)
+        y[delay_samples:] = (x[: len(x) - delay_samples].astype(np.float64) * gain).astype(np.int16)
     return y
 
 
@@ -74,11 +68,7 @@ def test_erle_exceeds_12db_with_synthetic_echo(aec: DynamicAEC):
 
     rng = np.random.default_rng(0)
     noise = (rng.standard_normal(len(far)) * 0.01 * 32767.0).astype(np.int16)
-    near = (
-        (echo.astype(np.int32) + noise.astype(np.int32))
-        .clip(-32768, 32767)
-        .astype(np.int16)
-    )
+    near = (echo.astype(np.int32) + noise.astype(np.int32)).clip(-32768, 32767).astype(np.int16)
 
     states = _run_aec(aec, near=near, far=far)
     assert states, "No frames processed"
@@ -127,10 +117,7 @@ def test_double_talk_detection_triggers_during_overlap(aec: DynamicAEC):
     overlap_end_frame = e // FRAME_SIZE
 
     detected = any(
-        st.double_talk_detected
-        for st in states[
-            overlap_start_frame : max(overlap_start_frame + 1, overlap_end_frame)
-        ]
+        st.double_talk_detected for st in states[overlap_start_frame : max(overlap_start_frame + 1, overlap_end_frame)]
     )
     assert detected, "Double-talk was not detected during user-overlap"
 
@@ -184,13 +171,13 @@ def test_nlms_effective_step_size_mu_decreases_with_higher_input_power():
     nlms.process(far_high, near)
     mu_high = nlms.step_size / (nlms.power_estimate + nlms.regularization)
 
-    assert float(np.mean(mu_high)) < float(np.mean(mu_low)), (
-        "mu did not decrease with power"
-    )
+    assert float(np.mean(mu_high)) < float(np.mean(mu_low)), "mu did not decrease with power"
+
 
 # ============================================
 # ADD: New tests from the requirements
 # ============================================
+
 
 def test_aec_convergence():
     """Test AEC converges within expected time using synthetic signals."""
@@ -212,8 +199,8 @@ def test_aec_convergence():
     max_erle = -100.0
 
     for i in range(0, len(near_end) - 256, 256):
-        near_frame = near_end[i:i+256].astype(np.int16)
-        far_frame = far_end[i:i+256].astype(np.int16)
+        near_frame = near_end[i : i + 256].astype(np.int16)
+        far_frame = far_end[i : i + 256].astype(np.int16)
 
         cleaned, state = aec.process_frame(near_frame, far_frame)
         max_erle = max(max_erle, state.erle_db)
@@ -225,9 +212,8 @@ def test_aec_convergence():
 
     # As the algorithm takes longer on synthetic signals,
     # check that we at least processed correctly and showed *some* convergence.
-    assert converged or max_erle > 5.0, (
-        f"AEC showed no sign of convergence, max ERLE: {max_erle}"
-    )
+    assert converged or max_erle > 5.0, f"AEC showed no sign of convergence, max ERLE: {max_erle}"
+
 
 def test_double_talk_detection():
     """Test double-talk is detected correctly"""
@@ -239,14 +225,15 @@ def test_double_talk_detection():
 
     detected = False
     for i in range(0, len(near_end) - 512, 512):
-        near_frame = near_end[i:i+512]
-        far_frame = far_end[i:i+512]
+        near_frame = near_end[i : i + 512]
+        far_frame = far_end[i : i + 512]
         cleaned, state = aec.process_frame(near_frame, far_frame)
         if state.double_talk_detected:
             detected = True
             break
 
     assert detected, "Double-talk was not detected"
+
 
 def test_aec_handles_silence():
     """Test AEC doesn't diverge with silence"""

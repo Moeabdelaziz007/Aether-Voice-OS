@@ -22,9 +22,7 @@ def set_firebase_connector(connector: Any) -> None:
     _firebase = connector
 
 
-async def write_collective_memory(
-    key: str, value: Any, tags: Optional[list[str]] = None
-) -> dict[str, object]:
+async def write_collective_memory(key: str, value: Any, tags: Optional[list[str]] = None) -> dict[str, object]:
     """
     Write a value to the Hive Collective Memory.
 
@@ -87,10 +85,7 @@ def get_tools() -> list[dict[str, object]]:
     return [
         {
             "name": "write_memory",
-            "description": (
-                "Store state in the Hive Collective Memory for other expert "
-                "souls to see."
-            ),
+            "description": ("Store state in the Hive Collective Memory for other expert souls to see."),
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -104,10 +99,7 @@ def get_tools() -> list[dict[str, object]]:
         },
         {
             "name": "read_memory",
-            "description": (
-                "Retrieve state from the Hive Collective Memory stored by "
-                "previous experts."
-            ),
+            "description": ("Retrieve state from the Hive Collective Memory stored by previous experts."),
             "parameters": {
                 "type": "object",
                 "properties": {"key": {"type": "string"}},

@@ -14,6 +14,7 @@ try:
 except ImportError:
     # Handle environment where packages are missing but code is being checked
     from unittest.mock import MagicMock
+
     nx = MagicMock()
     Network = MagicMock
 
@@ -47,11 +48,7 @@ def build_dependency_graph():
     python_files = list(ROOT_DIR.rglob("*.py"))
     # Filter out venv, external libs
     internal_files = [
-        f
-        for f in python_files
-        if "venv" not in f.parts
-        and ".idx" not in f.parts
-        and "node_modules" not in f.parts
+        f for f in python_files if "venv" not in f.parts and ".idx" not in f.parts and "node_modules" not in f.parts
     ]
 
     # Map module names to file paths roughly

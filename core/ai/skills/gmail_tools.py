@@ -81,8 +81,7 @@ def get_tools() -> list[dict]:
         {
             "name": "send_email",
             "description": (
-                "Send an email to a recipient with a subject and body. "
-                "Use when the user asks to email someone."
+                "Send an email to a recipient with a subject and body. Use when the user asks to email someone."
             ),
             "parameters": {
                 "type": "object",

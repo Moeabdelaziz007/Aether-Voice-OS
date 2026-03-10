@@ -78,10 +78,7 @@ async def test_event_bus_10k_eps_stress():
     # 2. Wait for processing (Max 5 seconds)
     max_wait = 10.0  # Increased wait time for full processing
     wait_start = time.perf_counter()
-    while (
-        sum(processed_counts.values()) < total_events
-        and (time.perf_counter() - wait_start) < max_wait
-    ):
+    while sum(processed_counts.values()) < total_events and (time.perf_counter() - wait_start) < max_wait:
         await asyncio.sleep(0.1)
 
     end_time = time.perf_counter()

@@ -22,14 +22,10 @@ class AgentModelRouter:
         """
         agent = self.registry.get_agent(agent_id)
         if not agent:
-            logger.warning(
-                f"[ModelRouter] Agent {agent_id} not found. Defaulting to FLASH."
-            )
+            logger.warning(f"[ModelRouter] Agent {agent_id} not found. Defaulting to FLASH.")
             return GeminiModel.FLASH
 
-        logger.info(
-            f"[ModelRouter] Agent {agent_id} mapped to {agent.foundation_model}"
-        )
+        logger.info(f"[ModelRouter] Agent {agent_id} mapped to {agent.foundation_model}")
         return agent.foundation_model
 
     def get_dispatch_config(self, agent_id: str) -> Dict[str, Any]:

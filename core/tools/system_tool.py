@@ -251,8 +251,7 @@ def get_tools() -> list[dict]:
         {
             "name": "get_current_time",
             "description": (
-                "Returns the current local time, date, and timezone. "
-                "Use when the user asks what time or date it is."
+                "Returns the current local time, date, and timezone. Use when the user asks what time or date it is."
             ),
             "parameters": {},
             "handler": get_current_time,
@@ -317,8 +316,7 @@ def get_tools() -> list[dict]:
         {
             "name": "list_codebase",
             "description": (
-                "Returns a map of all files in the current project directory, "
-                "ignoring git/build artifacts."
+                "Returns a map of all files in the current project directory, ignoring git/build artifacts."
             ),
             "parameters": {
                 "type": "object",
@@ -334,10 +332,7 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "read_file_content",
-            "description": (
-                "Reads the text content of a file. Use this to examine code or "
-                "config files."
-            ),
+            "description": ("Reads the text content of a file. Use this to examine code or config files."),
             "parameters": {
                 "type": "object",
                 "properties": {

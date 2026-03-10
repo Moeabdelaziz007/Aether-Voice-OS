@@ -70,9 +70,7 @@ class AudioConfig(BaseModel):
     def validate_channels(cls, v: int) -> int:
         """Aether supports mono only currently."""
         if v != 1:
-            raise ValueError(
-                f"Aether currently supports mono (channels=1) only, got {v}"
-            )
+            raise ValueError(f"Aether currently supports mono (channels=1) only, got {v}")
         return v
 
     @field_validator("aec_step_size")
@@ -120,8 +118,7 @@ class AudioConfig(BaseModel):
         """Ensure target <= max for jitter buffer."""
         if self.jitter_buffer_target_ms > self.jitter_buffer_max_ms:
             raise ValueError(
-                f"Jitter target ({self.jitter_buffer_target_ms}ms) "
-                f"cannot exceed max ({self.jitter_buffer_max_ms}ms)"
+                f"Jitter target ({self.jitter_buffer_target_ms}ms) cannot exceed max ({self.jitter_buffer_max_ms}ms)"
             )
         return self
 
@@ -130,10 +127,7 @@ class AudioConfig(BaseModel):
         """Ensure receive/send ratio is reasonable."""
         ratio = self.receive_sample_rate / self.send_sample_rate
         if ratio not in [1.0, 1.5, 2.0, 3.0]:
-            logger.warning(
-                f"Unusual sample rate ratio: {ratio:.2f}. "
-                f"Typical ratios: 1.5 (24k/16k) or 2.0 (48k/24k)"
-            )
+            logger.warning(f"Unusual sample rate ratio: {ratio:.2f}. Typical ratios: 1.5 (24k/16k) or 2.0 (48k/24k)")
         return self
 
 
@@ -158,9 +152,7 @@ class GeminiModel(str, Enum):
 
 def _get_env_file():
     """Safely get the .env file path if it's accessible."""
-    path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env"
-    )
+    path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".env")
     if os.path.exists(path):
         try:
             # Check if we have permission to read it
@@ -236,9 +228,7 @@ class AetherConfig(BaseSettings):
     # Security: Base64 encoded Service Account JSON
     # This allows passing the full JSON key as a single env var in CI/CD
     # (e.g. Vercel/Railway).
-    firebase_creds_base64: Optional[str] = Field(
-        None, alias="FIREBASE_CREDENTIALS_BASE64"
-    )
+    firebase_creds_base64: Optional[str] = Field(None, alias="FIREBASE_CREDENTIALS_BASE64")
 
     log_level: str = "INFO"
     log_file: Optional[str] = "logs/aether.log"

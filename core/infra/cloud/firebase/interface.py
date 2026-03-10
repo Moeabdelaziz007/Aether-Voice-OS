@@ -42,9 +42,7 @@ class FirebaseConnector:
                 if cert_dict:
                     cred = credentials.Certificate(cert_dict)
                     firebase_admin.initialize_app(cred)
-                    logger.info(
-                        "🔥 Firebase: Initialized with Secure Base64 Credentials"
-                    )
+                    logger.info("🔥 Firebase: Initialized with Secure Base64 Credentials")
                 else:
                     # Fallback to standard Google Application Credentials (local dev)
                     firebase_admin.initialize_app()
@@ -102,12 +100,7 @@ class FirebaseConnector:
             }
 
             def _write():
-                (
-                    self._db.collection("sessions")
-                    .document(self._session_id)
-                    .collection("messages")
-                    .add(msg_data)
-                )
+                (self._db.collection("sessions").document(self._session_id).collection("messages").add(msg_data))
 
             await asyncio.to_thread(_write)
         except Exception as e:
@@ -129,12 +122,7 @@ class FirebaseConnector:
             }
 
             def _write():
-                (
-                    self._db.collection("sessions")
-                    .document(self._session_id)
-                    .collection("metrics")
-                    .add(data)
-                )
+                (self._db.collection("sessions").document(self._session_id).collection("metrics").add(data))
 
             await asyncio.to_thread(_write)
         except Exception as e:
@@ -163,9 +151,7 @@ class FirebaseConnector:
         except Exception as e:
             logger.error(f"Failed to log knowledge: {e}")
 
-    async def log_repair_event(
-        self, filepath: str, diagnosis: str, status: str = "applied"
-    ) -> None:
+    async def log_repair_event(self, filepath: str, diagnosis: str, status: str = "applied") -> None:
         """Logs an autonomous healing action for the audit trail."""
         if not self.is_connected or not self._session_id:
             return
@@ -179,12 +165,7 @@ class FirebaseConnector:
             }
 
             def _write():
-                (
-                    self._db.collection("sessions")
-                    .document(self._session_id)
-                    .collection("repairs")
-                    .add(data)
-                )
+                (self._db.collection("sessions").document(self._session_id).collection("repairs").add(data))
 
             await asyncio.to_thread(_write)
             logger.info(f"🔥 Firebase: Repair logged for {filepath}")
@@ -224,11 +205,7 @@ class FirebaseConnector:
         try:
 
             def _aggregate():
-                metrics_ref = (
-                    self._db.collection("sessions")
-                    .document(session_id)
-                    .collection("metrics")
-                )
+                metrics_ref = self._db.collection("sessions").document(session_id).collection("metrics")
                 # Optimized: Aggregate on server-side
                 query = metrics_ref.aggregate(
                     [
@@ -314,9 +291,7 @@ class FirebaseConnector:
             dna["status"] = dna.get("status", "forged")
 
             def _write():
-                self._db.collection("agents").document(agent_name.lower()).set(
-                    dna, merge=True
-                )
+                self._db.collection("agents").document(agent_name.lower()).set(dna, merge=True)
 
             await asyncio.to_thread(_write)
             logger.info(f"🔥 Firebase: Agent DNA synced for {agent_name}")
@@ -325,9 +300,7 @@ class FirebaseConnector:
             logger.error(f"Failed to sync agent DNA for {agent_name}: {e}")
             return False
 
-    async def log_agent_memory(
-        self, agent_id: str, entry: str, context: Optional[dict] = None
-    ) -> None:
+    async def log_agent_memory(self, agent_id: str, entry: str, context: Optional[dict] = None) -> None:
         """
         Logs a memory entry for a specific agent.
         Ensures persistent 'consciousness' across sessions.
@@ -343,12 +316,7 @@ class FirebaseConnector:
             }
 
             def _write():
-                (
-                    self._db.collection("agents")
-                    .document(agent_id.lower())
-                    .collection("memory")
-                    .add(data)
-                )
+                (self._db.collection("agents").document(agent_id.lower()).collection("memory").add(data))
 
             await asyncio.to_thread(_write)
             logger.info(f"🔥 Firebase: Persistent memory logged for {agent_id}")

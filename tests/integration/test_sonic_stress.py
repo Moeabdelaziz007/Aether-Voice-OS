@@ -56,9 +56,7 @@ async def test_parallel_dispatch_benchmark():
 
     # Simulate 5 parallel function calls from Gemini
     mock_tool_call = MagicMock()
-    mock_tool_call.function_calls = [
-        MagicMock(name=f"tool_{i}", args={}) for i in range(5)
-    ]
+    mock_tool_call.function_calls = [MagicMock(name=f"tool_{i}", args={}) for i in range(5)]
     for i, fc in enumerate(mock_tool_call.function_calls):
         fc.name = f"tool_{i}"
 
@@ -70,7 +68,4 @@ async def test_parallel_dispatch_benchmark():
 
     # If sequential, it would take 2.5s. If parallel, ~0.5s.
     assert duration < 1.0
-    print(
-        f"\nParallel Dispatch Duration: {duration:.4f}s for 5 tools "
-        "(Sequential would be 2.5s)"
-    )
+    print(f"\nParallel Dispatch Duration: {duration:.4f}s for 5 tools (Sequential would be 2.5s)")

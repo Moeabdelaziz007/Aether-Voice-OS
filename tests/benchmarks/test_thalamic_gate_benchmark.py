@@ -66,12 +66,8 @@ def callback_args():
     return {"in_data": in_data, "frame_count": CHUNK_SIZE, "time_info": {}, "status": 0}
 
 
-@pytest.mark.skipif(
-    not pytest_benchmark_installed, reason="pytest-benchmark is not installed"
-)
-def test_thalamic_gate_performance(
-    benchmark: BenchmarkFixture, capture_instance, callback_args
-):
+@pytest.mark.skipif(not pytest_benchmark_installed, reason="pytest-benchmark is not installed")
+def test_thalamic_gate_performance(benchmark: BenchmarkFixture, capture_instance, callback_args):
     """
     Benchmarks the execution time of the Thalamic Gate callback using pytest-benchmark.
     """
@@ -103,9 +99,7 @@ def test_thalamic_gate_manual_benchmark(capture_instance, callback_args):
     print(f"Average Thalamic Gate processing time: {avg_time_ms:.4f} ms per frame")
 
     # The prompt claims ~1.5ms/frame performance, target is < 2ms
-    assert avg_time_ms < 2.5, (
-        f"Thalamic Gate is too slow ({avg_time_ms:.4f}ms), exceeds 2.5ms target."
-    )
+    assert avg_time_ms < 2.5, f"Thalamic Gate is too slow ({avg_time_ms:.4f}ms), exceeds 2.5ms target."
 
 
 # Stop the patcher after all tests are done

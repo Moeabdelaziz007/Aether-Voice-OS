@@ -57,9 +57,7 @@ class AgentRegistry:
             if metadata.id not in self._capability_map[cap]:
                 self._capability_map[cap].append(metadata.id)
 
-        logger.info(
-            f"[Registry] Registered Agent: {metadata.name} (ID: {metadata.id}) v{metadata.version}"
-        )
+        logger.info(f"[Registry] Registered Agent: {metadata.name} (ID: {metadata.id}) v{metadata.version}")
 
     def get_agent(self, agent_id: str) -> Optional[AgentMetadata]:
         return self._agents.get(agent_id)
@@ -79,9 +77,7 @@ class AgentRegistry:
             # Remove from capability maps
             for cap in agent.capabilities:
                 if cap in self._capability_map:
-                    self._capability_map[cap] = [
-                        aid for aid in self._capability_map[cap] if aid != agent_id
-                    ]
+                    self._capability_map[cap] = [aid for aid in self._capability_map[cap] if aid != agent_id]
             logger.info(f"[Registry] Unregistered Agent: {agent_id}")
 
 

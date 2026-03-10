@@ -63,11 +63,7 @@ class AuthService:
             logger.error(f"AuthService: Signature verification error: {e}")
             return False
 
-    def verify_payload_signature(
-        self, payload: bytes, signature: str, client_id: str
-    ) -> bool:
+    def verify_payload_signature(self, payload: bytes, signature: str, client_id: str) -> bool:
         """Verify the signature of a raw binary payload."""
         # Implementation extracted from gateway.py legacy code
-        return self.verify_signature(
-            payload.decode("utf-8", errors="ignore"), signature, client_id
-        )
+        return self.verify_signature(payload.decode("utf-8", errors="ignore"), signature, client_id)

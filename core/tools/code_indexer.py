@@ -13,9 +13,7 @@ from dotenv import load_dotenv
 from core.tools.vector_store import LocalVectorStore
 
 # Configure minimal logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
 
 # Settings
@@ -78,9 +76,7 @@ async def index_codebase() -> None:
 
     total_chunks = 0
     total_files = len(files_to_index)
-    logger.info(
-        "Found %d files to index. Beginning chunking and embedding...", total_files
-    )
+    logger.info("Found %d files to index. Beginning chunking and embedding...", total_files)
 
     for idx, filepath in enumerate(files_to_index, 1):
         try:

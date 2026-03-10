@@ -25,9 +25,7 @@ class InfraManager:
         firebase_ok = await self._firebase.initialize()
         if firebase_ok:
             await self._firebase.start_session()
-            logger.info(
-                "  Firebase: ✦ Connected — session %s", self._firebase._session_id
-            )
+            logger.info("  Firebase: ✦ Connected — session %s", self._firebase._session_id)
         else:
             logger.warning("  Firebase: ✗ Offline — tasks will not persist")
         return firebase_ok

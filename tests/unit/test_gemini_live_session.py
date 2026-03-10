@@ -86,9 +86,7 @@ def test_build_session_config_includes_tools_and_voice_id(cfg):
     # Voice mapping
     if c.speech_config is not None:
         voice_name = (
-            c.speech_config.voice_config.prebuilt_voice_config.voice_name
-            if c.speech_config.voice_config
-            else None
+            c.speech_config.voice_config.prebuilt_voice_config.voice_name if c.speech_config.voice_config else None
         )
         assert voice_name == "Aoede"
 

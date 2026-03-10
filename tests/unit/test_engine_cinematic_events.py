@@ -23,9 +23,7 @@ def test_handover_emits_cinematic_events() -> None:
 
         tasks: list[asyncio.Task[Any]] = []
 
-        def _run_background_task(
-            coro: Coroutine[Any, Any, Any], name: str | None = None
-        ) -> asyncio.Task[Any]:
+        def _run_background_task(coro: Coroutine[Any, Any, Any], name: str | None = None) -> asyncio.Task[Any]:
             task = asyncio.create_task(coro, name=name)
             tasks.append(task)
             return task
@@ -55,9 +53,8 @@ def test_handover_emits_cinematic_events() -> None:
 def test_handover_without_gateway_does_not_crash() -> None:
     engine = object.__new__(AetherEngine)
     setattr(engine, "_gateway", None)
-    def _run_background_task(
-        coro: Coroutine[Any, Any, Any], name: str | None = None
-    ) -> asyncio.Task[Any]:
+
+    def _run_background_task(coro: Coroutine[Any, Any, Any], name: str | None = None) -> asyncio.Task[Any]:
         return asyncio.create_task(coro, name=name)
 
     setattr(engine, "_run_background_task", _run_background_task)

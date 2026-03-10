@@ -141,13 +141,9 @@ async def test_gateway_handshake_e2e():
                 # If it's an AI error, the handshake *itself* might have passed
                 # logic check if it reached the AI connection stage.
                 if "API key not valid" in resp_msg.get("message", ""):
-                    print(
-                        "\n✅ Handshake Verified (Ed25519 passed, but AI key is dummy)."
-                    )
+                    print("\n✅ Handshake Verified (Ed25519 passed, but AI key is dummy).")
                     return
-                pytest.fail(
-                    f"Handshake failed with unexpected error: {resp_msg.get('message')}"
-                )
+                pytest.fail(f"Handshake failed with unexpected error: {resp_msg.get('message')}")
 
             assert resp_msg["type"] == "connect.ack"
             assert "session_id" in resp_msg

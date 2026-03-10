@@ -20,9 +20,7 @@ class SoulManifestStub:
             voice_id: str
             expertise: dict = None
 
-        self.manifest = Manifest(
-            name=name, voice_id=voice_id, expertise={"sysadmin": 1.0}
-        )
+        self.manifest = Manifest(name=name, voice_id=voice_id, expertise={"sysadmin": 1.0})
         self.manifest.persona = "Stub persona manifest"
         self.persona = "Stub persona"
         self.name = name
@@ -60,8 +58,9 @@ async def gateway(gateway_config):
     # Also fix Signature verification so it passes with dummy 0*128 signature
     # Since AuthService relies on verify_signature, we mock it via patch
     from unittest.mock import patch
-    patcher1 = patch('core.utils.security.verify_signature', return_value=True)
-    patcher2 = patch('core.infra.transport.auth.AuthService.verify_signature', return_value=True)
+
+    patcher1 = patch("core.utils.security.verify_signature", return_value=True)
+    patcher2 = patch("core.infra.transport.auth.AuthService.verify_signature", return_value=True)
 
     patcher1.start()
     patcher2.start()
@@ -164,9 +163,7 @@ async def test_pruning_dead_clients(gateway, gateway_config):
         assert "dead_client" in gateway._clients
 
         # Wait for max_missed_ticks to elapse without sending PONG
-        wait_time = gateway_config.tick_interval_s * (
-            gateway_config.max_missed_ticks + 1.5
-        )
+        wait_time = gateway_config.tick_interval_s * (gateway_config.max_missed_ticks + 1.5)
         await asyncio.sleep(wait_time)
 
         # Client should be pruned

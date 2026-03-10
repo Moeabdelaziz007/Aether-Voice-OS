@@ -59,10 +59,7 @@ class TestConfig:
     def test_gemini_model_enum(self):
         from core.infra.config import GeminiModel
 
-        assert (
-            GeminiModel.FLASH_NATIVE_AUDIO.value
-            == "gemini-2.5-flash-native-audio-preview-12-2025"
-        )
+        assert GeminiModel.FLASH_NATIVE_AUDIO.value == "gemini-2.5-flash-native-audio-preview-12-2025"
         assert GeminiModel.LIVE_FLASH.value == "gemini-live-2.5-flash-preview"
 
     def test_load_config_with_env(self):
@@ -92,9 +89,7 @@ class TestConfig:
         }
         json_str = json.dumps(test_data)
 
-        with patch(
-            "os.path.exists", side_effect=lambda x: True if "json" in str(x) else False
-        ):
+        with patch("os.path.exists", side_effect=lambda x: True if "json" in str(x) else False):
             with patch("builtins.open", mock_open(read_data=json_str)):
                 with patch.dict(os.environ, {}, clear=True):
                     with patch("core.infra.config.AetherConfig") as mock_class:

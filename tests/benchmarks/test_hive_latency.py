@@ -19,9 +19,7 @@ def mock_registry():
     coder = MagicMock()
     coder.manifest.name = "CoderExpert"
 
-    registry.get.side_effect = lambda name: (
-        architect if name == "ArchitectExpert" else coder
-    )
+    registry.get.side_effect = lambda name: (architect if name == "ArchitectExpert" else coder)
     registry.list_packages.return_value = ["ArchitectExpert", "CoderExpert"]
     registry.find_expert = AsyncMock(return_value=coder)
 
@@ -37,9 +35,7 @@ async def test_hive_transition_latency_benchmark(mock_registry):
     Target: < 50ms for local state management (excluding LLM summarization).
     """
     router = MagicMock()
-    hive = HiveCoordinator(
-        registry=mock_registry, router=router, enable_deep_handover=True
-    )
+    hive = HiveCoordinator(registry=mock_registry, router=router, enable_deep_handover=True)
 
     # We want to measure the synchronous part and the immediate async start
     # Note: NeuralSummarizer is triggered via create_task, so it shouldn't block.

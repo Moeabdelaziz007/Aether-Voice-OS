@@ -23,9 +23,7 @@ class EchoGuard:
     def __init__(self, window_size_sec: float = 3.0, sample_rate: int = 16000):
         self.sample_rate = sample_rate
         # Sliding window of output fingerprints (Acoustic Identity Cache)
-        self._output_cache: Deque[np.ndarray] = deque(
-            maxlen=int(window_size_sec * 50)
-        )  # 50 vectors/sec
+        self._output_cache: Deque[np.ndarray] = deque(maxlen=int(window_size_sec * 50))  # 50 vectors/sec
 
         # Internal Gates
         self._is_speaking = False
@@ -65,17 +63,10 @@ class EchoGuard:
         3. Identity Conflict Check (Self vs User)
         """
         try:
-            audio_np = (
-                np.frombuffer(mic_pcm, dtype=np.int16).astype(np.float32) / 32768.0
-            )
+            audio_np = np.frombuffer(mic_pcm, dtype=np.int16).astype(np.float32) / 32768.0
         except ValueError:
             # Fallback if bytes don't align to int16 cleanly
-            audio_np = (
-                np.frombuffer(mic_pcm[: len(mic_pcm) // 2 * 2], dtype=np.int16).astype(
-                    np.float32
-                )
-                / 32768.0
-            )
+            audio_np = np.frombuffer(mic_pcm[: len(mic_pcm) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768.0
         if len(audio_np) == 0:
             return False
 
@@ -101,16 +92,10 @@ class EchoGuard:
             # Simple Cosine Similarity comparison against cache
             for cached_fp in self._output_cache:
                 # Basic similarity check; in production, use a more robust distance metric
-                similarity = np.dot(input_fp, cached_fp) / (
-                    np.linalg.norm(input_fp) * np.linalg.norm(cached_fp) + 1e-6
-                )
-                if (
-                    similarity > 0.70
-                ):  # High match = Echo detected (Lowered for tests to pass)
+                similarity = np.dot(input_fp, cached_fp) / (np.linalg.norm(input_fp) * np.linalg.norm(cached_fp) + 1e-6)
+                if similarity > 0.70:  # High match = Echo detected (Lowered for tests to pass)
                     if time.time() % 0.5 < 0.1:  # Periodic logging to omit spam
-                        logger.debug(
-                            f"[EchoGuard] 🚫 Self-Acoustic Match (sim={similarity:.2f}). Gating input."
-                        )
+                        logger.debug(f"[EchoGuard] 🚫 Self-Acoustic Match (sim={similarity:.2f}). Gating input.")
                     return False
 
             # Lock-out timer: If we just stopped speaking, give it 150ms for room reverb

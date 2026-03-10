@@ -101,9 +101,7 @@ class AudioState:
         else:
             import logging
 
-            logging.getLogger(__name__).warning(
-                "AEC state update skipped (lock timeout)"
-            )
+            logging.getLogger(__name__).warning("AEC state update skipped (lock timeout)")
 
     def update_aec_state(
         self,

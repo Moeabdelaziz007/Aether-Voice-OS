@@ -120,12 +120,8 @@ class SpecialistHandoverManager:
             payload={
                 "architect_output": architect_output.model_dump(),
                 "blueprints": [bp.model_dump() for bp in architect_output.blueprints],
-                "high_impact_decisions": [
-                    d.model_dump() for d in architect_output.get_high_impact_decisions()
-                ],
-                "critical_risks": [
-                    r.model_dump() for r in architect_output.get_critical_risks()
-                ],
+                "high_impact_decisions": [d.model_dump() for d in architect_output.get_high_impact_decisions()],
+                "critical_risks": [r.model_dump() for r in architect_output.get_critical_risks()],
             },
         )
 
@@ -155,9 +151,7 @@ class SpecialistHandoverManager:
         )
 
         # Perform handover through orchestrator
-        return await self._orchestrator.handover_with_context(
-            "Architect", "Debugger", context
-        )
+        return await self._orchestrator.handover_with_context("Architect", "Debugger", context)
 
     async def debugger_to_architect_feedback(
         self,
@@ -181,12 +175,8 @@ class SpecialistHandoverManager:
             task=f"Rework: {original_context.task}",
             payload={
                 "debugger_output": debugger_output.model_dump(),
-                "failed_verifications": [
-                    v.model_dump() for v in debugger_output.get_failed_results()
-                ],
-                "critical_warnings": [
-                    w.model_dump() for w in debugger_output.get_critical_warnings()
-                ],
+                "failed_verifications": [v.model_dump() for v in debugger_output.get_failed_results()],
+                "critical_warnings": [w.model_dump() for w in debugger_output.get_critical_warnings()],
                 "proposed_fixes": [f.model_dump() for f in debugger_output.fixes],
                 "original_handover_id": original_context.handover_id,
             },
@@ -205,9 +195,7 @@ class SpecialistHandoverManager:
         context.conversation_history = original_context.conversation_history.copy()
 
         # Perform handover
-        return await self._orchestrator.handover_with_context(
-            "Debugger", "Architect", context
-        )
+        return await self._orchestrator.handover_with_context("Debugger", "Architect", context)
 
     def negotiate_scope(
         self,
@@ -361,25 +349,17 @@ class MultiAgentOrchestrator:
         task_lower = context.task.lower()
 
         # Design-related capabilities
-        if any(
-            word in task_lower
-            for word in ["design", "architecture", "blueprint", "plan"]
-        ):
+        if any(word in task_lower for word in ["design", "architecture", "blueprint", "plan"]):
             capabilities.add("design.create")
             capabilities.add("blueprint.generate")
 
         # Debug-related capabilities
-        if any(
-            word in task_lower for word in ["debug", "error", "fix", "issue", "problem"]
-        ):
+        if any(word in task_lower for word in ["debug", "error", "fix", "issue", "problem"]):
             capabilities.add("debug.analyze")
             capabilities.add("verify.design")
 
         # Code-related capabilities
-        if any(
-            word in task_lower
-            for word in ["code", "implement", "write", "function", "class"]
-        ):
+        if any(word in task_lower for word in ["code", "implement", "write", "function", "class"]):
             capabilities.add("code.write")
             capabilities.add("code.review")
 
@@ -388,16 +368,12 @@ class MultiAgentOrchestrator:
             capabilities.add("risk.assess")
 
         # Search capabilities
-        if any(
-            word in task_lower for word in ["search", "find", "lookup", "documentation"]
-        ):
+        if any(word in task_lower for word in ["search", "find", "lookup", "documentation"]):
             capabilities.add("semantic.search")
             capabilities.add("docs.lookup")
 
         # Note/documentation capabilities
-        if any(
-            word in task_lower for word in ["note", "document", "record", "summary"]
-        ):
+        if any(word in task_lower for word in ["note", "document", "record", "summary"]):
             capabilities.add("note.create")
 
         # Fallback to general task if no specific capabilities identified
@@ -419,9 +395,7 @@ class MultiAgentOrchestrator:
         self.active_agents[name] = agent
         logger.debug("Registered ADK Specialist: %s", name)
 
-    async def handover(
-        self, from_agent: str, to_agent: str, context: HandoverContext
-    ) -> str:
+    async def handover(self, from_agent: str, to_agent: str, context: HandoverContext) -> str:
         """
         Legacy handover method for backward compatibility.
 
@@ -531,11 +505,7 @@ class MultiAgentOrchestrator:
                 candidate = PlanetCandidate(
                     planet_id=to_agent,
                     capabilities=self._extract_agent_capabilities(to_agent),
-                    confidence=(
-                        context.intent_confidence.confidence_score
-                        if context.intent_confidence
-                        else 0.5
-                    ),
+                    confidence=(context.intent_confidence.confidence_score if context.intent_confidence else 0.5),
                     latency_ms=0.0,  # Will be populated later
                     load=0.0,  # Will be populated later
                     continuity_bonus=0.0,
@@ -579,9 +549,7 @@ class MultiAgentOrchestrator:
             context.add_history(f"Target agent '{to_agent}' processed task")
 
             # Post-transfer completion
-            success, message = await self._protocol.complete_handoff(
-                context.handover_id
-            )
+            success, message = await self._protocol.complete_handoff(context.handover_id)
 
             if success:
                 self._handover_history.append(context.handover_id)
@@ -845,15 +813,9 @@ class MultiAgentOrchestrator:
             starter.set_orchestrator(self)
 
         # Use deep handover
-        success, final_context, message = await self.handover_with_context(
-            "Orchestrator", primary_agent, context
-        )
+        success, final_context, message = await self.handover_with_context("Orchestrator", primary_agent, context)
 
         if success and final_context:
-            return (
-                f"Task: {task}\n"
-                f"Status: {final_context.status.value}\n"
-                f"History: {final_context.history}"
-            )
+            return f"Task: {task}\nStatus: {final_context.status.value}\nHistory: {final_context.history}"
         else:
             return f"Orchestration Failed: {message}"

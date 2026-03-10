@@ -55,9 +55,7 @@ class VoiceAgent:
             ),
         }
 
-        persona_prompt = PERSONAS.get(
-            self.dna.persona, PERSONAS["calm_brilliant_partner"]
-        )
+        persona_prompt = PERSONAS.get(self.dna.persona, PERSONAS["calm_brilliant_partner"])
 
         # Create more nuanced behavioral instructions
         behavioral_modifiers = [f"**Core Persona:** {persona_prompt}"]
@@ -82,13 +80,9 @@ class VoiceAgent:
                 "- **Empathy:** Use a warm, supportive, and highly empathetic tone. Acknowledge and validate the user's emotions."
             )
         elif self.dna.empathy < 0.3:
-            behavioral_modifiers.append(
-                "- **Empathy:** Maintain a strictly professional, neutral, and efficient tone."
-            )
+            behavioral_modifiers.append("- **Empathy:** Maintain a strictly professional, neutral, and efficient tone.")
         else:
-            behavioral_modifiers.append(
-                "- **Empathy:** Be moderately empathetic and supportive."
-            )
+            behavioral_modifiers.append("- **Empathy:** Be moderately empathetic and supportive.")
 
         # Proactivity
         if self.dna.proactivity > 0.7:
@@ -96,9 +90,7 @@ class VoiceAgent:
                 "- **Proactivity:** Be highly proactive. Anticipate needs and suggest tools or next steps frequently."
             )
         elif self.dna.proactivity < 0.3:
-            behavioral_modifiers.append(
-                "- **Proactivity:** Be reactive. Only act when explicitly commanded."
-            )
+            behavioral_modifiers.append("- **Proactivity:** Be reactive. Only act when explicitly commanded.")
         else:
             behavioral_modifiers.append(
                 "- **Proactivity:** Be selectively proactive when you have high confidence the user needs help."
@@ -114,11 +106,7 @@ class VoiceAgent:
 
         # Inject Semantic Seed if provided in context
         seed_prompt = ""
-        if (
-            hasattr(self, "_active_context")
-            and self._active_context
-            and self._active_context.compressed_seed
-        ):
+        if hasattr(self, "_active_context") and self._active_context and self._active_context.compressed_seed:
             seed = self._active_context.compressed_seed
             seed_prompt = f"""
 ### 🧬 SEMANTIC SEED (Compressed Context)

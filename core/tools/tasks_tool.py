@@ -237,9 +237,7 @@ def _score_semantic_match(query: str, content: str) -> float:
     query_counter = Counter(query_tokens)
     content_counter = Counter(content_tokens)
     overlap = set(query_counter).intersection(content_counter)
-    overlap_score = sum(
-        min(query_counter[token], content_counter[token]) for token in overlap
-    )
+    overlap_score = sum(min(query_counter[token], content_counter[token]) for token in overlap)
     normalization = max(len(query_tokens), 1)
     base_score = overlap_score / normalization
     phrase_boost = 0.25 if query.lower() in content.lower() else 0.0
@@ -335,9 +333,7 @@ def get_tools() -> list[dict]:
                     },
                     "due": {
                         "type": "string",
-                        "description": (
-                            "When the task is due (e.g., 'tomorrow', 'Friday')"
-                        ),
+                        "description": ("When the task is due (e.g., 'tomorrow', 'Friday')"),
                     },
                     "priority": {
                         "type": "string",
@@ -379,8 +375,7 @@ def get_tools() -> list[dict]:
         {
             "name": "complete_task",
             "description": (
-                "Mark a task as completed. Requires the task ID. "
-                "Use when the user says they finished a task."
+                "Mark a task as completed. Requires the task ID. Use when the user says they finished a task."
             ),
             "parameters": {
                 "type": "object",
@@ -398,10 +393,7 @@ def get_tools() -> list[dict]:
         },
         {
             "name": "add_note",
-            "description": (
-                "Save a freeform note. Use when the user asks to "
-                "remember something or save a quick note."
-            ),
+            "description": ("Save a freeform note. Use when the user asks to remember something or save a quick note."),
             "parameters": {
                 "type": "object",
                 "properties": {

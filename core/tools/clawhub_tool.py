@@ -68,9 +68,7 @@ def install_skill(slug: str, agent_name: str) -> Dict[str, Any]:
         # Also check for any script directories if present
         # (Implementation details vary based on ClawHub skill structure)
 
-        logger.info(
-            "✅ ClawHub: Skill '%s' installed into agent '%s'", slug, agent_name
-        )
+        logger.info("✅ ClawHub: Skill '%s' installed into agent '%s'", slug, agent_name)
         return {
             "status": "success",
             "message": f"Skill '{slug}' integrated successfully.",

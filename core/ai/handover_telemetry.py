@@ -251,17 +251,11 @@ class HandoverAnalytics(BaseModel):
         n = self.total_handovers
 
         # Simple moving average
-        self.avg_preparation_time_ms = (
-            (self.avg_preparation_time_ms * (n - 1)) + record.preparation_time_ms
-        ) / n
+        self.avg_preparation_time_ms = ((self.avg_preparation_time_ms * (n - 1)) + record.preparation_time_ms) / n
 
-        self.avg_transfer_time_ms = (
-            (self.avg_transfer_time_ms * (n - 1)) + record.transfer_time_ms
-        ) / n
+        self.avg_transfer_time_ms = ((self.avg_transfer_time_ms * (n - 1)) + record.transfer_time_ms) / n
 
-        self.avg_total_time_ms = (
-            (self.avg_total_time_ms * (n - 1)) + record.total_duration_ms
-        ) / n
+        self.avg_total_time_ms = ((self.avg_total_time_ms * (n - 1)) + record.total_duration_ms) / n
 
     def get_agent_pair_success_rate(self, source: str, target: str) -> float:
         """Get success rate for a specific agent pair."""
@@ -277,9 +271,7 @@ class HandoverAnalytics(BaseModel):
             "total_handovers": self.total_handovers,
             "success_rate": f"{self.calculate_success_rate():.2%}",
             "avg_total_time_ms": round(self.avg_total_time_ms, 2),
-            "top_failure_categories": sorted(
-                self.failure_categories.items(), key=lambda x: x[1], reverse=True
-            )[:5],
+            "top_failure_categories": sorted(self.failure_categories.items(), key=lambda x: x[1], reverse=True)[:5],
             "best_agent_pairs": sorted(
                 [
                     (pair, stats["success"] / stats["total"])
@@ -345,9 +337,7 @@ class HandoverTelemetry:
         logger.debug("Started recording handover %s", handover_id)
         return record
 
-    def update_recording(
-        self, handover_id: str, **updates: Any
-    ) -> Optional[HandoverRecord]:
+    def update_recording(self, handover_id: str, **updates: Any) -> Optional[HandoverRecord]:
         """Update an active recording with new data."""
         record = self._active_recordings.get(handover_id)
         if not record:
@@ -397,9 +387,7 @@ class HandoverTelemetry:
                     )
                 )
                 if failure_category:
-                    span.set_attribute(
-                        "handover.error_category", failure_category.value
-                    )
+                    span.set_attribute("handover.error_category", failure_category.value)
 
             span.end()
 
@@ -433,9 +421,7 @@ class HandoverTelemetry:
             removed = self._records.pop(0)
             logger.debug("Removed oldest record %s (size limit)", removed.record_id)
 
-    def record_validation_checkpoint(
-        self, handover_id: str, passed: bool, checkpoint_count: int = 1
-    ) -> None:
+    def record_validation_checkpoint(self, handover_id: str, passed: bool, checkpoint_count: int = 1) -> None:
         """Record validation checkpoint results."""
         record = self._active_recordings.get(handover_id)
         if record:
@@ -445,9 +431,7 @@ class HandoverTelemetry:
             else:
                 record.validations_failed += 1
 
-    def record_negotiation(
-        self, handover_id: str, message_count: int, duration_seconds: float
-    ) -> None:
+    def record_negotiation(self, handover_id: str, message_count: int, duration_seconds: float) -> None:
         """Record negotiation metrics."""
         record = self._active_recordings.get(handover_id)
         if record:
@@ -475,9 +459,7 @@ class HandoverTelemetry:
             record.rollback_initiated = True
             record.rollback_successful = successful
 
-    def record_context_size(
-        self, handover_id: str, size_bytes: int, payload_keys: List[str]
-    ) -> None:
+    def record_context_size(self, handover_id: str, size_bytes: int, payload_keys: List[str]) -> None:
         """Record context size metrics."""
         record = self._active_recordings.get(handover_id)
         if record:
@@ -545,9 +527,7 @@ class HandoverTelemetry:
 
         if window_hours:
             cutoff = datetime.now() - timedelta(hours=window_hours)
-            records = [
-                r for r in records if datetime.fromisoformat(r.created_at) >= cutoff
-            ]
+            records = [r for r in records if datetime.fromisoformat(r.created_at) >= cutoff]
 
         if source_agent:
             records = [r for r in records if r.source_agent == source_agent]
@@ -558,9 +538,7 @@ class HandoverTelemetry:
         if not records:
             return 0.0
 
-        successful = sum(
-            1 for r in records if r.outcome == HandoverOutcome.SUCCESS.value
-        )
+        successful = sum(1 for r in records if r.outcome == HandoverOutcome.SUCCESS.value)
         return successful / len(records)
 
     def get_failure_analysis(self, top_n: int = 5) -> List[Tuple[str, int, float]]:
@@ -579,18 +557,14 @@ class HandoverTelemetry:
             reverse=True,
         )[:top_n]
 
-        return [
-            (cat, count, count / total_failures) for cat, count in sorted_categories
-        ]
+        return [(cat, count, count / total_failures) for cat, count in sorted_categories]
 
     def get_performance_report(self) -> Dict[str, Any]:
         """Generate a comprehensive performance report."""
         return {
             "summary": self._analytics.get_summary(),
             "performance": {
-                "avg_preparation_time_ms": round(
-                    self._analytics.avg_preparation_time_ms, 2
-                ),
+                "avg_preparation_time_ms": round(self._analytics.avg_preparation_time_ms, 2),
                 "avg_transfer_time_ms": round(self._analytics.avg_transfer_time_ms, 2),
                 "avg_total_time_ms": round(self._analytics.avg_total_time_ms, 2),
             },
@@ -676,9 +650,7 @@ def record_handover_start(
     task_description: str = "",
 ) -> HandoverRecord:
     """Convenience function to start recording a handover."""
-    return get_telemetry().start_recording(
-        handover_id, source_agent, target_agent, task_description
-    )
+    return get_telemetry().start_recording(handover_id, source_agent, target_agent, task_description)
 
 
 def record_handover_end(
@@ -688,6 +660,4 @@ def record_handover_end(
     failure_reason: Optional[str] = None,
 ) -> Optional[HandoverRecord]:
     """Convenience function to finalize a handover recording."""
-    return get_telemetry().finalize_recording(
-        handover_id, outcome, failure_category, failure_reason
-    )
+    return get_telemetry().finalize_recording(handover_id, outcome, failure_category, failure_reason)

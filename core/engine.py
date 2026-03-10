@@ -222,9 +222,7 @@ class AetherEngine:
     def _on_agent_handover(self, source: str, target: str, context: str) -> None:
         """Logged when the Hive Coordinator swaps expert souls."""
         logger.info("🤝 HANDOVER: %s -> %s | Context: %s", source, target, context)
-        self.broadcast(
-            {"type": "agent_handover", "from": source, "to": target, "reason": context}
-        )
+        self.broadcast({"type": "agent_handover", "from": source, "to": target, "reason": context})
 
 
 def main() -> None:

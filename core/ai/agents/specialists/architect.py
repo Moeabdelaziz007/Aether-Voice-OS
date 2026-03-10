@@ -80,9 +80,7 @@ class ArchitectAgent(VoiceAgent):
 
         # Update context with output
         context.payload["architect_output"] = self._output.model_dump()
-        context.payload["blueprint"] = (
-            "Phase 1: Database Migration. Phase 2: React Component Update"
-        )
+        context.payload["blueprint"] = "Phase 1: Database Migration. Phase 2: React Component Update"
 
         # Add task nodes for decomposition
         task1 = context.add_task_node(
@@ -112,9 +110,7 @@ class ArchitectAgent(VoiceAgent):
             agent="Architect",
         )
 
-        logger.info(
-            "📐 Architect blueprint complete. Passing to Debugger for verification."
-        )
+        logger.info("📐 Architect blueprint complete. Passing to Debugger for verification.")
 
         # Handover to Debugger using deep protocol
         if self.orchestrator:
@@ -136,9 +132,7 @@ class ArchitectAgent(VoiceAgent):
         ) = await self.orchestrator.specialists.architect_to_debugger_handover(
             task=context.task,
             architect_output=self._output,
-            code_context=context.code_context.model_dump()
-            if context.code_context
-            else None,
+            code_context=context.code_context.model_dump() if context.code_context else None,
         )
 
         if success:  # final_context is no longer used

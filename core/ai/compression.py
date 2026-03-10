@@ -34,9 +34,7 @@ class NeuralSummarizer:
     def __init__(self, config: AIConfig) -> None:
         self._config = config
         self._client = genai.Client(api_key=config.api_key)
-        self._model_id = (
-            "gemini-2.5-flash-lite-preview"  # Fast and inexpensive for compression tasks
-        )
+        self._model_id = "gemini-2.5-flash-lite-preview"  # Fast and inexpensive for compression tasks
 
     async def compress(self, context: HandoverContext) -> Dict[str, Any]:
         """
@@ -46,12 +44,7 @@ class NeuralSummarizer:
             return {}
 
         # Prepare payload for LLM
-        history_text = "\n".join(
-            [
-                f"{entry.speaker}: {entry.message}"
-                for entry in context.conversation_history
-            ]
-        )
+        history_text = "\n".join([f"{entry.speaker}: {entry.message}" for entry in context.conversation_history])
 
         prompt = f"""
         Analyze the following conversation history and working memory from an AI session.
@@ -82,9 +75,7 @@ class NeuralSummarizer:
                 self._client.models.generate_content,
                 model=self._model_id,
                 contents=prompt,
-                config=types.GenerateContentConfig(
-                    response_mime_type="application/json"
-                ),
+                config=types.GenerateContentConfig(response_mime_type="application/json"),
             )
 
             if response and response.text:

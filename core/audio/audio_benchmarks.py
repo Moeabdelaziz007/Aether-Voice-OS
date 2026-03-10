@@ -1,10 +1,13 @@
 import time
-import structlog
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
+
+import structlog
+
 from core.audio.telemetry import AudioTelemetryLogger, SessionMetrics
 
 logger = structlog.get_logger("AetherOS.Audio.Benchmark")
+
 
 class AudioBenchmarkRunner:
     """
@@ -34,21 +37,22 @@ class AudioBenchmarkRunner:
         return {
             "scenarios": {k: str(v) for k, v in self._results.items()},
             "timestamp": datetime.now().isoformat(),
-            "verdict": "READY" if len(self._results) > 0 else "NO_DATA"
+            "verdict": "READY" if len(self._results) > 0 else "NO_DATA",
         }
+
 
 async def run_latency_stress_test(logger_instance: AudioTelemetryLogger, duration_sec: int = 10):
     """Utility to stress the pipeline and record results."""
     logger.info(f"Starting latency stress test for {duration_sec}s...")
     start_time = time.time()
     while time.time() - start_time < duration_sec:
-        fid = logger_instance.start_frame()
+        logger_instance.start_frame()
         # Simulate processing delay
-        time.sleep(0.01) 
+        time.sleep(0.01)
         logger_instance.record_capture(2.5)
         logger_instance.record_aec(1.2, converged=True)
         logger_instance.end_frame()
-    
+
     report = logger_instance.get_session_metrics()
     logger.info("Stress test complete.", p95_ms=report.latency_p95_ms)
     return report

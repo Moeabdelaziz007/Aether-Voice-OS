@@ -119,15 +119,11 @@ async def test_e2e_singularity():
     for _ in range(5):
         energy_vad(np.zeros(1600, dtype=np.int16), adaptive_engine=vad)
 
-    speech_signal = np.random.normal(0, 15000, 1600).astype(
-        np.int16
-    )  # Very Loud speech
+    speech_signal = np.random.normal(0, 15000, 1600).astype(np.int16)  # Very Loud speech
     vad_res = energy_vad(speech_signal, adaptive_engine=vad)
     assert vad_res.is_hard, f"Failed to detect speech. RMS: {vad_res.energy_rms}"
 
-    assert hive.active_soul.manifest.name == "ArchitectExpert", (
-        "Default must be Architect."
-    )
+    assert hive.active_soul.manifest.name == "ArchitectExpert", "Default must be Architect."
     print(f"[E2E] Speech detected. Active Soul: {hive.active_soul.manifest.name}")
 
     # Simulate Gemini executing parallel write_memory calls
@@ -161,9 +157,7 @@ async def test_e2e_singularity():
     # ==========================================
     # System evaluates a new user intent "Can you write the code now?"
     print("[E2E] Evaluating intent shift to Coding...")
-    target_expert = await hive.evaluate_intent(
-        "Write the python code for the system plan."
-    )
+    target_expert = await hive.evaluate_intent("Write the python code for the system plan.")
     assert target_expert == "CodingExpert"
 
     # Architect calls handoff tool
@@ -176,9 +170,7 @@ async def test_e2e_singularity():
 
     handoff_result = await router.dispatch(mock_fc_handoff)
 
-    assert handoff_result["result"].get("status") == "handoff_initiated", (
-        f"Handoff failed: {handoff_result}"
-    )
+    assert handoff_result["result"].get("status") == "handoff_initiated", f"Handoff failed: {handoff_result}"
     assert restart_event.is_set(), "Session restart signal must be fired."
     print("[E2E] Autonomous Handoff OK.")
 

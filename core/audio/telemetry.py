@@ -10,6 +10,7 @@ from core.infra.event_bus import EventBus, TelemetryEvent
 
 logger = structlog.get_logger("AetherOS.Telemetry.Logger")
 
+
 @dataclass
 class FrameMetrics:
     timestamp: float
@@ -27,6 +28,7 @@ class FrameMetrics:
     frame_dropped: bool = False
     queue_size_in: int = 0
     queue_size_out: int = 0
+
 
 @dataclass
 class SessionMetrics:
@@ -49,8 +51,10 @@ class SessionMetrics:
     speech_ratio: float = 0.0
     jitter_ms: float = 0.0
 
+
 class AudioTelemetryLogger:
     """Performance logging for the audio pipeline."""
+
     def __init__(self, event_bus: Optional[EventBus] = None, session_id: Optional[str] = None):
         self._bus = event_bus
         self._session_id = session_id or f"session_{int(time.time() * 1000)}"
@@ -88,7 +92,8 @@ class AudioTelemetryLogger:
             self._current_frame.rms_energy = rms_energy
 
     def end_frame(self) -> Optional[FrameMetrics]:
-        if not self._current_frame: return None
+        if not self._current_frame:
+            return None
         self._current_frame.total_latency_ms = (time.perf_counter() - self._frame_start_time) * 1000
         if self._last_frame_id >= 0 and self._current_frame.frame_id > self._last_frame_id + 1:
             self._current_frame.frame_dropped = True
@@ -102,11 +107,21 @@ class AudioTelemetryLogger:
         return frame
 
     async def _publish_frame_metrics(self, frame: FrameMetrics):
-        await self._bus.publish(TelemetryEvent(timestamp=frame.timestamp, source="AudioTelemetryLogger", latency_budget=50, metric_name="frame_metrics", value=frame.total_latency_ms, metadata=asdict(frame)))
+        await self._bus.publish(
+            TelemetryEvent(
+                timestamp=frame.timestamp,
+                source="AudioTelemetryLogger",
+                latency_budget=50,
+                metric_name="frame_metrics",
+                value=frame.total_latency_ms,
+                metadata=asdict(frame),
+            )
+        )
 
     def get_session_metrics(self) -> SessionMetrics:
         frames = list(self._frame_metrics)
-        if not frames: return SessionMetrics(session_id=self._session_id, start_time=self._start_time)
+        if not frames:
+            return SessionMetrics(session_id=self._session_id, start_time=self._start_time)
         latencies = [f.total_latency_ms for f in frames]
         sorted_latencies = sorted(latencies)
         n = len(sorted_latencies)
@@ -115,7 +130,7 @@ class AudioTelemetryLogger:
             session_id=self._session_id,
             start_time=self._start_time,
             total_frames=n,
-            latency_p50_ms=sorted_latencies[int(n*0.5)],
-            latency_p95_ms=sorted_latencies[int(n*0.95)],
-            latency_avg_ms=sum(latencies)/n
+            latency_p50_ms=sorted_latencies[int(n * 0.5)],
+            latency_p95_ms=sorted_latencies[int(n * 0.95)],
+            latency_avg_ms=sum(latencies) / n,
         )

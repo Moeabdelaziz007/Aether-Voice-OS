@@ -47,17 +47,13 @@ class EnvironmentMemory:
         }
 
         # We index the description so we can search it later
-        await self._vector_store.add_text(
-            key=key, text=description, metadata=full_metadata
-        )
+        await self._vector_store.add_text(key=key, text=description, metadata=full_metadata)
 
         # Save incrementally
         self._vector_store.save(ENV_INDEX_PATH)
         logger.info(f"✦ Environment Memory: Indexed new frame at T+{timestamp_offset}s")
 
-    async def query_environment(
-        self, query: str, limit: int = 3
-    ) -> List[Dict[str, Any]]:
+    async def query_environment(self, query: str, limit: int = 3) -> List[Dict[str, Any]]:
         """
         Search visual history for matches to the query.
         """

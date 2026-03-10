@@ -59,9 +59,7 @@ async def test_long_session_stability():
         "final_memory_mb": round(final_mem, 2),
         "memory_growth_mb": round(mem_growth, 2),
         "history": history,
-        "status": "success"
-        if mem_growth < 50
-        else "warning",  # 50MB growth for 50k events is safe
+        "status": "success" if mem_growth < 50 else "warning",  # 50MB growth for 50k events is safe
     }
 
     # Save report

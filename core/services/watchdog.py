@@ -76,17 +76,13 @@ class SREWatchdog:
             # In production, this would be loaded from a secure vault.
             # For the challenge MVP, we generate a session-bound key if not provided.
             self._signing_key = SigningKey.generate()
-            self._verify_key_hex = self._signing_key.verify_key.encode(
-                encoder=HexEncoder
-            ).decode()
+            self._verify_key_hex = self._signing_key.verify_key.encode(encoder=HexEncoder).decode()
             logger.info(
                 "🛡️ SRE Watchdog [SECURE]: Generated session signature key. Root: %s...",
                 self._verify_key_hex[:12],
             )
         else:
-            logger.warning(
-                "⚠️ SRE Watchdog [UNSECURE]: PyNaCl not found. Signatures disabled."
-            )
+            logger.warning("⚠️ SRE Watchdog [UNSECURE]: PyNaCl not found. Signatures disabled.")
 
         self._is_running = False
         self._loop_task: Optional[asyncio.Task] = None
@@ -157,9 +153,7 @@ class SREWatchdog:
             if not getattr(gws_bridge, "_is_running", False):
                 self._gws_bridge_failures += 1
                 if self._gws_bridge_failures >= 3:
-                    logger.warning(
-                        "SRE Watchdog: GWS MCP probe failed 3 times. Triggering autonomous repair."
-                    )
+                    logger.warning("SRE Watchdog: GWS MCP probe failed 3 times. Triggering autonomous repair.")
                     await self._heal_gws_mcp()
             else:
                 self._gws_bridge_failures = 0
@@ -183,9 +177,7 @@ class SREWatchdog:
                     "status": "diagnosing",
                     "message": "Workspace link lagging. Re-initializing bridge...",
                     "log": "GWS MCP daemon unresponsive. Restarting.",
-                    "signature": self._generate_signature(
-                        "diagnosing|GWS MCP daemon unresponsive."
-                    ),
+                    "signature": self._generate_signature("diagnosing|GWS MCP daemon unresponsive."),
                 },
             )
 
@@ -235,9 +227,7 @@ class SREWatchdog:
         message = record.getMessage()
         # Non-blocking, cross-thread safe processing
         if getattr(self, "_loop", None) and not self._loop.is_closed():
-            self._loop.call_soon_threadsafe(
-                lambda: asyncio.create_task(self._process_failure(message))
-            )
+            self._loop.call_soon_threadsafe(lambda: asyncio.create_task(self._process_failure(message)))
 
     async def _process_failure(self, message: str):
         """Analyze failure and trigger healing if a pattern matches."""
@@ -251,9 +241,7 @@ class SREWatchdog:
                     return
 
                 self._last_alert_time[pattern] = now
-                logger.warning(
-                    "🚨 SRE Watchdog detected critical pattern: '%s'", pattern
-                )
+                logger.warning("🚨 SRE Watchdog detected critical pattern: '%s'", pattern)
 
                 # Signal global health alert
                 if self._bus:
@@ -276,9 +264,7 @@ class SREWatchdog:
                         await result
                     logger.info("✅ Watchdog: Healing action complete for %s", pattern)
                 except Exception as e:
-                    logger.error(
-                        "Failed to execute healing action for %s: %s", pattern, e
-                    )
+                    logger.error("Failed to execute healing action for %s: %s", pattern, e)
                 return
 
     async def log_audio_metrics(self, metrics: dict):
@@ -385,9 +371,7 @@ class SREWatchdog:
                     "status": "diagnosing",
                     "message": "Initiating autonomous repair...",
                     "log": "Timeout/Connection error detected.",
-                    "signature": self._generate_signature(
-                        "diagnosing|Timeout/Connection error detected."
-                    ),
+                    "signature": self._generate_signature("diagnosing|Timeout/Connection error detected."),
                 },
             )
 

@@ -1,7 +1,8 @@
 import os
 import sys
+
 from google import genai
-from google.genai import types
+
 
 def generate_summary():
     diff_file = sys.argv[1]

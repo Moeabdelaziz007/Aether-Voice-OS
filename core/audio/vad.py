@@ -30,9 +30,7 @@ class AetherVAD:
         self._silence_hysteresis_frames = 0
 
         # Calibration (Rolling RMS statistics)
-        self._rms_history: Deque[float] = collections.deque(
-            maxlen=100
-        )  # 2 seconds of history
+        self._rms_history: Deque[float] = collections.deque(maxlen=100)  # 2 seconds of history
         self._noise_floor = 0.01
 
     def process_frame(self, pcm_data: bytes) -> bool:

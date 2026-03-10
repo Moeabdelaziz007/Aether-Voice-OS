@@ -90,9 +90,7 @@ class STFT:
 
         return stft_matrix.T  # (freq_bins x time_frames)
 
-    def inverse(
-        self, stft_matrix: np.ndarray, length: Optional[int] = None
-    ) -> np.ndarray:
+    def inverse(self, stft_matrix: np.ndarray, length: Optional[int] = None) -> np.ndarray:
         """Compute inverse STFT.
 
         Args:
@@ -312,9 +310,7 @@ class SpectralAnalyzer:
         if self._prev_magnitude is not None:
             # Ensure same length
             min_len = min(len(magnitude), len(self._prev_magnitude))
-            flux = np.sum(
-                np.maximum(0, magnitude[:min_len] - self._prev_magnitude[:min_len])
-            )
+            flux = np.sum(np.maximum(0, magnitude[:min_len] - self._prev_magnitude[:min_len]))
         else:
             flux = 0.0
 
@@ -332,9 +328,7 @@ class SpectralAnalyzer:
             bark_bands=bark_bands,
         )
 
-    def compute_coherence(
-        self, x: np.ndarray, y: np.ndarray, n_frames: int = 4
-    ) -> float:
+    def compute_coherence(self, x: np.ndarray, y: np.ndarray, n_frames: int = 4) -> float:
         """Compute magnitude-squared coherence between two signals.
 
         Args:
@@ -456,9 +450,7 @@ def gcc_phat(
     return int(delay), float(confidence)
 
 
-def erle(
-    mic_signal: np.ndarray, error_signal: np.ndarray, frame_size: int = 256
-) -> float:
+def erle(mic_signal: np.ndarray, error_signal: np.ndarray, frame_size: int = 256) -> float:
     """Compute Echo Return Loss Enhancement (ERLE).
 
     ERLE measures the echo cancellation performance in dB.

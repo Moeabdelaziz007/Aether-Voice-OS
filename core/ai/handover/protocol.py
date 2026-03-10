@@ -64,10 +64,7 @@ class HandoffProtocol:
                     "a2a_code": 202,
                     "target": target_agent_id,
                     "handoff_id": f"h-idx-{datetime.now().timestamp()}",
-                    "message": (
-                        f"Handoff to Expert '{target_agent_id}' successful. "
-                        "Restarting session..."
-                    ),
+                    "message": (f"Handoff to Expert '{target_agent_id}' successful. Restarting session..."),
                 }
             return {
                 "status": "error",
@@ -79,10 +76,7 @@ class HandoffProtocol:
             "a2a_code": 202,
             "target": target_agent_id,
             "handoff_id": f"h-idx-{datetime.now().timestamp()}",
-            "message": (
-                f"Task delegated to '{target_agent_id}' (Simulation). "
-                "I'll monitor the completion."
-            ),
+            "message": (f"Task delegated to '{target_agent_id}' (Simulation). I'll monitor the completion."),
         }
 
     def get_tools(self) -> list[dict]:

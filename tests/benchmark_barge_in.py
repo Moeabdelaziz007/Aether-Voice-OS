@@ -64,10 +64,7 @@ async def main():
     logger = logging.getLogger("BargeInBenchmark")
 
     logger.info("🚀 Running Barge-in Latency Benchmark...")
-    logger.info(
-        "This test measures the time to drain the outgoing audio queue upon "
-        "user interruption.\n"
-    )
+    logger.info("This test measures the time to drain the outgoing audio queue upon user interruption.\n")
 
     queue_size = 15  # From core/engine.py
     num_runs = 1000
@@ -75,18 +72,14 @@ async def main():
     logger.info(f"Configuration: Queue Size = {queue_size}, Test Runs = {num_runs}\n")
 
     # --- Benchmark Scenarios ---
-    full_queue_latencies = [
-        await run_interrupt_drain(queue_size, queue_size) for _ in range(num_runs)
-    ]
+    full_queue_latencies = [await run_interrupt_drain(queue_size, queue_size) for _ in range(num_runs)]
     log_stats(
         logger,
         full_queue_latencies,
         f"Scenario 1: Queue is 100% full ({queue_size}/{queue_size} items)",
     )
 
-    half_queue_latencies = [
-        await run_interrupt_drain(queue_size, queue_size // 2) for _ in range(num_runs)
-    ]
+    half_queue_latencies = [await run_interrupt_drain(queue_size, queue_size // 2) for _ in range(num_runs)]
     log_stats(
         logger,
         half_queue_latencies,

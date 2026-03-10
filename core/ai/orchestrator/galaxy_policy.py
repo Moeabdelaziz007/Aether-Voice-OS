@@ -138,17 +138,11 @@ class GalaxyPolicyEnforcer:
 
         # Check latency threshold
         if latency_ms > policy.max_latency_ms:
-            violations.append(
-                f"Latency {latency_ms:.0f}ms exceeds max "
-                f"{policy.max_latency_ms:.0f}ms for {planet_id}"
-            )
+            violations.append(f"Latency {latency_ms:.0f}ms exceeds max {policy.max_latency_ms:.0f}ms for {planet_id}")
 
         # Check load threshold
         if load > policy.max_load_threshold:
-            violations.append(
-                f"Load {load:.2f} exceeds threshold "
-                f"{policy.max_load_threshold:.2f} for {planet_id}"
-            )
+            violations.append(f"Load {load:.2f} exceeds threshold {policy.max_load_threshold:.2f} for {planet_id}")
 
         if violations:
             logger.warning(

@@ -36,12 +36,8 @@ class CognitiveScheduler:
         self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
 
         # Proactive Neural OS protocols
-        self._wal = WALProtocol(
-            workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace"
-        )
-        self._buffer = WorkingBuffer(
-            workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace"
-        )
+        self._wal = WALProtocol(workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace")
+        self._buffer = WorkingBuffer(workspace_path="/Users/cryptojoker710/Desktop/Aether Live Agent/workspace")
         self._heartbeat_task: Optional[asyncio.Task] = None
 
     async def start_heartbeat(self):
@@ -74,16 +70,12 @@ class CognitiveScheduler:
 
         # 2. Pattern Detector (Reverse Prompting)
         # Using simple frequency analysis on temporal memory
-        actions = [
-            m.get("action") for m in self._temporal_memory[-20:] if "action" in m
-        ]
+        actions = [m.get("action") for m in self._temporal_memory[-20:] if "action" in m]
         if actions:
             # Check for repetition
             for action in set(actions):
                 if actions.count(action) >= 3:
-                    logger.info(
-                        f"💡 Pattern Detected: Repeated action '{action}'. Preparing proactive proposal."
-                    )
+                    logger.info(f"💡 Pattern Detected: Repeated action '{action}'. Preparing proactive proposal.")
                     if self._echo_callback:
                         await self._echo_callback(
                             f"I've noticed you've done '{action}' several times. Should I automate this?"
@@ -97,19 +89,13 @@ class CognitiveScheduler:
         """Adjust cognitive load based on user emotional state."""
         if event.trait_name == "arousal" and event.trait_value > 0.8:
             # User is excited/stressed: Prioritize 'Speed/Action' specialists
-            logger.info(
-                "⚡ Cortex: High arousal detected. Prioritizing Reactive Specialists."
-            )
+            logger.info("⚡ Cortex: High arousal detected. Prioritizing Reactive Specialists.")
 
     async def _on_vision_pulse(self, event: VisionPulseEvent):
         """Update temporal memory with vision context for spatial grounding."""
         logger.debug("👁️ Cortex: Vision Pulse received.")
         # Store Pulse in temporal memory
-        self._temporal_memory.append({
-            "type": "vision",
-            "timestamp": time.time(),
-            "metadata": event.metadata
-        })
+        self._temporal_memory.append({"type": "vision", "timestamp": time.time(), "metadata": event.metadata})
         if len(self._temporal_memory) > 100:
             self._temporal_memory.pop(0)
 
@@ -129,9 +115,7 @@ class CognitiveScheduler:
             if key in prompt_fragment.lower():
                 for tool in tools:
                     if tool not in self._active_speculations:
-                        logger.info(
-                            f"🔮 Speculation: Pre-warming {tool} for keyword '{key}'"
-                        )
+                        logger.info(f"🔮 Speculation: Pre-warming {tool} for keyword '{key}'")
                         # In a real impl, we'd spawn a background task.
                         # For now, we track the speculation state.
                         self._active_speculations[tool] = True  # Mark as pre-warmed

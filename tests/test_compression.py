@@ -50,9 +50,7 @@ async def test_summarizer_compress_fallback(mock_config):
     summarizer = NeuralSummarizer(mock_config)
 
     # Mock the client to raise an exception
-    summarizer._client.models.generate_content = MagicMock(
-        side_effect=Exception("API Error")
-    )
+    summarizer._client.models.generate_content = MagicMock(side_effect=Exception("API Error"))
 
     context = HandoverContext(
         handover_id="test-3",

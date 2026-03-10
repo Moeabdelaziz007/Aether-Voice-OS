@@ -61,10 +61,7 @@ async def search_codebase(query: str, limit: int = 3) -> dict[str, Any]:
         return {
             "query": query,
             "results": formatted_results,
-            "instruction": (
-                "Use the vision_tool or system_tool to read the specific file "
-                "if more context is needed."
-            ),
+            "instruction": ("Use the vision_tool or system_tool to read the specific file if more context is needed."),
         }
     except Exception as e:
         logger.error("RAG Tool search failed: %s", e)
@@ -76,18 +73,13 @@ def get_tools() -> list[dict[str, Any]]:
     return [
         {
             "name": "search_codebase",
-            "description": (
-                "Perform a semantic search across the entire AetherOS codebase."
-            ),
+            "description": ("Perform a semantic search across the entire AetherOS codebase."),
             "parameters": {
                 "type": "OBJECT",
                 "properties": {
                     "query": {
                         "type": "STRING",
-                        "description": (
-                            "The search query, e.g., "
-                            "'How is the Thalamic Gate implemented?'"
-                        ),
+                        "description": ("The search query, e.g., 'How is the Thalamic Gate implemented?'"),
                     },
                     "limit": {
                         "type": "INTEGER",

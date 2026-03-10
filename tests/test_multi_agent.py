@@ -19,9 +19,7 @@ def test_synergy():
     orchestrator.register_agent("Architect", ArchitectAgent())
     orchestrator.register_agent("Debugger", DebuggerAgent())
 
-    result = orchestrator.collaborate(
-        "Design and build a new database migration script.", "Architect"
-    )
+    result = orchestrator.collaborate("Design and build a new database migration script.", "Architect")
     print(f"\n--- Final Result ---\n{result}\n--------------------")
 
     assert "Synergy Complete" in result

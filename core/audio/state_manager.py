@@ -221,9 +221,7 @@ class AudioStateManager:
                 pos = (self._far_end_write_pos + i) % self._buffer_capacity
                 self._far_end_buffer[pos] = sample
 
-            self._far_end_write_pos = (
-                self._far_end_write_pos + n
-            ) % self._buffer_capacity
+            self._far_end_write_pos = (self._far_end_write_pos + n) % self._buffer_capacity
             self._far_end_count = min(self._far_end_count + n, self._buffer_capacity)
 
     def read_far_end_last(self, n: int) -> np.ndarray:

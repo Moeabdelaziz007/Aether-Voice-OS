@@ -154,19 +154,14 @@ class AudioCapture:
         from core.audio.state import HysteresisGate
 
         self._aec = DynamicAEC(
-            sample_rate=config.send_sample_rate,
-            frame_size=config.chunk_size,
-            filter_length_ms=100.0,
-            step_size=0.1
+            sample_rate=config.send_sample_rate, frame_size=config.chunk_size, filter_length_ms=100.0, step_size=0.1
         )
         self._hysteresis = HysteresisGate()
         self._smooth_muter = SmoothMuter()
 
         # Delay Compensation Counters
         self._audio_latency_ms = 50  # hardware latency approximation
-        self._latency_samples = int(
-            self._audio_latency_ms * self._config.send_sample_rate // 1000
-        )
+        self._latency_samples = int(self._audio_latency_ms * self._config.send_sample_rate // 1000)
         self._mute_delay_remaining = 0
         self._unmute_delay_remaining = 0
 
@@ -181,9 +176,7 @@ class AudioCapture:
                 pass
             self._async_queue.put_nowait(msg)
 
-    def _callback(
-        self, in_data: bytes, frame_count: int, time_info: dict, status: int
-    ) -> tuple[bytes | None, int]:
+    def _callback(self, in_data: bytes, frame_count: int, time_info: dict, status: int) -> tuple[bytes | None, int]:
         """
         High-priority Thalamic Gate callback.
         Analyzes energy and gates microphone input based on AI state and Leakage.
@@ -193,14 +186,14 @@ class AudioCapture:
         # 1. Dynamic AEC (The 'Cortex' Path)
         # Pull reference signal (AI output) from shared far_end_pcm buffer
         far_end_ref = audio_state.far_end_pcm.read_latest(frame_count)
-        
+
         # Process through NLMS filter to subtract echo
         processed_chunk, aec_state = self._aec.process_frame(pcm_chunk, far_end_ref)
-        
+
         # Update shared state for telemetry/gateway
         audio_state.aec_double_talk = aec_state.double_talk_detected
         audio_state.aec_erle_db = aec_state.erle_db
-        
+
         # SOTA VAD signal decided by AEC
         is_user = aec_state.double_talk_detected
 
@@ -211,19 +204,13 @@ class AudioCapture:
         if audio_state.just_started_playing:
             self._mute_delay_remaining = self._latency_samples
         if audio_state.just_stopped_playing:
-            self._unmute_delay_remaining = int(
-                self._latency_samples * 1.5
-            )  # grace period for echo to die
+            self._unmute_delay_remaining = int(self._latency_samples * 1.5)  # grace period for echo to die
 
         if self._mute_delay_remaining > 0:
-            self._mute_delay_remaining = max(
-                0, self._mute_delay_remaining - frame_count
-            )
+            self._mute_delay_remaining = max(0, self._mute_delay_remaining - frame_count)
             ai_playing_compensated = False
         elif self._unmute_delay_remaining > 0:
-            self._unmute_delay_remaining = max(
-                0, self._unmute_delay_remaining - frame_count
-            )
+            self._unmute_delay_remaining = max(0, self._unmute_delay_remaining - frame_count)
             ai_playing_compensated = True
         else:
             ai_playing_compensated = ai_playing_base
@@ -266,25 +253,17 @@ class AudioCapture:
         audio_state.is_hard = vad.is_hard
 
         zero_crossings = np.where(np.diff(np.sign(processed_chunk)))[0]
-        audio_state.last_zcr = (
-            len(zero_crossings) / len(processed_chunk)
-            if len(processed_chunk) > 0
-            else 0
-        )
+        audio_state.last_zcr = len(zero_crossings) / len(processed_chunk) if len(processed_chunk) > 0 else 0
 
         # Architecture of Silence: Classify silence if no clear speech
         if not vad.is_hard:
-            audio_state.silence_type = self._analyzer.classify(
-                processed_chunk, vad.energy_rms
-            ).value
+            audio_state.silence_type = self._analyzer.classify(processed_chunk, vad.energy_rms).value
         else:
             audio_state.silence_type = "speech"
 
         if self._paralinguistic_analyzer and self._on_affective_data:
             if vad.is_hard or vad.energy_rms < 0.05:
-                features = self._paralinguistic_analyzer.analyze(
-                    processed_chunk, vad.energy_rms
-                )
+                features = self._paralinguistic_analyzer.analyze(processed_chunk, vad.energy_rms)
                 if self._loop and not self._loop.is_closed():
                     self._loop.call_soon_threadsafe(self._on_affective_data, features)
 

@@ -50,9 +50,7 @@ async def run_simulation(generations: int = 10, pop_size: int = 5):
             new_population.append(mutated)
 
             # 2. Performance Tracking (Mock)
-            fitness = (await firebase.get_session_affective_summary("sim"))["summary"][
-                "avg_engagement"
-            ]
+            fitness = (await firebase.get_session_affective_summary("sim"))["summary"]["avg_engagement"]
             print(
                 f"Agent {i} DNA: Empathy={mutated.empathy:.2f}, Proactivity={mutated.proactivity:.2f} | Fitness={fitness:.2f}"
             )

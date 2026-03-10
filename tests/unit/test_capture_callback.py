@@ -31,11 +31,7 @@ mock_audio_state.capture_queue_drops = 0
 
 patcher = patch.dict(
     "sys.modules",
-    {
-        "core.audio.state": MagicMock(
-            audio_state=mock_audio_state, HysteresisGate=MagicMock()
-        )
-    },
+    {"core.audio.state": MagicMock(audio_state=mock_audio_state, HysteresisGate=MagicMock())},
 )
 patcher.start()
 
@@ -63,7 +59,6 @@ def mock_dependencies():
         patch("core.audio.capture.HysteresisGate") as MockHysteresis,
         patch("core.audio.capture.AECBridge"),
     ):
-
         # Configure the return values of the mocked instances
         mock_aec_instance = MockDynamicAEC.return_value
         mock_aec_state = MagicMock()
@@ -94,9 +89,7 @@ def mock_dependencies():
         }
 
 
-def _sine_pcm16(
-    freq_hz: float, amp: float, n: int = CHUNK_SIZE, sr: int = SAMPLE_RATE
-) -> np.ndarray:
+def _sine_pcm16(freq_hz: float, amp: float, n: int = CHUNK_SIZE, sr: int = SAMPLE_RATE) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
@@ -153,9 +146,7 @@ def capture_instance():
     mock_audio_state.is_playing = False
     mock_audio_state.just_started_playing = False
     mock_audio_state.just_stopped_playing = False
-    mock_audio_state.far_end_pcm.read_last.return_value = np.zeros(
-        CHUNK_SIZE, dtype=np.int16
-    )
+    mock_audio_state.far_end_pcm.read_last.return_value = np.zeros(CHUNK_SIZE, dtype=np.int16)
     mock_audio_state.capture_queue_drops = 0
 
     config = AudioConfig(send_sample_rate=SAMPLE_RATE, chunk_size=CHUNK_SIZE)
@@ -187,9 +178,7 @@ def capture_instance():
         return inst
 
 
-def test_callback_when_ai_is_silent_and_user_speaks(
-    capture_instance, mock_dependencies
-):
+def test_callback_when_ai_is_silent_and_user_speaks(capture_instance, mock_dependencies):
     """
     Scenario: AI is not playing, user speaks.
     Expected: SmoothMuter.unmute() is called.
@@ -265,6 +254,7 @@ def test_push_to_async_queue_overflow_drops_oldest_and_counts_telemetry(
     capture_instance: AudioCapture,
 ):
     import core.audio.capture
+
     # Simulate QueueFull once, then success.
     q = capture_instance._async_queue
 

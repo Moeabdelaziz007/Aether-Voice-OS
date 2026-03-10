@@ -45,6 +45,7 @@ async def run_comprehensive_test():
     print(f"✓ API Key Available: {'*' * 10}{api_key[-5:]}")
 
     from core.infra.config import AetherConfig
+
     try:
         # Avoid .env loading which is restricted on this system
         config = AetherConfig(_env_file=None)
@@ -105,9 +106,7 @@ async def run_comprehensive_test():
                 f"P95: {result['latency']['p95_ms']:.1f}ms, "
                 f"P99: {result['latency']['p99_ms']:.1f}ms"
             )
-            print(
-                f"  AEC Convergence: {result['aec']['convergence_rate_percent']:.1f}%"
-            )
+            print(f"  AEC Convergence: {result['aec']['convergence_rate_percent']:.1f}%")
             print(f"  AEC ERLE: {result['aec']['erle_db_avg']:.1f}dB")
             print(f"  VAD Accuracy: {result['vad']['accuracy_percent']:.1f}%")
             print(f"  Double-talk Frames: {result['aec']['double_talk_frames']}")
@@ -137,40 +136,31 @@ async def run_comprehensive_test():
     if all_results:
         # Calculate summary statistics
         latencies_p95 = [r["result"]["latency"]["p95_ms"] for r in all_results]
-        aec_convergence_rates = [
-            r["result"]["aec"]["convergence_rate_percent"] for r in all_results
-        ]
+        aec_convergence_rates = [r["result"]["aec"]["convergence_rate_percent"] for r in all_results]
         vad_accuracies = [r["result"]["vad"]["accuracy_percent"] for r in all_results]
 
         summary_report["summary_statistics"] = {
             "average_latency_p95_ms": sum(latencies_p95) / len(latencies_p95),
             "min_latency_p95_ms": min(latencies_p95),
             "max_latency_p95_ms": max(latencies_p95),
-            "average_aec_convergence_percent": sum(aec_convergence_rates)
-            / len(aec_convergence_rates),
+            "average_aec_convergence_percent": sum(aec_convergence_rates) / len(aec_convergence_rates),
             "average_vad_accuracy_percent": sum(vad_accuracies) / len(vad_accuracies),
         }
 
         print("📈 Summary Statistics:")
-        print(
-            f"  Average Latency (P95): {summary_report['summary_statistics']['average_latency_p95_ms']:.1f}ms"
-        )
+        print(f"  Average Latency (P95): {summary_report['summary_statistics']['average_latency_p95_ms']:.1f}ms")
         print(
             f"  Latency Range: {summary_report['summary_statistics']['min_latency_p95_ms']:.1f}ms - {summary_report['summary_statistics']['max_latency_p95_ms']:.1f}ms"
         )
         print(
             f"  Average AEC Convergence: {summary_report['summary_statistics']['average_aec_convergence_percent']:.1f}%"
         )
-        print(
-            f"  Average VAD Accuracy: {summary_report['summary_statistics']['average_vad_accuracy_percent']:.1f}%"
-        )
+        print(f"  Average VAD Accuracy: {summary_report['summary_statistics']['average_vad_accuracy_percent']:.1f}%")
         print()
 
     # Save detailed report
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    report_file = (
-        ROOT / "benchmark_reports" / f"complete_testing_report_{timestamp}.json"
-    )
+    report_file = ROOT / "benchmark_reports" / f"complete_testing_report_{timestamp}.json"
     report_file.parent.mkdir(exist_ok=True)
 
     with open(report_file, "w") as f:

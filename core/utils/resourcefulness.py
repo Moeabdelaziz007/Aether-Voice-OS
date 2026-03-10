@@ -31,15 +31,11 @@ def relentless_resourcefulness(max_attempts: int = 10):
                 except Exception as e:
                     attempts += 1
                     last_error = e
-                    logger.warning(
-                        f"Attempt {attempts} failed: {e}. Trying next approach..."
-                    )
+                    logger.warning(f"Attempt {attempts} failed: {e}. Trying next approach...")
                     # Delay between retries (could be exponential backoff)
                     await asyncio.sleep(0.5 * attempts)
 
-            logger.error(
-                f"Exhausted all {max_attempts} attempts. Final failure: {last_error}"
-            )
+            logger.error(f"Exhausted all {max_attempts} attempts. Final failure: {last_error}")
             raise last_error
 
         return wrapper

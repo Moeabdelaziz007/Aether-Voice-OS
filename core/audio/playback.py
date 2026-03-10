@@ -21,10 +21,10 @@ from core.audio.exceptions import (
     AudioDeviceNotFoundError,
     DeviceDisconnectedError,
 )
-from core.audio.state import audio_state
-from core.infra.config import AudioConfig
 from core.audio.jitter_buffer import AudioJitterBuffer
 from core.audio.opus_encoding import OpusDecoder
+from core.audio.state import audio_state
+from core.infra.config import AudioConfig
 
 logger = logging.getLogger(__name__)
 
@@ -45,11 +45,11 @@ class AudioPlayback:
         self._config = config
         self._async_queue = input_queue
         self._on_audio_tx = on_audio_tx
-        
+
         # Enhanced Jitter Buffer (capacity=500ms, nominal=100ms)
         self._jitter_buffer = AudioJitterBuffer(capacity_ms=1000, nominal_ms=120)
         self._decoder = OpusDecoder(sample_rate=config.receive_sample_rate)
-        
+
         self._pya: Optional[pyaudio.PyAudio] = None
         self._stream: Optional[pyaudio.Stream] = None
         self._running = False
@@ -75,7 +75,7 @@ class AudioPlayback:
         try:
             # Pop from adaptive jitter buffer
             data = self._jitter_buffer.pop()
-            
+
             if data is None:
                 audio_state.set_playing(False)
                 # Return silence
@@ -90,9 +90,7 @@ class AudioPlayback:
 
             # 2. Mix Ambient Heartbeat (Subliminal status)
             t = np.arange(len(pcm)) / 16000.0
-            heartbeat = 500.0 * np.sin(
-                2 * np.pi * self._heartbeat_freq * (t + self._phase)
-            )
+            heartbeat = 500.0 * np.sin(2 * np.pi * self._heartbeat_freq * (t + self._phase))
             pcm += heartbeat
             self._phase = (self._phase + t[-1]) % 1.0
 
@@ -172,10 +170,7 @@ class AudioPlayback:
                 payload = await self._async_queue.get()
 
                 audio_bytes: bytes
-                if (
-                    isinstance(payload, dict)
-                    and payload.get("type") == "pressure_marker"
-                ):
+                if isinstance(payload, dict) and payload.get("type") == "pressure_marker":
                     fill_ms = int(payload.get("fill_ms", 20))
                     sample_rate = self._config.receive_sample_rate
                     samples = max(1, int(sample_rate * fill_ms / 1000))
@@ -188,9 +183,7 @@ class AudioPlayback:
                 elif isinstance(payload, (bytes, bytearray)):
                     audio_bytes = bytes(payload)
                 else:
-                    logger.debug(
-                        "Skipping unsupported playback payload type: %s", type(payload)
-                    )
+                    logger.debug("Skipping unsupported playback payload type: %s", type(payload))
                     continue
 
                 # 1.5 Mirror to UI (WebSockets) if connected

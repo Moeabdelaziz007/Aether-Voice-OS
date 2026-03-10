@@ -56,13 +56,9 @@ except ImportError:
             # Standard location (should be here if cp worked)
             os.path.join(os.path.dirname(__file__), "aether_cortex.so"),
             # Local release build
-            os.path.join(
-                base_dir, "aether-cortex", "target", "release", "libaether_cortex.dylib"
-            ),
+            os.path.join(base_dir, "aether-cortex", "target", "release", "libaether_cortex.dylib"),
             # Local debug build
-            os.path.join(
-                base_dir, "aether-cortex", "target", "debug", "libaether_cortex.dylib"
-            ),
+            os.path.join(base_dir, "aether-cortex", "target", "debug", "libaether_cortex.dylib"),
         ]
 
         for path in potential_paths:
@@ -452,9 +448,7 @@ def enhanced_vad(
         A `HyperVADResult` object with the VAD decision and energy stats.
     """
     if len(pcm_chunk) == 0:
-        return HyperVADResult(
-            is_soft=False, is_hard=False, energy_rms=0.0, sample_count=0
-        )
+        return HyperVADResult(is_soft=False, is_hard=False, energy_rms=0.0, sample_count=0)
 
     normalized = pcm_chunk.astype(np.float32) / 32768.0
 
@@ -477,11 +471,7 @@ def enhanced_vad(
     # Combine with weights
     # Energy is normalized against a typical strong speech RMS (0.1)
     # Centroid is normalized against typical speech range max (4000Hz)
-    speech_score = (
-        (min(rms / 0.1, 1.0)) * 0.4
-        + (1.0 - zcr) * 0.3
-        + (min(centroid / 4000.0, 1.0)) * 0.3
-    )
+    speech_score = (min(rms / 0.1, 1.0)) * 0.4 + (1.0 - zcr) * 0.3 + (min(centroid / 4000.0, 1.0)) * 0.3
 
     is_soft = False
     is_hard = False

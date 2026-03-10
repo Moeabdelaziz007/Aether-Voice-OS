@@ -84,9 +84,7 @@ def main():
     # Generate test data
     np.random.seed(42)
     pcm_speech = np.random.randint(-10000, 10000, size=FRAME_SAMPLES, dtype=np.int16)
-    pcm_crossing = np.array(
-        list(range(-200, 0)) + list(range(0, FRAME_SAMPLES - 200)), dtype=np.int16
-    )[:FRAME_SAMPLES]
+    pcm_crossing = np.array(list(range(-200, 0)) + list(range(0, FRAME_SAMPLES - 200)), dtype=np.int16)[:FRAME_SAMPLES]
 
     results = []
 
@@ -99,9 +97,7 @@ def main():
     print(f"  {name:20s}: {us:8.2f} µs/call")
 
     if HAS_RUST:
-        name, us_rust = bench(
-            "Rust (Synapse)", aether_cortex.energy_vad, pcm_speech, 0.02
-        )
+        name, us_rust = bench("Rust (Synapse)", aether_cortex.energy_vad, pcm_speech, 0.02)
         results.append((name, us_rust))
         print(f"  {name:20s}: {us_rust:8.2f} µs/call")
         print(f"  {'Speedup':20s}: {us / us_rust:8.1f}x 🚀")
@@ -115,9 +111,7 @@ def main():
     print(f"  {name:20s}: {us:8.2f} µs/call")
 
     if HAS_RUST:
-        name, us_rust = bench(
-            "Rust (Axon)", aether_cortex.find_zero_crossing, pcm_crossing, 16000, 20.0
-        )
+        name, us_rust = bench("Rust (Axon)", aether_cortex.find_zero_crossing, pcm_crossing, 16000, 20.0)
         results.append((name, us_rust))
         print(f"  {name:20s}: {us_rust:8.2f} µs/call")
         print(f"  {'Speedup':20s}: {us / us_rust:8.1f}x 🚀")

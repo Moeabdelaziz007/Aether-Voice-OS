@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Optional
 
 from core.audio.state import audio_state
 
@@ -44,9 +43,7 @@ class ThalamicGate:
             if need_help_score > 0.6:
                 self._frustration_streak += 1
                 if self._frustration_streak >= 15:  # ~1.5 seconds of sustained 'need-help'
-                    logger.warning(
-                        "🚨 THALAMIC GATE: Proactive Intervention Triggered!"
-                    )
+                    logger.warning("🚨 THALAMIC GATE: Proactive Intervention Triggered!")
                     self._last_trigger_time = asyncio.get_event_loop().time()
                     await self._trigger_intervention()
                     self._frustration_streak = 0
@@ -103,13 +100,13 @@ class ThalamicGate:
             if self._last_trigger_time > 0:
                 latency_ms = (asyncio.get_event_loop().time() - self._last_trigger_time) * 1000
                 logger.info("⚡ Intervention Latency: %.2fms", latency_ms)
-                
+
                 # Proactively emit to gateway if possible
                 if hasattr(self._gemini_session, "_gateway"):
                     asyncio.create_task(
-                        self._gemini_session._gateway.broadcast("interrupt_latency", {
-                            "ms": float(latency_ms),
-                            "ts_ms": int(asyncio.get_event_loop().time() * 1000)
-                        })
+                        self._gemini_session._gateway.broadcast(
+                            "interrupt_latency",
+                            {"ms": float(latency_ms), "ts_ms": int(asyncio.get_event_loop().time() * 1000)},
+                        )
                     )
                 self._last_trigger_time = 0

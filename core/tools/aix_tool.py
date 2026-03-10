@@ -20,9 +20,7 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-async def import_aix_profile(
-    file_path: str, galaxy_id: str = "Genesis", **kwargs: Any
-) -> dict[str, Any]:
+async def import_aix_profile(file_path: str, galaxy_id: str = "Genesis", **kwargs: Any) -> dict[str, Any]:
     try:
         payload = parse_aix_file(file_path)
     except Exception as exc:
@@ -111,8 +109,7 @@ def get_tools() -> list[dict[str, Any]]:
         {
             "name": "import_aix_profile",
             "description": (
-                "Import an AIX agent package file and register it as a planet profile "
-                "inside a target galaxy."
+                "Import an AIX agent package file and register it as a planet profile inside a target galaxy."
             ),
             "parameters": {
                 "type": "object",
@@ -134,9 +131,7 @@ def get_tools() -> list[dict[str, Any]]:
         },
         {
             "name": "export_aix_profile",
-            "description": (
-                "Export an imported planet profile back to AIX format with checksum."
-            ),
+            "description": ("Export an imported planet profile back to AIX format with checksum."),
             "parameters": {
                 "type": "object",
                 "properties": {

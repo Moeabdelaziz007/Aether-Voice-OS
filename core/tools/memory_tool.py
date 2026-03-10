@@ -83,9 +83,7 @@ async def save_memory(
             "status": "saved",
             "key": key,
             "priority": priority,
-            "message": (
-                f"Synapse update: I've stored '{key}' as {priority} priority memory."
-            ),
+            "message": (f"Synapse update: I've stored '{key}' as {priority} priority memory."),
         }
     except Exception as exc:
         logger.error("Memory save failed: %s", exc)
@@ -128,9 +126,7 @@ async def recall_memory(key: str, **kwargs) -> dict:
         return {"status": "error", "message": f"Failed to recall memory: {exc}"}
 
 
-async def list_memories(
-    limit: int = 10, priority: Optional[str] = None, **kwargs
-) -> dict:
+async def list_memories(limit: int = 10, priority: Optional[str] = None, **kwargs) -> dict:
     """
     List saved memories, optionally filtered by priority.
 
@@ -184,11 +180,7 @@ async def semantic_search(tags: list[str], limit: int = 5, **kwargs) -> dict:
     try:
         memories = []
         # Firestore array_contains_any supports up to 10 tags
-        query = (
-            db.collection("memory")
-            .where("tags", "array_contains_any", tags)
-            .limit(limit)
-        )
+        query = db.collection("memory").where("tags", "array_contains_any", tags).limit(limit)
         docs = query.stream()
         async for doc in docs:
             data = doc.to_dict()
@@ -223,9 +215,7 @@ async def prune_memories(priority: str = "low", **kwargs) -> dict:
 
     try:
         count = 0
-        docs = (
-            db.collection("memory").where("priority", "==", priority.lower()).stream()
-        )
+        docs = db.collection("memory").where("priority", "==", priority.lower()).stream()
         async for doc in docs:
             await doc.reference.delete()
             count += 1
@@ -234,9 +224,7 @@ async def prune_memories(priority: str = "low", **kwargs) -> dict:
         return {
             "status": "pruned",
             "count": count,
-            "message": (
-                f"Successfully cleared {count} {priority}-importance items from memory."
-            ),
+            "message": (f"Successfully cleared {count} {priority}-importance items from memory."),
         }
     except Exception as exc:
         logger.error("Pruning failed: %s", exc)

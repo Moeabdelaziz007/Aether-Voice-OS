@@ -20,9 +20,7 @@ class AudioJitterBuffer:
     and the sub-200ms latency requirement.
     """
 
-    def __init__(
-        self, capacity_ms: int = 500, nominal_ms: int = 100, packet_size_ms: int = 20
-    ):
+    def __init__(self, capacity_ms: int = 500, nominal_ms: int = 100, packet_size_ms: int = 20):
         self.packet_size_ms = packet_size_ms
         self.capacity = int(capacity_ms / packet_size_ms)
         self.nominal = int(nominal_ms / packet_size_ms)

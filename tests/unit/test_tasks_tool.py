@@ -20,9 +20,7 @@ class _FakeQuery:
 
     def where(self, field: str, op: str, value: str) -> "_FakeQuery":
         if field == "tag" and op == "==":
-            return _FakeQuery(
-                [doc for doc in self._docs if doc.to_dict().get("tag") == value]
-            )
+            return _FakeQuery([doc for doc in self._docs if doc.to_dict().get("tag") == value])
         return _FakeQuery(list(self._docs))
 
     async def stream(self):
@@ -67,10 +65,7 @@ async def test_recall_notes_returns_semantic_matches() -> None:
             "a1",
             {
                 "note_id": "a1",
-                "content": (
-                    "Fallback path validated after handover failure "
-                    "in galaxy alpha."
-                ),
+                "content": ("Fallback path validated after handover failure in galaxy alpha."),
                 "tag": "research",
                 "created_at": "2026-03-07T12:00:00+00:00",
             },

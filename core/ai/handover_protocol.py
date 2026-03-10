@@ -48,9 +48,7 @@ class IntentConfidence(BaseModel):
 
     source_agent: str = Field(description="Agent initiating the handover")
     target_agent: str = Field(description="Intended recipient agent")
-    confidence_score: float = Field(
-        ge=0.0, le=1.0, description="Confidence in the handover decision"
-    )
+    confidence_score: float = Field(ge=0.0, le=1.0, description="Confidence in the handover decision")
     reasoning: str = Field(description="Why this handover was initiated")
     alternatives_considered: List[str] = Field(
         default_factory=list, description="Other agents considered for this task"
@@ -94,12 +92,8 @@ class TaskNode(BaseModel):
 class WorkingMemory(BaseModel):
     """Ephemeral working memory for active context."""
 
-    short_term: Dict[str, Any] = Field(
-        default_factory=dict, description="Active working memory"
-    )
-    attention_focus: List[str] = Field(
-        default_factory=list, description="Current attention priorities"
-    )
+    short_term: Dict[str, Any] = Field(default_factory=dict, description="Active working memory")
+    attention_focus: List[str] = Field(default_factory=list, description="Current attention priorities")
     scratchpad: str = Field(default="", description="Temporary notes")
     session_duration_seconds: float = Field(default=0.0)
 
@@ -114,28 +108,18 @@ class HandoverContext(BaseModel):
     """
 
     # Core identity
-    handover_id: str = Field(
-        default_factory=lambda: f"hov-{datetime.now().timestamp()}"
-    )
+    handover_id: str = Field(default_factory=lambda: f"hov-{datetime.now().timestamp()}")
     source_agent: str = Field(description="Agent handing off the task")
     target_agent: str = Field(description="Agent receiving the task")
-    galaxy_id: str = Field(
-        default="Genesis", description="Logical workspace galaxy namespace"
-    )
+    galaxy_id: str = Field(default="Genesis", description="Logical workspace galaxy namespace")
     orbit_lane: Optional[str] = Field(None, description="Orbital lane: inner/mid/outer")
-    gravity_score: Optional[float] = Field(
-        None, ge=0.0, le=1.0, description="Routing priority weight"
-    )
-    focus_target: Optional[str] = Field(
-        None, description="Target planet/agent for focus"
-    )
+    gravity_score: Optional[float] = Field(None, ge=0.0, le=1.0, description="Routing priority weight")
+    focus_target: Optional[str] = Field(None, description="Target planet/agent for focus")
     status: HandoverStatus = Field(default=HandoverStatus.PENDING)
 
     # Task decomposition
     task: str = Field(description="Primary task description")
-    task_tree: List[TaskNode] = Field(
-        default_factory=list, description="Decomposed task hierarchy"
-    )
+    task_tree: List[TaskNode] = Field(default_factory=list, description="Decomposed task hierarchy")
     current_node_id: Optional[str] = None
 
     # Rich context
@@ -173,13 +157,9 @@ class HandoverContext(BaseModel):
         self.updated_at = timestamp
         logger.debug("Handover %s: %s", self.handover_id, entry)
 
-    def add_conversation_entry(
-        self, speaker: str, message: str, metadata: Optional[Dict[str, Any]] = None
-    ) -> None:
+    def add_conversation_entry(self, speaker: str, message: str, metadata: Optional[Dict[str, Any]] = None) -> None:
         """Add a conversation entry to the history."""
-        entry = ConversationEntry(
-            speaker=speaker, message=message, metadata=metadata or {}
-        )
+        entry = ConversationEntry(speaker=speaker, message=message, metadata=metadata or {})
         self.conversation_history.append(entry)
 
     def create_snapshot(self) -> None:
@@ -257,12 +237,8 @@ class HandoverContext(BaseModel):
 class ArchitectDecision(BaseModel):
     """Single decision made by the Architect agent."""
 
-    decision_id: str = Field(
-        default_factory=lambda: f"dec-{datetime.now().timestamp()}"
-    )
-    category: str = Field(
-        description="Decision category (e.g., 'architecture', 'data_model')"
-    )
+    decision_id: str = Field(default_factory=lambda: f"dec-{datetime.now().timestamp()}")
+    category: str = Field(description="Decision category (e.g., 'architecture', 'data_model')")
     description: str = Field(description="What was decided")
     rationale: str = Field(description="Why this decision was made")
     alternatives: List[str] = Field(default_factory=list)
@@ -300,22 +276,14 @@ class ArchitectOutput(BaseModel):
     """
 
     # Metadata
-    output_id: str = Field(
-        default_factory=lambda: f"arch-out-{datetime.now().timestamp()}"
-    )
+    output_id: str = Field(default_factory=lambda: f"arch-out-{datetime.now().timestamp()}")
     handover_id: str = Field(description="Reference to parent handover")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
     # Core deliverables
-    blueprints: List[BlueprintSection] = Field(
-        default_factory=list, description="Architectural blueprint sections"
-    )
-    decisions: List[ArchitectDecision] = Field(
-        default_factory=list, description="Key architectural decisions"
-    )
-    risk_assessment: List[RiskAssessment] = Field(
-        default_factory=list, description="Identified risks and mitigations"
-    )
+    blueprints: List[BlueprintSection] = Field(default_factory=list, description="Architectural blueprint sections")
+    decisions: List[ArchitectDecision] = Field(default_factory=list, description="Key architectural decisions")
+    risk_assessment: List[RiskAssessment] = Field(default_factory=list, description="Identified risks and mitigations")
 
     # Design metadata
     design_patterns: List[str] = Field(default_factory=list)
@@ -323,15 +291,11 @@ class ArchitectOutput(BaseModel):
     integration_points: List[str] = Field(default_factory=list)
 
     # Completion status
-    completeness_score: float = Field(
-        ge=0.0, le=1.0, default=0.0, description="How complete is the blueprint"
-    )
+    completeness_score: float = Field(ge=0.0, le=1.0, default=0.0, description="How complete is the blueprint")
     estimated_implementation_time: Optional[str] = None
     next_steps: List[str] = Field(default_factory=list)
 
-    def add_blueprint_section(
-        self, title: str, content: str, dependencies: Optional[List[str]] = None
-    ) -> str:
+    def add_blueprint_section(self, title: str, content: str, dependencies: Optional[List[str]] = None) -> str:
         """Add a new blueprint section."""
         section_id = f"bp-{len(self.blueprints)}-{datetime.now().timestamp()}"
         section = BlueprintSection(
@@ -385,9 +349,7 @@ class ArchitectOutput(BaseModel):
 
     def get_critical_risks(self) -> List[RiskAssessment]:
         """Get risks with high probability and impact."""
-        return [
-            r for r in self.risk_assessment if r.probability > 0.7 and r.impact > 0.7
-        ]
+        return [r for r in self.risk_assessment if r.probability > 0.7 and r.impact > 0.7]
 
 
 class VerificationResult(BaseModel):
@@ -418,9 +380,7 @@ class CodeFix(BaseModel):
 class DebuggerWarning(BaseModel):
     """Warning issued by the Debugger agent."""
 
-    warning_id: str = Field(
-        default_factory=lambda: f"warn-{datetime.now().timestamp()}"
-    )
+    warning_id: str = Field(default_factory=lambda: f"warn-{datetime.now().timestamp()}")
     category: str = Field(description="Warning category")
     message: str = Field(description="Warning message")
     affected_files: List[str] = Field(default_factory=list)
@@ -437,9 +397,7 @@ class DebuggerOutput(BaseModel):
     """
 
     # Metadata
-    output_id: str = Field(
-        default_factory=lambda: f"dbg-out-{datetime.now().timestamp()}"
-    )
+    output_id: str = Field(default_factory=lambda: f"dbg-out-{datetime.now().timestamp()}")
     handover_id: str = Field(description="Reference to parent handover")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
@@ -504,9 +462,7 @@ class DebuggerOutput(BaseModel):
         self.fixes.append(fix)
         return fix
 
-    def add_warning(
-        self, category: str, message: str, severity: str = "medium"
-    ) -> DebuggerWarning:
+    def add_warning(self, category: str, message: str, severity: str = "medium") -> DebuggerWarning:
         """Add a warning."""
         warning = DebuggerWarning(category=category, message=message, severity=severity)
         self.warnings.append(warning)
@@ -516,12 +472,8 @@ class DebuggerOutput(BaseModel):
     def _update_metrics(self) -> None:
         """Update summary metrics based on verification results."""
         self.total_checks = len(self.verification_results)
-        self.passed_checks = sum(
-            1 for r in self.verification_results if r.status == "passed"
-        )
-        self.failed_checks = sum(
-            1 for r in self.verification_results if r.status == "failed"
-        )
+        self.passed_checks = sum(1 for r in self.verification_results if r.status == "passed")
+        self.failed_checks = sum(1 for r in self.verification_results if r.status == "failed")
 
     def get_failed_results(self) -> List[VerificationResult]:
         """Get all failed verification results."""
@@ -540,9 +492,7 @@ class ValidationCheckpoint(BaseModel):
     a full handover, enabling iterative refinement.
     """
 
-    checkpoint_id: str = Field(
-        default_factory=lambda: f"chk-{datetime.now().timestamp()}"
-    )
+    checkpoint_id: str = Field(default_factory=lambda: f"chk-{datetime.now().timestamp()}")
     handover_id: str = Field(description="Reference to parent handover")
     created_at: str = Field(default_factory=lambda: datetime.now().isoformat())
 
@@ -598,9 +548,7 @@ class HandoverNegotiation(BaseModel):
     deliverables before committing to a handover.
     """
 
-    negotiation_id: str = Field(
-        default_factory=lambda: f"neg-{datetime.now().timestamp()}"
-    )
+    negotiation_id: str = Field(default_factory=lambda: f"neg-{datetime.now().timestamp()}")
     handover_id: str = Field(description="Reference to parent handover")
     status: str = Field(default="open")  # open, negotiating, accepted, rejected
 
@@ -923,9 +871,7 @@ class HandoverProtocol:
             return False, f"Handover {handover_id} not found"
 
         context.update_status(HandoverStatus.COMPLETED)
-        context.add_history(
-            f"Handover completed. Source: {context.source_agent}, Target: {context.target_agent}"
-        )
+        context.add_history(f"Handover completed. Source: {context.source_agent}, Target: {context.target_agent}")
 
         # Clear snapshot after successful completion
         context.snapshot = None

@@ -26,9 +26,7 @@ async def test_dna_stability_chaos():
     verify EMA smoothing prevents personality whiplash.
     """
     mock_fb = MockFirebase()
-    optimizer = GeneticOptimizer(
-        firebase=mock_fb, api_key="dummy", ema_alpha=0.15
-    )  # Using the V3.1 alpha
+    optimizer = GeneticOptimizer(firebase=mock_fb, api_key="dummy", ema_alpha=0.15)  # Using the V3.1 alpha
 
     current_dna = AgentDNA(verbosity=0.5, empathy=0.5)
     initial_dna = AgentDNA(verbosity=0.5, empathy=0.5)

@@ -46,9 +46,7 @@ async def take_screenshot(**kwargs) -> dict:
                 "status": "success",
                 "mime_type": "image/png",
                 "data": b64_data,
-                "message": (
-                    "Screen captured instantly. Visual data injected into context."
-                ),
+                "message": ("Screen captured instantly. Visual data injected into context."),
             }
     except Exception as e:
         logger.error("Vision Tool: Failed to capture screen: %s", str(e))

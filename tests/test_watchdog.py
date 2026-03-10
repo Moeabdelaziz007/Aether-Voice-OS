@@ -74,9 +74,7 @@ async def test_watchdog_system_failure_flow(mock_diagnose, mock_firebase_cls):
     )
 
     # 2. Verify diagnosing state sent to frontend
-    expected_sig = watchdog._generate_signature(
-        "diagnosing|Timeout/Connection error detected."
-    )
+    expected_sig = watchdog._generate_signature("diagnosing|Timeout/Connection error detected.")
     mock_bus.publish.assert_any_call(
         "frontend_events",
         {
@@ -92,9 +90,7 @@ async def test_watchdog_system_failure_flow(mock_diagnose, mock_firebase_cls):
     mock_diagnose.assert_called_once()
 
     # 4. Verify applied state logged to Firebase
-    mock_firebase.log_repair_event.assert_any_call(
-        filepath="system", diagnosis="Repaired correctly", status="applied"
-    )
+    mock_firebase.log_repair_event.assert_any_call(filepath="system", diagnosis="Repaired correctly", status="applied")
 
     # 5. Verify applied state sent to frontend
     mock_bus.publish.assert_any_call(

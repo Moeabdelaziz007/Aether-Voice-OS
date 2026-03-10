@@ -38,14 +38,10 @@ class ShortTermMemory:
     """
 
     def __init__(self, max_tokens: int = 4000, max_messages: int = 50):
-        self._messages: collections.deque[MemoryBlock] = collections.deque(
-            maxlen=max_messages
-        )
+        self._messages: collections.deque[MemoryBlock] = collections.deque(maxlen=max_messages)
         self.max_tokens = max_tokens
 
-    def add_message(
-        self, role: str, content: str, metadata: Optional[Dict[str, Any]] = None
-    ):
+    def add_message(self, role: str, content: str, metadata: Optional[Dict[str, Any]] = None):
         """Append a new cognitive block."""
         block = MemoryBlock(
             id=f"msg_{int(time.time() * 1000)}",

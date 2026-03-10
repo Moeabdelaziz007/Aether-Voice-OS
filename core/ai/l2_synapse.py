@@ -41,11 +41,7 @@ async def consolidate_memory():
 
     try:
         # Fetch the 10 most recent sessions
-        sessions_ref = (
-            db.collection("sessions")
-            .order_by("started_at", direction="DESCENDING")
-            .limit(10)
-        )
+        sessions_ref = db.collection("sessions").order_by("started_at", direction="DESCENDING").limit(10)
 
         sessions_stream = sessions_ref.stream()
 
@@ -80,9 +76,7 @@ async def consolidate_memory():
         with open(package_path, "w") as f:
             json.dump(consolidated_data, f, indent=4)
 
-        logger.info(
-            "✅ L2 Synapse: Memory successfully consolidated at %s", package_path
-        )
+        logger.info("✅ L2 Synapse: Memory successfully consolidated at %s", package_path)
 
     except Exception as e:
         logger.error("L2 Synapse encountered an error during consolidation: %s", e)

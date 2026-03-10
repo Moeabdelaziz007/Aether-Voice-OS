@@ -151,13 +151,11 @@ def generate_echo_signal(
     """Generate echo of original signal."""
     delay_samples = int(delay_ms * sample_rate / 1000)
     echo = np.zeros(len(original) + delay_samples, dtype=np.float64)
-    echo[delay_samples: delay_samples + len(original)] = original * attenuation
-    return echo[:len(original)].astype(np.int16)
+    echo[delay_samples : delay_samples + len(original)] = original * attenuation
+    return echo[: len(original)].astype(np.int16)
 
 
-def mix_signals(
-    signal1: np.ndarray, signal2: np.ndarray, snr_db: float = 10.0
-) -> np.ndarray:
+def mix_signals(signal1: np.ndarray, signal2: np.ndarray, snr_db: float = 10.0) -> np.ndarray:
     """Mix two signals at specified SNR."""
     # Ensure same length
     min_len = min(len(signal1), len(signal2))
@@ -205,9 +203,7 @@ class TestVAD:
 
         # Should not detect voice in silence
         false_positive_rate = sum(detections) / len(detections)
-        assert false_positive_rate < 0.05, (
-            f"False positive rate {false_positive_rate:.2%} exceeds 5%"
-        )
+        assert false_positive_rate < 0.05, f"False positive rate {false_positive_rate:.2%} exceeds 5%"
 
     def test_vad_speech_detection(self, vad):
         """Test that VAD correctly detects speech."""
@@ -220,7 +216,7 @@ class TestVAD:
         # Feed frames
         detections = []
         for i in range(0, len(speech) - frame_size, frame_size):
-            frame = speech[i: i + frame_size]
+            frame = speech[i : i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
@@ -236,23 +232,19 @@ class TestVAD:
 
         # Generate speech + noise
         speech = generate_speech_signal(duration_s=duration_s, sample_rate=sample_rate)
-        noise = generate_noise(
-            duration_s=duration_s, sample_rate=sample_rate, amplitude=0.05
-        )
+        noise = generate_noise(duration_s=duration_s, sample_rate=sample_rate, amplitude=0.05)
         noisy_speech = mix_signals(speech, noise, snr_db=15.0)
 
         # Feed frames
         detections = []
         for i in range(0, len(noisy_speech) - frame_size, frame_size):
-            frame = noisy_speech[i: i + frame_size]
+            frame = noisy_speech[i : i + frame_size]
             result = vad.process_frame(frame.tobytes())
             detections.append(result)
 
         # Should still detect voice in noisy speech
         detection_rate = sum(detections[10:]) / len(detections[10:])
-        assert detection_rate > 0.7, (
-            f"Noisy detection rate {detection_rate:.2%} below 70%"
-        )
+        assert detection_rate > 0.7, f"Noisy detection rate {detection_rate:.2%} below 70%"
 
     def test_vad_latency(self, vad):
         """Test VAD processing latency."""
@@ -310,9 +302,7 @@ class TestAEC:
         far_end = (np.sin(2 * np.pi * 300 * t) * 10000).astype(np.int16)
 
         # Generate echo (attenuated + delayed far-end)
-        echo = generate_echo_signal(
-            far_end, delay_ms=50, attenuation=0.3, sample_rate=sample_rate
-        )
+        echo = generate_echo_signal(far_end, delay_ms=50, attenuation=0.3, sample_rate=sample_rate)
 
         # Process through AEC
         erle_values = []
@@ -363,12 +353,8 @@ class TestAEC:
                 double_talk_detections.append(state.double_talk_detected)
 
         # Should detect double-talk
-        detection_rate = sum(double_talk_detections) / max(
-            1, len(double_talk_detections)
-        )
-        assert detection_rate > 0.5, (
-            f"Double-talk detection rate {detection_rate:.2%} below 50%"
-        )
+        detection_rate = sum(double_talk_detections) / max(1, len(double_talk_detections))
+        assert detection_rate > 0.5, f"Double-talk detection rate {detection_rate:.2%} below 50%"
 
     def test_aec_convergence_time(self, aec):
         """Test AEC convergence speed."""
@@ -396,9 +382,7 @@ class TestAEC:
 
         if convergence_frame:
             convergence_time_s = convergence_frame * (frame_size / sample_rate)
-            assert convergence_time_s < 5.0, (
-                f"Convergence time {convergence_time_s:.1f}s exceeds 5s"
-            )
+            assert convergence_time_s < 5.0, f"Convergence time {convergence_time_s:.1f}s exceeds 5s"
 
     def test_aec_latency(self, aec):
         """Test AEC processing latency per frame."""
@@ -453,7 +437,10 @@ class TestEchoGuard:
         # Note: The original test seems broken or the similarity threshold logic doesn't align
         # with synthetic sine waves. For testing purposes, we override output cache with a perfect match
         import numpy as np
-        echo_np = np.frombuffer(echo.tobytes()[:len(echo.tobytes())//2*2], dtype=np.int16).astype(np.float32) / 32768.0
+
+        echo_np = (
+            np.frombuffer(echo.tobytes()[: len(echo.tobytes()) // 2 * 2], dtype=np.int16).astype(np.float32) / 32768.0
+        )
         input_spectrum = np.abs(np.fft.rfft(echo_np))
         splits = np.array_split(input_spectrum, 13)
         echo_fp = np.array([np.mean(s) for s in splits if len(s) > 0])
@@ -528,9 +515,7 @@ class TestEmotionDetection:
             features = analyzer.analyze(calm_signal, float(rms))
 
         # Verify calm characteristics
-        assert features.pitch_estimate < 150, (
-            f"Pitch {features.pitch_estimate} too high for calm"
-        )
+        assert features.pitch_estimate < 150, f"Pitch {features.pitch_estimate} too high for calm"
 
     def test_alert_detection(self, analyzer):
         """Test detection of alert/engaged state."""
@@ -544,9 +529,7 @@ class TestEmotionDetection:
             features = analyzer.analyze(alert_signal, float(rms))
 
         # Higher pitch for alert
-        assert features.pitch_estimate > 140, (
-            f"Pitch {features.pitch_estimate} too low for alert"
-        )
+        assert features.pitch_estimate > 140, f"Pitch {features.pitch_estimate} too low for alert"
 
     def test_emotion_latency(self, analyzer):
         """Test emotion analysis latency."""
@@ -566,9 +549,7 @@ class TestEmotionDetection:
             latencies.append(latency_ms)
 
         avg_latency = np.mean(latencies)
-        assert avg_latency < 2.0, (
-            f"Emotion analysis latency {avg_latency:.2f}ms exceeds 2ms"
-        )
+        assert avg_latency < 2.0, f"Emotion analysis latency {avg_latency:.2f}ms exceeds 2ms"
 
 
 # ═══════════════════════════════════════════════════════════
@@ -861,17 +842,11 @@ def generate_recommendations(suite: VoiceTestSuite) -> List[str]:
     for result in suite.results:
         if not result.passed:
             if "VAD" in result.test_name:
-                recommendations.append(
-                    "🎙️ VAD: Consider tuning noise floor threshold or hysteresis parameters"
-                )
+                recommendations.append("🎙️ VAD: Consider tuning noise floor threshold or hysteresis parameters")
             elif "AEC" in result.test_name:
-                recommendations.append(
-                    "🔊 AEC: Increase filter length or adjust NLMS step size for better convergence"
-                )
+                recommendations.append("🔊 AEC: Increase filter length or adjust NLMS step size for better convergence")
             elif "Latency" in result.test_name:
-                recommendations.append(
-                    "⚡ Latency: Profile hot paths, consider Rust acceleration for DSP operations"
-                )
+                recommendations.append("⚡ Latency: Profile hot paths, consider Rust acceleration for DSP operations")
 
     # General recommendations
     recommendations.extend(
@@ -892,9 +867,7 @@ def print_test_report(suite: VoiceTestSuite):
     print("    🎵 AETHER VOICE OS - COMPREHENSIVE TEST REPORT")
     print("=" * 70)
     print(f"\n  Duration: {suite.total_duration_s:.2f}s")
-    print(
-        f"  Tests: {len(suite.results)} | Passed: {suite.passed_count} | Failed: {suite.failed_count}"
-    )
+    print(f"  Tests: {len(suite.results)} | Passed: {suite.passed_count} | Failed: {suite.failed_count}")
     print(f"  Pass Rate: {suite.pass_rate:.1f}%")
     print("\n" + "-" * 70)
     print("  TEST RESULTS")
@@ -903,9 +876,7 @@ def print_test_report(suite: VoiceTestSuite):
     for r in suite.results:
         status = "✅" if r.passed else "❌"
         print(f"  {status} {r.test_name}")
-        print(
-            f"     {r.metric_name}: {r.metric_value:.2f}{r.unit} (threshold: {r.threshold}{r.unit})"
-        )
+        print(f"     {r.metric_name}: {r.metric_value:.2f}{r.unit} (threshold: {r.threshold}{r.unit})")
 
     print("\n" + "-" * 70)
     print("  RECOMMENDATIONS")

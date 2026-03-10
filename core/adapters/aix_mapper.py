@@ -33,9 +33,7 @@ def canonical_bytes_for_checksum(payload: dict[str, Any]) -> bytes:
         checksum = security.get("checksum")
         if isinstance(checksum, dict):
             checksum.pop("value", None)
-    encoded = json.dumps(
-        normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")
-    ).encode("utf-8")
+    encoded = json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return encoded
 
 
@@ -80,33 +78,21 @@ def aix_to_planet_profile(payload: dict[str, Any]) -> dict[str, Any]:
             "instructions": str(persona.get("instructions", "")),
         },
         "capabilities": enabled_capabilities,
-        "mcp_endpoints": payload.get("mcp", {}).get("servers", [])
-        if isinstance(payload.get("mcp"), dict)
-        else [],
+        "mcp_endpoints": payload.get("mcp", {}).get("servers", []) if isinstance(payload.get("mcp"), dict) else [],
         "tool_bindings": payload.get("tools", []),
         "memory": payload.get("memory", {}),
         "integrity": {
-            "checksum": (
-                security.get("checksum", {}) if isinstance(security, dict) else {}
-            ),
-            "signature": (
-                security.get("signature", {}) if isinstance(security, dict) else {}
-            ),
+            "checksum": (security.get("checksum", {}) if isinstance(security, dict) else {}),
+            "signature": (security.get("signature", {}) if isinstance(security, dict) else {}),
         },
         "runtime_requirements": requirements,
-        "policy_overlay": {
-            "allowed_domains": network.get("allowed_domains", [])
-            if isinstance(network, dict)
-            else []
-        },
+        "policy_overlay": {"allowed_domains": network.get("allowed_domains", []) if isinstance(network, dict) else []},
         "raw_aix": payload,
     }
     return profile
 
 
-def planet_profile_to_aix(
-    profile: dict[str, Any], fmt_version: str = "0.1"
-) -> dict[str, Any]:
+def planet_profile_to_aix(profile: dict[str, Any], fmt_version: str = "0.1") -> dict[str, Any]:
     payload: dict[str, Any] = {
         "meta": {
             "version": str(profile.get("profile_version", fmt_version)),
@@ -127,11 +113,7 @@ def planet_profile_to_aix(
         "mcp": {"servers": profile.get("mcp_endpoints", [])},
         "memory": profile.get("memory", {}),
         "requirements": profile.get("runtime_requirements", {}),
-        "network": {
-            "allowed_domains": profile.get("policy_overlay", {}).get(
-                "allowed_domains", []
-            )
-        },
+        "network": {"allowed_domains": profile.get("policy_overlay", {}).get("allowed_domains", [])},
         "security": {
             "checksum": {"algorithm": "sha256", "value": ""},
             "signature": profile.get("integrity", {}).get("signature", {}),

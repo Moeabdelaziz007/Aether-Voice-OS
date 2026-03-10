@@ -24,9 +24,7 @@ def _resolve_project_path(filepath: str) -> Path:
     try:
         resolved_path.relative_to(PROJECT_ROOT)
     except ValueError as exc:
-        raise ValueError(
-            "Path is outside the project root and is not allowed."
-        ) from exc
+        raise ValueError("Path is outside the project root and is not allowed.") from exc
     return resolved_path
 
 
@@ -80,23 +78,13 @@ def _apply_unified_diff(original_content: str, diff_text: str) -> str:
             content = hunk_line[1:]
 
             if prefix == " ":
-                if (
-                    src_index >= len(original_lines)
-                    or original_lines[src_index] != content
-                ):
-                    raise ValueError(
-                        "Unified diff context does not match file content."
-                    )
+                if src_index >= len(original_lines) or original_lines[src_index] != content:
+                    raise ValueError("Unified diff context does not match file content.")
                 result.append(content)
                 src_index += 1
             elif prefix == "-":
-                if (
-                    src_index >= len(original_lines)
-                    or original_lines[src_index] != content
-                ):
-                    raise ValueError(
-                        "Unified diff removal does not match file content."
-                    )
+                if src_index >= len(original_lines) or original_lines[src_index] != content:
+                    raise ValueError("Unified diff removal does not match file content.")
                 src_index += 1
             elif prefix == "+":
                 result.append(content)
@@ -124,9 +112,7 @@ def _changed_lines(before: str, after: str) -> dict[str, Any]:
     return {"count": len(line_numbers), "line_numbers": line_numbers}
 
 
-async def diagnose_and_repair(
-    context: Optional[str] = None, **kwargs
-) -> dict[str, Any]:
+async def diagnose_and_repair(context: Optional[str] = None, **kwargs) -> dict[str, Any]:
     """
     Takes a snapshot of the screen and terminal, analyzes the error,
     and returns a diagnosis with a proposed fix.
@@ -136,9 +122,7 @@ async def diagnose_and_repair(
     # 1. Capture Visual Context
     screenshot_result = await take_screenshot()
     if "error" in screenshot_result:
-        return {
-            "error": f"Failed to capture visual context: {screenshot_result['error']}"
-        }
+        return {"error": f"Failed to capture visual context: {screenshot_result['error']}"}
 
     # 2. Capture Terminal Context (Last 50 lines of common log files or current dir)
     terminal_context = ""
@@ -154,9 +138,7 @@ async def diagnose_and_repair(
             terminal_context = result.stdout
         else:
             # Fallback: Just return current directory status
-            result = subprocess.run(
-                ["ls", "-la"], capture_output=True, text=True, timeout=2
-            )
+            result = subprocess.run(["ls", "-la"], capture_output=True, text=True, timeout=2)
             terminal_context = f"No log file found. Current Dir:\n{result.stdout}"
     except Exception:
         terminal_context = "Could not retrieve terminal context."
@@ -166,10 +148,7 @@ async def diagnose_and_repair(
         "status": "analysis_ready",
         "visual_data": screenshot_result["data"],
         "terminal_output": terminal_context,
-        "hint": (
-            "Analyze the screenshot for red text or crash logs. Cross-reference "
-            "with terminal output."
-        ),
+        "hint": ("Analyze the screenshot for red text or crash logs. Cross-reference with terminal output."),
         "message": "Grounded context gathered. Ready for repair proposal.",
     }
 
@@ -266,8 +245,7 @@ def get_tools() -> list[dict]:
         {
             "name": "apply_repair",
             "description": (
-                "Applies a code fix to a specific file. Use after "
-                "'diagnose_and_repair' identifies the fix."
+                "Applies a code fix to a specific file. Use after 'diagnose_and_repair' identifies the fix."
             ),
             "parameters": {
                 "type": "object",

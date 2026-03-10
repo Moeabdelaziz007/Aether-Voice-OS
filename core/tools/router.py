@@ -208,9 +208,7 @@ class ToolRouter:
         args = function_call.args or {}
 
         if name not in self._tools:
-            logger.warning(
-                "Unmatched tool called: %s. Attempting semantic recovery...", name
-            )
+            logger.warning("Unmatched tool called: %s. Attempting semantic recovery...", name)
 
             was_recovered = False
             # --- Semantic Recovery Sequence ---
@@ -230,10 +228,7 @@ class ToolRouter:
                         was_recovered = True
                     else:
                         return {
-                            "error": (
-                                f"Tool '{name}' not found and no close semantic "
-                                "matches (>0.85)."
-                            ),
+                            "error": (f"Tool '{name}' not found and no close semantic matches (>0.85)."),
                             "available_tools": self.names,
                             "x-a2a-status": 404,
                         }
@@ -263,10 +258,7 @@ class ToolRouter:
                     "requires_auth": "voice_biometrics",
                 }
 
-            logger.info(
-                "🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against "
-                "Soul.md... SUCCESS"
-            )
+            logger.info("🛡️ [SECURITY] [BIO-HASH] Verifying biometric signature against Soul.md... SUCCESS")
 
         logger.info(
             "⚡ Dispatching: %s(%s) [Tier: %s]",
@@ -304,9 +296,7 @@ class ToolRouter:
                 "x-a2a-duration_ms": int(duration * 1000),
             }
 
-            logger.info(
-                "✓ Tool %s completed [A2A:%d] (%.3fs)", name, a2a_status, duration
-            )
+            logger.info("✓ Tool %s completed [A2A:%d] (%.3fs)", name, a2a_status, duration)
             return wrapped_result
 
         except TypeError as exc:

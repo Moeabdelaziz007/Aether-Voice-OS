@@ -24,17 +24,13 @@ async def test_firebase():
         print(f"Session ID: {connector._session_id}")
 
         print("Logging message...")
-        await connector.log_message(
-            role="assistant", content="Testing Firebase connectivity."
-        )
+        await connector.log_message(role="assistant", content="Testing Firebase connectivity.")
 
         print("Logging affective metrics...")
         await connector.log_affective_metrics(DummyFeatures())
 
         print("Ending session...")
-        await connector.end_session(
-            {"test_status": "success", "notes": "Automated verification"}
-        )
+        await connector.end_session({"test_status": "success", "notes": "Automated verification"})
         print("Test complete.")
     else:
         print("Failed to initialize Firebase.")

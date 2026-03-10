@@ -148,9 +148,7 @@ class GlobalBus:
 
         while self._running:
             try:
-                message = await self._pubsub.get_message(
-                    ignore_subscribe_messages=True, timeout=1.0
-                )
+                message = await self._pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
                 if message and message["type"] == b"message":
                     channel = message["channel"]
                     if isinstance(channel, bytes):
@@ -185,9 +183,7 @@ class GlobalBus:
                             else:
                                 cb(data)
                         except Exception as e:
-                            logger.error(
-                                "A2A [BUS] Callback error on %s: %s", channel, e
-                            )
+                            logger.error("A2A [BUS] Callback error on %s: %s", channel, e)
             except asyncio.CancelledError:
                 break
             except Exception as e:

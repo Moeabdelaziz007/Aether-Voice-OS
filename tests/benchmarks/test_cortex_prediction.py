@@ -65,9 +65,7 @@ async def test_cortex_neural_lead_time():
         "benchmark": "cortex_neural_lead_time",
         "total_fragments": len(sentence_fragments),
         "pre_warmed": prediction_triggered,
-        "pre_warm_elapsed_ms": round((pre_warm_time - start_time) * 1000, 2)
-        if pre_warm_time > 0
-        else 0,
+        "pre_warm_elapsed_ms": round((pre_warm_time - start_time) * 1000, 2) if pre_warm_time > 0 else 0,
         "status": "success" if prediction_triggered else "failed",
     }
 

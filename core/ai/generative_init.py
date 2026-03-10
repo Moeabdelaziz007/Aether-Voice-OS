@@ -14,11 +14,12 @@ from google.genai import types
 
 logger = logging.getLogger(__name__)
 
+
 def get_genai_client(api_key: Optional[str] = None, api_version: str = "v1alpha") -> genai.Client:
     """
     Initialize and return a production-ready Gemini client, optionally
     falling back to or wrapping google_adk initialization based on config.
-    
+
     Args:
         api_key: Google AI API key. Defaults to GEMINI_API_KEY or GOOGLE_API_KEY.
         api_version: API version to use (e.g., 'v1alpha' for Live features).
@@ -33,14 +34,12 @@ def get_genai_client(api_key: Optional[str] = None, api_version: str = "v1alpha"
 
     try:
         # Wrapper logic: we attempt to initialize genai.Client with safe boundaries
-        client = genai.Client(
-            api_key=key,
-            http_options={"api_version": api_version}
-        )
+        client = genai.Client(api_key=key, http_options={"api_version": api_version})
         return client
     except Exception as e:
         logger.error(f"Failed to initialize google.genai Client: {e}")
         raise
+
 
 def get_default_safety_settings() -> list[types.SafetySetting]:
     """Return standard safety boundaries for Aether."""
@@ -62,6 +61,7 @@ def get_default_safety_settings() -> list[types.SafetySetting]:
             threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
         ),
     ]
+
 
 def get_base_config() -> types.GenerateContentConfig:
     """Get the base generation config with Aether's personality constraints."""

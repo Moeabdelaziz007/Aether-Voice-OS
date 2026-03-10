@@ -25,9 +25,7 @@ async def verify_persistence():
     # 2. Instance A: Create and transition session
     manager_a = SessionStateManager(bus=bus)
     metadata = SessionMetadata(session_id="verify-sid-123", soul_name="Aether")
-    await manager_a.transition_to(
-        SessionState.CONNECTED, reason="Unit Test", metadata=metadata
-    )
+    await manager_a.transition_to(SessionState.CONNECTED, reason="Unit Test", metadata=metadata)
     manager_a.increment_message_count()
 
     # Wait for background persistence

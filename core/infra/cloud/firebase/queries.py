@@ -21,18 +21,14 @@ class Queries:
     def __init__(self):
         self.db = firestore.client() if firestore else None
 
-    async def get_recent_sessions(
-        self, user_id: str, limit: int = 10
-    ) -> List[SessionMetadata]:
+    async def get_recent_sessions(self, user_id: str, limit: int = 10) -> List[SessionMetadata]:
         """
         Retrieves the most recent sessions for a user.
         Utilizes a compound index on {"user_id": ASC, "start_time": DESC}
         Results are cached in memory for 5 minutes to optimize reads.
         """
         if not self.db:
-            logger.warning(
-                "Firestore client not initialized. Cannot fetch recent sessions."
-            )
+            logger.warning("Firestore client not initialized. Cannot fetch recent sessions.")
             return []
 
         now = datetime.utcnow().timestamp()
@@ -59,10 +55,7 @@ class Queries:
             def _fetch_and_parse():
                 # For small limits, get() is more efficient than stream()
                 docs = query.get()
-                return [
-                    SessionMetadata(**{**doc.to_dict(), "session_id": doc.id})
-                    for doc in docs
-                ]
+                return [SessionMetadata(**{**doc.to_dict(), "session_id": doc.id}) for doc in docs]
 
             results = await asyncio.to_thread(_fetch_and_parse)
 

@@ -148,9 +148,7 @@ class EventBus:
 
         if self._running:
             state.worker_task = asyncio.create_task(self._subscriber_worker(state))
-        logger.debug(
-            f"[EventBus] Subscribed {callback.__name__} to {event_type.__name__}"
-        )
+        logger.debug(f"[EventBus] Subscribed {callback.__name__} to {event_type.__name__}")
 
     async def publish(self, event: SystemEvent):
         """Publish an event to its respective tier queue."""
@@ -161,9 +159,7 @@ class EventBus:
         elif isinstance(event, (TelemetryEvent, VisionPulseEvent)):
             await self.telemetry_queue.put(event)
         else:
-            logger.warning(
-                f"[EventBus] Unknown event tier for {type(event)}. Routing to Telemetry."
-            )
+            logger.warning(f"[EventBus] Unknown event tier for {type(event)}. Routing to Telemetry.")
             await self.telemetry_queue.put(event)
 
     async def start(self):
@@ -173,25 +169,15 @@ class EventBus:
 
         self._running = True
         self._tasks = [
-            asyncio.create_task(
-                self._tier_worker("Audio", self.audio_queue, drop_if_expired=True)
-            ),
-            asyncio.create_task(
-                self._tier_worker("Control", self.control_queue, drop_if_expired=True)
-            ),
-            asyncio.create_task(
-                self._tier_worker(
-                    "Telemetry", self.telemetry_queue, drop_if_expired=False
-                )
-            ),
+            asyncio.create_task(self._tier_worker("Audio", self.audio_queue, drop_if_expired=True)),
+            asyncio.create_task(self._tier_worker("Control", self.control_queue, drop_if_expired=True)),
+            asyncio.create_task(self._tier_worker("Telemetry", self.telemetry_queue, drop_if_expired=False)),
         ]
 
         for states in self._subscribers.values():
             for state in states:
                 if state.worker_task is None or state.worker_task.done():
-                    state.worker_task = asyncio.create_task(
-                        self._subscriber_worker(state)
-                    )
+                    state.worker_task = asyncio.create_task(self._subscriber_worker(state))
         logger.info("[EventBus] 🌌 Multi-Lane Neural Event Bus initialized.")
 
     async def stop(self):
@@ -219,9 +205,7 @@ class EventBus:
                 state.worker_task = None
         logger.info("[EventBus] Event Bus offline.")
 
-    async def _tier_worker(
-        self, name: str, queue: asyncio.Queue, drop_if_expired: bool
-    ):
+    async def _tier_worker(self, name: str, queue: asyncio.Queue, drop_if_expired: bool):
         """Dedicated worker for a specific event lane."""
         logger.debug(f"[EventBus] {name} Lane Worker started.")
         while self._running:
@@ -229,9 +213,7 @@ class EventBus:
                 event = await queue.get()
 
                 if drop_if_expired and event.is_expired():
-                    logger.warning(
-                        f"[EventBus] 🔴 {name} Lane: Dropped expired event from {event.source}"
-                    )
+                    logger.warning(f"[EventBus] 🔴 {name} Lane: Dropped expired event from {event.source}")
                 else:
                     await self._route_event(event)
 
@@ -270,13 +252,9 @@ class EventBus:
             except asyncio.CancelledError:
                 break
             except Exception as e:
-                logger.error(
-                    "[EventBus] Subscriber worker error (%s): %s", state.name, e
-                )
+                logger.error("[EventBus] Subscriber worker error (%s): %s", state.name, e)
 
-    async def _execute_subscriber_callback(
-        self, state: _SubscriberState, event: SystemEvent
-    ):
+    async def _execute_subscriber_callback(self, state: _SubscriberState, event: SystemEvent):
         now = time.time()
         deadline = event.timestamp + (event.latency_budget / 1000.0)
         budget_remaining_s = max(deadline - now, 0.0)
@@ -290,9 +268,7 @@ class EventBus:
         start = time.perf_counter()
         try:
             async with self._callback_semaphore:
-                await asyncio.wait_for(
-                    state.callback(event), timeout=callback_timeout_s
-                )
+                await asyncio.wait_for(state.callback(event), timeout=callback_timeout_s)
             elapsed_ms = (time.perf_counter() - start) * 1000
             state.processed += 1
             state.total_service_time_ms += elapsed_ms
@@ -334,11 +310,7 @@ class EventBus:
         telemetry: Dict[str, Dict[str, float | int | bool]] = {}
         for states in self._subscribers.values():
             for state in states:
-                avg_ms = (
-                    state.total_service_time_ms / state.processed
-                    if state.processed
-                    else 0.0
-                )
+                avg_ms = state.total_service_time_ms / state.processed if state.processed else 0.0
                 telemetry[state.name] = {
                     "processed": state.processed,
                     "dropped": state.dropped,

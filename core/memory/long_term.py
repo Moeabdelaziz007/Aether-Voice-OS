@@ -83,9 +83,7 @@ class LongTermMemory:
             self._local_store.append(entry)
             logger.info(f"[Memory] Persisted knowledge: {content[:40]}...")
 
-    async def query_memory(
-        self, vector: List[float], top_k: int = 3
-    ) -> List[MemoryEntry]:
+    async def query_memory(self, vector: List[float], top_k: int = 3) -> List[MemoryEntry]:
         """
         Semantic search for relevant past experiences.
         Uses cosine similarity for local provider,
@@ -119,9 +117,7 @@ class LongTermMemory:
         for entry in self._local_store:
             entry_vec = np.array(entry.vector)
             # Cosine Similarity
-            score = np.dot(query_vec, entry_vec) / (
-                np.linalg.norm(query_vec) * np.linalg.norm(entry_vec) + 1e-6
-            )
+            score = np.dot(query_vec, entry_vec) / (np.linalg.norm(query_vec) * np.linalg.norm(entry_vec) + 1e-6)
             results.append((entry, score))
 
         # Sort by best match

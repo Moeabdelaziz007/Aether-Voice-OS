@@ -19,9 +19,7 @@ def mock_registry_chaos():
     coder = MagicMock()
     coder.manifest.name = "CoderExpert"
 
-    registry.get.side_effect = lambda name: (
-        architect if name == "ArchitectExpert" else coder
-    )
+    registry.get.side_effect = lambda name: (architect if name == "ArchitectExpert" else coder)
     return registry
 
 
@@ -35,17 +33,13 @@ async def test_hive_chaos_rollback(mock_registry_chaos):
     the Hive Coordinator rolls back the system state to the last known-good Expert.
     """
     router = MagicMock()
-    hive = HiveCoordinator(
-        registry=mock_registry_chaos, router=router, enable_deep_handover=True
-    )
+    hive = HiveCoordinator(registry=mock_registry_chaos, router=router, enable_deep_handover=True)
 
     # Initial state: Architect is active
     assert hive.active_soul.manifest.name == "ArchitectExpert"
 
     # 1. Prepare Handoff to Coder
-    success, context, msg = hive.prepare_handoff(
-        target_name="CoderExpert", task="Fix deep handover bug"
-    )
+    success, context, msg = hive.prepare_handoff(target_name="CoderExpert", task="Fix deep handover bug")
     assert success
     hov_id = context.handover_id
 

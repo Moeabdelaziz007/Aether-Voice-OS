@@ -193,12 +193,8 @@ class TestEngineRegistration:
 
         engine = AetherEngine(config=mock_config)
         VoiceTool()
-        engine._router.register(
-            name="voice", description="test", parameters={}, handler=MagicMock()
-        )
-        engine._router.register(
-            name="search", description="test", parameters={}, handler=MagicMock()
-        )
+        engine._router.register(name="voice", description="test", parameters={}, handler=MagicMock())
+        engine._router.register(name="search", description="test", parameters={}, handler=MagicMock())
         assert engine._router.count >= 2
 
 

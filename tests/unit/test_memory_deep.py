@@ -67,17 +67,13 @@ async def test_prune_logic(mock_firebase):
     doc1.reference.delete.assert_called_once()
 
     # Ensure query filtered by 'low'
-    mock_firebase._db.collection.return_value.where.assert_called_with(
-        "priority", "==", "low"
-    )
+    mock_firebase._db.collection.return_value.where.assert_called_with("priority", "==", "low")
 
 
 @pytest.mark.asyncio
 async def test_semantic_search_mock(mock_firebase):
     """Verify tag-based search hits Firestore array_contains_any."""
-    query_mock = (
-        mock_firebase._db.collection.return_value.where.return_value.limit.return_value
-    )
+    query_mock = mock_firebase._db.collection.return_value.where.return_value.limit.return_value
 
     async def empty_stream():
         if False:
@@ -88,6 +84,4 @@ async def test_semantic_search_mock(mock_firebase):
     await memory_tool.semantic_search(tags=["home", "iot"])
 
     # Verify Firestore query structure
-    mock_firebase._db.collection.return_value.where.assert_called_with(
-        "tags", "array_contains_any", ["home", "iot"]
-    )
+    mock_firebase._db.collection.return_value.where.assert_called_with("tags", "array_contains_any", ["home", "iot"])

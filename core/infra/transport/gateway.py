@@ -106,7 +106,7 @@ class AetherGateway:
         self._registry = AgentRegistry()
         for agent in get_default_agents():
             self._registry.register_agent(agent)
-            
+
         self._forge = AgentForge(api_key=self._ai_config.api_key)
         self._hive = hive
         self._hive.set_pre_warm_callback(self.pre_warm_soul)
@@ -116,27 +116,26 @@ class AetherGateway:
         self._bus = GlobalBus()
 
         # Session State Manager (Single Source of Truth)
-        self._state_manager = SessionStateManager(
-            broadcast_callback=self.broadcast, bus=self._bus
-        )
+        self._state_manager = SessionStateManager(broadcast_callback=self.broadcast, bus=self._bus)
 
         # Legacy session reference (now managed by state manager)
         # 3. Dynamic AEC Bridge (The 'Cortex' Integration)
         # We replace the legacy LeakageDetector with pro-grade NLMS filter
         from core.audio.dynamic_aec import DynamicAEC
+
         self._aec = DynamicAEC(
             sample_rate=self._audio_config.send_sample_rate,
             frame_size=self._audio_config.chunk_size,
             filter_length_ms=100.0,
-            step_size=0.1
+            step_size=0.1,
         )
-        
+
         self._leakage_task: Optional[asyncio.Task] = None
         self._server: Optional[Server] = None
         self._running = False
         self._shutdown_event = asyncio.Event()
         self._session_restart_event = asyncio.Event()
-        self._audio_initialized = False # NEW: Track audio engine state
+        self._audio_initialized = False  # NEW: Track audio engine state
 
         # Decentralized Logic Brackets
         self._auth = AuthService(
@@ -146,25 +145,24 @@ class AetherGateway:
         self._intent_broker = IntentBroker()
 
         # Audio queues
-        self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(
-            maxsize=self._audio_config.mic_queue_max
-        )
+        self._audio_in: asyncio.Queue[dict[str, object]] = asyncio.Queue(maxsize=self._audio_config.mic_queue_max)
         self._audio_out: asyncio.Queue[bytes] = asyncio.Queue(maxsize=15)
 
         # Session Manager handles the Gemini lifecycle internally
         self._session_manager = SessionManager(
             engine_session=None  # Will be set during loop
         )
-        
+
         # 3. Register specialized diagnostic tools
         self._visual_diagnose = VisualDiagnoseTool(gateway=self)
         from core.ai.tools.visual_diagnose import VisualDiagnoseInput
+
         self._tool_router.register(
             name="visual_diagnose",
             description="Aether V3 Visual-Spatial Diagnostic Tool. Correlates Pulse Vision with system logs.",
             parameters=VisualDiagnoseInput.model_json_schema(),
             handler=self._visual_diagnose.run,
-            latency_tier="p95_sub_2s"
+            latency_tier="p95_sub_2s",
         )
 
         # Client management
@@ -174,13 +172,13 @@ class AetherGateway:
         # Speculative Pre-warming Lock
         self._pre_warm_lock = asyncio.Lock()
         self._warmed_souls: dict[str, GeminiLiveSession] = {}
-        
+
         # 2. Spatial Intelligence
         self._spatial_cortex = SpatialCortexAgent()
-        
+
         # Rate Limiting & Backpressure
         self._last_text_time = 0.0
-        self._text_rate_limit = 0.5 # seconds
+        self._text_rate_limit = 0.5  # seconds
         self._frame_buffer_cache: List[bytes] = []
         self._max_frame_cache = 5
 
@@ -191,16 +189,17 @@ class AetherGateway:
             "UI_STATE_SYNC": self._handle_ui_sync,
             "VISION_FRAME": self._handle_vision_frame,
             "FORGE_COMMIT": self._handle_forge_commit,
-            "CLAW_INJECT": self._handle_claw_inject, # NEW: CLAW_INJECT handler
+            "CLAW_INJECT": self._handle_claw_inject,  # NEW: CLAW_INJECT handler
             MessageType.DISCONNECT.value: self._handle_disconnect,
         }
-        
+
         # VAD State Tracking
         self._last_vad_state = False
 
         # Audio processing effects
-        from core.audio.state import HysteresisGate
         from core.audio.capture import SmoothMuter
+        from core.audio.state import HysteresisGate
+
         self._hysteresis = HysteresisGate()
         self._smooth_muter = SmoothMuter()
 
@@ -248,7 +247,7 @@ class AetherGateway:
         if now - self._last_text_time < self._text_rate_limit:
             logger.warning("Rate limit hit: send_text too frequent")
             return False
-            
+
         session = self._state_manager.session
 
         try:
@@ -256,10 +255,8 @@ class AetherGateway:
             if not session.is_ready():
                 logger.error("Session health check failed before send_text")
                 return False
-                
-            await session._session.send_realtime_input(
-                parts=[types.Part(text=text)]
-            )
+
+            await session._session.send_realtime_input(parts=[types.Part(text=text)])
             self._last_text_time = now
             self._state_manager.increment_message_count()
             return True
@@ -267,9 +264,7 @@ class AetherGateway:
             logger.error("Failed to send text to session: %s", e)
             return False
 
-    async def send_audio(
-        self, audio_data: bytes, mime_type: str = "audio/pcm;rate=16000"
-    ) -> bool:
+    async def send_audio(self, audio_data: bytes, mime_type: str = "audio/pcm;rate=16000") -> bool:
         """
         Send audio input to the active Gemini session.
 
@@ -286,9 +281,7 @@ class AetherGateway:
             return False
 
         try:
-            await session._session.send_realtime_input(
-                audio={"data": audio_data, "mime_type": mime_type}
-            )
+            await session._session.send_realtime_input(audio={"data": audio_data, "mime_type": mime_type})
             return True
         except Exception as e:
             logger.error("Failed to send audio to session: %s", e)
@@ -354,9 +347,7 @@ class AetherGateway:
                 f"Deep Handoff to {target_soul}: {reason} (ID: {context.handover_id})",
             )
             # Store the active handover ID in the session state metadata
-            self._state_manager.update_metadata(
-                {"active_handover_id": context.handover_id}
-            )
+            self._state_manager.update_metadata({"active_handover_id": context.handover_id})
 
             # Signal session restart with visual context
             # The next session initialization will pick up these frames
@@ -416,28 +407,29 @@ class AetherGateway:
         try:
             # 1. Forge the agent identity
             metadata = await self._forge.forge_agent(description)
-            
+
             # 2. Register it in our hippocumpus
             self._registry.register_agent(metadata)
-            
+
             # 3. Broadcast success to UI
-            await self.broadcast("AGENT_FORGED", {
-                "id": metadata.id,
-                "name": metadata.name,
-                "description": metadata.description
-            })
-            
+            await self.broadcast(
+                "AGENT_FORGED", {"id": metadata.id, "name": metadata.name, "description": metadata.description}
+            )
+
             # 4. Proactively pre-warm this new agent
             await self.pre_warm_soul(metadata.id)
-            
+
         except Exception as e:
             logger.error(f"❌ Gateway: Agent forging failed: {e}")
-            await self.broadcast("error", {
-                "code": "AGENT_FORGE_FAILED",
-                "message": f"Failed to forge agent: {str(e)}",
-                "severity": "high",
-                "retryable": True
-            })
+            await self.broadcast(
+                "error",
+                {
+                    "code": "AGENT_FORGE_FAILED",
+                    "message": f"Failed to forge agent: {str(e)}",
+                    "severity": "high",
+                    "retryable": True,
+                },
+            )
 
     async def inject_dna_update(self, dna: Any, rationales: list[str]) -> None:
         """
@@ -460,9 +452,7 @@ class AetherGateway:
 
         # Bridge frontend events from GlobalBus to WebSocket clients
         if self._bus:
-            asyncio.create_task(
-                self._bus.subscribe("frontend_events", self._handle_frontend_event)
-            )
+            asyncio.create_task(self._bus.subscribe("frontend_events", self._handle_frontend_event))
 
         # Initialize State Manager (Subscriptions)
         await self._state_manager.initialize()
@@ -472,7 +462,7 @@ class AetherGateway:
             self._handle_connection,
             self._gateway_config.host,
             self._gateway_config.port,
-            process_request=self._health_check_handler
+            process_request=self._health_check_handler,
         )
         logger.info(
             "Gateway listening on ws://%s:%d",
@@ -490,29 +480,29 @@ class AetherGateway:
     async def _vad_loop(self) -> None:
         """Monitors local VAD state and broadcasts changes to clients."""
         while self._running:
-            await asyncio.sleep(0.05) # 50ms polling for sub-100ms UI reactivity
-            
+            await asyncio.sleep(0.05)  # 50ms polling for sub-100ms UI reactivity
+
             try:
-                # Use double_talk from AEC as the most reliable VAD signal 
+                # Use double_talk from AEC as the most reliable VAD signal
                 # (since it accounts for playback echo)
                 # GUARD: Prevent null startup crash
                 if audio_state is None:
                     await asyncio.sleep(0.1)
                     continue
 
-                current_vad = audio_state.aec_double_talk if hasattr(audio_state, "aec_double_talk") else audio_state.is_hard
-                
+                current_vad = (
+                    audio_state.aec_double_talk if hasattr(audio_state, "aec_double_talk") else audio_state.is_hard
+                )
+
                 if current_vad != self._last_vad_state:
                     self._last_vad_state = current_vad
-                    
+
                     # FIXED: 1. _vad_loop: Correct energy_db log calculation
                     energy_db = 20 * math.log10(max(0.0001, audio_state.last_rms))
-                    
-                    await self.broadcast("vad", {
-                        "active": current_vad,
-                        "energy_db": float(energy_db),
-                        "ts_ms": int(time.time() * 1000)
-                    })
+
+                    await self.broadcast(
+                        "vad", {"active": current_vad, "energy_db": float(energy_db), "ts_ms": int(time.time() * 1000)}
+                    )
             except Exception as e:
                 logger.error("Error in VAD loop: %s", e)
 
@@ -526,16 +516,15 @@ class AetherGateway:
                 await self._run_session_iteration()
             except Exception as e:
                 logger.error("Session iteration failed: %s", e, exc_info=True)
-                await self._state_manager.transition_to(
-                    SessionState.ERROR, f"Iteration Error: {str(e)[:100]}"
-                )
+                await self._state_manager.transition_to(SessionState.ERROR, f"Iteration Error: {str(e)[:100]}")
                 if self._running:
                     await asyncio.sleep(5)  # Backoff
 
     async def _run_session_iteration(self) -> None:
         """Single iteration of the session lifecycle."""
-        from core.audio.state import HysteresisGate
         from core.audio.capture import SmoothMuter
+        from core.audio.state import HysteresisGate
+
         self._hysteresis = HysteresisGate()
         self._smooth_muter = SmoothMuter()
         import uuid
@@ -583,10 +572,7 @@ class AetherGateway:
         # Inject pending handover context with visual frames
         pending_handover = self._hive.get_pending_handover_for_target(soul_name)
         if pending_handover and not session._injected_handover_context:
-            logger.info(
-                "A2A [GATEWAY] Injecting Deep Handover context with %d frames",
-                len(self._frame_buffer_cache)
-            )
+            logger.info("A2A [GATEWAY] Injecting Deep Handover context with %d frames", len(self._frame_buffer_cache))
             session.inject_handover_context(pending_handover, visual_frames=list(self._frame_buffer_cache))
             # Clear cache after successful injection
             self._frame_buffer_cache = []
@@ -605,7 +591,7 @@ class AetherGateway:
                             if attempt == 3:
                                 raise
                             logger.warning("Session connect attempt %d failed: %s", attempt, e)
-                            await asyncio.sleep(2 ** attempt)  # Exponential backoff
+                            await asyncio.sleep(2**attempt)  # Exponential backoff
                 except (asyncio.TimeoutError, Exception) as e:
                     logger.error(
                         "✦ Critical: Expert '%s' failed to stabilize. Rolling back...",
@@ -613,23 +599,17 @@ class AetherGateway:
                     )
 
                     # Recover last handover ID from hive for context restoration
-                    fail_handover_id = getattr(
-                        self._hive, "_last_handover_id", None
-                    )
+                    fail_handover_id = getattr(self._hive, "_last_handover_id", None)
                     if fail_handover_id:
                         self._hive.rollback_handover(fail_handover_id)
 
-                    await self._state_manager.transition_to(
-                        SessionState.ERROR, f"Expert handshake timeout: {str(e)}"
-                    )
+                    await self._state_manager.transition_to(SessionState.ERROR, f"Expert handshake timeout: {str(e)}")
                     # Trigger restart which will now pick up the rolled-back 'last_successful_soul'
                     self._session_restart_event.set()
                     return
 
             # Transition to CONNECTED
-            await self._state_manager.transition_to(
-                SessionState.CONNECTED, f"Session established for {soul_name}"
-            )
+            await self._state_manager.transition_to(SessionState.CONNECTED, f"Session established for {soul_name}")
 
             await self.broadcast("engine_state", {"state": "LISTENING"})
             logger.info(
@@ -645,9 +625,7 @@ class AetherGateway:
                     session.run(),
                     name="gemini-session",
                 )
-                restart_waiter = tg.create_task(
-                    self._session_restart_event.wait(), name="restart-waiter"
-                )
+                restart_waiter = tg.create_task(self._session_restart_event.wait(), name="restart-waiter")
 
                 done, pending = await asyncio.wait(
                     [session_task, restart_waiter],
@@ -658,24 +636,16 @@ class AetherGateway:
 
             if self._session_restart_event.is_set():
                 logger.info("🔄 Hive Handoff: Preparing next expert...")
-                await self._state_manager.transition_to(
-                    SessionState.HANDING_OFF, "Soul handoff initiated"
-                )
+                await self._state_manager.transition_to(SessionState.HANDING_OFF, "Soul handoff initiated")
                 await session.stop()
                 await asyncio.sleep(1.0)  # Graceful cross-fade
 
                 # Transition to RESTARTING
-                await self._state_manager.transition_to(
-                    SessionState.RESTARTING, "Preparing for next soul"
-                )
+                await self._state_manager.transition_to(SessionState.RESTARTING, "Preparing for next soul")
             else:
                 if not self._shutdown_event.is_set():
-                    logger.warning(
-                        "Session ended unexpectedly. Restarting in 5s..."
-                    )
-                    await self._state_manager.transition_to(
-                        SessionState.ERROR, "Unexpected session termination"
-                    )
+                    logger.warning("Session ended unexpectedly. Restarting in 5s...")
+                    await self._state_manager.transition_to(SessionState.ERROR, "Unexpected session termination")
                     await asyncio.sleep(5.0)
 
         finally:
@@ -725,10 +695,10 @@ class AetherGateway:
                             msg = msgpack.unpackb(raw_msg)
                             if isinstance(msg, dict) and "type" in msg:
                                 await self._route_message(client_id, msg)
-                                continue # Msgpack handled
+                                continue  # Msgpack handled
                         except Exception as e:
                             logger.error("Msgpack unpack failed: %s", e)
-                    
+
                     # If not handled by msgpack or msgpack failed/skipped, treat as raw audio
                     await self._route_binary(client_id, raw_msg)
                 else:
@@ -758,9 +728,7 @@ class AetherGateway:
         await ws.send(challenge.model_dump_json())
 
         try:
-            raw = await asyncio.wait_for(
-                ws.recv(), timeout=self._gateway_config.handshake_timeout_s
-            )
+            raw = await asyncio.wait_for(ws.recv(), timeout=self._gateway_config.handshake_timeout_s)
             resp = json.loads(raw)
         except (asyncio.TimeoutError, json.JSONDecodeError):
             raise HandshakeError("Handshake timed out or malformed")
@@ -779,9 +747,9 @@ class AetherGateway:
                     raise HandshakeError("Invalid Firebase ID Token")
             except Exception as e:
                 logger.error("Firebase auth check failed: %s", e)
-                await ws.close(code=4001) # Authentication Failure
+                await ws.close(code=4001)  # Authentication Failure
                 raise HandshakeError(f"Auth Service Failure: {e}")
-                
+
             # If client_id not provided, use Firebase UID
             if not client_id:
                 client_id = decoded.get("uid")
@@ -794,9 +762,7 @@ class AetherGateway:
                 raise HandshakeError(f"JWT Validation Failure: {e}")
         elif signature:
             try:
-                if not self._auth.verify_signature(
-                    challenge_bytes.hex(), signature, client_id
-                ):
+                if not self._auth.verify_signature(challenge_bytes.hex(), signature, client_id):
                     raise HandshakeError("Invalid Signature")
             except Exception as e:
                 await ws.close(code=4001)
@@ -805,9 +771,7 @@ class AetherGateway:
             await ws.close(code=4001)
             raise HandshakeError("No authentication provided")
 
-        session = ClientSession(
-            client_id=client_id, ws=ws, capabilities=capabilities
-        )
+        session = ClientSession(client_id=client_id, ws=ws, capabilities=capabilities)
         session.use_msgpack = use_msgpack
         async with self._lock:
             self._clients[client_id] = session
@@ -829,12 +793,10 @@ class AetherGateway:
             await self._audio_in.put(
                 {
                     "data": data,
-                    "mime_type": (
-                        f"audio/pcm;rate={self._gateway_config.receive_sample_rate}"
-                    ),
+                    "mime_type": (f"audio/pcm;rate={self._gateway_config.receive_sample_rate}"),
                 }
             )
-            
+
             # Send ACK for backpressure management
             async with self._lock:
                 if client_id in self._clients:
@@ -844,7 +806,7 @@ class AetherGateway:
                         await client.ws.send(msgpack.packb(ack_msg))
                     else:
                         await client.ws.send(json.dumps(ack_msg))
-                        
+
         except Exception as exc:
             logger.error("Error routing binary audio: %s", exc, exc_info=True)
 
@@ -874,6 +836,7 @@ class AetherGateway:
         if frame_b64:
             try:
                 import base64
+
                 frame_bytes = base64.b64decode(frame_b64)
                 self._frame_buffer_cache.append(frame_bytes)
                 if len(self._frame_buffer_cache) > self._max_frame_cache:
@@ -881,27 +844,31 @@ class AetherGateway:
 
                 session = self.get_session()
                 if session and session.is_ready():
-                    asyncio.create_task(session._session.send_realtime_input(
-                        parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/jpeg")]
-                    ))
-                
+                    asyncio.create_task(
+                        session._session.send_realtime_input(
+                            parts=[types.Part.from_bytes(data=frame_bytes, mime_type="image/jpeg")]
+                        )
+                    )
+
                 # 2. Process for Spatial Gaze (Ambient Awareness)
                 # Map 2D vision frame to 3D spatial intent
-                spatial_pulse = await self._spatial_cortex.map_vision_to_spatial({
-                    "timestamp": time.time(),
-                    "client_id": client_id
-                })
-                
+                spatial_pulse = await self._spatial_cortex.map_vision_to_spatial(
+                    {"timestamp": time.time(), "client_id": client_id}
+                )
+
                 # 3. Synchronize Avatar Gaze (Broadcast to UI)
-                await self.broadcast("GAZE_SYNC", {
-                    "vector": spatial_pulse["focus_vector"],
-                    "intent": spatial_pulse["avatar_gaze"],
-                    "confidence": spatial_pulse["intentionality_score"]
-                })
-                
+                await self.broadcast(
+                    "GAZE_SYNC",
+                    {
+                        "vector": spatial_pulse["focus_vector"],
+                        "intent": spatial_pulse["avatar_gaze"],
+                        "confidence": spatial_pulse["intentionality_score"],
+                    },
+                )
+
             except Exception as e:
                 logger.error("Failed to process VISION_FRAME: %s", e)
-    
+
     async def _handle_forge_commit(self, client_id: str, msg: dict) -> None:
         """Process agent creation request from the ForgeWizard."""
         payload = msg.get("payload", {})
@@ -914,18 +881,18 @@ class AetherGateway:
         name = dna.get("name", "Unnamed Agent")
         role = dna.get("role", "General Purpose Assistant")
         tone = dna.get("tone", "Professional")
-        
+
         # Synthesize instructions from tone + role
         instructions = f"Role: {role}\nTone: {tone}\n"
         if dna.get("selectedSoul"):
             instructions += f"Soul Blueprint: {dna['selectedSoul']}\n"
-            
+
         expertise = {skill: 0.8 for skill in dna.get("skills", [])}
         if not expertise:
             expertise = {"general": 0.5}
 
         logger.info("🔨 Gateway: Forging agent '%s' via forge_tool", name)
-        
+
         # Offload to thread since create_agent is synchronous and does I/O
         result = await asyncio.to_thread(
             create_agent,
@@ -933,15 +900,13 @@ class AetherGateway:
             description=role,
             instructions=instructions,
             expertise=expertise,
-            suggested_tools=dna.get("skills", [])
+            suggested_tools=dna.get("skills", []),
         )
 
         # Broadcast result to client
-        await self.broadcast("tool_result", {
-            "tool_name": "AgentForge",
-            "status": result["status"],
-            "message": result["message"]
-        })
+        await self.broadcast(
+            "tool_result", {"tool_name": "AgentForge", "status": result["status"], "message": result["message"]}
+        )
 
     async def _handle_claw_inject(self, client_id: str, msg: dict) -> None:
         """
@@ -950,7 +915,7 @@ class AetherGateway:
         """
         payload = msg.get("payload", {})
         instructions = payload.get("instructions")
-        rationales = payload.get("rationales", ["CLAW_INJECT via Gateway"])
+        payload.get("rationales", ["CLAW_INJECT via Gateway"])
 
         if not instructions:
             logger.warning("CLAW_INJECT received with no instructions from %s", client_id)
@@ -982,13 +947,9 @@ class AetherGateway:
         """Process structured intent via IntentBroker."""
         await self._intent_broker.handle_intent(client_id, json.dumps(msg), self)
 
-    def _verify_payload_signature(
-        self, payload: dict, signature: str, client_id: str
-    ) -> bool:
+    def _verify_payload_signature(self, payload: dict, signature: str, client_id: str) -> bool:
         """Verify payload signature via AuthService."""
-        return self._auth.verify_payload_signature(
-            json.dumps(payload).encode(), signature, client_id
-        )
+        return self._auth.verify_payload_signature(json.dumps(payload).encode(), signature, client_id)
 
     async def _tick_loop(self) -> None:
         """Send periodic heartbeats and prune dead clients."""
@@ -1005,10 +966,7 @@ class AetherGateway:
                 for cid, session in self._clients.items():
                     # Check for dead clients
                     elapsed = now - session.last_pong
-                    max_silence = (
-                        self._gateway_config.tick_interval_s
-                        * self._gateway_config.max_missed_ticks
-                    )
+                    max_silence = self._gateway_config.tick_interval_s * self._gateway_config.max_missed_ticks
                     if elapsed > max_silence:
                         dead_clients.append(cid)
                         continue
@@ -1019,7 +977,7 @@ class AetherGateway:
                             "type": MessageType.TICK.value,
                             "timestamp": now,
                         }
-                        if getattr(session, 'use_msgpack', False):
+                        if getattr(session, "use_msgpack", False):
                             await session.ws.send(msgpack.packb(payload_dict))
                         else:
                             await session.ws.send(json.dumps(payload_dict))
@@ -1045,7 +1003,7 @@ class AetherGateway:
 
         async def _send(session):
             try:
-                if getattr(session, 'use_msgpack', False):
+                if getattr(session, "use_msgpack", False):
                     await session.ws.send(msgpack_data)
                 else:
                     await session.ws.send(json_data)
@@ -1125,4 +1083,3 @@ class AetherGateway:
             self._server.close()
             await self._server.wait_closed()
         logger.info("Gateway stopped")
-

@@ -147,9 +147,7 @@ class SessionRestarter:
             if attempt < self._config.max_attempts:
                 import random
 
-                jitter = (
-                    random.uniform(-self._config.jitter, self._config.jitter) * delay
-                )
+                jitter = random.uniform(-self._config.jitter, self._config.jitter) * delay
                 actual_delay = min(delay + jitter, self._config.max_delay)
                 logger.info(f"⏳ Waiting {actual_delay:.1f}s before retry...")
                 await asyncio.sleep(actual_delay)
@@ -199,7 +197,5 @@ class SessionRestarter:
         self._last_heartbeat = time.time()
 
     def get_backoff_delay(self, attempt: int) -> float:
-        delay = self._config.initial_delay * (
-            self._config.backoff_multiplier ** (attempt - 1)
-        )
+        delay = self._config.initial_delay * (self._config.backoff_multiplier ** (attempt - 1))
         return min(delay, self._config.max_delay)

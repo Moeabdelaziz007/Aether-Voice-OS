@@ -41,11 +41,7 @@ class VoiceAuthGuard:
             return 100 <= estimated_pitch <= 180
 
         # Authentic matching against calibrated soul fingerprint
-        return (
-            (calibrated_pitch - calibration_window)
-            <= estimated_pitch
-            <= (calibrated_pitch + calibration_window)
-        )
+        return (calibrated_pitch - calibration_window) <= estimated_pitch <= (calibrated_pitch + calibration_window)
 
     @staticmethod
     def calibrate(pitch: float):

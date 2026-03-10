@@ -84,13 +84,9 @@ class AetherRegistry:
                         if pkg_name:
                             self._discovered_paths[pkg_name] = entry
                             discovered += 1
-                            logger.debug(
-                                "[Registry] Discovered lazy package: %s", pkg_name
-                            )
+                            logger.debug("[Registry] Discovered lazy package: %s", pkg_name)
                 except Exception as e:
-                    logger.warning(
-                        "Failed to discover package at %s: %s", entry.name, e
-                    )
+                    logger.warning("Failed to discover package at %s: %s", entry.name, e)
 
         logger.info("📡 Discovered %d specialists (Lazy Mode)", discovered)
         return discovered
@@ -115,9 +111,7 @@ class AetherRegistry:
             return
 
         self._observer = Observer()
-        self._observer.schedule(
-            PackageChangeHandler(self), str(self._dir), recursive=True
-        )
+        self._observer.schedule(PackageChangeHandler(self), str(self._dir), recursive=True)
         self._observer.start()
         logger.info("📡 ADK Hot-Reloading Active: Watching %s", self._dir)
 
@@ -148,11 +142,7 @@ class AetherRegistry:
             import asyncio
 
             # Notify callback (e.g. engine) to update tool registration
-            pkg_name = (
-                new_pkg.manifest.name
-                if new_pkg
-                else (old_pkg.manifest.name if old_pkg else path.name)
-            )
+            pkg_name = new_pkg.manifest.name if new_pkg else (old_pkg.manifest.name if old_pkg else path.name)
             try:
                 loop = asyncio.get_running_loop()
                 loop.create_task(self._on_change(pkg_name, new_pkg))
@@ -192,11 +182,7 @@ class AetherRegistry:
         text = package.get_expertise_string()
         try:
             loop = asyncio.get_running_loop()
-            loop.create_task(
-                self._vector_store.add_text(
-                    text, metadata={"name": package.manifest.name}
-                )
-            )
+            loop.create_task(self._vector_store.add_text(text, metadata={"name": package.manifest.name}))
         except RuntimeError:
             # No event loop (e.g. during sync initialization)
             pass

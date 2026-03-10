@@ -92,9 +92,7 @@ class DebuggerAgent(VoiceAgent):
                 handover_id=context.handover_id,
                 stage="design_verification",
                 partial_output={
-                    "verification_results": [
-                        v.model_dump() for v in self._output.verification_results
-                    ],
+                    "verification_results": [v.model_dump() for v in self._output.verification_results],
                     "warnings": [w.model_dump() for w in self._output.warnings],
                     "blueprint_sections": [
                         bs.model_dump() for bs in self._output.blueprint_sections
@@ -102,24 +100,18 @@ class DebuggerAgent(VoiceAgent):
                 },
             )
             if checkpoint:
-                logger.info(
-                    "🐛 Created validation checkpoint: %s", checkpoint.checkpoint_id
-                )
+                logger.info("🐛 Created validation checkpoint: %s", checkpoint.checkpoint_id)
 
         # Determine if rework is needed
         if self._output.failed_checks > 0 or self._output.get_critical_warnings():
             logger.warning("🐛 Verification found issues - recommending rework")
-            context.add_history(
-                "Debugger found issues requiring rework", agent="Debugger"
-            )
+            context.add_history("Debugger found issues requiring rework", agent="Debugger")
 
             # Request rework from Architect
             return await self._request_rework(context)
 
         # All checks passed
-        context.add_history(
-            "Debugger verified and approved the structural changes.", agent="Debugger"
-        )
+        context.add_history("Debugger verified and approved the structural changes.", agent="Debugger")
 
         # Update metrics
         self._output.total_checks = len(self._output.verification_results)
@@ -143,9 +135,7 @@ class DebuggerAgent(VoiceAgent):
 
         return final_report
 
-    def _verify_blueprint(
-        self, context: HandoverContext, architect_data: Dict[str, Any]
-    ) -> None:
+    def _verify_blueprint(self, context: HandoverContext, architect_data: Dict[str, Any]) -> None:
         """Verify the architectural blueprint."""
         if not self._output:
             return

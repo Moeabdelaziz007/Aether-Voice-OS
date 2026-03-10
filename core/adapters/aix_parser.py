@@ -29,9 +29,7 @@ def parse_aix_text(content: str, fmt: str) -> dict[str, Any]:
         try:
             import yaml
         except ImportError as exc:
-            raise ValueError(
-                "YAML parsing requires PyYAML, which is not installed."
-            ) from exc
+            raise ValueError("YAML parsing requires PyYAML, which is not installed.") from exc
         parsed = yaml.safe_load(content)
 
     if not isinstance(parsed, dict):
@@ -60,7 +58,5 @@ def dump_aix_text(payload: dict[str, Any], fmt: str) -> str:
     try:
         import yaml
     except ImportError as exc:
-        raise ValueError(
-            "YAML export requires PyYAML, which is not installed."
-        ) from exc
+        raise ValueError("YAML export requires PyYAML, which is not installed.") from exc
     return yaml.safe_dump(payload, sort_keys=False, allow_unicode=True)

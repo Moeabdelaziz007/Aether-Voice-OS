@@ -28,9 +28,7 @@ CHUNK_DURATION_S = 0.1
 CHUNK_SAMPLES = int(SAMPLE_RATE * CHUNK_DURATION_S)
 
 
-def _sine_pcm16(
-    freq_hz: float, amp: float, n: int = CHUNK_SAMPLES, sr: int = SAMPLE_RATE
-) -> np.ndarray:
+def _sine_pcm16(freq_hz: float, amp: float, n: int = CHUNK_SAMPLES, sr: int = SAMPLE_RATE) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     x = amp * np.sin(2.0 * np.pi * freq_hz * t)
     return (np.clip(x, -1.0, 1.0) * 32767.0).astype(np.int16)
@@ -62,17 +60,13 @@ def test_adaptive_vad_baseline_adapts_and_hits_accuracy_targets():
         energy_vad(noise, adaptive_engine=vad)
 
     # Evaluate silence accuracy (baseline established)
-    silence_hard = sum(
-        1 for fr in silence_frames if energy_vad(fr, adaptive_engine=vad).is_hard
-    )
+    silence_hard = sum(1 for fr in silence_frames if energy_vad(fr, adaptive_engine=vad).is_hard)
     silence_acc = 1.0 - (silence_hard / len(silence_frames))
     assert silence_acc >= 0.85, f"Silence accuracy too low: {silence_acc:.2%}"
 
     # Now evaluate speech accuracy
     speech_frames = [_sine_pcm16(freq_hz=440.0, amp=0.5) for _ in range(25)]
-    speech_hard = sum(
-        1 for fr in speech_frames if energy_vad(fr, adaptive_engine=vad).is_hard
-    )
+    speech_hard = sum(1 for fr in speech_frames if energy_vad(fr, adaptive_engine=vad).is_hard)
     speech_acc = speech_hard / len(speech_frames)
     assert speech_acc >= 0.85, f"Speech accuracy too low: {speech_acc:.2%}"
 

@@ -44,11 +44,7 @@ async def receive_loop(session_facade, session) -> None:
             for part in sc.model_turn.parts:
                 if part.text:
                     try:
-                        asyncio.create_task(
-                            session_facade._gateway.broadcast(
-                                "transcript", {"text": part.text}
-                            )
-                        )
+                        asyncio.create_task(session_facade._gateway.broadcast("transcript", {"text": part.text}))
                     except Exception as e:
                         logger.debug("Failed to broadcast transcript: %s", e)
 
@@ -68,12 +64,8 @@ async def receive_loop(session_facade, session) -> None:
                             pass
 
                     session_facade._out_queue.put_nowait(part.inline_data.data)
-                    asyncio.create_task(
-                        session_facade._gateway.broadcast(
-                            "engine_state", {"state": "SPEAKING"}
-                        )
-                    )
-        
+                    asyncio.create_task(session_facade._gateway.broadcast("engine_state", {"state": "SPEAKING"}))
+
         if sc.interrupted:
             logger.info("⚡ Barge-in detected — draining output")
             drain_output(session_facade)

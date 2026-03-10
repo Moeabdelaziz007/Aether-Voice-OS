@@ -40,9 +40,7 @@ class AudioManager:
 
     async def start(self) -> None:
         """Initialize and start audio components."""
-        self._paralinguistics = ParalinguisticAnalyzer(
-            sample_rate=self._config.audio.send_sample_rate
-        )
+        self._paralinguistics = ParalinguisticAnalyzer(sample_rate=self._config.audio.send_sample_rate)
 
         self._vad = AdaptiveVAD(
             window_size_sec=getattr(self._config.audio, "vad_window_sec", 5.0),
@@ -135,13 +133,9 @@ class AudioManager:
     def run_tasks(self, tg: asyncio.TaskGroup):
         """Add audio tasks to TaskGroup."""
         if self._capture:
-            self._capture_task = tg.create_task(
-                self._capture.run(), name="audio-capture"
-            )
+            self._capture_task = tg.create_task(self._capture.run(), name="audio-capture")
         if self._playback:
-            self._playback_task = tg.create_task(
-                self._playback.run(), name="audio-playback"
-            )
+            self._playback_task = tg.create_task(self._playback.run(), name="audio-playback")
 
     def interrupt(self):
         if self._playback:

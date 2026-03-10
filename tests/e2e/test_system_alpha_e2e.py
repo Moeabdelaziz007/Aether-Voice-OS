@@ -151,10 +151,7 @@ async def test_aether_system_alpha_full_cycle():
                 print(f"[PROBE] Result Received: {ack_msg['type']}")
 
                 if ack_msg["type"] == "error":
-                    print(
-                        f"[PROBE] Protocol Error (Expected if AI Auth fails): "
-                        f"{ack_msg.get('message')}"
-                    )
+                    print(f"[PROBE] Protocol Error (Expected if AI Auth fails): {ack_msg.get('message')}")
                     return  # Passthrough success for protocol validation
 
                 assert ack_msg["type"] == "connect.ack"

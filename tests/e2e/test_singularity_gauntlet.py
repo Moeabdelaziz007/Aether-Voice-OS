@@ -65,9 +65,7 @@ async def test_semantic_recovery_success():
             }
         ]
     )
-    router._vector_store.add_text = (
-        AsyncMock()
-    )  # Must be AsyncMock for asyncio.create_task
+    router._vector_store.add_text = AsyncMock()  # Must be AsyncMock for asyncio.create_task
 
     # Register the real tool
     router.register_module(handoff)
@@ -81,9 +79,9 @@ async def test_semantic_recovery_success():
 
     # Should have recovered to 'delegate_to_agent'
     assert result["x-a2a-status"] == 202
-    assert "Target expert" in result["result"].get(
+    assert "Target expert" in result["result"].get("message", "") or "Task delegated" in result["result"].get(
         "message", ""
-    ) or "Task delegated" in result["result"].get("message", "")
+    )
 
 
 @pytest.mark.asyncio

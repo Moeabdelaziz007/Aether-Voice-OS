@@ -94,17 +94,11 @@ class LiveDashboard:
 
     async def setup(self) -> None:
         session_id = f"dashboard_{int(time.time() * 1000)}"
-        self._telemetry = AudioTelemetryLogger(
-            session_id=session_id, log_to_file=True, log_dir="telemetry_logs"
-        )
+        self._telemetry = AudioTelemetryLogger(session_id=session_id, log_to_file=True, log_dir="telemetry_logs")
         audio_in_queue = asyncio.Queue(maxsize=self._config.audio.mic_queue_max)
         audio_out_queue = asyncio.Queue(maxsize=15)
-        vad_engine = AdaptiveVAD(
-            window_size_sec=5.0, sample_rate=self._config.audio.send_sample_rate
-        )
-        silent_analyzer = SilentAnalyzer(
-            sample_rate=self._config.audio.send_sample_rate
-        )
+        vad_engine = AdaptiveVAD(window_size_sec=5.0, sample_rate=self._config.audio.send_sample_rate)
+        silent_analyzer = SilentAnalyzer(sample_rate=self._config.audio.send_sample_rate)
         para_analyzer = ParalinguisticAnalyzer()
         self._capture = AudioCapture(
             config=self._config.audio,
@@ -114,9 +108,7 @@ class LiveDashboard:
             paralinguistic_analyzer=para_analyzer,
         )
         self._capture.set_telemetry_logger(self._telemetry)
-        self._playback = AudioPlayback(
-            config=self._config.audio, input_queue=audio_out_queue
-        )
+        self._playback = AudioPlayback(config=self._config.audio, input_queue=audio_out_queue)
 
     async def run(self) -> None:
         self._running = True
@@ -263,9 +255,7 @@ class LiveDashboard:
 
 async def main():
     parser = argparse.ArgumentParser(description="Aether Live Dashboard")
-    parser.add_argument(
-        "--duration", type=float, default=60.0, help="Duration in seconds"
-    )
+    parser.add_argument("--duration", type=float, default=60.0, help="Duration in seconds")
     args = parser.parse_args()
     dashboard = LiveDashboard(duration_sec=args.duration)
     await dashboard.setup()

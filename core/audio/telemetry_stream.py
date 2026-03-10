@@ -9,6 +9,7 @@ from core.infra.event_bus import EventBus, TelemetryEvent
 
 logger = structlog.get_logger("AetherOS.Telemetry.Stream")
 
+
 class AudioTelemetryStream:
     """
     Analyzes real-time PCM audio segments (15Hz)
@@ -49,7 +50,7 @@ class AudioTelemetryStream:
                 volume = np.sqrt(np.mean(audio_np**2)) if len(audio_np) > 0 else 0
                 zero_crossings = np.nonzero(np.diff(np.sign(audio_np)))[0]
                 pitch_est = len(zero_crossings) / (len(audio_np) / 16000) / 2 if len(audio_np) > 0 else 0
-                
+
                 spectrum = np.abs(np.fft.rfft(audio_np))
                 freqs = np.fft.rfftfreq(len(audio_np), 1 / 16000)
                 centroid = np.sum(freqs * spectrum) / np.sum(spectrum) if np.sum(spectrum) > 0 else 0

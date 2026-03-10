@@ -78,23 +78,17 @@ class LiveAudioBenchmark:
 
         # Create telemetry logger
         session_id = f"benchmark_{int(time.time() * 1000)}"
-        self._telemetry = AudioTelemetryLogger(
-            session_id=session_id, log_to_file=True, log_dir=str(self._output_dir)
-        )
+        self._telemetry = AudioTelemetryLogger(session_id=session_id, log_to_file=True, log_dir=str(self._output_dir))
 
         # Create queues
         audio_in_queue = asyncio.Queue(maxsize=self._config.audio.mic_queue_max)
         audio_out_queue = asyncio.Queue(maxsize=15)
 
         # Create VAD engine
-        vad_engine = AdaptiveVAD(
-            window_size_sec=5.0, sample_rate=self._config.audio.send_sample_rate
-        )
+        vad_engine = AdaptiveVAD(window_size_sec=5.0, sample_rate=self._config.audio.send_sample_rate)
 
         # Create analyzers
-        silent_analyzer = SilentAnalyzer(
-            sample_rate=self._config.audio.send_sample_rate
-        )
+        silent_analyzer = SilentAnalyzer(sample_rate=self._config.audio.send_sample_rate)
         para_analyzer = ParalinguisticAnalyzer()
 
         # Create capture
@@ -162,16 +156,10 @@ class LiveAudioBenchmark:
         """Format metrics for display."""
         return {
             "session_id": metrics.session_id,
-            "duration_sec": metrics.end_time - metrics.start_time
-            if metrics.end_time
-            else 0,
+            "duration_sec": metrics.end_time - metrics.start_time if metrics.end_time else 0,
             "total_frames": metrics.total_frames,
             "frames_dropped": metrics.frames_dropped,
-            "drop_rate": (
-                metrics.frames_dropped / metrics.total_frames * 100
-                if metrics.total_frames > 0
-                else 0
-            ),
+            "drop_rate": (metrics.frames_dropped / metrics.total_frames * 100 if metrics.total_frames > 0 else 0),
             "latency": {
                 "p50_ms": round(metrics.latency_p50_ms, 2),
                 "p95_ms": round(metrics.latency_p95_ms, 2),
@@ -242,9 +230,7 @@ class LiveAudioBenchmark:
 
 
 async def main():
-    parser = argparse.ArgumentParser(
-        description="Aether Voice OS — Live Audio Benchmark"
-    )
+    parser = argparse.ArgumentParser(description="Aether Voice OS — Live Audio Benchmark")
     parser.add_argument(
         "--duration",
         type=float,
@@ -267,9 +253,7 @@ async def main():
 
     args = parser.parse_args()
 
-    benchmark = LiveAudioBenchmark(
-        duration_sec=args.duration, scenario=args.scenario, output_dir=args.output
-    )
+    benchmark = LiveAudioBenchmark(duration_sec=args.duration, scenario=args.scenario, output_dir=args.output)
 
     await benchmark.setup()
     metrics = await benchmark.run()

@@ -113,9 +113,7 @@ async def collapse_app(
     return {"status": "ok", "action": "collapse_app", "app": app}
 
 
-async def list_workspace_apps(
-    galaxy_id: str = "Genesis", **kwargs: Any
-) -> dict[str, Any]:
+async def list_workspace_apps(galaxy_id: str = "Genesis", **kwargs: Any) -> dict[str, Any]:
     return {
         "status": "ok",
         "galaxy_id": galaxy_id,

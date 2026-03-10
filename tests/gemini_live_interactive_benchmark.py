@@ -188,16 +188,12 @@ class InteractiveDashboard:
 
         # Header
         print(f"{Colors.BOLD}{Colors.CYAN}{'═' * 80}{Colors.RESET}")
-        print(
-            f"{Colors.BOLD}{Colors.WHITE}  AETHER VOICE OS — GEMINI LIVE API INTERACTIVE BENCHMARK{Colors.RESET}"
-        )
+        print(f"{Colors.BOLD}{Colors.WHITE}  AETHER VOICE OS — GEMINI LIVE API INTERACTIVE BENCHMARK{Colors.RESET}")
         print(f"{Colors.BOLD}{Colors.CYAN}{'═' * 80}{Colors.RESET}")
         print()
 
         # Current scenario
-        print(
-            f"{Colors.BOLD}Current Scenario:{Colors.RESET} {Colors.GREEN}{self.stats.scenario_name}{Colors.RESET}"
-        )
+        print(f"{Colors.BOLD}Current Scenario:{Colors.RESET} {Colors.GREEN}{self.stats.scenario_name}{Colors.RESET}")
         print(
             f"{Colors.BOLD}Duration:{Colors.RESET} {time.time() - self.stats.start_time:.1f}s / {self._get_scenario_duration()}s"
         )
@@ -235,12 +231,9 @@ class InteractiveDashboard:
             if self.stats.vad_accuracy > 75
             else Colors.RED
         )
-        speech_ratio = (
-            self.stats.vad_speech_frames / max(1, self.stats.frames_processed)
-        ) * 100
+        speech_ratio = (self.stats.vad_speech_frames / max(1, self.stats.frames_processed)) * 100
         print(
-            f"VAD Accuracy:   {vad_color}{self.stats.vad_accuracy:>5.1f}%{Colors.RESET} "
-            f"(Speech: {speech_ratio:>5.1f}%)"
+            f"VAD Accuracy:   {vad_color}{self.stats.vad_accuracy:>5.1f}%{Colors.RESET} (Speech: {speech_ratio:>5.1f}%)"
         )
 
         # Frame drops
@@ -259,23 +252,13 @@ class InteractiveDashboard:
         print()
 
         # Double-talk detection
-        dt_rate = (
-            self.stats.double_talk_frames / max(1, self.stats.frames_processed)
-        ) * 100
-        dt_color = (
-            Colors.GREEN
-            if dt_rate < 10
-            else Colors.YELLOW
-            if dt_rate < 25
-            else Colors.RED
-        )
+        dt_rate = (self.stats.double_talk_frames / max(1, self.stats.frames_processed)) * 100
+        dt_color = Colors.GREEN if dt_rate < 10 else Colors.YELLOW if dt_rate < 25 else Colors.RED
         print(f"Double-talk Detection: {dt_color}{dt_rate:>5.1f}%{Colors.RESET}")
         print()
 
         # Progress bar
-        progress = min(
-            1.0, (time.time() - self.stats.start_time) / self._get_scenario_duration()
-        )
+        progress = min(1.0, (time.time() - self.stats.start_time) / self._get_scenario_duration())
         bar_length = 50
         filled = int(bar_length * progress)
         bar = "█" * filled + "░" * (bar_length - filled)
@@ -284,9 +267,7 @@ class InteractiveDashboard:
 
         # Controls
         print(f"{Colors.BOLD}{Colors.MAGENTA}CONTROLS:{Colors.RESET}")
-        print(
-            "  [q] Quit  [s] Switch Scenario  [p] Pause/Resume  [r] Reset  [c] Configure"
-        )
+        print("  [q] Quit  [s] Switch Scenario  [p] Pause/Resume  [r] Reset  [c] Configure")
         print()
 
     def _get_scenario_duration(self) -> float:
@@ -319,9 +300,7 @@ class InteractiveDashboard:
         """Get available test scenarios."""
         return [
             TestScenario("normal", "Normal conversation", 60.0),
-            TestScenario(
-                "noise", "Background noise environment", 60.0, background_noise=True
-            ),
+            TestScenario("noise", "Background noise environment", 60.0, background_noise=True),
             TestScenario(
                 "overlap",
                 "Overlapping speech (double-talk)",
@@ -386,9 +365,7 @@ class GeminiLiveInteractiveBenchmark:
             convergence_threshold_db=self.config.audio.aec_convergence_threshold_db,
         )
 
-        self.vad = AdaptiveVAD(
-            window_size_sec=5.0, sample_rate=self.config.audio.send_sample_rate
-        )
+        self.vad = AdaptiveVAD(window_size_sec=5.0, sample_rate=self.config.audio.send_sample_rate)
 
         # Setup audio capture
         self.audio_capture = AudioCapture(
@@ -502,9 +479,7 @@ class GeminiLiveInteractiveBenchmark:
 
                 # Get REAL audio from microphone via capture queue
                 try:
-                    audio_msg = await asyncio.wait_for(
-                        self.audio_in_queue.get(), timeout=0.1
-                    )
+                    audio_msg = await asyncio.wait_for(self.audio_in_queue.get(), timeout=0.1)
                     # Debug: Log audio message structure
                     if self.stats.frames_processed < 5:  # Only log first 5 frames
                         logger.debug(
@@ -534,9 +509,7 @@ class GeminiLiveInteractiveBenchmark:
                     far_end_ref = np.zeros_like(mic_audio_float)
 
                     # Process through AEC
-                    cleaned_audio, aec_state = self.aec.process_frame(
-                        mic_audio_float, far_end_ref
-                    )
+                    cleaned_audio, aec_state = self.aec.process_frame(mic_audio_float, far_end_ref)
 
                     # Update AEC metrics
                     self.stats.aec_erle_values.append(aec_state.erle_db)
@@ -564,9 +537,7 @@ class GeminiLiveInteractiveBenchmark:
                     else:
                         mic_audio_int16 = np.array(mic_audio, dtype=np.int16)
 
-                    current_rms = float(
-                        np.sqrt(np.mean(mic_audio_int16.astype(np.float32) ** 2))
-                    )
+                    current_rms = float(np.sqrt(np.mean(mic_audio_int16.astype(np.float32) ** 2)))
 
                     # Use AdaptiveVAD's update method
                     soft_threshold, hard_threshold = self.vad.update(current_rms)
@@ -595,9 +566,7 @@ class GeminiLiveInteractiveBenchmark:
                     aec_erle_db=aec_state.erle_db if self.aec else 0.0,
                     aec_converged=aec_state.converged if self.aec else False,
                     vad_speech_detected=vad_detected if self.vad else False,
-                    double_talk_detected=aec_state.double_talk_detected
-                    if self.aec
-                    else False,
+                    double_talk_detected=aec_state.double_talk_detected if self.aec else False,
                     frame_drop=False,
                     processing_time_ms=processing_time,
                 )
@@ -636,9 +605,7 @@ class GeminiLiveInteractiveBenchmark:
 
         # AEC convergence rate
         if self.stats.frames_processed > 0:
-            self.stats.aec_convergence_rate = (
-                self.stats.aec_convergence_count / self.stats.frames_processed
-            ) * 100
+            self.stats.aec_convergence_rate = (self.stats.aec_convergence_count / self.stats.frames_processed) * 100
 
         # VAD accuracy (assuming 90% accuracy as baseline for normal speech)
         total_vad_frames = self.stats.vad_speech_frames + self.stats.vad_silence_frames
@@ -648,9 +615,7 @@ class GeminiLiveInteractiveBenchmark:
 
         # Frame drop rate
         if self.stats.frames_processed > 0:
-            self.stats.frame_drop_rate = (
-                self.stats.frames_dropped / self.stats.frames_processed
-            ) * 100
+            self.stats.frame_drop_rate = (self.stats.frames_dropped / self.stats.frames_processed) * 100
 
     def _generate_report(self) -> Dict[str, Any]:
         """Generate final benchmark report."""
@@ -668,9 +633,7 @@ class GeminiLiveInteractiveBenchmark:
                 "avg_ms": self.stats.latency_avg,
             },
             "aec": {
-                "erle_db_avg": np.mean(self.stats.aec_erle_values)
-                if self.stats.aec_erle_values
-                else 0,
+                "erle_db_avg": np.mean(self.stats.aec_erle_values) if self.stats.aec_erle_values else 0,
                 "convergence_rate_percent": self.stats.aec_convergence_rate,
                 "double_talk_frames": self.stats.double_talk_frames,
             },
@@ -696,9 +659,7 @@ class GeminiLiveInteractiveBenchmark:
         """Get available test scenarios."""
         return [
             TestScenario("normal", "Normal conversation", 60.0),
-            TestScenario(
-                "noise", "Background noise environment", 60.0, background_noise=True
-            ),
+            TestScenario("noise", "Background noise environment", 60.0, background_noise=True),
             TestScenario(
                 "overlap",
                 "Overlapping speech (double-talk)",
@@ -726,9 +687,7 @@ class GeminiLiveInteractiveBenchmark:
 
 
 async def main():
-    parser = argparse.ArgumentParser(
-        description="Gemini Live API Interactive Benchmark"
-    )
+    parser = argparse.ArgumentParser(description="Gemini Live API Interactive Benchmark")
     parser.add_argument(
         "--scenario",
         "-s",

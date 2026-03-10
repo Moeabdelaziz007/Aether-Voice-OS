@@ -48,9 +48,7 @@ async def create_event(
     }
 
 
-async def list_events(
-    time_min: str, time_max: str, max_results: int = 5, **kwargs
-) -> Dict[str, Any]:
+async def list_events(time_min: str, time_max: str, max_results: int = 5, **kwargs) -> Dict[str, Any]:
     """
     Mock implementation for listing upcoming calendar events.
     Returns A2A status codes for robust error handling.
@@ -115,17 +113,11 @@ def get_tools() -> list[dict]:
                     },
                     "start_time": {
                         "type": "string",
-                        "description": (
-                            "Start time in ISO format "
-                            "(e.g., '2023-10-27T10:00:00-07:00')"
-                        ),
+                        "description": ("Start time in ISO format (e.g., '2023-10-27T10:00:00-07:00')"),
                     },
                     "end_time": {
                         "type": "string",
-                        "description": (
-                            "End time in ISO format "
-                            "(e.g., '2023-10-27T11:00:00-07:00')"
-                        ),
+                        "description": ("End time in ISO format (e.g., '2023-10-27T11:00:00-07:00')"),
                     },
                     "attendees": {
                         "type": "array",
@@ -150,17 +142,11 @@ def get_tools() -> list[dict]:
                 "properties": {
                     "time_min": {
                         "type": "string",
-                        "description": (
-                            "Start of the time range in ISO format "
-                            "(e.g., '2023-10-27T00:00:00-07:00')"
-                        ),
+                        "description": ("Start of the time range in ISO format (e.g., '2023-10-27T00:00:00-07:00')"),
                     },
                     "time_max": {
                         "type": "string",
-                        "description": (
-                            "End of the time range in ISO format "
-                            "(e.g., '2023-10-28T00:00:00-07:00')"
-                        ),
+                        "description": ("End of the time range in ISO format (e.g., '2023-10-28T00:00:00-07:00')"),
                     },
                     "max_results": {
                         "type": "integer",

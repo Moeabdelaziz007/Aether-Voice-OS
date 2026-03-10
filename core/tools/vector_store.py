@@ -32,9 +32,7 @@ class LocalVectorStore:
         try:
             with open(filepath, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                self._vectors = {
-                    k: np.array(v) for k, v in data.get("vectors", {}).items()
-                }
+                self._vectors = {k: np.array(v) for k, v in data.get("vectors", {}).items()}
                 self._metadata = data.get("metadata", {})
             logger.info(
                 "Vector index loaded from %s (Entries: %d)",
@@ -64,9 +62,7 @@ class LocalVectorStore:
         except Exception as e:
             logger.error("Failed to save vector index to %s: %s", filepath, e)
 
-    async def add_text(
-        self, key: str, text: str, metadata: Optional[dict] = None
-    ) -> None:
+    async def add_text(self, key: str, text: str, metadata: Optional[dict] = None) -> None:
         """Embed text and add to the local index."""
         try:
             res = self._client.models.embed_content(
@@ -89,9 +85,7 @@ class LocalVectorStore:
         results = []
         for key, vector in self._vectors.items():
             # Cosine similarity = (A . B) / (||A|| * ||B||)
-            similarity = np.dot(query_vector, vector) / (
-                np.linalg.norm(query_vector) * np.linalg.norm(vector)
-            )
+            similarity = np.dot(query_vector, vector) / (np.linalg.norm(query_vector) * np.linalg.norm(vector))
             results.append(
                 {
                     "key": key,

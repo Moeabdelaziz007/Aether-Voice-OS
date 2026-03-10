@@ -20,9 +20,7 @@ class SystemState(Enum):
     SPEAKING = "speaking"  # TTS outputting audio, mic suppressed (EchoGuard active)
     PAUSED = "paused"  # System suspended via Admin
     ERROR = "error"  # Fatal breakdown, watchdog restart required
-    NIGHT_TERRORS = (
-        "night_terrors"  # The system is dreaming (Internal Memory Consolidation)
-    )
+    NIGHT_TERRORS = "night_terrors"  # The system is dreaming (Internal Memory Consolidation)
 
 
 # ==========================================
@@ -71,9 +69,7 @@ class EngineStateManager:
     def current_state(self) -> SystemState:
         return self._current_state
 
-    async def request_transition(
-        self, new_state: SystemState, source: str, reason: str = ""
-    ) -> bool:
+    async def request_transition(self, new_state: SystemState, source: str, reason: str = "") -> bool:
         """
         Request a state transition. Validates against the ALLOWED_TRANSITIONS matrix.
         If valid, updates internal state and broadcasts a ControlEvent on Tier 2.
@@ -91,9 +87,7 @@ class EngineStateManager:
             # 2. State Mutation
             old_state = self._current_state
             self._current_state = new_state
-            logger.info(
-                f"[StateManager] 🔄 Transition: {old_state.value} -> {new_state.value} ({reason})"
-            )
+            logger.info(f"[StateManager] 🔄 Transition: {old_state.value} -> {new_state.value} ({reason})")
 
             # 3. Broadcast Event-Driven Knowledge (Control Tier 2)
             # This is how the HUD and hardware know to react

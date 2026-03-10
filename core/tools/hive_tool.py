@@ -24,9 +24,7 @@ def set_hive_coordinator(coordinator: HiveCoordinator):
     _hive_coordinator = coordinator
 
 
-async def switch_expert_soul(
-    target_name: str, reason: str, **kwargs: object
-) -> dict[str, object]:
+async def switch_expert_soul(target_name: str, reason: str, **kwargs: object) -> dict[str, object]:
     """
     Switches the current agent's personality and expertise to another soul.
     Use this when you need specialized knowledge (e.g., Architect, Debugger).

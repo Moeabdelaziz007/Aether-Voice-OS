@@ -66,9 +66,7 @@ async def optimized_fetch(query):
     # This is the proposed implementation
     def _fetch_and_parse():
         docs = query.get()
-        return [
-            SessionMetadata(**{**doc.to_dict(), "session_id": doc.id}) for doc in docs
-        ]
+        return [SessionMetadata(**{**doc.to_dict(), "session_id": doc.id}) for doc in docs]
 
     return await asyncio.to_thread(_fetch_and_parse)
 
@@ -77,9 +75,7 @@ async def main():
     print("Establish Baseline Benchmark for get_recent_sessions")
 
     # Setup mock data (10 sessions)
-    mock_data = [
-        {"user_id": "user123", "start_time": datetime.utcnow()} for _ in range(10)
-    ]
+    mock_data = [{"user_id": "user123", "start_time": datetime.utcnow()} for _ in range(10)]
     docs = [MockDoc(f"doc_{i}", data) for i, data in enumerate(mock_data)]
     query = MockQuery(docs)
 

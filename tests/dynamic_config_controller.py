@@ -229,10 +229,7 @@ class DynamicParameterController:
 
     def get_current_state(self) -> Dict[str, Any]:
         """Get current parameter values."""
-        return {
-            param_name: param_info["value"]
-            for param_name, param_info in self.parameters.items()
-        }
+        return {param_name: param_info["value"] for param_name, param_info in self.parameters.items()}
 
     def save_preset(self, filename: str):
         """Save current parameters as a preset file."""
@@ -265,9 +262,7 @@ class DynamicParameterController:
 
     def interactive_control(self):
         """Start interactive parameter control via keyboard input."""
-        print(
-            f"\n{Colors.BOLD}{Colors.CYAN}Dynamic Parameter Controller Started{Colors.RESET}"
-        )
+        print(f"\n{Colors.BOLD}{Colors.CYAN}Dynamic Parameter Controller Started{Colors.RESET}")
         print("Commands:")
         print("  [1-8] Adjust parameters")
         print("  [p] Apply preset")
@@ -306,9 +301,7 @@ class DynamicParameterController:
 
         for i, (param_name, param_info) in enumerate(param_list[:8], 1):
             current_value = param_info["value"]
-            print(
-                f"  {i}. {param_name}: {current_value:.2f} ({param_info['description']})"
-            )
+            print(f"  {i}. {param_name}: {current_value:.2f} ({param_info['description']})")
 
         print()
 
@@ -319,9 +312,7 @@ class DynamicParameterController:
             value = param_info["value"]
             min_val = param_info["min"]
             max_val = param_info["max"]
-            print(
-                f"  {param_name:25s}: {value:8.2f} (range: {min_val:.2f} - {max_val:.2f})"
-            )
+            print(f"  {param_name:25s}: {value:8.2f} (range: {min_val:.2f} - {max_val:.2f})")
         print()
 
     def _apply_preset_interactive(self):
@@ -389,9 +380,7 @@ def create_parameter_controller(
     return DynamicParameterController(audio_config)
 
 
-def integrate_with_benchmark(
-    benchmark_instance, controller: DynamicParameterController
-):
+def integrate_with_benchmark(benchmark_instance, controller: DynamicParameterController):
     """Integrate parameter controller with benchmark instance."""
 
     def parameter_callback(param_name: str, value: float):

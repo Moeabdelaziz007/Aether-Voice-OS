@@ -25,9 +25,7 @@ class SoulManifestStub:
             voice_id: str
             expertise: dict = None
 
-        self.manifest = Manifest(
-            name=name, voice_id=voice_id, expertise={"sysadmin": 1.0}
-        )
+        self.manifest = Manifest(name=name, voice_id=voice_id, expertise={"sysadmin": 1.0})
         self.persona = "Stub persona manifest"
         self.name = name
 
@@ -61,13 +59,14 @@ async def aether_services():
 
     # Mock signature verification for E2E speed/ease
     from unittest.mock import patch
-    patcher1 = patch('core.utils.security.verify_signature', return_value=True)
-    patcher2 = patch('core.infra.transport.auth.AuthService.verify_signature', return_value=True)
+
+    patcher1 = patch("core.utils.security.verify_signature", return_value=True)
+    patcher2 = patch("core.infra.transport.auth.AuthService.verify_signature", return_value=True)
 
     # Mock Gemini connection to avoid real API Calls / 404 errors in tests
-    patcher3 = patch('core.ai.session.facade.GeminiLiveSession.connect', return_value=asyncio.sleep(0))
-    patcher4 = patch('core.ai.session.facade.GeminiLiveSession.run', return_value=asyncio.sleep(1000)) # Block run loop
-    
+    patcher3 = patch("core.ai.session.facade.GeminiLiveSession.connect", return_value=asyncio.sleep(0))
+    patcher4 = patch("core.ai.session.facade.GeminiLiveSession.run", return_value=asyncio.sleep(1000))  # Block run loop
+
     patcher1.start()
     patcher2.start()
     patcher3.start()
