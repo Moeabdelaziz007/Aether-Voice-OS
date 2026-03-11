@@ -66,3 +66,8 @@ brain/packages/*/secrets/
 .git_stuck_backup/
 dump.rdb
 .coverage
+
+# --- Tool Specific ---
+.kombai/
+repomix-output*
+test-results/

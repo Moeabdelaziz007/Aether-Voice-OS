@@ -12,6 +12,10 @@ from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
+# [V-STANDARD COMPLIANCE]
+# V1: Acquisition (Search/Install)
+# V2: Validation (Inspect/Audit)
+
 
 def search_skills(query: str) -> List[Dict[str, str]]:
     """

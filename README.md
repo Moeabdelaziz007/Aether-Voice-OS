@@ -84,12 +84,39 @@ Dynamically routes tasks to specialized agents based on gravity scoring (Capabil
 </details>
 
 <details>
-<summary><b>Neural Forge & Skill Bridge | المسبك العصبي وجسر المهارات</b></summary>
+<summary><b>Neural Forge & Skill Bridge (Blueprint V4.0) | المسبك العصبي وجسر المهارات</b></summary>
 
-Enables autonomous skill acquisition via **ClawHub** and real-time tool orchestration with **Google Workspace**.
-يتيح اكتساب المهارات ذاتياً عبر **ClawHub** وتنسيق الأدوات في الوقت الفعلي مع **Google Workspace**.
+The **Aether Skills Hub** is the definitive instruction set for Autonomous Agent Reason. It categorizes capabilities into 5 Strategic Sectors:
+**مركز مهارات أيثر** هو مجموعة التعليمات النهائية للعميل المستقل. يصنف القدرات إلى 5 قطاعات استراتيجية:
+
+1.  **Sector 1: GWS Enterprise**: Native Google Workspace integration (Gmail, Drive, Calendar) for high-impact professional tasks.
+2.  **Sector 2: Neural & Sensory**: Voice VAD, emotional trend analysis, and biometric empathy loops.
+3.  **Sector 3: Galaxy Orchestration**: "Gravity-Based Routing" for delegating sub-tasks to specialized sub-agents.
+4.  **Sector 4: Embodiment**: 3D Avatar state-machine synchronization and real-time gesture injection.
+5.  **Sector 5: External Library (ClawHub)**: Dynamic acquisition of advanced tech skills (e.g., `sql-architect`, `rust-optimizer`) via the `clawhub-acquire` protocol.
+
+> **Future: Aether Forge**
+> We are building the first **Voice-Native Agent Creation Platform**. In the Forge, users will "speak" new agents into existence, dynamically injecting skills from our registry into a new neural DNA template.
+> **المستقبل: مسبك أيثر**
+> نحن نبني أول منصة لإنشاء الوكلاء معتمدة على الصوت. في "المسبك"، سيقوم المستخدمون بإنشاء وكلاء جدد بالحديث فقط، وحقن المهارات ديناميكياً في قالب الحمض النووي العصبي الجديد.
 
 </details>
+
+---
+
+---
+
+## 🛠️ Forge Pipeline | خط أنابيب المسبك
+
+Skills in AetherOS follow an evolutionary path, ensuring safety and reliability before achieving full autonomy.
+تتبع المهارات في أيثر مساراً تطورياً، مما يضمن الأمان والموثوقية قبل الوصول إلى الاستقلالية الكاملة.
+
+- **V1: Foundational (Primitive)**: Direct CLI/API bridge. Requires explicit user command.
+  **V1 (أساسي):** جسر مباشر للواجهة البرمجية. يتطلب أمراً صريحاً من المستخدم.
+- **V2: Proactive (Augmented)**: Agent detects context and suggests actions + 3D Avatar gestures.
+  **V2 (استباقي):** يكتشف الوكيل السياق ويقترح إجراءات مع إيماءات ثلاثية الأبعاد.
+- **V3: Autonomous (Recursive)**: Full loop execution with self-healing and RAG-enhanced intelligence.
+  **V3 (مستقل):** تنفيذ كامل للحلقات مع ذكاء معزز واستعادة ذاتية للأخطاء.
 
 ---
 
