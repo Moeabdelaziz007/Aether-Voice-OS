@@ -113,6 +113,61 @@ Powered by the elite integration of:
 
 ---
 
+## ⭐ Stargazers & Contributors
+
+<a href="https://github.com/Moeabdelaziz007/Aether-Voice-OS/stargazers">
+  <img src="https://img.shields.io/github/stars/Moeabdelaziz007/Aether-Voice-OS?style=social" alt="Stars"/>
+</a>
+
+### Special Thanks 🙏
+
+- The **Google DeepMind** team for opening the Gemini Live API.
+- The maintainers of **NumPy** & **PyAudio** for rock-solid DSP primitives.
+- The **DevPost** challenge team.
+- 🤖 **AI Co-Architect:** [Antigravity](https://deepmind.google/) — Advanced Agentic AI by Google DeepMind.
+
+---
+
+## 🤝 Credits | الفريق
+
+<table>
+<tr>
+<td align="center">
+  <a href="https://github.com/Moeabdelaziz007">
+    <img src="https://github.com/Moeabdelaziz007.png" width="120px;" alt="Moe Abdelaziz" style="border-radius:50%"/>
+    <br />
+    <sub><strong>Moe Abdelaziz</strong></sub>
+  </a>
+  <br />
+  <sub>🧬 Lead Architect & Creator</sub>
+  <br />
+  <sub>AI Engineer • Full-Stack Developer</sub>
+  <br />
+  <sub>مهندس ذكاء اصطناعي • مطور شامل</sub>
+</td>
+</tr>
+</table>
+
+---
+
+## 📜 License | الرخصة
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  <img src="./docs/images/platform.png" alt="Gemigram Platform Mockup" width="80%"/>
+  <br /><br />
+  <em>"In the realm of Aether, there is no distance between voice and vision."</em>
+  <br />
+  <em>"في عالم أيثر، لا مسافة بين الصوت والرؤية."</em>
+  <br /><br />
+  <strong>⭐ Star this project if you believe AI should feel alive.</strong>
+</p>
+
+---
+
 <p align="center">
   <em>"Where voice meets vision."</em><br/>
   <em>"حيث يلتقي الصوت بالرؤية."</em><br/><br/>

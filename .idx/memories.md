@@ -1,5 +1,17 @@
 # 🧬 AetherOS Memories
 
+## Project Genesis & Evolution Summary
+
+### Phase 1-6: Core Infrastructure [2026-03-07]
+- **State Management**: Implemented `useAetherStore` with Terminal, Skills, Persona, and Theme slices. Added persistence via localStorage.
+- **Server Actions**: Developed `terminalActions`, `skillsActions` (with 800ms timeout fallback), and `personaActions`.
+- **Theming System**: Created a robust CSS variable-based system with 4 Cyberpunk sub-themes (Matrix Core, Quantum Cyan, Cyber Amber, Ghost White).
+- **Graceful Degradation**: Integrated a hard-timeout sync for `clawhib.ai` with local cache fallback.
+- **Audio/Voice UX**: Shipped the `TerminalFeed` with smart auto-scroll and voice interruption handling.
+- **Generative Widgets**: Launched `SkillsManager`, `PersonaConfig`, and `ThemeSettings` widgets for the HUD.
+
+## Recent Updates
+
 ## Last Update: 2026-03-10
 
 - **Production Alignment**: Multi-runtime `Dockerfile` (Node.js 22 + Python 3.11) and global `@googleworkspace/cli` integration.

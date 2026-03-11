@@ -180,7 +180,10 @@ class AIConfig(BaseSettings):
     GOOGLE_API_KEY and related fields from a .env file by default.
     """
 
-    api_key: str = Field(..., alias="GOOGLE_API_KEY")
+    api_key: Optional[str] = Field(
+        None, 
+        validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY", "api_key")
+    )
     model: GeminiModel = GeminiModel.LIVE_FLASH
     api_version: str = "v1"
     enable_affective_dialog: bool = True
@@ -280,9 +283,14 @@ def load_config() -> AetherConfig:
         try:
             return AetherConfig(_env_file=None)
         except Exception as e2:
+            # Fallback for critical missing AI key
+            if not getattr(config.ai, "api_key", None):
+                print("WARNING: No GOOGLE_API_KEY found in environment or .env!")
+            return config
+        except Exception as e2:
             print(f"Critical: Config loading failed even without .env: {e2}")
-            # Final fallback: manually construct it if possible, or raise
-            raise OSError(f"Sandbox restriction or missing config: {e2}")
+            # Final fallback: manually construct it if possible
+            return AetherConfig()
 
 
 def get_firebase_cert(config: AetherConfig) -> Optional[dict]:
