@@ -323,9 +323,7 @@ class GeminiLiveSession:
                         # Sending a tiny text hint can encourage Gemini to
                         # give a soft vocal affirmative without fully taking the turn.
                         await session.send_realtime_input(
-                            parts=[
-                                types.Part.from_text(text="[user thinking, soft 'Mhm']")
-                            ]
+                            text=f"The following {message_type} occurred in the system: {message_content}"
                         )
                         thinking_streak = 0  # Reset to avoid spamming
                     except Exception as e:
@@ -353,24 +351,21 @@ class GeminiLiveSession:
 
                     # Inject into the realtime stream
                     await session.send_realtime_input(
-                        parts=[
-                            types.Part.from_bytes(
-                                data=image_bytes, mime_type="image/jpeg"
-                            )
-                        ]
+                        video=types.Blob(data=image_bytes, mime_type="image/jpeg")
                     )
                     self._vision_pulse.record_pulse()
 
                     # Broadcast a subtle pulse event to the UI
-                    asyncio.create_task(
-                        self._gateway.broadcast(
-                            "vision_pulse",
-                            {
-                                "status": "captured",
-                                "timestamp": datetime.now().isoformat(),
-                            },
+                    if getattr(self, "_gateway", None):
+                        asyncio.create_task(
+                            self._gateway.broadcast(
+                                "vision_pulse",
+                                {
+                                    "status": "captured",
+                                    "timestamp": datetime.now().isoformat(),
+                                },
+                            )
                         )
-                    )
 
             except Exception as e:
                 logger.error("Vision Pulse loop error: %s", e)
@@ -411,7 +406,7 @@ class GeminiLiveSession:
 
         try:
             await self._session.send_realtime_input(
-                parts=[types.Part(text=instr)]
+                text=f"A2A Communication from {source}: {message}"
             )
             logger.info("⚡ Session: Injected Hot-DNA update instruction.")
         except Exception as e:
@@ -427,13 +422,14 @@ class GeminiLiveSession:
             return False
 
         try:
-            from google.genai import types
-
-            await self._session.send_realtime_input(parts=[types.Part(text=text)])
-            return True
+            if self._session:
+                logger.info("A2A [SESSION] Sending text to Gemini: %s", text)
+                await self._session.send_realtime_input(text=text)
+                return True
         except Exception as e:
             logger.error(f"Failed to send text to session: {e}")
             return False
+        return False # Should not be reached if session is active, but for type safety
 
     # ── Deep Handover Protocol Methods ──
 
@@ -478,11 +474,11 @@ class GeminiLiveSession:
         if not self._session or not self._running:
             return
         
-        parts = [types.Part(inline_data=types.Blob(data=f, mime_type="image/webp")) for f in frames]
-        try:
-            await self._session.send_realtime_input(parts=parts)
-        except Exception as e:
-            logger.error("Failed to inject visual frames: %s", e)
+        for f in frames:
+            try:
+                await self._session.send_realtime_input(video=types.Blob(data=f, mime_type="image/webp"))
+            except Exception as e:
+                logger.error("Failed to inject visual frames: %s", e)
 
     def clear_handover_context(self) -> None:
         clear_handover_context(self)
@@ -496,7 +492,7 @@ class GeminiLiveSession:
         try:
             # We wrap the echo in a directive to ensure Gemini vocalizes it as a thought
             await self._session.send_realtime_input(
-                parts=[types.Part(text=f"[thought: {echo}]")]
+                text=f"[thought: {echo}]"
             )
         except Exception as e:
             logger.error("Echo injection failed: %s", e)

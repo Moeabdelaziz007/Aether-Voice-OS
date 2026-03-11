@@ -57,7 +57,8 @@ def build_session_config(session) -> types.LiveConnectConfig:
         )
 
     # Required for real-time transcript overlay
-    config.input_audio_transcription = True
-    config.output_audio_transcription = True
+    # (Disabled: CAUSES 1007 WebSocket Invalid Frame Payload error on Gemini-2.5-flash-live)
+    # config.input_audio_transcription = True
+    # config.output_audio_transcription = True
 
     return config

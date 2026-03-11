@@ -1,0 +1,14 @@
+{
+  "iterations": 3,
+  "ttfb_ms": [
+    5225.825786590576
+  ],
+  "total_audio_chunks": [
+    60
+  ],
+  "success_rate": 33.33333333333333,
+  "errors": 2,
+  "avg_ttfb_ms": 5225.825786590576,
+  "min_ttfb_ms": 5225.825786590576,
+  "max_ttfb_ms": 5225.825786590576
+}

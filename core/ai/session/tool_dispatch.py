@@ -115,11 +115,9 @@ async def handle_tool_call(session_facade, session, tool_call) -> None:
                     with open(path, "rb") as f:
                         image_bytes = f.read()
                     await session.send_realtime_input(
-                        parts=[
-                            types.Part.from_bytes(
+                        video=types.Blob(
                                 data=image_bytes, mime_type="image/jpeg"
                             )
-                        ]
                     )
                     os.remove(path)
                 except Exception as e:

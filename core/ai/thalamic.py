@@ -87,14 +87,8 @@ class ThalamicGate:
             else:
                 # Fallback to direct session injection
                 await self._gemini_session._session.send_realtime_input(
-                    parts=[
-                        types.Part(
-                            text=(
-                                "[SYSTEM: User needs assistance. Proactively intervene immediately. "
-                                "Read their screen/code and offer the exact fix with deep empathy.]"
-                            )
-                        )
-                    ]
+                    text="[SYSTEM: User needs assistance. Proactively intervene immediately. "
+                         "Read their screen/code and offer the exact fix with deep empathy.]"
                 )
         except Exception as e:
             logger.error("Thalamic Gate intervention failed: %s", e)

@@ -58,21 +58,23 @@ async def receive_loop(session_facade, session) -> None:
                         try:
                             session_facade._out_queue.get_nowait()
                             session_facade._output_queue_drops += 1
-                            asyncio.create_task(
-                                session_facade._gateway.broadcast(
-                                    "system_telemetry",
-                                    {"type": "pressure_marker", "severity": "critical"},
+                            if session_facade._gateway:
+                                asyncio.create_task(
+                                    session_facade._gateway.broadcast(
+                                        "system_telemetry",
+                                        {"type": "pressure_marker", "severity": "critical"},
+                                    )
                                 )
-                            )
                         except asyncio.QueueEmpty:
                             pass
 
                     session_facade._out_queue.put_nowait(part.inline_data.data)
-                    asyncio.create_task(
-                        session_facade._gateway.broadcast(
-                            "engine_state", {"state": "SPEAKING"}
+                    if session_facade._gateway:
+                        asyncio.create_task(
+                            session_facade._gateway.broadcast(
+                                "engine_state", {"state": "SPEAKING"}
+                            )
                         )
-                    )
         
         if sc.interrupted:
             logger.info("⚡ Barge-in detected — draining output")

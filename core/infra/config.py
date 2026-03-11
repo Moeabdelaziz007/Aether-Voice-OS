@@ -23,7 +23,7 @@ class AudioConfig(BaseModel):
     send_sample_rate: int = 16000
     receive_sample_rate: int = 24000
     channels: int = 1
-    chunk_size: int = 512
+    chunk_size: int = 1024
     format_width: int = 2
     vad_window_sec: float = 5.0
     input_device_index: Optional[int] = None
@@ -141,7 +141,7 @@ class GeminiModel(str, Enum):
     """Model IDs for Gemini 2.5 specialized intelligence matrix."""
 
     # Real-time Voice & Audio Reasoning
-    LIVE_FLASH = "gemini-2.5-flash-live-preview-03-2026"
+    LIVE_FLASH = "gemini-2.5-flash-native-audio-latest"
     FLASH_TTS = "gemini-2.5-flash-tts-preview"
 
     # Multi-step Reasoning & Coding
