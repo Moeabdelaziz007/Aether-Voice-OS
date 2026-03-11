@@ -357,3 +357,73 @@ class FirebaseConnector:
             logger.info(f"🔥 Firebase: Persistent memory logged for {agent_id}")
         except Exception as e:
             logger.error(f"Failed to log agent memory for {agent_id}: {e}")
+
+    # --- AetherMemoryService Extension ---
+
+    async def get_user_dna(self, uid: str) -> dict:
+        """Retrieves the persistent User DNA for a specific identity."""
+        if not self.is_connected or not self._db:
+            return {}
+
+        try:
+            def _read():
+                doc = self._db.collection("user_dna").document(uid).get()
+                return doc.to_dict() if doc.exists else {}
+
+            return await asyncio.to_thread(_read)
+        except Exception as e:
+            logger.error(f"Failed to fetch user DNA for {uid}: {e}")
+            return {}
+
+    async def update_user_dna(self, uid: str, dna_updates: dict) -> bool:
+        """Updates the persistent User DNA (preferences, themes)."""
+        if not self.is_connected or not self._db:
+            return False
+
+        try:
+            def _write():
+                self._db.collection("user_dna").document(uid).set(
+                    dna_updates, merge=True
+                )
+
+            await asyncio.to_thread(_write)
+            logger.info(f"🔥 Firebase: User DNA updated for {uid}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to update user DNA for {uid}: {e}")
+            return False
+
+    async def link_agent_to_synapse(self, agent_id: str, mission_id: str, uid: str) -> None:
+        """Maps an agent's memory to a shared mission synapse."""
+        if not self.is_connected or not self._db:
+            return
+
+        try:
+            synapse_id = f"{uid}_{mission_id}"
+            def _write():
+                self._db.collection("synapses").document(synapse_id).set({
+                    "mission_id": mission_id,
+                    "last_active": datetime.now(timezone.utc),
+                    "agents": firestore.ArrayUnion([agent_id])
+                }, merge=True)
+
+            await asyncio.to_thread(_write)
+            logger.info(f"🔥 Firebase: Agent {agent_id} linked to synapse {synapse_id}")
+        except Exception as e:
+            logger.error(f"Failed to link agent to synapse: {e}")
+
+    async def get_mission_context(self, uid: str, mission_id: str) -> dict:
+        """Retrieves shared context (synapse) for a mission."""
+        if not self.is_connected or not self._db:
+            return {}
+
+        try:
+            synapse_id = f"{uid}_{mission_id}"
+            def _read():
+                doc = self._db.collection("synapses").document(synapse_id).get()
+                return doc.to_dict() if doc.exists else {}
+
+            return await asyncio.to_thread(_read)
+        except Exception as e:
+            logger.error(f"Failed to fetch mission context: {e}")
+            return {}
