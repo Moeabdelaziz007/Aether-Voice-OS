@@ -54,6 +54,12 @@ async def handle_tool_call(session_facade, session, tool_call) -> None:
 
         started = perf_counter()
         try:
+            # A2A [FORGE]: Special case for autonomous synthesis
+            if fc.name == "forge_autonomous_agent":
+                return await session_facade._forge.forge_and_activate(
+                    user_intent=fc.args.get("intent", "Create a general specialist")
+                )
+
             return await asyncio.wait_for(
                 session_facade._tool_router.dispatch(fc),
                 timeout=timeout_s,

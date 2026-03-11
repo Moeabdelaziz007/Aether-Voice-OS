@@ -47,6 +47,11 @@ def build_session_config(session) -> types.LiveConnectConfig:
         speech_config=speech_config,
     )
 
+    if hasattr(session, "_cached_content_name") and session._cached_content_name:
+        config.cached_content = session._cached_content_name
+        # When using cached_content, the system_instruction in config is usually ignored or merged.
+        logger.info("A2A [SESSION] Applying Context Cache: %s", config.cached_content)
+
     if session._config.enable_affective_dialog:
         config.enable_affective_dialog = True
     if session._config.proactive_audio:

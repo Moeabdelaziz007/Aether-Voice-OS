@@ -8,6 +8,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 
 from core.infra.config import get_firebase_cert, load_config
+from core.infra.cloud.firebase.vector_utils import AetherVectorEngine
 
 logger = logging.getLogger(__name__)
 
@@ -427,3 +428,62 @@ class FirebaseConnector:
         except Exception as e:
             logger.error(f"Failed to fetch mission context: {e}")
             return {}
+
+    async def search_neural_synapses(
+        self, uid: str, query_text: str, limit: int = 5
+    ) -> list[dict]:
+        """
+        Performs a semantic search across the user's synapses using 
+        Firestore Vector Search (KNN).
+        """
+        if not self.is_connected or not self._db:
+            return []
+
+        try:
+            # Generate embedding for the query
+            query_vector = AetherVectorEngine.generate_embedding(query_text)
+            vector_value = AetherVectorEngine.format_for_firestore(query_vector)
+
+            def _search():
+                collection_ref = self._db.collection("synapses")
+                # Firestore Native Vector Search (KNN)
+                # Note: Requires a vector index on the 'embedding' field
+                query = collection_ref.where("uid", "==", uid).find_nearest(
+                    vector_field="embedding",
+                    query_vector=vector_value,
+                    distance_measure=firestore.DistanceMeasure.COSINE,
+                    limit=limit
+                )
+                return [doc.to_dict() for doc in query.stream()]
+
+            return await asyncio.to_thread(_search)
+        except Exception as e:
+            logger.error(f"🔥 Firebase: Neural Search Failed - {e}")
+            return []
+
+    async def log_vector_memory(
+        self, uid: str, content: str, metadata: Optional[dict] = None
+    ) -> None:
+        """Logs a memory with its vector embedding for future semantic retrieval."""
+        if not self.is_connected or not self._db:
+            return
+
+        try:
+            embedding = AetherVectorEngine.generate_embedding(content)
+            vector_value = AetherVectorEngine.format_for_firestore(embedding)
+
+            data = {
+                "uid": uid,
+                "content": content,
+                "embedding": vector_value,
+                "metadata": metadata or {},
+                "timestamp": datetime.now(timezone.utc),
+            }
+
+            def _write():
+                self._db.collection("synapses").add(data)
+
+            await asyncio.to_thread(_write)
+            logger.info(f"🔥 Firebase: Neural memory synced for {uid}")
+        except Exception as e:
+            logger.error(f"Failed to log vector memory: {e}")

@@ -35,6 +35,7 @@ from .io_loops import drain_output, handle_usage, receive_loop, send_loop
 from .tool_dispatch import handle_tool_call
 from .tool_registry import ToolRegistry
 from .sensory_manager import SensoryManager
+from .caching import AetherContextCacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +54,10 @@ class GeminiLiveSession:
         gateway: "AetherGateway",
         on_interrupt: Optional[Callable] = None,
         on_tool_call: Optional[Callable] = None,
-        tool_router: Optional["ToolRouter"] = None,
         soul_manifest: Optional["SoulManifest"] = None,
         scheduler: Optional[Any] = None,
+        agent_registry: Optional[Any] = None,
+        firebase: Optional[Any] = None,
     ) -> None:
         self._config = config
         self._soul = soul_manifest
@@ -66,6 +68,8 @@ class GeminiLiveSession:
         self._on_tool_call = on_tool_call
         self._tool_router = tool_router
         self._scheduler = scheduler
+        self._agent_registry = agent_registry
+        self._firebase = firebase
         if self._scheduler:
             self._scheduler.set_echo_callback(self._inject_echo)
 
@@ -76,6 +80,9 @@ class GeminiLiveSession:
         # Modular Components
         self._tool_registry = ToolRegistry()
         self._sensory = SensoryManager(self, gateway)
+        
+        from .forge_orchestrator import ForgeOrchestrator
+        self._forge = ForgeOrchestrator(self)
 
         # Session State
         self._output_queue_drops = 0
@@ -83,6 +90,10 @@ class GeminiLiveSession:
         self._injected_handover_context: Optional[HandoverContext] = None
         self._handover_acknowledgments: Dict[str, str] = {}
         self._start_time: datetime = datetime.now()
+        
+        # Caching & Neural Memory
+        self._cache_manager = AetherContextCacheManager(config.api_key)
+        self._cached_content_name: Optional[str] = None
         
         # Reliability & Budget
         self._retry_count = 0
@@ -129,6 +140,19 @@ class GeminiLiveSession:
             async with self._client.aio.live.connect(model=self._config.model.value, config=config) as session:
                 self._session = session
                 logger.info("✦ Gemini Live session established")
+
+                # Neural Spine: Warm up context cache if mission is heavy
+                if self._soul and hasattr(self._soul, "memories") and len(self._soul.memories) > 5:
+                    logger.info("A2A [NEURAL] MISSION COMPLEXITY DETECTED. Warming cache...")
+                    try:
+                        memories = [m.get("content", str(m)) for m in self._soul.memories]
+                        self._cached_content_name = await self._cache_manager.create_memory_cache(
+                            model_name=self._config.model.value,
+                            system_instruction=self._build_system_instruction(),
+                            memories=memories
+                        )
+                    except Exception as e:
+                        logger.error("Failed to warm context cache: %s", e)
 
                 try:
                     self._thalamic_gate = ThalamicGate(session)
