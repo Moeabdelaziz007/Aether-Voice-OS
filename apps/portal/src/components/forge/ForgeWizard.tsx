@@ -27,7 +27,16 @@ export default function ForgeWizard() {
         } else {
             setNameScramble('');
         }
-    }, [transcriptStream.interim, fsm.state]);
+        
+        // Voice Actuation for Confirmation
+        if (fsm.state === 'AWAITING_CONFIRMATION' && (transcriptStream.final || transcriptStream.interim)) {
+            const textToCheck = `${transcriptStream.final} ${transcriptStream.interim}`.toLowerCase();
+            if (textToCheck.includes('confirm') || textToCheck.includes('proceed') || textToCheck.includes('yes') || textToCheck.includes('تأكيد')) {
+                console.log("🎙️ Voice confirmation detected! Synthesizing DNA...");
+                fsm.confirmForge();
+            }
+        }
+    }, [transcriptStream.interim, transcriptStream.final, fsm.state, fsm.confirmForge]);
 
     const cardVariants: Variants = {
         hidden: { opacity: 0, x: 100, filter: 'blur(20px)' },

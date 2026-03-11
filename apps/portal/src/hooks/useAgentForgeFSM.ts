@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { useAetherStore } from "../store/useAetherStore";
 import { useAetherGateway } from "./useAetherGateway";
 import { useForgeStore, AgentDNA } from "../store/useForgeStore";
@@ -79,18 +81,25 @@ export function useAgentForgeFSM() {
         forgeStore.setVoiceMode("processing");
         auraStore.addTerminalLog('SYS', 'Initiating Soul Injection into Firestore Cluster...');
 
-        // Simulate Firestore Write
+        // Real Firestore Write
         try {
-            // Placeholder: await addDoc(collection(db, `users/${uid}/agents`), forgeStore.dna);
-            await new Promise(r => setTimeout(r, 2000));
+            // Using a top-level 'agents' collection
+            const newAgentRef = await addDoc(collection(db, "agents"), {
+                ...forgeStore.dna,
+                ownerId: "anonymous", // Simplified for current demo scope
+                createdAt: serverTimestamp(),
+            });
+
+            console.log("🔥 Agent Forged successfully with ID:", newAgentRef.id);
 
             forgeStore.completeForge();
             auraStore.setAnimationTrigger('soul-swap');
             setState("IDLE");
-            auraStore.addTerminalLog('SUCCESS', 'Consciousness Stable. Aether Forge Complete.');
-        } catch (e) {
+            auraStore.addTerminalLog('SUCCESS', `Consciousness Stable. Aether Forge Complete. [ID: ${newAgentRef.id}]`);
+        } catch (e: any) {
+            console.error("Firestore Error:", e);
             setState("ERROR");
-            auraStore.addTerminalLog('ERROR', 'Firestore Synthesis Failed. Connection lost.');
+            auraStore.addTerminalLog('ERROR', `Firestore Synthesis Failed: ${e.message}`);
         }
     }, [state, forgeStore, auraStore]);
 
