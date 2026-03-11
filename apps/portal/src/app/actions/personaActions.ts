@@ -1,4 +1,4 @@
-'use server';
+'use client';
 
 import { useAetherStore } from '@/store/useAetherStore';
 import type { PersonaConfig } from '@/store/useAetherStore';

@@ -5,8 +5,8 @@ import { motion } from 'framer-motion';
 import GemigramLogo from '../shared/GemigramLogo';
 import { User } from 'lucide-react';
 
-export default function GemiGramHeader() {
-    const navItems = [
+export default function GemiGramHeader({ hideNav = false }: { hideNav?: boolean }) {
+    const navItems = hideNav ? [] : [
         { name: 'Discover', href: '#' },
         { name: 'Create', href: '#' },
         { name: 'Hub', href: '#' },

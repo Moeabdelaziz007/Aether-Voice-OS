@@ -170,4 +170,3 @@ export function useEmotionalPipeline(options: UseEmotionalPipelineOptions = {}) 
     };
 }
 
-export { extractEmotionalFeaturesFromPCM } from "../utils/audioUtils"; // Assuming we move extraction too

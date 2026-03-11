@@ -2,14 +2,19 @@
 
 import React, { useEffect, useRef } from "react";
 import { useAetherStore } from "@/store/useAetherStore";
+import { useForgeStore } from "@/store/useForgeStore";
 
-/**
- * NeuralBackground — High-performance Canvas-based ambient animation.
- * Creates a "Neural Network" / "Data Stream" effect that reacts to the accent color.
- */
 export default function NeuralBackground() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const engineState = useAetherStore((s) => s.engineState);
+    const mouseRef = useRef({ x: 0, y: 0, active: false });
+    
+    // Neural Links to Store
+    const micLevel = useAetherStore((s) => s.micLevel || 0);
+    const speakerLevel = useAetherStore((s) => s.speakerLevel || 0);
+    const voiceMode = useForgeStore((s) => s.voiceMode);
+    
+    // Combine audio for reactivity
+    const totalAudio = Math.max(micLevel, speakerLevel);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -20,14 +25,30 @@ export default function NeuralBackground() {
 
         let animationFrameId: number;
         let w: number, h: number;
-        let particles: any[] = [];
+        let particles: Particle[] = [];
 
         const resize = () => {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
+            w = canvas.width = window.innerWidth * window.devicePixelRatio;
+            h = canvas.height = window.innerHeight * window.devicePixelRatio;
+            canvas.style.width = window.innerWidth + "px";
+            canvas.style.height = window.innerHeight + "px";
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            w = window.innerWidth;
+            h = window.innerHeight;
+            init();
+        };
+
+        const handleMouseMove = (e: MouseEvent) => {
+            mouseRef.current = { x: e.clientX, y: e.clientY, active: true };
+        };
+
+        const handleMouseLeave = () => {
+            mouseRef.current.active = false;
         };
 
         window.addEventListener("resize", resize);
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseleave", handleMouseLeave);
         resize();
 
         class Particle {
@@ -36,64 +57,107 @@ export default function NeuralBackground() {
             vx: number;
             vy: number;
             size: number;
+            baseSize: number;
+            color: string;
 
             constructor() {
                 this.x = Math.random() * w;
                 this.y = Math.random() * h;
-                this.vx = (Math.random() - 0.5) * 0.5;
-                this.vy = (Math.random() - 0.5) * 0.5;
-                this.size = Math.random() * 2;
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.baseSize = Math.random() * 1.2 + 0.3;
+                this.size = this.baseSize;
+                this.color = Math.random() > 0.95 ? "#22d3ee" : "#ffffff";
             }
 
-            update() {
-                this.x += this.vx;
-                this.y += this.vy;
+            update(audio: number) {
+                // Boost velocity based on audio
+                const speedMult = 1 + audio * 5;
+                this.x += this.vx * speedMult;
+                this.y += this.vy * speedMult;
 
-                if (this.x < 0 || this.x > w) this.vx *= -1;
-                if (this.y < 0 || this.y > h) this.vy *= -1;
+                // Mouse interaction (Repulsion / Attraction)
+                if (mouseRef.current.active) {
+                    const dx = this.x - mouseRef.current.x;
+                    const dy = this.y - mouseRef.current.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const maxDist = 200;
+                    
+                    if (dist < maxDist) {
+                        const force = (maxDist - dist) / maxDist;
+                        this.x += dx * force * 0.02;
+                        this.y += dy * force * 0.02;
+                        this.size = this.baseSize * (1 + force * 1.5 + audio * 3);
+                    } else {
+                        this.size = this.baseSize * (1 + audio * 2);
+                    }
+                } else {
+                    this.size = this.baseSize * (1 + audio * 2);
+                }
+
+                if (this.x < 0) this.x = w;
+                if (this.x > w) this.x = 0;
+                if (this.y < 0) this.y = h;
+                if (this.y > h) this.y = 0;
             }
 
             draw() {
                 if (!ctx) return;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color === "#ffffff" ? `rgba(255,255,255,${0.1 + totalAudio * 0.4})` : `rgba(34,211,238,${0.3 + totalAudio})`;
                 ctx.fill();
             }
         }
 
-        const init = () => {
+        function init() {
             particles = [];
-            for (let i = 0; i < 100; i++) {
+            const count = Math.min(Math.floor((w * h) / 15000), 120);
+            for (let i = 0; i < count; i++) {
                 particles.push(new Particle());
             }
-        };
+        }
 
         const draw = () => {
             ctx.clearRect(0, 0, w, h);
 
-            // Get current accent color from CSS variables
-            const r = getComputedStyle(document.documentElement).getPropertyValue("--accent-r").trim() || "0";
-            const g = getComputedStyle(document.documentElement).getPropertyValue("--accent-g").trim() || "243";
-            const b = getComputedStyle(document.documentElement).getPropertyValue("--accent-b").trim() || "255";
-
-            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, 0.2)`;
-            ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, 0.05)`;
+            // Fetch dynamic colors from theme
+            const r = getComputedStyle(document.documentElement).getPropertyValue("--accent-r").trim() || "34";
+            const g = getComputedStyle(document.documentElement).getPropertyValue("--accent-g").trim() || "211";
+            const b = getComputedStyle(document.documentElement).getPropertyValue("--accent-b").trim() || "238";
 
             particles.forEach((p, i) => {
-                p.update();
+                p.update(totalAudio);
                 p.draw();
 
                 for (let j = i + 1; j < particles.length; j++) {
                     const p2 = particles[j];
                     const dx = p.x - p2.x;
                     const dy = p.y - p2.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const distSq = dx * dx + dy * dy;
+                    const maxDist = 150;
 
-                    if (dist < 150) {
+                    if (distSq < maxDist * maxDist) {
+                        const dist = Math.sqrt(distSq);
+                        const alpha = (1 - dist / maxDist) * (0.05 + totalAudio * 0.3);
+                        
+                        // "Synapse Pulse" Effect
+                        const isFiring = Math.random() > (0.9992 - totalAudio * 0.01);
+                        
+                        ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${isFiring ? alpha * 4 : alpha})`;
+                        ctx.lineWidth = isFiring ? 1.5 : 0.4;
                         ctx.beginPath();
                         ctx.moveTo(p.x, p.y);
                         ctx.lineTo(p2.x, p2.y);
                         ctx.stroke();
+
+                        // Occasional glowing node at junction
+                        if (isFiring && totalAudio > 0.1) {
+                            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 2})`;
+                            ctx.beginPath();
+                            ctx.arc((p.x + p2.x) / 2, (p.y + p2.y) / 2, 1, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
                     }
                 }
             });
@@ -101,19 +165,23 @@ export default function NeuralBackground() {
             animationFrameId = requestAnimationFrame(draw);
         };
 
-        init();
         draw();
 
         return () => {
             window.removeEventListener("resize", resize);
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseleave", handleMouseLeave);
             cancelAnimationFrame(animationFrameId);
         };
-    }, []);
+    }, [totalAudio]); // Re-bind effect on audio change to maintain reactive feel
 
     return (
         <canvas
             ref={canvasRef}
-            className="fixed inset-0 pointer-events-none z-0 opacity-40 mix-blend-screen"
+            className={`fixed inset-0 pointer-events-none z-0 transition-opacity duration-1000 ${
+                voiceMode !== 'idle' ? 'opacity-80' : 'opacity-40'
+            } mix-blend-screen`}
+            style={{ filter: 'blur(0.5px)' }}
         />
     );
 }

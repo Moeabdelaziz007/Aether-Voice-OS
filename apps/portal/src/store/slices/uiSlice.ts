@@ -22,14 +22,15 @@ export interface UISlice {
 
     // ─── Avatar & Interaction ────────────────────────────────
     avatarState: AvatarState;
-    visualSettings: {
+    avatarCinematicState: AvatarCinematicState;
+    auraSettings: {
         particlesEnabled: boolean;
         bloomIntensity: number;
         reflectionOpacity: number;
     };
 
     // ─── Transcript & Real-time Text ────────────────────────
-    transcript: string;
+    voiceTranscript: string;
     transcriptStream: TranscriptStream;
     isListening: boolean;
     // ─── Original UI State ───────────────────────────────────
@@ -47,13 +48,16 @@ export interface UISlice {
     orbitalLayoutPreset: OrbitalLayoutPreset;
     focusModeEnvironment: boolean;
     gazeTarget: [number, number, number];
+    showTelemetry: boolean;
+    omnibarFocused: boolean;
 
     // ─── Actions ─────────────────────────────────────────────
     setTheme: (theme: 'dark' | 'light' | 'system') => void;
     toggleSidebar: () => void;
     setActiveTab: (tab: 'terminal' | 'files' | 'dna' | 'network' | 'telemetry') => void;
     setAvatarState: (state: AvatarState) => void;
-    setTranscript: (transcript: string) => void;
+    setAvatarCinematicState: (state: AvatarCinematicState) => void;
+    setVoiceTranscript: (transcript: string) => void;
     setTranscriptStream: (stream: Partial<TranscriptStream>) => void;
     setIsListening: (isListening: boolean) => void;
     // ─── Original Actions ────────────────────────────────────
@@ -81,6 +85,8 @@ export interface UISlice {
     focusOrbitPlanet: (planetId: string | null) => void;
     clearOrbitRegistry: () => void;
     applyWorkspaceState: (payload: WorkspaceStateEnvelope) => void;
+    setShowTelemetry: (show: boolean) => void;
+    setOmnibarFocused: (focused: boolean) => void;
 }
 
 const ORBIT_PRESET_MULTIPLIER: Record<OrbitalLayoutPreset, number> = {
@@ -111,14 +117,15 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
 
     // ─── Avatar & Interaction ────────────────────────────────
     avatarState: 'Idle',
-    visualSettings: {
+    avatarCinematicState: 'IDLE',
+    auraSettings: {
         particlesEnabled: true,
         bloomIntensity: 0.8,
         reflectionOpacity: 0.5,
     },
 
     // ─── Transcript & Real-time Text ────────────────────────
-    transcript: '',
+    voiceTranscript: '',
     transcriptStream: {
         interim: '',
         final: '',
@@ -141,13 +148,16 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
     orbitalLayoutPreset: 'mid',
     focusModeEnvironment: false,
     gazeTarget: [0, 0, 5],
+    showTelemetry: false,
+    omnibarFocused: false,
 
     // ─── Actions ─────────────────────────────────────────────
     setTheme: (theme) => set({ theme }),
     toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
     setActiveTab: (tab) => set({ activeTab: tab }),
     setAvatarState: (state) => set({ avatarState: state }),
-    setTranscript: (transcript) => set({ transcript }),
+    setAvatarCinematicState: (avatarCinematicState) => set({ avatarCinematicState }),
+    setVoiceTranscript: (voiceTranscript) => set({ voiceTranscript }),
     setTranscriptStream: (stream) => set((state) => ({
         transcriptStream: { ...state.transcriptStream, ...stream }
     })),
@@ -290,4 +300,6 @@ export const createUISlice: StateCreator<UISlice> = (set, get) => ({
         nextState.focusModeEnvironment = shouldDisableFocusMode ? false : Boolean(nextState.focusedPlanetId);
         return nextState;
     }),
+    setShowTelemetry: (showTelemetry) => set({ showTelemetry }),
+    setOmnibarFocused: (omnibarFocused) => set({ omnibarFocused }),
 });

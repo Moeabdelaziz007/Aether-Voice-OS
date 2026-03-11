@@ -20,7 +20,18 @@ export default function TopBar({ onOpenSettings, onToggleOmnibar }: TopBarProps)
     const engineState = useAetherStore((s) => s.engineState);
     const latencyMs = useAetherStore((s) => s.latencyMs);
 
-    // ... (existing constants)
+    const editMode = useWidgetStore((s) => s.editMode);
+    const setEditMode = useWidgetStore((s) => s.setEditMode);
+    const setStoreOpen = useWidgetStore((s) => s.setStoreOpen);
+
+    const stateColors: Record<string, string> = {
+        IDLE: '#64748b',
+        LISTENING: '#3b82f6',
+        THINKING: '#bc13fe',
+        SPEAKING: '#00f3ff',
+        INTERRUPTING: '#f43f5e',
+    };
+    const stateColor = stateColors[engineState] || '#64748b';
 
     return (
         <header className="h-14 flex items-center justify-between px-6 border-b border-white/[0.05] bg-black/40 backdrop-blur-3xl">

@@ -71,6 +71,19 @@ class DiagnoseStructure(BaseModel):
 
 from core.ai.tools.visual_diagnose import VisualDiagnoseInput
 
+class ForgeAgentManifest(BaseModel):
+    """Extract structured agent configuration from the user's vocal description for the Aether Forge protocol."""
+    name: str = Field(..., description="The name of the AI consciousness.")
+    role: str = Field(..., description="The core professional role or persona of the agent (e.g., DevOps Engineer).")
+    skills: list[str] = Field(default_factory=list, description="Specific technical or creative skills (e.g., Docker, Python).")
+    tone: str = Field(default="Analytical", description="The vocal and behavioral tone (e.g., Analytical, Mentor, Sarcastic).")
+    tools_required: list[str] = Field(default_factory=list, description="The specialized tools or MCP skills the agent needs access to.")
+
+class ToggleHUD(BaseModel):
+    """Toggle the visibility of the SRE Telemetry HUD or other interface elements."""
+    element: str = Field(..., description="The UI element to toggle (e.g., 'telemetry', 'omnibar', 'all')")
+    visible: bool = Field(..., description="Whether the element should be visible or hidden")
+
 class ToolRegistry:
     """Typed registry for declarative tools with response_schema enforcement."""
     def __init__(self):
@@ -78,7 +91,9 @@ class ToolRegistry:
             "open_claw": OpenClaw,
             "soul_swap": SoulSwap,
             "diagnose_structure": DiagnoseStructure,
-            "visual_diagnose": VisualDiagnoseInput
+            "visual_diagnose": VisualDiagnoseInput,
+            "forge_agent_manifest": ForgeAgentManifest,
+            "toggle_hud": ToggleHUD
         }
 
     def get_declarations(self) -> list[types.FunctionDeclaration]:
@@ -289,7 +304,8 @@ class GeminiLiveSession:
 
         thinking_streak = 0
         while self._running:
-            await asyncio.sleep(0.2)
+            # Reduced polling frequency (5Hz vs 50Hz)
+            await asyncio.sleep(0.5)
 
             # Reset empathy if model is currently playing audio
             if audio_state.is_playing:
@@ -299,7 +315,7 @@ class GeminiLiveSession:
             stype = audio_state.silence_type
             if stype in ("thinking", "breathing"):
                 thinking_streak += 1
-                if thinking_streak >= 25:  # ~5 seconds of cognitive load
+                if thinking_streak >= 10:  # ~5 seconds of cognitive load
                     logger.info(
                         "🧠 Empathy Trigger: User is thinking. Sending backchannel cue."
                     )

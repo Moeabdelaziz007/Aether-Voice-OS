@@ -7,7 +7,7 @@ import { Mic2, Zap, Brain, Shield, Rocket } from 'lucide-react';
 interface IdentityCardProps {
     name: string;
     role: string;
-    icon: React.ElementType;
+    icon: any;
     stats: string;
     active?: boolean;
 }

@@ -66,7 +66,7 @@ export default function SoulSwapAnimation({ isVisible, onComplete }: SoulSwapAni
                                 transition={{
                                     duration: 0.8,
                                     delay: Math.random() * 0.2,
-                                    ease: "expoIn"
+                                    ease: "easeIn"
                                 }}
                                 className="absolute top-1/2 left-1/2 w-1 h-1 bg-cyan-200 rounded-full"
                             />

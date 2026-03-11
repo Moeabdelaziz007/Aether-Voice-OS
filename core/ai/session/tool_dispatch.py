@@ -33,8 +33,16 @@ async def handle_tool_call(session_facade, session, tool_call) -> None:
         
         timeout_s, latency_tier = latency_config.get(fc.name, (25.0, "medium"))
 
-        if session_facade._scheduler:
-            session_facade._scheduler.on_tool_start(fc.name, fc.args)
+        # Broadcast tool_call to the UI immediately for Zero-UI responsiveness
+        asyncio.create_task(
+            session_facade._gateway.broadcast(
+                "tool_call",
+                {
+                    "name": fc.name,
+                    "args": fc.args or {},
+                },
+            )
+        )
 
         # Strict JSONSchema & Pydantic Validation against Soul Manifest
         if not session_facade._tool_registry.validate(fc.name, fc.args or {}):

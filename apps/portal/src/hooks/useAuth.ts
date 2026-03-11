@@ -14,28 +14,29 @@ import { useAetherStore } from "../store/useAetherStore";
 export function useAuth() {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const store = useAetherStore();
+    const addSystemLog = useAetherStore((s) => s.addSystemLog);
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setUser(user);
+        // We only want to set up this listener once
+        const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+            setUser(currentUser);
             setLoading(false);
 
-            if (user) {
-                store.addSystemLog(`[Auth] User synchronized: ${user.displayName}`);
+            if (currentUser) {
+                addSystemLog(`[Auth] User synchronized: ${currentUser.displayName}`);
                 // Pre-fetch token to ensure it's ready for the gateway
                 try {
-                    await getIdToken(user);
+                    await getIdToken(currentUser);
                 } catch (e) {
                     console.error("Token fetch failed", e);
                 }
             } else {
-                store.addSystemLog("[Auth] User signed out.");
+                addSystemLog("[Auth] User signed out.");
             }
         });
 
         return () => unsubscribe();
-    }, [store]);
+    }, [addSystemLog]);
 
     const loginWithGoogle = async () => {
         try {

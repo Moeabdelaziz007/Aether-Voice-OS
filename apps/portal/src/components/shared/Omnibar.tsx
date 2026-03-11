@@ -20,6 +20,17 @@ export default function Omnibar() {
     const activeSoul = useAetherStore((s) => s.activeSoul);
     const engineState = useAetherStore((s) => s.engineState);
     const setListening = useAetherStore((s) => s.setListening);
+    const omnibarFocused = useAetherStore((s) => s.omnibarFocused);
+
+    useEffect(() => {
+        if (omnibarFocused) {
+            inputRef.current?.focus();
+            setIsFocused(true);
+        } else {
+            inputRef.current?.blur();
+            setIsFocused(false);
+        }
+    }, [omnibarFocused]);
 
     // Magnetic interaction
     const handleExecute = async () => {
@@ -92,8 +103,8 @@ export default function Omnibar() {
                             <button
                                 onClick={() => setListening(engineState !== 'LISTENING')}
                                 className={`p-3 rounded-xl border transition-all duration-300 ${engineState === 'LISTENING'
-                                        ? "bg-neon-cyan border-neon-cyan text-black shadow-[0_0_30px_#00F3FF]"
-                                        : "bg-white/5 border-white/10 text-white/40 hover:text-white"
+                                    ? "bg-neon-cyan border-neon-cyan text-black shadow-[0_0_30px_#00F3FF]"
+                                    : "bg-white/5 border-white/10 text-white/40 hover:text-white"
                                     }`}
                             >
                                 <Mic className="w-5 h-5" />

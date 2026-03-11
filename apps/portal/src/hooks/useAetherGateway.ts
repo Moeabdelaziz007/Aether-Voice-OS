@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import nacl from "tweetnacl";
 import { encode, decode } from "@msgpack/msgpack";
 import { useAetherStore } from "../store/useAetherStore";
+import { useForgeStore } from "../store/useForgeStore";
 
 export type GatewayStatus = "disconnected" | "connecting" | "handshaking" | "connected" | "reconnecting" | "error";
 export type GazeVector = [number, number, number];
@@ -33,7 +34,8 @@ export type GatewayEvent =
     | { type: "repair_state"; payload: { status: any; message: string; log: string } }
     | { type: "GAZE_SYNC"; payload: { vector: GazeVector; intent: string } }
     | { type: "vad"; payload: { active: boolean; energy_db: number; ts_ms: number } }
-    | { type: "interrupt_latency"; payload: { ms: number; ts_ms: number } };
+    | { type: "interrupt_latency"; payload: { ms: number; ts_ms: number } }
+    | { type: "tool_call"; payload: { name: string; args: any } };
 
 export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_URL || "ws://localhost:18789"): GatewayAPI {
     const [status, setStatus] = useState<GatewayStatus>("disconnected");
@@ -91,7 +93,7 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
                     });
                     store.addTerminalLog('ERROR', `Gateway Error: ${m.payload.code} - ${m.payload.message}`);
                 }
-                else processEvent(m as GatewayEvent, store, setLatencyMs, onTranscript);
+                else processEvent(m as GatewayEvent, store, setLatencyMs, onTranscript, onToolCall);
             };
             ws.onclose = (ev) => {
                 hk.zeroize();
@@ -204,7 +206,13 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
     return { status, latencyMs, connect, disconnect, sendAudio, sendIntent, sendUIStateSync, sendVisionFrame, sendForgeCommit, sendClawInject, onAudioResponse, onTranscript, onToolCall, onInterrupt, isConnected: status === "connected", isAudioActive, toggleAudio };
 }
 
-function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: React.MutableRefObject<((t: string, r: "user" | "ai") => void) | null>) {
+function processEvent(
+    m: GatewayEvent,
+    s: any,
+    sl: (l: number) => void,
+    ot?: React.MutableRefObject<((t: string, r: "user" | "ai") => void) | null>,
+    onc?: React.MutableRefObject<((tc: any) => void) | null>
+) {
     if (m.type === "tick") { const rtt = Math.abs(Date.now() - m.timestamp * 1000); sl(rtt); s.setLatencyMs(rtt); return; }
     const p = (m as any).payload; if (!p) return;
     switch (m.type) {
@@ -213,7 +221,6 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: Rea
             s.addTranscriptMessage({ role: p.role || "ai", content: p.text });
             // Direct injection into Forge Store for zero-latency UI updates
             try {
-                const { useForgeStore } = require("../store/useForgeStore");
                 if (useForgeStore.getState().activeStep !== 'review') {
                     useForgeStore.getState().setTranscript(p.text);
                 }
@@ -231,13 +238,25 @@ function processEvent(m: GatewayEvent, s: any, sl: (l: number) => void, ot?: Rea
             s.setAvatarState(p.active ? 'ListeningActive' : 'ListeningWaiting');
             // Notify Forge Store of VAD status
             try {
-                const { useForgeStore } = require("../store/useForgeStore");
                 useForgeStore.getState().setListening(p.active);
                 if (p.active) useForgeStore.getState().setVoiceMode('listening');
             } catch (e) { }
             break;
         case "interrupt_latency":
             s.setTelemetry({ ...s.telemetry, interruptLatency: p.ms }, 0);
+            break;
+        case "tool_call":
+            // OS-Level Handlers
+            if (p.name === "toggle_hud") {
+                if (p.args.element === "telemetry" || p.args.element === "all") {
+                    s.setShowTelemetry(p.args.visible);
+                }
+                if (p.args.element === "omnibar" || p.args.element === "all") {
+                    s.setOmnibarFocused(p.args.visible);
+                }
+            }
+            // General Dispatch for specific component-level FSMs (e.g., Forge)
+            onc?.current?.(p);
             break;
     }
 }

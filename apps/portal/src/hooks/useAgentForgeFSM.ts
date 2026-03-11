@@ -68,13 +68,15 @@ export function useAgentForgeFSM() {
     const initiateForge = useCallback(() => {
         if (!isConnected) return;
         setState("LISTENING_SPEC");
-        auraStore.addTerminalLog('BUS', 'Neural Ear Active. Awaiting Agent Specification...');
-    }, [isConnected, auraStore]);
+        forgeStore.setVoiceMode("listening");
+        auraStore.addTerminalLog('SYS', 'Neural Ear Active. Awaiting Agent Specification...');
+    }, [isConnected, auraStore, forgeStore]);
 
     const confirmForge = useCallback(async () => {
         if (state !== "AWAITING_CONFIRMATION") return;
 
         setState("COMMITTING_TO_FIRESTORE");
+        forgeStore.setVoiceMode("processing");
         auraStore.addTerminalLog('SYS', 'Initiating Soul Injection into Firestore Cluster...');
 
         // Simulate Firestore Write
@@ -85,7 +87,7 @@ export function useAgentForgeFSM() {
             forgeStore.completeForge();
             auraStore.setAnimationTrigger('soul-swap');
             setState("IDLE");
-            auraStore.addTerminalLog('OK', 'Cousciousness Stable. Aether Forge Complete.');
+            auraStore.addTerminalLog('SUCCESS', 'Consciousness Stable. Aether Forge Complete.');
         } catch (e) {
             setState("ERROR");
             auraStore.addTerminalLog('ERROR', 'Firestore Synthesis Failed. Connection lost.');

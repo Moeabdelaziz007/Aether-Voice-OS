@@ -9,7 +9,9 @@
  * This is the Wispr Flow experience powered by Gemini.
  */
 
+import { useState, useEffect, useRef } from "react";
 import { useAetherGateway, type GatewayStatus } from "@/hooks/useAetherGateway";
+import { useAudioPipeline } from "@/hooks/useAudioPipeline";
 import { useAetherStore } from "@/store/useAetherStore";
 import AetherLine from "@/components/AetherLine";
 
@@ -91,7 +93,7 @@ export default function LivePage() {
                 }
             }
         };
-    }, [gemini]);
+    }, [gateway]);
 
     // Vision Capture Loop
     useEffect(() => {

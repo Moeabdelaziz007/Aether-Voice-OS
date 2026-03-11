@@ -244,6 +244,17 @@ export interface UserPreferences {
     ambientSoundsEnabled: boolean; // Background neural ambience
 }
 
+// ─── Silent Hint Entry ─────────────────────────────────────
+export interface SilentHint {
+    id: string;
+    type: 'code' | 'info' | 'task' | 'alert';
+    priority: 'info' | 'warning' | 'error';
+    text: string;
+    code?: string;
+    explanation?: string;
+    timestamp: number;
+}
+
 // ─── Tool Call Entry ───────────────────────────────────────
 export interface ToolCallEntry {
     id: string;
@@ -260,6 +271,22 @@ export interface MemoryCrystal {
     type: 'research' | 'code' | 'session' | 'file';
     metadata: any;
     color?: string;
+}
+
+export interface VoyagerLatencyRow {
+    id: string;
+    label: string;
+    latencyMs: number;
+    status: 'ok' | 'warning' | 'error';
+    timestamp: number;
+}
+
+export interface NeuralEvent {
+    id: string;
+    type: 'flare' | 'pulse' | 'synapse' | 'glow';
+    intensity: number;
+    color: string;
+    timestamp: number;
 }
 
 export interface DragState {

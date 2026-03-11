@@ -16,10 +16,18 @@
 import React, { useEffect, useRef, useState } from 'react';
 import clsx from 'clsx';
 import { useAetherStore } from '../store/useAetherStore';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SystemMetrics {
     activeConnections: number;
     interruptLatency: number; // ms
+    cpu: number;
+    memory: number;
+    networkIn: number;
+    networkOut: number;
+    latency: number;
+    errorRate: number;
+    uptime: number;
 }
 
 interface ServiceStatus {
@@ -50,9 +58,10 @@ export function SREHeartbeat({
     const animationRef = useRef<number>(0);
 
     const errors = useAetherStore((s) => s.errors);
+    const showTelemetry = useAetherStore((s) => s.showTelemetry);
 
     // Default metrics
-    const systemMetrics: SystemMetrics = {
+    const systemMetrics: any = {
         cpu: metrics.cpu ?? 45,
         memory: metrics.memory ?? 62,
         networkIn: metrics.networkIn ?? 12.5,
@@ -75,7 +84,7 @@ export function SREHeartbeat({
         const width = canvas.width;
         const height = canvas.height;
         const dataPoints: number[] = [];
-        let position = 0;
+        const position = 0;
         let beatPhase = 0;
 
         // Initialize with flat line

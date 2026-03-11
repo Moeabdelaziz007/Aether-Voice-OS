@@ -93,6 +93,7 @@ const STATE_INTENSITY: Record<string, number> = {
 
 export default function AetherPortal() {
     const preferences = useAetherStore((s) => s.preferences);
+    const themeConfig = useAetherStore((s) => s.themeConfig);
     const engineState = useAetherStore((s) => s.engineState);
     const currentRealm = useAetherStore((s) => s.currentRealm);
     const orbitRegistry = useAetherStore((s) => s.orbitRegistry);
@@ -101,7 +102,7 @@ export default function AetherPortal() {
     const addWidget = useAetherStore((s) => s.addWidget);
     const setPreferences = useAetherStore((s) => s.setPreferences);
 
-    const emotionSenseEnabled = useAetherStore((s) => s.preferences.superpowers.emotionSense);
+    const emotionSenseEnabled = useAetherStore((s) => s.preferences?.superpowers?.emotionSense ?? true);
     const platformFeed = useAetherStore((s) => s.platformFeed);
     const pushToFeed = useAetherStore((s) => s.pushToFeed);
 
@@ -153,65 +154,69 @@ export default function AetherPortal() {
             setViewMode('portal');
             if (targetPanel) setActivePanel(targetPanel);
         }, 800);
+
+        // Reset swapping state after animation completes
+        setTimeout(() => {
+            setIsSwapping(false);
+        }, 1500);
     }, []);
 
+    const toggleOmnibar = useCallback(() => setOmnibarOpen(prev => !prev), []);
+    const avatarState = useAetherStore((s) => s.avatarState);
+    const themeClass = `theme-${themeConfig.currentTheme}`;
+    const avatarConfig = { size: 'medium' as const, variant: 'detailed' as const };
+
+    // Determine if we show Voice Agent view or Dashboard view
+    const showVoiceView = activePanel === 'voice';
+    const showDashboard = activePanel === 'dashboard';
+    const showHub = activePanel === 'hub';
+    const showManagementPanel = ['memory', 'skills', 'persona'].includes(activePanel || '');
+    const showTerminal = activePanel === 'terminal';
+
     useEffect(() => {
-        if (platformFeed.length === 0) {
+        if (!showVoiceView) return;
+        if (!orbitRegistry['planet-notes']) {
+            applyWorkspaceState({
+                action: 'materialize_app',
+                app_id: 'planet-notes',
+                x: 140,
+                y: 10,
+                orbit_lane: 'inner',
+            });
+        }
+        const hasNotesWidget = activeWidgets.some((widget) => widget.type === 'notes_planet');
+        if (!hasNotesWidget) {
+            addWidget('notes_planet', { appId: 'planet-notes' });
+        }
+    }, [showVoiceView, orbitRegistry, activeWidgets, applyWorkspaceState, addWidget]);
 
-            const toggleOmnibar = useCallback(() => setOmnibarOpen(prev => !prev), []);
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const params = new URLSearchParams(window.location.search);
+        const compactHud = params.get("hud");
+        const motion = params.get("motion");
+        if (compactHud === "compact") {
+            setPreferences({ compactMissionHud: true });
+        }
+        if (compactHud === "full") {
+            setPreferences({ compactMissionHud: false });
+        }
+        if (motion === "low") {
+            setPreferences({ lowMotionMode: true });
+        }
+        if (motion === "full") {
+            setPreferences({ lowMotionMode: false });
+        }
+    }, [setPreferences]);
 
-            // Determine if we show Voice Agent view or Dashboard view
-            const showVoiceView = activePanel === 'voice';
-            const showDashboard = activePanel === 'dashboard';
-            const showHub = activePanel === 'hub';
-            const showManagementPanel = ['memory', 'skills', 'persona'].includes(activePanel || '');
-            const showTerminal = activePanel === 'terminal';
-
-            useEffect(() => {
-                if (!showVoiceView) return;
-                if (!orbitRegistry['planet-notes']) {
-                    applyWorkspaceState({
-                        action: 'materialize_app',
-                        app_id: 'planet-notes',
-                        x: 140,
-                        y: 10,
-                        orbit_lane: 'inner',
-                    });
-                }
-                const hasNotesWidget = activeWidgets.some((widget) => widget.type === 'notes_planet');
-                if (!hasNotesWidget) {
-                    addWidget('notes_planet', { appId: 'planet-notes' });
-                }
-            }, [showVoiceView, orbitRegistry, activeWidgets, applyWorkspaceState, addWidget]);
-
-            useEffect(() => {
-                if (typeof window === "undefined") return;
-                const params = new URLSearchParams(window.location.search);
-                const compactHud = params.get("hud");
-                const motion = params.get("motion");
-                if (compactHud === "compact") {
-                    setPreferences({ compactMissionHud: true });
-                }
-                if (compactHud === "full") {
-                    setPreferences({ compactMissionHud: false });
-                }
-                if (motion === "low") {
-                    setPreferences({ lowMotionMode: true });
-                }
-                if (motion === "full") {
-                    setPreferences({ lowMotionMode: false });
-                }
-            }, [setPreferences]);
-
-            const themeClass = preferences.activeTheme === 'dark' ? 'theme-matrix-core' : 'theme-ghost-white';
-            const avatarState = useAetherStore((s) => s.avatarState);
-
-            return (
-                <ThemeProvider>
+    return (
+        <ThemeProvider>
                     <EmotionalAtmosphere showDebugOverlay={false}>
+                        {/* ⚡ Cinematic Global Transition Layer - Placed outside view switching to avoid unmount flicker */}
+                        <SoulSwapAnimation isVisible={isSwapping} />
+
                         <AnimatePresence mode="wait">
-                            {/* Soul Swap Cinematic Transition */}
-                            <SoulSwapAnimation isVisible={isSwapping} onComplete={() => setIsSwapping(false)} />
+                            {/* The Portal Views */}
 
                             {viewMode === 'landing' ? (
                                 <motion.div
@@ -259,7 +264,6 @@ export default function AetherPortal() {
                                     <div className="carbon-fiber-overlay" />
 
                                     <NotificationCenter />
-                                    {/* @ts-ignore */}
                                     <LayoutGroup>
                                         {/* Sidebar Navigation */}
                                         <Sidebar

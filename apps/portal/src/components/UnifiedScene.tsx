@@ -105,7 +105,7 @@ const SharedPostProcessing = memo(function SharedPostProcessing({
 
   return (
     <AnimatePresence>
-      <EffectComposer disableNormalPass>
+      <EffectComposer enableNormalPass={false}>
         <Bloom
           ref={bloomRef}
           intensity={1.5}
@@ -240,7 +240,6 @@ function UnifiedSceneContent({
       {/* Quantum Neural Avatar Scene */}
       {showAvatar && (
         <AvatarSceneContent
-          size={cameraZ}
           showConnections={showConnections && avatarConfig.variant !== "minimal"}
           state={visualState}
           cinematicState={avatarCinematicState}

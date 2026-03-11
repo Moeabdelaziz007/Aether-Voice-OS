@@ -16,8 +16,8 @@ export * from './constants';
 // ─── Combined State Interface ──────────────────────────────
 export type AetherState = AuthSlice & TelemetrySlice & DataSlice & UISlice & ErrorSlice & PreferencesSlice & {
     isListening: boolean;
-    animationTrigger: string | null;
-    setAnimationTrigger: (t: string | null) => void;
+    animationTrigger: DataSlice['animationTrigger'];
+    setAnimationTrigger: (t: DataSlice['animationTrigger']) => void;
     setListening: (l: boolean) => void;
 };
 
@@ -32,7 +32,7 @@ export const useAetherStore = create<AetherState>()(
             ...createErrorSlice(set, get, ...a),
             ...createPreferencesSlice(set, get, ...a),
             isListening: false,
-            animationTrigger: null,
+            animationTrigger: "none",
             setAnimationTrigger: (t) => set({ animationTrigger: t }),
             setListening: (l) => set({ isListening: l }),
         }),

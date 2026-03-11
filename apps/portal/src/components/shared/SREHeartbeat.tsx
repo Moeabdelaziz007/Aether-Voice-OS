@@ -1,25 +1,27 @@
 "use client";
-
+ 
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAetherStore } from '../../store/useAetherStore';
 import { Activity, Signal, Zap, ShieldCheck, Clock, BarChart3 } from 'lucide-react';
-
+ 
 interface Metrics {
     p50: number;
     p95: number;
     vad: number;
     frustration: number;
 }
-
+ 
 export default function SREHeartbeat() {
-    const [isVisible, setIsVisible] = useState(false);
+    const showTelemetry = useAetherStore((s) => s.showTelemetry);
+    const setShowTelemetry = useAetherStore((s) => s.setShowTelemetry);
     const [metrics, setMetrics] = useState<Metrics>({
         p50: 320,
         p95: 450,
         vad: 0.8,
         frustration: 0.1
     });
-
+ 
     useEffect(() => {
         const interval = setInterval(() => {
             setMetrics(prev => ({
@@ -31,11 +33,11 @@ export default function SREHeartbeat() {
         }, 1500);
         return () => clearInterval(interval);
     }, []);
-
+ 
     return (
         <div className="fixed top-24 left-8 z-[100]">
             <button
-                onClick={() => setIsVisible(!isVisible)}
+                onClick={() => setShowTelemetry(!showTelemetry)}
                 className="flex items-center gap-3 px-4 py-2 bg-carbon-950/40 backdrop-blur-xl border border-white/10 rounded-xl hover:bg-white/5 transition-all group overflow-hidden"
             >
                 <div className="absolute inset-0 bg-gradient-to-r from-neon-cyan/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -43,9 +45,9 @@ export default function SREHeartbeat() {
                 <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] group-hover:text-white transition-colors">Neural HUD</span>
                 <div className={`w-1.5 h-1.5 rounded-full ${metrics.p50 < 400 ? 'bg-neon-emerald' : 'bg-neon-pink'} animate-pulse shadow-[0_0_10px_currentcolor]`} />
             </button>
-
+ 
             <AnimatePresence>
-                {isVisible && (
+                {showTelemetry && (
                     <motion.div
                         initial={{ opacity: 0, x: -20, scale: 0.95 }}
                         animate={{ opacity: 1, x: 0, scale: 1 }}
@@ -60,7 +62,7 @@ export default function SREHeartbeat() {
                             </div>
                             <div className="px-2 py-0.5 bg-neon-purple/20 border border-neon-purple/30 rounded text-[8px] font-mono text-neon-purple uppercase">p95 Stable</div>
                         </div>
-
+ 
                         <div className="space-y-6">
                             {/* Latency Cluster */}
                             <div className="space-y-3">
@@ -73,7 +75,7 @@ export default function SREHeartbeat() {
                                     <MetricCard label="p95" value={`${metrics.p95.toFixed(0)}ms`} color="text-neon-purple" />
                                 </div>
                             </div>
-
+ 
                             {/* Resonance Cluster */}
                             <div className="space-y-3">
                                 <div className="flex justify-between text-[9px] font-mono text-white/30 uppercase tracking-widest">
@@ -83,7 +85,7 @@ export default function SREHeartbeat() {
                                 <HUDProgressBar label="VAD Energy" value={metrics.vad} color="bg-neon-cyan shadow-[0_0_10px_#00F3FF]" />
                                 <HUDProgressBar label="Frustration Index" value={metrics.frustration} color="bg-neon-pink shadow-[0_0_10px_#FF1CF7]" />
                             </div>
-
+ 
                             {/* System Status */}
                             <div className="pt-4 border-t border-white/5 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
@@ -93,7 +95,7 @@ export default function SREHeartbeat() {
                                 <span className="text-[10px] font-mono text-white/20">LIVE_MAPPING</span>
                             </div>
                         </div>
-
+ 
                         {/* Animated Grid Background */}
                         <div className="absolute inset-0 z-[-1] opacity-10">
                             <div className="w-full h-full bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:20px_20px]" />
@@ -104,7 +106,7 @@ export default function SREHeartbeat() {
         </div>
     );
 }
-
+ 
 function MetricCard({ label, value, color }: { label: string, value: string, color: string }) {
     return (
         <div className="bg-white/5 rounded-xl p-3 border border-white/10 group hover:border-white/20 transition-colors">
@@ -113,7 +115,7 @@ function MetricCard({ label, value, color }: { label: string, value: string, col
         </div>
     );
 }
-
+ 
 function HUDProgressBar({ label, value, color }: { label: string, value: number, color: string }) {
     return (
         <div className="space-y-1.5">
