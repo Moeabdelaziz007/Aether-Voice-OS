@@ -46,6 +46,8 @@ export interface AgentDNA {
     name: string;
     role: string;
     tone: string;
+    personality_quarks: string[];
+    visual_grounding?: string;
     provider: string;
     model: string;
     apiKey: string;
@@ -106,6 +108,8 @@ const initialDNA: AgentDNA = {
     name: '',
     role: '',
     tone: 'Professional & Technical',
+    personality_quarks: [],
+    visual_grounding: '',
     provider: 'google',
     model: 'gemini-2.0-flash',
     apiKey: '',

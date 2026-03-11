@@ -1,9 +1,6 @@
-"use client";
-import { useCallback, useEffect, useRef, useState } from "react";
-import nacl from "tweetnacl";
-import { encode, decode } from "@msgpack/msgpack";
-import { useAetherStore } from "../store/useAetherStore";
-import { useForgeStore } from "../store/useForgeStore";
+import { BackpressureController, ReconnectionManager } from "../lib/gateway/controllers";
+import { HandshakeManager } from "../lib/gateway/security";
+import { PCMStreamBatcher } from "../lib/gateway/stream";
 
 export type GatewayStatus = "disconnected" | "connecting" | "handshaking" | "connected" | "reconnecting" | "error";
 export type GazeVector = [number, number, number];
@@ -231,20 +228,6 @@ function processEvent(
         case "affective_score": s.setTelemetry(p, 0); break;
         case "vision_pulse": s.setVisionPulse(p.timestamp); s.setVisionActive(true); break;
         case "tool_result": s.addToolCall({ toolName: p.tool_name, status: p.status }); break;
-        case "task_pulse": s.setTaskPulse({ ...p, timestamp: Date.now() }); break;
-        case "repair_state": s.setRepairState({ ...p, timestamp: Date.now() }); break;
-        case "GAZE_SYNC": s.setGazeTarget(p.vector); break;
-        case "vad":
-            s.setAvatarState(p.active ? 'ListeningActive' : 'ListeningWaiting');
-            // Notify Forge Store of VAD status
-            try {
-                useForgeStore.getState().setListening(p.active);
-                if (p.active) useForgeStore.getState().setVoiceMode('listening');
-            } catch (e) { }
-            break;
-        case "interrupt_latency":
-            s.setTelemetry({ ...s.telemetry, interruptLatency: p.ms }, 0);
-            break;
         case "tool_call":
             // OS-Level Handlers
             if (p.name === "toggle_hud") {
@@ -261,81 +244,3 @@ function processEvent(
     }
 }
 
-class BackpressureController {
-    HIGH = 65536;
-    MAX_UNACKED = 15;
-    unacked = 0;
-
-    isThrottled(ba: number) {
-        return ba > this.HIGH || this.unacked >= this.MAX_UNACKED;
-    }
-
-    send() { this.unacked++; }
-    ack() { this.unacked = Math.max(0, this.unacked - 1); }
-}
-
-class ReconnectionManager {
-    attempt = 0; timer: any = null; constructor(private onR: () => void) { }
-    MAX_ATTEMPTS = 10;
-    trigger() {
-        this.stop();
-        if (this.attempt >= this.MAX_ATTEMPTS) {
-            console.error("❌ Aether Gateway: Max reconnection attempts reached.");
-            return;
-        }
-        const delay = Math.min(1000 * Math.pow(1.5, this.attempt++) + Math.random() * 500, 15000);
-        console.log(`↻ Aether Gateway Reconnecting in ${Math.round(delay)}ms (Attempt ${this.attempt}/${this.MAX_ATTEMPTS})`);
-        this.timer = setTimeout(() => this.onR(), delay);
-    }
-    stop() { if (this.timer) clearTimeout(this.timer); }
-    reset() { this.attempt = 0; this.stop(); }
-}
-
-class HandshakeManager {
-    private kp: nacl.SignKeyPair | null = null;
-
-    constructor() {
-        // Enforce ephemeral keys: generate a fresh keypair on every connection
-        // Do not persist Ed25519 seed in localStorage to avoid credential theft via XSS
-        const seed = nacl.randomBytes(32);
-        this.kp = nacl.sign.keyPair.fromSeed(seed);
-
-        // Zeroize the seed buffer immediately after usage
-        seed.fill(0);
-    }
-
-    generateResponse(ch: string) {
-        if (!this.kp) throw new Error("Keypair already zeroized");
-        const sig = nacl.sign.detached(this.fh(ch), this.kp.secretKey);
-        return { client_id: this.th(this.kp.publicKey), signature: this.th(sig) };
-    }
-
-    signIntent(i: string) {
-        if (!this.kp) throw new Error("Keypair already zeroized");
-        return this.th(nacl.sign.detached(new TextEncoder().encode(i), this.kp.secretKey));
-    }
-
-    zeroize() {
-        // Secure wipe of private key material
-        if (this.kp) {
-            const sk = this.kp.secretKey as Uint8Array;
-            sk.fill(0);
-            this.kp = null;
-        }
-    }
-
-    private th(d: Uint8Array) { return Array.from(d).map(b => b.toString(16).padStart(2, '0')).join(''); }
-    private fh(h: string) { const b = new Uint8Array(h.length / 2); for (let i = 0; i < h.length; i += 2) b[i / 2] = parseInt(h.slice(i, i + 2), 16); return b; }
-}
-
-class PCMStreamBatcher {
-    private b: Uint8Array[] = []; timer: any = null; constructor(private ws: WebSocket, private bp: BackpressureController) { }
-    add(p: Uint8Array) { this.b.push(p); if (!this.timer) this.timer = setTimeout(() => this.flush(), 40); }
-    private flush() {
-        this.timer = null; if (this.ws.readyState !== 1 || this.bp.isThrottled(this.ws.bufferedAmount)) { this.b = []; return; }
-        const merged = new Uint8Array(this.b.reduce((a, v) => a + v.length, 0)); let o = 0;
-        for (const c of this.b) { merged.set(c, o); o += c.length; }
-        this.ws.send(merged); this.b = [];
-        this.bp.send(); // Track unacked chunk
-    }
-}

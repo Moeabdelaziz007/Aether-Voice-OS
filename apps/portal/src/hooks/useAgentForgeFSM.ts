@@ -14,24 +14,33 @@ export type ForgeState =
     | "IDLE"
     | "LISTENING_SPEC"
     | "EXTRACTING_JSON"
+    | "REFINING_WITH_VISION"
     | "AWAITING_CONFIRMATION"
     | "COMMITTING_TO_FIRESTORE"
     | "ERROR";
 
 /**
- * Gemini Function Declaration for Forge Protocol
+ * Gemini Function Declaration for Forge Protocol V2.0
  */
 export const FORGE_AGENT_SCHEMA = {
     name: "forge_agent_manifest",
-    description: "Extract structured agent configuration from the user's vocal description for the Aether Forge protocol.",
+    description: "Extract structured agent configuration from the user's vocal description and environmental context for the Aether Forge protocol.",
     parameters: {
         type: "object",
         properties: {
             name: { type: "string", description: "The name of the AI consciousness." },
-            role: { type: "string", description: "The core professional role or persona of the agent (e.g., DevOps Engineer)." },
-            skills: { type: "array", items: { type: "string" }, description: "Specific technical or creative skills (e.g., Docker, Python)." },
+            role: { type: "string", description: "The core professional role or persona of the agent." },
+            skills: { type: "array", items: { type: "string" }, description: "Specific technical or creative skills." },
             tone: { type: "string", description: "The vocal and behavioral tone (e.g., Analytical, Mentor, Sarcastic)." },
-            tools_required: { type: "array", items: { type: "string" }, description: "The specialized tools or MCP skills the agent needs access to." }
+            personality_quarks: { 
+                type: "array", 
+                items: { type: "string" }, 
+                description: "Subtle character traits or quirks (e.g., 'obsessed with clean code', 'loves sci-fi metaphors')." 
+            },
+            visual_grounding: { 
+                type: "string", 
+                description: "Context captured from user's screen that influenced the design (e.g., 'Detected React project open')." 
+            }
         },
         required: ["name", "role"]
     }
@@ -48,17 +57,27 @@ export function useAgentForgeFSM() {
             const args = toolCall.args;
             setState("EXTRACTING_JSON");
 
-            // Update store with incoming neural DNA
+            // Update store with incoming neural DNA + V2.0 metadata
             forgeStore.updateDNA({
                 name: args.name,
                 role: args.role,
                 skills: args.skills || [],
                 tone: args.tone || "Analytical",
+                personality_quarks: args.personality_quarks || [],
+                visual_grounding: args.visual_grounding || ""
             });
 
-            // Transition to confirmation
-            setTimeout(() => setState("AWAITING_CONFIRMATION"), 1000);
-            auraStore.addTerminalLog('SYS', `[PROTOCOL] Identity Mapped: ${args.name}. Awaiting confirmation.`);
+            // Transition to vision refinement (simulated grounding)
+            setTimeout(() => {
+                setState("REFINING_WITH_VISION");
+                auraStore.addTerminalLog('SYS', `[PROTOCOL] Multimodal Grounding Active: ${args.visual_grounding || "Scanning workspace environment..."}`);
+                
+                // Final transition to confirmation
+                setTimeout(() => {
+                    setState("AWAITING_CONFIRMATION");
+                    auraStore.addTerminalLog('SYS', `[PROTOCOL] Identity Mapped: ${args.name}. Awaiting confirmation.`);
+                }, 2000);
+            }, 1000);
         }
     }, [forgeStore, auraStore]);
 

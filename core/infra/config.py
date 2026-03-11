@@ -23,7 +23,7 @@ class AudioConfig(BaseModel):
     send_sample_rate: int = 16000
     receive_sample_rate: int = 24000
     channels: int = 1
-    chunk_size: int = 1024
+    chunk_size: int = 512
     format_width: int = 2
     vad_window_sec: float = 5.0
     input_device_index: Optional[int] = None
