@@ -9,6 +9,7 @@ import SoulSwapAnimation from "@/components/SoulSwapAnimation";
 // Store & Hooks
 import { useAetherStore } from "@/store/useAetherStore";
 import { useForgeStore } from "@/store/useForgeStore";
+import { SidebarPanel, AvatarConfig } from "@/store/types";
 
 // Views
 import LandingView from "@/components/views/LandingView";
@@ -25,7 +26,7 @@ export default function AetherPortal() {
 
     // Local UI State
     const [viewMode, setViewMode] = useState<'landing' | 'portal'>('landing');
-    const [activePanel, setActivePanel] = useState<any>('dashboard');
+    const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [omnibarOpen, setOmnibarOpen] = useState(false);
     const [isSwapping, setIsSwapping] = useState(false);
@@ -52,18 +53,18 @@ export default function AetherPortal() {
     }, [platformFeed, pushToFeed]);
 
     // Handlers
-    const handleEnterPortal = useCallback((targetPanel?: any) => {
+    const handleEnterPortal = useCallback((targetPanel?: SidebarPanel) => {
         setIsSwapping(true);
         setTimeout(() => {
             setViewMode('portal');
             if (targetPanel) setActivePanel(targetPanel);
         }, 800);
         setTimeout(() => setIsSwapping(false), 1500);
-    }, []);
+    }, [setViewMode, setActivePanel]);
 
     const toggleOmnibar = useCallback(() => setOmnibarOpen(prev => !prev), []);
     const themeClass = `theme-${themeConfig.currentTheme}`;
-    const avatarConfig = { size: 'medium' as const, variant: 'detailed' as const };
+    const avatarConfig: AvatarConfig = { size: 'medium', variant: 'detailed' };
 
     return (
         <ThemeProvider>

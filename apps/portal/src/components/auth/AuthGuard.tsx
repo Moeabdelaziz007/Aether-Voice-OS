@@ -1,21 +1,37 @@
 "use client";
 
 import { useAuth } from "@/hooks/useAuth";
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import LoginPage from "./LoginPage";
 
 interface AuthGuardProps {
     children: ReactNode;
+    showDevWarning?: boolean;
 }
 
 /**
  * AuthGuard — Wraps the app to require Firebase authentication.
  * Shows LoginPage when not authenticated, children when authenticated.
+ * Supports development mode with fallback mock user when Firebase is unavailable.
  * No routing required — renders inline for static export compatibility.
  */
-export default function AuthGuard({ children }: AuthGuardProps) {
-    const { user, loading } = useAuth();
+export default function AuthGuard({ children, showDevWarning = true }: AuthGuardProps) {
+    const { user, loading, firebaseReady } = useAuth();
+    const [isMounted, setIsMounted] = useState(false);
+
+    // Prevent hydration mismatch
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
+
+    if (!isMounted) {
+        return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#050505]">
+                <div className="w-16 h-16 border-2 border-cyan-500/20 rounded-lg animate-pulse" />
+            </div>
+        );
+    }
 
     return (
         <AnimatePresence mode="wait">

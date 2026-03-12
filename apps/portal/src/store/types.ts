@@ -291,7 +291,75 @@ export interface NeuralEvent {
 
 export interface DragState {
     isDragging: boolean;
-    activeData: any;
+    activeData: Record<string, unknown>;
     type: 'crystal' | 'file' | 'data' | 'skill';
     sourceId?: string;
+}
+
+// ─── UI Panel Types ────────────────────────────────────────
+export type SidebarPanel = 'dashboard' | 'hub' | 'memory' | 'skills' | 'persona' | 'voice' | 'terminal';
+
+// ─── Avatar Configuration ─────────────────────────────────
+export interface AvatarConfig {
+    size: 'icon' | 'small' | 'medium' | 'large' | 'fullscreen';
+    variant: 'minimal' | 'standard' | 'detailed' | 'immersive';
+}
+
+// ─── Agent Creation Types ─────────────────────────────────
+export type AgentCreationStep = 'identity' | 'brain' | 'voice' | 'review' | 'deploy';
+
+export interface AgentCreationState {
+    currentStep: AgentCreationStep;
+    agentName: string;
+    agentRole: string;
+    agentDescription: string;
+    voiceTone: VoiceTone;
+    skills: string[];
+    customPrompt: string;
+    isValid: boolean;
+    validationErrors: Record<string, string>;
+}
+
+// ─── Agent Communication Types ────────────────────────────
+export interface ChatMessage {
+    id: string;
+    agentId: string;
+    agentName: string;
+    senderId: 'user' | 'agent';
+    content: string;
+    timestamp: number;
+    isVoiceMessage?: boolean;
+    audioUrl?: string;
+}
+
+export interface AgentInteraction {
+    id: string;
+    agentId: string;
+    type: 'chat' | 'voice' | 'task';
+    startTime: number;
+    endTime?: number;
+    messages: ChatMessage[];
+    status: 'active' | 'archived' | 'completed';
+}
+
+// ─── User Profile Types ──────────────────────────────────
+export interface UserProfile {
+    id: string;
+    username: string;
+    email: string;
+    displayName: string;
+    avatar?: string;
+    bio?: string;
+    createdAt: number;
+    preferences: UserPreferences;
+}
+
+// ─── Authentication Types ────────────────────────────────
+export type AuthStatus = 'unauthenticated' | 'loading' | 'authenticated' | 'error';
+
+export interface AuthState {
+    status: AuthStatus;
+    user: UserProfile | null;
+    error: string | null;
+    token?: string;
 }
