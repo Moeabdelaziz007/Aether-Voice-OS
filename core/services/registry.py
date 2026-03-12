@@ -157,8 +157,11 @@ class AetherRegistry:
                 loop = asyncio.get_running_loop()
                 loop.create_task(self._on_change(pkg_name, new_pkg))
             except RuntimeError:
-                # Fallback for sync contexts if needed
-                pass
+                # Fallback for sync contexts or background threads (watchdog)
+                if asyncio.iscoroutinefunction(self._on_change):
+                    asyncio.run(self._on_change(pkg_name, new_pkg))
+                else:
+                    self._on_change(pkg_name, new_pkg)
 
     def get(self, name: str) -> AthPackage:
         """Get a package by name, loading it lazily if necessary."""

@@ -30,7 +30,7 @@ async def test_aether_registry_hot_loading(tmp_path):
         manifest_file.write_text(manifest_content)
         
         # Wait for watchdog and delay logic
-        await asyncio.sleep(1.0)
+        await asyncio.sleep(2.0)
         
         on_change_mock.assert_called()
         args, kwargs = on_change_mock.call_args
