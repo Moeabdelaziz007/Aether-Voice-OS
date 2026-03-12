@@ -13,7 +13,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from core.utils.errors import ManifestValidationError, PackageCorruptError
 
@@ -26,6 +26,8 @@ class SoulManifest(BaseModel):
 
     Loaded from manifest.json inside a .ath package directory.
     """
+
+    model_config = ConfigDict(populate_by_name=True)
 
     name: str = Field(..., min_length=1, max_length=64)
     version: str = Field(..., pattern=r"^\d+\.\d+\.\d+$")
@@ -43,6 +45,9 @@ class SoulManifest(BaseModel):
         description="Domain-specific expertise scores (0.0 to 1.0)",
     )
     author: Optional[str] = None
+    client_id: Optional[str] = Field(
+        None, alias="id", description="Manifest-specified identity"
+    )
     public_key: Optional[str] = Field(
         None, description="Ed25519 public key (hex) for authentication"
     )
