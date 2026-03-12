@@ -1,11 +1,14 @@
 from __future__ import annotations
+
 import logging
 from collections import deque
 from dataclasses import dataclass
+
 import numpy as np
-from core.audio.aec.filters import FrequencyDomainNLMS
-from core.audio.aec.detectors import DoubleTalkDetector, DelayEstimator
+
 from core.audio.aec.buffer import BoundedBuffer
+from core.audio.aec.detectors import DelayEstimator, DoubleTalkDetector
+from core.audio.aec.filters import FrequencyDomainNLMS
 from core.audio.spectral import erle
 
 logger = logging.getLogger(__name__)

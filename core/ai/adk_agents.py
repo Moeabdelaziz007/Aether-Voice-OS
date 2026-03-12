@@ -6,6 +6,7 @@ Wraps the existing Hive Specialists as official ADK Agents.
 from google.adk.agents import Agent
 from google.adk.tools import FunctionTool
 
+from core.infra.config import GeminiModel
 from core.tools import (
     clawhub_tool,
     context_scraper,
@@ -15,7 +16,6 @@ from core.tools import (
     system_tool,
     vision_tool,
 )
-from core.infra.config import GeminiModel
 
 # ── ADK Agent 1: The Architect ──────────────────────────────────────
 architect_agent = Agent(

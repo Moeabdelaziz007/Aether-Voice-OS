@@ -1,5 +1,7 @@
 import threading
+
 import numpy as np
+
 
 class BoundedBuffer:
     """A thread-safe preallocated ring buffer for audio samples."""

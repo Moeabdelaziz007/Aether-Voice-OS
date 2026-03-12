@@ -4,13 +4,13 @@ Aether Voice OS — Automated E2E Voice Flow Benchmark
 Measures Text-to-Audio (TTFB) Live Latency without requiring a microphone.
 """
 import asyncio
-import time
-import sys
-import logging
 import json
+import logging
 import os
-from pathlib import Path
+import sys
+import time
 from datetime import datetime
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
@@ -27,7 +27,6 @@ if not os.getenv("GOOGLE_API_KEY") and os.getenv("GEMINI_API_KEY"):
 
 from core.ai.session.facade import GeminiLiveSession
 from core.infra.config import load_config
-from core.infra.transport.gateway import AetherGateway
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("e2e_benchmark")
@@ -78,7 +77,7 @@ async def run_automated_benchmark(iterations: int = 3):
                 # Wait for first audio chunk
                 try:
                     # Time to First Byte (TTFB)
-                    first_chunk = await asyncio.wait_for(audio_out_queue.get(), timeout=10.0)
+                    await asyncio.wait_for(audio_out_queue.get(), timeout=10.0)
                     ttfb = (time.time() - start_time) * 1000
                     logger.info(f"TTFB achieved: {ttfb:.2f} ms")
                     stats["ttfb_ms"].append(ttfb)

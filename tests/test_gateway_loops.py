@@ -1,8 +1,11 @@
-import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock
-from core.infra.transport.perception import PerceptionPipeline
+from unittest.mock import AsyncMock, MagicMock
+
+import pytest
+
 from core.audio.state import audio_state
+from core.infra.transport.perception import PerceptionPipeline
+
 
 @pytest.mark.asyncio
 async def test_perception_broadcast_on_push():

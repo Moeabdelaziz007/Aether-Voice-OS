@@ -1,6 +1,9 @@
-import numpy as np
 from collections import deque
+
+import numpy as np
+
 from core.audio.spectral import SpectralAnalyzer, gcc_phat
+
 
 class DoubleTalkDetector:
     """Double-talk detection using spectral coherence and energy ratios."""

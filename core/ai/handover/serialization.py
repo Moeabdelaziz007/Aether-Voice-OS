@@ -1,7 +1,10 @@
 from __future__ import annotations
+
 import json
-from typing import Any, Dict, Union, Tuple
-from core.ai.handover.models import HandoverContext, ContextDiff
+from typing import Any, Dict, Union
+
+from core.ai.handover.models import ContextDiff, HandoverContext
+
 
 class ContextSerializer:
     """Handles serialization and deserialization of HandoverContext."""

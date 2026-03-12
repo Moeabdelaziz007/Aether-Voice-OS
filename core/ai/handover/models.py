@@ -1,9 +1,11 @@
 from __future__ import annotations
+
 import copy
 import logging
 from datetime import datetime
 from enum import Enum, auto
-from typing import Any, Dict, List, Optional, Tuple, TypeVar, Union
+from typing import Any, Dict, List, Optional, Tuple
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)

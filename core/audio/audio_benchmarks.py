@@ -1,7 +1,9 @@
 import time
-import structlog
 from datetime import datetime
-from typing import Dict, Any
+from typing import Any, Dict
+
+import structlog
+
 from core.audio.telemetry import AudioTelemetryLogger, SessionMetrics
 
 logger = structlog.get_logger("AetherOS.Audio.Benchmark")
@@ -42,7 +44,7 @@ async def run_latency_stress_test(logger_instance: AudioTelemetryLogger, duratio
     logger.info(f"Starting latency stress test for {duration_sec}s...")
     start_time = time.time()
     while time.time() - start_time < duration_sec:
-        fid = logger_instance.start_frame()
+        logger_instance.start_frame()
         # Simulate processing delay
         time.sleep(0.01) 
         logger_instance.record_capture(2.5)

@@ -3,12 +3,13 @@ Tests for AetherRegistry hot-loading.
 """
 
 import asyncio
-from pathlib import Path
-import pytest
 import shutil
 from unittest.mock import AsyncMock
 
+import pytest
+
 from core.services.registry import AetherRegistry
+
 
 @pytest.mark.asyncio
 async def test_aether_registry_hot_loading(tmp_path):

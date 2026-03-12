@@ -5,7 +5,7 @@ import os
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator, model_validator, AliasChoices
+from pydantic import AliasChoices, BaseModel, Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -282,7 +282,7 @@ def load_config() -> AetherConfig:
         print(f"Note: Standard config loading failed ({e}). Retrying without .env...")
         try:
             return AetherConfig(_env_file=None)
-        except Exception as e2:
+        except Exception:
             # Fallback for critical missing AI key
             if not getattr(config.ai, "api_key", None):
                 print("WARNING: No GOOGLE_API_KEY found in environment or .env!")

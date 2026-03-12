@@ -1,8 +1,10 @@
 import asyncio
 import time
+from typing import Optional
+
 import numpy as np
 import structlog
-from typing import Optional
+
 from core.infra.event_bus import EventBus, TelemetryEvent
 
 logger = structlog.get_logger("AetherOS.Telemetry.Stream")
