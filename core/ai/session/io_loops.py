@@ -53,23 +53,11 @@ async def receive_loop(session_facade, session) -> None:
                         logger.debug("Failed to broadcast transcript: %s", e)
 
                 if part.inline_data and isinstance(part.inline_data.data, bytes):
-                    # Elite Audio Queue Policy
-                    if session_facade._out_queue.full():
-                        try:
-                            session_facade._out_queue.get_nowait()
-                            session_facade._output_queue_drops += 1
-                            if session_facade._gateway:
-                                asyncio.create_task(
-                                    session_facade._gateway.broadcast(
-                                        "system_telemetry",
-                                        {"type": "pressure_marker", "severity": "critical"},
-                                    )
-                                )
-                        except asyncio.QueueEmpty:
-                            pass
-
-                    session_facade._out_queue.put_nowait(part.inline_data.data)
+                    # Direct Binary Audio Output via Gateway Liaison (Zero-Friction Audio Out)
                     if session_facade._gateway:
+                        asyncio.create_task(
+                            session_facade._gateway.liaison.broadcast_binary(part.inline_data.data)
+                        )
                         asyncio.create_task(
                             session_facade._gateway.broadcast(
                                 "engine_state", {"state": "SPEAKING"}
@@ -122,12 +110,5 @@ def handle_usage(session_facade, response: types.LiveConnectResponse) -> None:
 
 
 def drain_output(session_facade) -> None:
-    count = 0
-    while not session_facade._out_queue.empty():
-        try:
-            session_facade._out_queue.get_nowait()
-            count += 1
-        except asyncio.QueueEmpty:
-            break
-    if count:
-        logger.debug("Drained %d audio chunks from output queue", count)
+    # Deprecated: Zero-Friction streaming has no output queue to drain
+    pass

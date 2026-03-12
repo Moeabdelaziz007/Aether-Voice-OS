@@ -91,8 +91,8 @@ class NeuralBridge:
                 target_soul = self._hive._registry.get(soul_name)
                 session = GeminiLiveSession(
                     config=self._ai_config,
-                    audio_in_queue=self._perception.audio_in,
-                    audio_out_queue=self._perception.audio_out,
+                    audio_in_queue=None, # Removed due to direct byte injection
+                    audio_out_queue=None, # Removed due to direct byte injection
                     gateway=self._gateway,
                     on_interrupt=self._on_interrupt,
                     on_tool_call=self._on_tool_call,
@@ -135,8 +135,8 @@ class NeuralBridge:
             else:
                 session = GeminiLiveSession(
                     config=self._ai_config,
-                    audio_in_queue=self._perception.audio_in,
-                    audio_out_queue=self._perception.audio_out,
+                    audio_in_queue=None, # Removed due to direct byte injection
+                    audio_out_queue=None, # Removed due to direct byte injection
                     gateway=self._gateway,
                     on_interrupt=self._on_interrupt,
                     on_tool_call=self._on_tool_call,
@@ -147,9 +147,14 @@ class NeuralBridge:
         # Context Injection
         pending = self._hive.get_pending_handover_for_target(soul_name)
         if pending and not session._injected_handover_context:
-            session.inject_handover_context(pending, visual_frames=list(self._perception.frame_buffer))
+            # Note: Perception no longer maintains frame buffer for zero friction.
+            session.inject_handover_context(pending)
         
         self._state_manager.set_session(session)
+
+        # Link session to perception for direct byte routing
+        if hasattr(self._perception, "set_active_session"):
+            self._perception.set_active_session(session)
 
         try:
             if not session.is_ready():
@@ -172,10 +177,6 @@ class NeuralBridge:
 
     def _on_interrupt(self) -> None:
         logger.info("⚡ Neural Bridge: Barge-in detected.")
-        # Drain audio out
-        while not self._perception.audio_out.empty():
-            try: self._perception.audio_out.get_nowait()
-            except asyncio.QueueEmpty: break
 
     async def _on_tool_call(self, tool_name, args, result) -> None:
         pass

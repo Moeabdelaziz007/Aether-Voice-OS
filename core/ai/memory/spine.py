@@ -9,15 +9,16 @@ Redis-backed sliding window of interaction frames via GlobalBus.
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 from typing import Any, Dict, List, Optional
 
-import logging
-logger = logging.getLogger(__name__)
 from google import genai
 from pydantic import BaseModel
 
 from core.infra.transport.bus import GlobalBus
+
+logger = logging.getLogger(__name__)
 
 
 class NeuralSnapshot(BaseModel):
@@ -29,8 +30,8 @@ class NeuralSnapshot(BaseModel):
 class NeuralSpine:
     """
     Distributed Context & Autonomous SRE Cache with Neural Compression.
-    Maintains a Redis-backed sliding window of 'Interaction Frames' and
-    periodically compresses them into snapshots.
+    Maintains a Firestore-backed sliding window of 'Interaction Frames' and
+    periodically compresses them into snapshots. (Replaces Redis).
     """
 
     def __init__(
@@ -38,36 +39,43 @@ class NeuralSpine:
         bus: Optional[GlobalBus] = None, 
         api_key: Optional[str] = None,
         max_frames: int = 50,
-        compression_interval_minutes: int = 5
+        compression_interval_minutes: int = 5,
+        firebase_client: Optional[Any] = None
     ):
         self._bus = bus
         self._api_key = api_key
         self._client = genai.Client(api_key=api_key) if api_key else None
+        self._db = getattr(firebase_client, "db", None) if firebase_client else None
         
         self._max_frames = max_frames
         self._compression_interval = compression_interval_minutes * 60
         self._last_compression = time.time()
-        
-        self._key = "neural_spine:frames"
-        self._system_prompt_key = "neural_spine:system_prompt"
         
         self.history: List[Dict[str, Any]] = []
         self.current_summary: str = ""
         self._lock = asyncio.Lock()
         self._running = False
 
+        # In-memory Local Cache for O(1) reads
+        import collections
+        self._local_cache = collections.deque(maxlen=max_frames)
+
     async def start(self) -> None:
         """Start listening to GlobalBus for memory events."""
         if not self._bus or not self._bus.is_connected:
             logger.warning(
-                "NeuralSpine: GlobalBus not available. Memory will not persist in Redis."
+                "NeuralSpine: GlobalBus not available. Subscriptions will not work."
             )
         else:
             # Subscribe to tool results and AI learnings
             await self._bus.subscribe("frontend_events", self._handle_event)
             await self._bus.subscribe("tool_result", self._handle_tool_result)
             await self._bus.subscribe("ai_learning", self._handle_learning)
-            logger.info("✦ Neural Spine: Redis sync active.")
+
+        if self._db:
+            logger.info("✦ Neural Spine: Firestore Cloud Memory active.")
+        else:
+            logger.warning("NeuralSpine: Firestore DB not found. Using local cache only.")
 
         self._running = True
         logger.info("✦ Neural Spine initialized. Listening for context frames.")
@@ -91,39 +99,41 @@ class NeuralSpine:
         await self.add_interaction("learning", str(learning))
 
     async def add_interaction(self, role: str, content: str):
-        """Add a frame to persistent Redis and local history for compression."""
+        """Add a frame to persistent Firestore and local history for compression."""
         async with self._lock:
-            frame_data = {"role": role, "content": content}
+            frame_data = {"role": role, "content": content, "timestamp": time.time()}
             self.history.append(frame_data)
+            self._local_cache.append({"type": role, "data": frame_data})
             
-            # Redis Persistence
-            if self._bus and self._bus.is_connected:
-                await self._add_redis_frame(role, frame_data)
+            # Firestore Persistence (Fire and Forget)
+            if self._db:
+                asyncio.create_task(self._add_firestore_frame(role, frame_data))
             
             # Auto-trigger compression if interval exceeded and client available
             if self._client and (time.time() - self._last_compression > self._compression_interval):
                 asyncio.create_task(self.compress())
 
-    async def _add_redis_frame(self, frame_type: str, data: Dict[str, Any]) -> None:
-        """Push a frame to the Redis-backed sliding window."""
-        if not self._bus or not self._bus._client:
+    async def _add_firestore_frame(self, frame_type: str, data: Dict[str, Any]) -> None:
+        """Push a frame to the Firestore-backed sliding window."""
+        if not self._db:
             return
 
-        full_key = f"{self._bus._prefix}{self._key}"
-        frame = {"type": frame_type, "data": data}
-
         try:
-            try:
-                import msgpack
-                payload = msgpack.packb(frame, use_bin_type=True)
-            except ImportError:
-                import json
-                payload = json.dumps(frame)
+            doc_ref = self._db.collection("spine_frames").document()
+            doc_data = {
+                "type": frame_type,
+                "data": data,
+                "created_at": time.time()
+            }
+            # Adding an expires_at TTL field (e.g. 7 days)
+            from datetime import datetime, timedelta
+            doc_data["expires_at"] = datetime.utcnow() + timedelta(days=7)
             
-            await self._bus._client.lpush(full_key, payload)
-            await self._bus._client.ltrim(full_key, 0, self._max_frames - 1)
+            # This is sync by default in google-cloud-firestore. In high throughput,
+            # this could block. Wrapping in to_thread avoids blocking the event loop.
+            await asyncio.to_thread(doc_ref.set, doc_data)
         except Exception as e:
-            logger.error("NeuralSpine: Failed to append Redis frame: %s", e)
+            logger.error("NeuralSpine: Failed to append Firestore frame: %s", e)
 
     async def compress(self):
         """Compresses the history into a Neural Snapshot using Gemini."""
@@ -171,48 +181,16 @@ class NeuralSpine:
         return self.current_summary or "No previous context available."
 
     async def get_warm_cache(self) -> List[Dict[str, Any]]:
-        """Retrieve the last N interaction frames from Redis."""
-        if not self._bus or not self._bus._client:
+        """Retrieve the last N interaction frames from the local cache."""
+        if not self._local_cache:
             return [{"role": "local_history", "content": str(self.history)}]
 
-        full_key = f"{self._bus._prefix}{self._key}"
-        try:
-            frames_raw = await self._bus._client.lrange(full_key, 0, self._max_frames - 1)
-            frames = []
-            for f in frames_raw:
-                try:
-                    import msgpack
-                    if isinstance(f, bytes):
-                        try:
-                            decoded = msgpack.unpackb(f, raw=False)
-                            frames.append(decoded)
-                            continue
-                        except Exception:
-                            pass
-                except ImportError:
-                    pass
-
-                import json
-                if isinstance(f, bytes):
-                    f = f.decode("utf-8")
-                frames.append(json.loads(f))
-            return list(reversed(frames))
-        except Exception as e:
-            logger.error("NeuralSpine: Failed to retrieve cache: %s", e)
-            return []
+        return list(self._local_cache)
 
     async def inject_diagnostic_trace(self, trace: str) -> None:
         """Inject a diagnostic trace as a Hidden System Prompt."""
-        if not self._bus or not self._bus._client:
-            return
-
-        full_key = f"{self._bus._prefix}{self._system_prompt_key}"
-        try:
-            await self._bus._client.set(full_key, trace, ex=60)
-            logger.info("NeuralSpine: Injected diagnostic trace: %s", trace)
-            await self.add_interaction("diagnostic", trace)
-        except Exception as e:
-            logger.error("NeuralSpine: Failed to inject diagnostic trace: %s", e)
+        logger.info("NeuralSpine: Injected diagnostic trace: %s", trace)
+        await self.add_interaction("diagnostic", trace)
 
     def clear(self):
         self.history = []
