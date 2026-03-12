@@ -1,11 +1,9 @@
 import asyncio
-import time
-import uuid
-import numpy as np
-import websockets
 import json
-import msgpack
 import os
+import time
+
+import websockets
 
 # AetherOS Latency Benchmark Tool
 # Measures E2E latency: Mic Capture -> Gateway -> GenAI -> Audio Output
@@ -18,7 +16,7 @@ async def run_benchmark(iterations=10):
     async with websockets.connect(GATEWAY_URL) as ws:
         # 1. Handshake
         raw = await ws.recv()
-        challenge = json.loads(raw)["challenge"]
+        json.loads(raw)["challenge"]
         
         # Simple auth response (No signature for benchmark if bypassed in dev)
         await ws.send(json.dumps({
@@ -58,7 +56,7 @@ async def run_benchmark(iterations=10):
 
         avg = sum(latencies) / len(latencies)
         print("\n" + "="*30)
-        print(f"📊 BENCHMARK RESULTS")
+        print("📊 BENCHMARK RESULTS")
         print(f"   Average RTT: {avg:.2f}ms")
         print(f"   Min RTT:     {min(latencies):.2f}ms")
         print(f"   Max RTT:     {max(latencies):.2f}ms")

@@ -13,9 +13,8 @@ import logging
 import os
 import time
 import uuid
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
-import msgpack
 import websockets
 from websockets.asyncio.server import Server, ServerConnection
 
@@ -49,7 +48,6 @@ class ClientSession:
         self.capabilities = capabilities
         self.last_pong: float = time.monotonic()
         self.connected_at: float = time.monotonic()
-        self.use_msgpack = "msgpack" in capabilities
 
 
 class ConnectionLiaison:
@@ -116,19 +114,12 @@ class ConnectionLiaison:
     async def handle_connection(self, ws: ServerConnection) -> None:
         client_id: Optional[str] = None
         try:
-            client_id, use_msgpack = await self._handshake(ws)
-            logger.info("Client connected: %s (Msgpack: %s)", client_id, use_msgpack)
+            client_id = await self._handshake(ws)
+            logger.info("Client connected: %s", client_id)
             
             async for raw_msg in ws:
                 if isinstance(raw_msg, bytes):
-                    if use_msgpack:
-                        try:
-                            msg = msgpack.unpackb(raw_msg)
-                            if isinstance(msg, dict) and "type" in msg:
-                                await self._message_router(client_id, msg)
-                                continue
-                        except Exception as e:
-                            logger.error("Msgpack unpack failed: %s", e)
+                    # Direct Binary Stream Routing (Zero-Friction Audio/Vision)
                     await self._binary_router(client_id, raw_msg)
                 else:
                     try:
@@ -150,7 +141,7 @@ class ConnectionLiaison:
                 async with self._lock:
                     self._clients.pop(client_id, None)
 
-    async def _handshake(self, ws: ServerConnection) -> Tuple[str, bool]:
+    async def _handshake(self, ws: ServerConnection) -> str:
         challenge_bytes = os.urandom(32)
         challenge = ChallengeMessage(challenge=challenge_bytes.hex())
         await ws.send(challenge.model_dump_json())
@@ -168,7 +159,6 @@ class ConnectionLiaison:
         id_token = resp.get("id_token")
         signature = resp.get("signature")
         capabilities = resp.get("capabilities", [])
-        use_msgpack = "msgpack" in capabilities
 
         if id_token:
             decoded = self._auth.verify_firebase_token(id_token)
@@ -195,12 +185,11 @@ class ConnectionLiaison:
             tick_interval_s=self._config.tick_interval_s,
         )
         await ws.send(ack.model_dump_json())
-        return client_id, use_msgpack
+        return client_id
 
     async def broadcast(self, msg_type: str, payload: dict) -> None:
         msg_dict = {"type": msg_type, "payload": payload}
         json_data = json.dumps(msg_dict)
-        msgpack_data = msgpack.packb(msg_dict)
 
         async with self._lock:
             active_sessions = list(self._clients.values())
@@ -210,10 +199,7 @@ class ConnectionLiaison:
 
         async def _send(session: ClientSession):
             try:
-                if session.use_msgpack:
-                    await session.ws.send(msgpack_data)
-                else:
-                    await session.ws.send(json_data)
+                await session.ws.send(json_data)
             except Exception:
                 return session.client_id
             return None

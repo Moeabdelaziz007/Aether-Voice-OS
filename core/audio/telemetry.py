@@ -1,13 +1,11 @@
 import asyncio
-import json
 import time
 from collections import deque
 from dataclasses import asdict, dataclass
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Optional
 
 import structlog
+
 from core.infra.event_bus import EventBus, TelemetryEvent
 
 logger = structlog.get_logger("AetherOS.Telemetry.Logger")

@@ -1,13 +1,15 @@
 import asyncio
 import logging
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from core.infra.transport.gateway import AetherGateway
+
     from .facade import GeminiLiveSession
 
 from google.genai import types
+
 from core.ai.agents.proactive import VisionPulseAgent
 from core.audio.state import audio_state
 

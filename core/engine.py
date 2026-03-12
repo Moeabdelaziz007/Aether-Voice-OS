@@ -78,11 +78,11 @@ class AetherEngine:
 
         # 2. Main AI Session (The Core Brain)
         self._session = GeminiLiveSession(
-            api_key=self._config.ai.api_key,
-            router=self._router,
+            config=self._config.ai,
+            gateway=self,
             audio_in_queue=self._audio.input_queue,
             audio_out_queue=self._audio.output_queue,
-            gateway=self,
+            tool_router=self._router,
             soul_manifest=self._agents._registry.get(self._config.ai.default_soul),
             agent_registry=self._agents._registry,
             firebase=self._infra._firebase,

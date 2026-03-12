@@ -1,9 +1,10 @@
 from __future__ import annotations
+
 import logging
-from typing import Any, Dict, List, Optional
+
 import jsonschema
-from pydantic import BaseModel, Field
 from google.genai import types
+from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,7 @@ class ToggleHUD(BaseModel):
 
 # Late import for VisualDiagnoseInput to avoid circularity if possible
 from core.ai.tools.visual_diagnose import VisualDiagnoseInput
+
 
 class ToolRegistry:
     """Typed registry for declarative tools with response_schema enforcement."""

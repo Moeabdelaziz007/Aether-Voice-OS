@@ -98,13 +98,13 @@ class HiveCoordinator:
         )
         self._last_handover_id: Optional[str] = None
 
-        # Genetic DNA Repository
-        self._dna_pool: Dict[str, AgentDNA] = {}
+        # Genetic DNA Repository (Stateless via Firestore)
         self._genetic_optimizer = (
             GeneticOptimizer(getattr(registry, "firebase", None), api_key)
             if getattr(registry, "firebase", None) and api_key
             else None
         )
+        # Note: self._dna_pool has been removed. We now fetch/write to Firestore.
 
         # Reactive Kernel -> Affective Soul bridge
         if self._event_bus:
@@ -166,25 +166,51 @@ class HiveCoordinator:
                     logger.error("No souls found in registry!")
         return self._active_soul
 
-    def get_dna(self, soul_name: str) -> AgentDNA:
-        """Retrieve the current DNA for a soul, or the default if none exists."""
-        if soul_name not in self._dna_pool:
-            self._dna_pool[soul_name] = AgentDNA()
-        return self._dna_pool[soul_name]
+    async def get_dna(self, soul_name: str) -> AgentDNA:
+        """Retrieve the current DNA for a soul from Firestore, or default."""
+        if not self._genetic_optimizer or not getattr(self._registry, "firebase", None):
+            return AgentDNA()
+
+        try:
+            db = self._registry.firebase.db
+            if not db:
+                return AgentDNA()
+
+            doc_ref = db.collection("agent_dna").document(soul_name)
+            doc = doc_ref.get()
+            if doc.exists:
+                return AgentDNA(**doc.to_dict())
+        except Exception as e:
+            logger.warning("Failed to fetch DNA from Firestore for %s: %s", soul_name, e)
+
+        return AgentDNA()
 
     async def evolve_soul(
         self, soul_name: str, session_id: Optional[str] = None
     ) -> None:
-        """Trigger an evolutionary step for a specific soul."""
+        """Trigger an evolutionary step for a specific soul and persist to Firestore."""
         if not self._genetic_optimizer:
             return
 
-        current_dna = self.get_dna(soul_name)
+        current_dna = await self.get_dna(soul_name)
         new_dna = await self._genetic_optimizer.evolve(
             expert_id=soul_name, current_dna=current_dna, session_id=session_id
         )
-        self._dna_pool[soul_name] = new_dna
-        logger.info("A2A [HIVE] Soul '%s' DNA evolved.", soul_name)
+
+        # Write back to Firestore with TTL for dynamic DNA adaptation
+        try:
+            db = self._registry.firebase.db
+            if db:
+                from datetime import datetime, timedelta
+                doc_ref = db.collection("agent_dna").document(soul_name)
+                # TTL: Auto-reset DNA to base after 24 hours of inactivity
+                expires_at = datetime.utcnow() + timedelta(hours=24)
+                data = new_dna.to_dict()
+                data["expires_at"] = expires_at
+                doc_ref.set(data, merge=True)
+                logger.info("A2A [HIVE] Soul '%s' DNA evolved and saved to Firestore.", soul_name)
+        except Exception as e:
+            logger.error("Failed to persist evolved DNA to Firestore: %s", e)
 
     async def request_handoff(self, target_agent: str, task: str):
         """Standard request for any kind of handover."""
@@ -774,7 +800,7 @@ class HiveCoordinator:
             return
 
         soul_name = self._active_soul.manifest.name
-        current_dna = self.get_dna(soul_name)
+        current_dna = await self.get_dna(soul_name)
 
         # 1. Trigger micro-mutation
         new_dna, rationales = await self._genetic_optimizer.mutate_mid_session(
@@ -783,14 +809,25 @@ class HiveCoordinator:
             trait_value=event.trait_value,
         )
 
-        # 2. Update local pool
+        # 2. Update Firestore and notify Session
         if new_dna != current_dna:
-            self._dna_pool[soul_name] = new_dna
-            logger.info(
-                "⚡ Aether Hive: Hot-Mutated DNA for '%s' due to %s pulse.",
-                soul_name,
-                event.trait_name,
-            )
+            try:
+                db = self._registry.firebase.db
+                if db:
+                    from datetime import datetime, timedelta
+                    doc_ref = db.collection("agent_dna").document(soul_name)
+                    expires_at = datetime.utcnow() + timedelta(hours=24)
+                    data = new_dna.to_dict()
+                    data["expires_at"] = expires_at
+                    doc_ref.set(data, merge=True)
+
+                logger.info(
+                    "⚡ Aether Hive: Hot-Mutated DNA for '%s' due to %s pulse.",
+                    soul_name,
+                    event.trait_name,
+                )
+            except Exception as e:
+                logger.error("Failed to save Hot-Mutated DNA to Firestore: %s", e)
 
             # 3. Inject updated DNA traits into the active session
             if self._pre_warm_callback:

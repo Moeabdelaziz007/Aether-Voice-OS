@@ -3,9 +3,9 @@
 Bridges the AetherOS Agent to the GWS CLI and Google ADK Skills.
 """
 
-import os
-import subprocess
 import json
+import subprocess
+
 
 class GWSConnectorV1:
     def __init__(self):

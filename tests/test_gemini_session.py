@@ -60,8 +60,6 @@ async def test_session_retry_logic(mock_config, mock_gateway):
     """Verify that GeminiLiveSession retries connection on failure."""
     session = GeminiLiveSession(
         config=mock_config,
-        audio_in_queue=asyncio.Queue(),
-        audio_out_queue=asyncio.Queue(),
         gateway=mock_gateway
     )
     
@@ -77,8 +75,6 @@ async def test_multimodal_injection(mock_config, mock_gateway):
     """Verify that inject_handover_context correctly processes visual frames."""
     session = GeminiLiveSession(
         config=mock_config,
-        audio_in_queue=asyncio.Queue(),
-        audio_out_queue=asyncio.Queue(),
         gateway=mock_gateway
     )
     session._session = AsyncMock()

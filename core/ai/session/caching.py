@@ -1,8 +1,11 @@
 from __future__ import annotations
+
 import logging
 import os
-from typing import List, Optional, Any
+from typing import Any, List, Optional
+
 from google.genai import types
+
 from core.ai.generative_init import get_genai_client
 
 logger = logging.getLogger(__name__)

@@ -1,8 +1,10 @@
 
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 from core.api.gws_connector import GWSConnectorV1
-from core.tools.clawhub_tool import search_skills, install_skill
+from core.tools.clawhub_tool import search_skills
+
 
 class TestAetherSkillsWorkflow(unittest.TestCase):
     

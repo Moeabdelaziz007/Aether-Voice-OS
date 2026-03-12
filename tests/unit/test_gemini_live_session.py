@@ -70,8 +70,6 @@ def test_build_session_config_includes_tools_and_voice_id(cfg):
 
     sess = GeminiLiveSession(
         config=cfg,
-        audio_in_queue=asyncio.Queue(),
-        audio_out_queue=asyncio.Queue(),
         gateway=gateway,
         tool_router=tool_router,
         soul_manifest=soul,
@@ -96,11 +94,11 @@ def test_build_session_config_includes_tools_and_voice_id(cfg):
 @pytest.mark.asyncio
 async def test_send_loop_reads_from_in_queue_and_sends(cfg):
     gateway = _FakeGateway()
+    in_queue = asyncio.Queue()
     sess = GeminiLiveSession(
         config=cfg,
-        audio_in_queue=asyncio.Queue(),
-        audio_out_queue=asyncio.Queue(),
         gateway=gateway,
+        audio_in_queue=in_queue,
     )
     sess._running = True
 
@@ -109,7 +107,8 @@ async def test_send_loop_reads_from_in_queue_and_sends(cfg):
     msg = {"data": b"123", "mime_type": "audio/pcm;rate=16000"}
     await sess._in_queue.put(msg)
 
-    task = asyncio.create_task(sess._send_loop(fake_session))
+    from core.ai.session.io_loops import send_loop
+    task = asyncio.create_task(send_loop(sess, fake_session))
     await asyncio.sleep(0.05)
     sess._running = False
     await asyncio.sleep(0.01)
@@ -121,18 +120,11 @@ async def test_send_loop_reads_from_in_queue_and_sends(cfg):
     fake_session.send_realtime_input.assert_awaited()
 
 
-def test_drain_output_empties_queue(cfg):
+def test_drain_output_deprecated(cfg):
     gateway = _FakeGateway()
-    out = asyncio.Queue()
     sess = GeminiLiveSession(
         config=cfg,
-        audio_in_queue=asyncio.Queue(),
-        audio_out_queue=out,
         gateway=gateway,
     )
-
-    out.put_nowait(b"a")
-    out.put_nowait(b"b")
-
+    # Testing that drain_output works gracefully with Zero-Friction streaming
     sess._drain_output()
-    assert out.empty()

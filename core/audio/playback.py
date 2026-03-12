@@ -21,10 +21,10 @@ from core.audio.exceptions import (
     AudioDeviceNotFoundError,
     DeviceDisconnectedError,
 )
-from core.audio.state import audio_state
-from core.infra.config import AudioConfig
 from core.audio.jitter_buffer import AudioJitterBuffer
 from core.audio.opus_encoding import OpusDecoder
+from core.audio.state import audio_state
+from core.infra.config import AudioConfig
 
 logger = logging.getLogger(__name__)
 

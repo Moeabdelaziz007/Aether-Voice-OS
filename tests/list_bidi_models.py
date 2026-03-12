@@ -1,6 +1,7 @@
 import os
-from google import genai
 import sys
+
+from google import genai
 
 # Ensure validation
 api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")

@@ -1,7 +1,5 @@
 import logging
-from typing import List, Optional
-import numpy as np
-from core.infra.config import load_config
+from typing import List
 
 logger = logging.getLogger(__name__)
 

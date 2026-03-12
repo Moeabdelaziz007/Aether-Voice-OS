@@ -6,7 +6,6 @@ import sys
 # Add project root to path
 sys.path.append(os.getcwd())
 
-from core.ai.adk_agents import forge_agent
 from core.tools.forge_tool import list_forged_agents
 
 logging.basicConfig(level=logging.INFO)
@@ -20,8 +19,8 @@ async def run_demo():
     # Normally, this would go through the Gemini Live API.
     # Here we mock the result of the forge_agent tool call.
     
+    from core.tools.clawhub_tool import install_skill
     from core.tools.forge_tool import create_agent
-    from core.tools.clawhub_tool import search_skills, install_skill
     
     print("\n🛠️ ForgeAgent: Analyzing requirements...")
     name = "Atlas"

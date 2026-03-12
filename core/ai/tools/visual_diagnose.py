@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Dict, Optional
+
 from pydantic import BaseModel, Field
 
 logger = logging.getLogger("AetherOS.Tools.VisualDiagnose")

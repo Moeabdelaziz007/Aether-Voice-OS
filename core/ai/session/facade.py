@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
 if TYPE_CHECKING:
     from core.ai.genetic import AgentDNA
     from core.infra.transport.gateway import AetherGateway
-    from core.tools.router import ToolRouter
 
 from google import genai
 from google.genai import types
@@ -21,6 +20,7 @@ from core.identity.package import SoulManifest
 from core.infra.config import AIConfig
 from core.utils.errors import AIConnectionError, AISessionExpiredError
 
+from .caching import AetherContextCacheManager
 from .config_builder import build_session_config
 from .handover_bridge import (
     build_system_instruction,
@@ -32,10 +32,9 @@ from .handover_bridge import (
     restore_handover_state,
 )
 from .io_loops import drain_output, handle_usage, receive_loop, send_loop
+from .sensory_manager import SensoryManager
 from .tool_dispatch import handle_tool_call
 from .tool_registry import ToolRegistry
-from .sensory_manager import SensoryManager
-from .caching import AetherContextCacheManager
 
 logger = logging.getLogger(__name__)
 
@@ -49,11 +48,12 @@ class GeminiLiveSession:
     def __init__(
         self,
         config: AIConfig,
-        audio_in_queue: asyncio.Queue[dict[str, object]],
-        audio_out_queue: asyncio.Queue[bytes],
         gateway: "AetherGateway",
+        audio_in_queue: Optional[asyncio.Queue[dict[str, object]]] = None,
+        audio_out_queue: Optional[asyncio.Queue[bytes]] = None,
         on_interrupt: Optional[Callable] = None,
         on_tool_call: Optional[Callable] = None,
+        tool_router: Optional[Any] = None,
         soul_manifest: Optional["SoulManifest"] = None,
         scheduler: Optional[Any] = None,
         agent_registry: Optional[Any] = None,
@@ -120,7 +120,11 @@ class GeminiLiveSession:
             try:
                 self._client = get_genai_client(api_key=self._config.api_key)
                 self._config.model = self._config.model or types.GeminiModel.LIVE_FLASH
-                logger.info("Connecting to Gemini Live (Attempt %d): model=%s", self._retry_count + 1, self._config.model.value)
+                logger.info(
+                    "Connecting to Gemini Live (Attempt %d): model=%s",
+                    self._retry_count + 1,
+                    self._config.model.value,
+                )
                 return
             except Exception as exc:
                 self._retry_count += 1
@@ -161,7 +165,10 @@ class GeminiLiveSession:
                     logger.error("Failed to wire Thalamic Gate: %s", e)
 
                 async with asyncio.TaskGroup() as tg:
-                    tg.create_task(send_loop(self, session))
+                    # Note: send_loop might not be needed for audio if using direct injection,
+                    # but kept for text/tools. receive_loop is still needed for output.
+                    if self._in_queue:
+                        tg.create_task(send_loop(self, session))
                     tg.create_task(receive_loop(self, session))
 
                     # Start specialized sensory loops via SensoryManager

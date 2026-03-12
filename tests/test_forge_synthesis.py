@@ -2,11 +2,12 @@
 Tests for ForgeOrchestrator in core.ai.session.
 """
 
-import pytest
-import shutil
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from core.ai.session.forge_orchestrator import ForgeOrchestrator
+
 
 @pytest.mark.asyncio
 async def test_forge_synthesis_flow(tmp_path):

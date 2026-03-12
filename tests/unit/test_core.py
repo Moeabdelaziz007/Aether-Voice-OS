@@ -17,8 +17,12 @@ import json
 import os
 from unittest.mock import patch
 
-import numpy as np
 import pytest
+
+try:
+    import numpy as np
+except ImportError:
+    pass
 
 # ═══════════════════════════════════════════════════════════
 # 1. CONFIG

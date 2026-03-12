@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import Optional
 
 from core.audio.state import audio_state
 
@@ -75,7 +74,6 @@ class ThalamicGate:
     async def _trigger_intervention(self):
         """Forces the Gemini session to speak proactively."""
         try:
-            from google.genai import types
 
             # This triggers the prompt directly into the current Live Session
             # context window.

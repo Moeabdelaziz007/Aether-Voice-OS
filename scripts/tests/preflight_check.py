@@ -2,13 +2,14 @@ import asyncio
 import logging
 import sys
 import time
-from typing import Any, Dict
 
 # Add core to path
 sys.path.append(".")
 
-from dotenv import load_dotenv, find_dotenv
 import os
+
+from dotenv import find_dotenv, load_dotenv
+
 print(f"DEBUG: CWD: {os.getcwd()}")
 dotenv_path = find_dotenv()
 print(f"DEBUG: find_dotenv() found: {dotenv_path}")
@@ -19,7 +20,7 @@ else:
     print("DEBUG: NO .env file found!")
 
 from core.engine import AetherEngine
-from core.infra.event_bus import EventBus
+
 
 # Custom formatter for the preflight dashboard
 class PreflightFormatter(logging.Formatter):
