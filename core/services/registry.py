@@ -56,6 +56,7 @@ class AetherRegistry:
     ) -> None:
         self._dir = Path(packages_dir)
         self._packages: dict[str, AthPackage] = {}
+        self._client_id_map: dict[str, AthPackage] = {}
         self._discovered_paths: dict[str, Path] = {}  # Lazy-loading map
         self._on_change = on_change
         self._observer: Optional[Observer] = None
@@ -104,6 +105,7 @@ class AetherRegistry:
             package = AthPackage.load(path)
             self._packages[package.manifest.name] = package
             self._index_package(package)
+            self._rebuild_client_id_map()
             return package
         except IdentityError as exc:
             logger.error("Failed to load package at %s: %s", path.name, exc)
@@ -204,6 +206,15 @@ class AetherRegistry:
             # No event loop (e.g. during sync initialization)
             pass
 
+    def _rebuild_client_id_map(self) -> None:
+        """Repopulate the reverse map index from all loaded packages."""
+        self._client_id_map.clear()
+        for pkg in self._packages.values():
+            if pkg.manifest.client_id:
+                self._client_id_map[pkg.manifest.client_id] = pkg
+            if pkg.manifest.public_key:
+                self._client_id_map[pkg.manifest.public_key] = pkg
+
     def list_packages(self) -> list[str]:
         return list(self._packages.keys())
 
@@ -260,12 +271,6 @@ class AetherRegistry:
     def get_package_by_client_id(self, client_id: str) -> Optional[AthPackage]:
         """
         Lookup a package by its client_id (manifest-specified identity).
-        TODO: Index this in a reverse map if registry grows large.
+        Optimized via reverse map index.
         """
-        for pkg in self._packages.values():
-            if hasattr(pkg.manifest, "client_id") and pkg.manifest.client_id == client_id:
-                return pkg
-            # Fallback: Check if client_id matches public_key
-            if hasattr(pkg.manifest, "public_key") and pkg.manifest.public_key == client_id:
-                return pkg
-        return None
+        return self._client_id_map.get(client_id)
