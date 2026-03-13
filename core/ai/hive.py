@@ -107,12 +107,16 @@ class HiveCoordinator:
         )
         # Note: self._dna_pool has been removed. We now fetch/write to Firestore.
 
-        # Reactive Kernel -> Affective Soul bridge
+    async def initialize(self) -> None:
+        """Reactive Kernel -> Affective Soul bridge - Formal Init."""
         if self._event_bus:
             from core.infra.event_bus import AcousticTraitEvent
 
-            self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
-            self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
+            await self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
+            await self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
+        
+        # Trigger initial scan
+        self._registry.scan()
 
         self._inject_dna_callback: Optional[Callable[[AgentDNA, List[str]], Any]] = None
 

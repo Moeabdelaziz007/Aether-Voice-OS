@@ -21,6 +21,7 @@ async def run_stress_test_server():
     os.environ["AETHER_BENCHMARK_MODE"] = "true"
     config = load_config()
     config.gateway.port = 18889
+    config.packages_dir = str(ROOT / "packages")
     bus = EventBus()
     router = ToolRouter()
     

@@ -14,7 +14,7 @@ from google.genai import types
 
 logger = logging.getLogger(__name__)
 
-def get_genai_client(api_key: Optional[str] = None, api_version: str = "v1alpha") -> genai.Client:
+def get_genai_client(api_key: Optional[str] = None, api_version: str = "v1beta") -> genai.Client:
     """
     Initialize and return a production-ready Gemini client, optionally
     falling back to or wrapping google_adk initialization based on config.

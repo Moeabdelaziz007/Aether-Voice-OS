@@ -118,12 +118,17 @@ class GeminiLiveSession:
     async def connect(self) -> None:
         while self._retry_count < self._max_retries:
             try:
-                self._client = get_genai_client(api_key=self._config.api_key)
-                self._config.model = self._config.model or types.GeminiModel.LIVE_FLASH
+                self._client = get_genai_client(
+                    api_key=self._config.api_key,
+                    api_version=self._config.api_version
+                )
+                from core.infra.config import GeminiModel
+                self._config.model = self._config.model or GeminiModel.LIVE_FLASH
                 logger.info(
-                    "Connecting to Gemini Live (Attempt %d): model=%s",
+                    "Connecting to Gemini Live (Attempt %d): model=%s version=%s",
                     self._retry_count + 1,
                     self._config.model.value,
+                    self._config.api_version,
                 )
                 return
             except Exception as exc:

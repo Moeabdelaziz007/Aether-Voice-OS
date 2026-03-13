@@ -186,7 +186,7 @@ class AIConfig(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY", "api_key")
     )
     model: GeminiModel = GeminiModel.LIVE_FLASH
-    api_version: str = "v1"
+    api_version: str = "v1beta"
     enable_affective_dialog: bool = True
     proactive_audio: bool = True
     enable_search_grounding: bool = True
