@@ -13,7 +13,25 @@ GATEWAY_URL = os.environ.get("AETHER_GATEWAY_URL", "ws://localhost:18889")
 async def run_benchmark(iterations=10):
     print(f"🚀 Starting AetherOS Latency Benchmark (Target: {GATEWAY_URL})")
     
-    async with websockets.connect(GATEWAY_URL) as ws:
+    # Wait for server to be ready
+    max_retries = 30
+    retry_delay = 1
+    ws = None
+    
+    for i in range(max_retries):
+        try:
+            ws = await websockets.connect(GATEWAY_URL)
+            break
+        except Exception:
+            if i % 5 == 0:
+                print(f"Waiting for gateway to arm on port 18889... ({i}/{max_retries})")
+            await asyncio.sleep(retry_delay)
+    
+    if not ws:
+        print("❌ CRITICAL: Gateway failed to arm. Benchmark aborted.")
+        return
+
+    async with ws:
         # 1. Handshake
         raw = await ws.recv()
         print(f"DEBUG: Raw message received: {raw}")
@@ -41,7 +59,7 @@ async def run_benchmark(iterations=10):
             start = time.time()
             
             # Send Pulse Tick
-            tick = {"type": "tick", "timestamp": start}
+            tick = {"type": "tick", "payload": {"timestamp": start}}
             await ws.send(json.dumps(tick))
             
             # Wait for response (tick echo or transcript)

@@ -69,6 +69,7 @@ class AetherGateway:
             "pre_warm_soul": self._on_pre_warm_soul,
             "request_state_sync": self._on_request_state_sync,
             "portal_input": self._on_portal_input,
+            "tick": self._on_tick,
             "FORGE_COMMIT": self._on_forge_commit,
             "CLAW_INJECT": self._on_claw_inject,
         }
@@ -126,6 +127,10 @@ class AetherGateway:
     async def _on_portal_input(self, client_id: str, payload: dict) -> None:
         # Emergency override logic
         pass
+
+    async def _on_tick(self, client_id: str, payload: dict) -> None:
+        """Echoes a tick message back for latency measurement."""
+        await self.broadcast("tick", payload)
 
     async def _on_forge_commit(self, client_id: str, payload: dict) -> None:
         dna = payload.get("dna")

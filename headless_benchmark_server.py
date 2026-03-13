@@ -47,10 +47,25 @@ async def run_stress_test_server():
     )
     
     print("🚀 Starting Headless Gateway for Benchmarking...")
-    await gateway.start()
+    server_task = asyncio.create_task(gateway.start())
     
-    # Run for a while or until benchmark finishes
-    await asyncio.sleep(300)
+    # Wait for server to arm
+    await asyncio.sleep(10)
+    
+    print("🚀 Triggering Latency Benchmark...")
+    process = await asyncio.create_subprocess_exec(
+        sys.executable, str(ROOT / "scripts" / "latency_benchmark.py"),
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE
+    )
+    
+    stdout, stderr = await process.communicate()
+    print("\nBENCHMARK OUTPUT:")
+    print(stdout.decode())
+    if stderr:
+        print("BENCHMARK ERRORS:")
+        print(stderr.decode())
+    
     await gateway.stop()
 
 if __name__ == "__main__":

@@ -146,18 +146,6 @@ class GeminiLiveSession:
         self._running = True
 
         try:
-            if os.environ.get("AETHER_BENCHMARK_MODE") == "true":
-                logger.info("A2C [SESSION] Benchmark Mock Active")
-                # Neural Simulation Mock
-                while self._status == SessionStatus.INITIALIZING:
-                    self._status = SessionStatus.CONNECTED
-                    break
-                
-                async for chunk in self._input_queue:
-                    # Echo back for latency measurement
-                    await self._output_queue.put(chunk)
-                return
-
             async with self._client.aio.live.connect(model=self._config.model.value, config=config) as session:
                 self._session = session
                 logger.info("✦ Gemini Live session established")
