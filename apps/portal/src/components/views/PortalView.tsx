@@ -154,9 +154,11 @@ export default function PortalView({
                                 >
                                     <HUDContainer>
                                         <div className="relative w-full h-full overflow-hidden">
-                                            <OrbitalWorkspaceOverlay />
-                                            <MirrorInteractionOverlay />
-                                            <SystemFailure />
+                                            <dynamic.CommunicationSanctum 
+                                                agentName={avatarConfig?.name || "Aether Specialist"}
+                                                agentAura={avatarConfig?.aura || "cyan"}
+                                                emotionalState={avatarState === 'Listening' ? 'listening' : avatarState === 'Speaking' ? 'speaking' : 'thinking'}
+                                            />
                                             <RealmController />
                                             <MissionControlHUD />
                                         </div>
