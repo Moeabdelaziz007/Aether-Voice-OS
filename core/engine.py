@@ -96,11 +96,11 @@ class AetherEngine:
 
         # 5. External Gateway (WebSocket Bridge)
         self._gateway = AetherGateway(
-            gateway_config=self._config.gateway,
+            config=self._config.gateway,
             ai_config=self._config.ai,
-            audio_config=self._config.audio,
-            tool_router=self._router,
             hive=self._agents._hive,
+            bus=self._event_bus,
+            tool_router=self._router,
         )
 
         self._running = False
@@ -177,7 +177,7 @@ class AetherEngine:
                 self._infra.start_watchdog()
 
                 # 4. Run External Gateway
-                tg.create_task(self._gateway.run(), name="aether-gateway")
+                tg.create_task(self._gateway.start(), name="aether-gateway")
 
                 # 5. Wait for shutdown signal
                 await self._shutdown_event.wait()

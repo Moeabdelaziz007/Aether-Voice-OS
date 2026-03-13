@@ -9,3 +9,12 @@ SYMBOL_MIGRATION_MAP = {
     "core.ai.handover_protocol.*": "core.ai.handover.protocol_models.*",
     "core.ai.handover_telemetry.*": "core.ai.handover.telemetry.*",
 }
+
+class HandoverMigration:
+    """Shim for legacy handover discovery."""
+    def __init__(self):
+        from core.ai.handover.protocol import create_handoff_protocol
+        self._impl = create_handoff_protocol()
+    
+    def __getattr__(self, name):
+        return getattr(self._impl, name)

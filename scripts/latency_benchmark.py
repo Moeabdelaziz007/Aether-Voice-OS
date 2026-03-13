@@ -8,7 +8,7 @@ import websockets
 # AetherOS Latency Benchmark Tool
 # Measures E2E latency: Mic Capture -> Gateway -> GenAI -> Audio Output
 
-GATEWAY_URL = os.environ.get("AETHER_GATEWAY_URL", "ws://localhost:18789")
+GATEWAY_URL = os.environ.get("AETHER_GATEWAY_URL", "ws://localhost:18888")
 
 async def run_benchmark(iterations=10):
     print(f"🚀 Starting AetherOS Latency Benchmark (Target: {GATEWAY_URL})")
@@ -16,7 +16,13 @@ async def run_benchmark(iterations=10):
     async with websockets.connect(GATEWAY_URL) as ws:
         # 1. Handshake
         raw = await ws.recv()
-        json.loads(raw)["challenge"]
+        print(f"DEBUG: Raw message received: {raw}")
+        try:
+            data = json.loads(raw)
+            challenge = data["challenge"]
+        except Exception as e:
+            print(f"FAILED to parse challenge from: {raw}")
+            raise e
         
         # Simple auth response (No signature for benchmark if bypassed in dev)
         await ws.send(json.dumps({

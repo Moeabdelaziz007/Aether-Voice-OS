@@ -133,10 +133,10 @@ class EventBus:
 
     def subscribe(
         self,
-        event_type: Type[SystemEvent],
-        callback: Callable[[SystemEvent], Awaitable[None]],
+        event_type: Any,
+        callback: Callable[[Any], Awaitable[None]],
     ):
-        """Register an async callback for a specific event type."""
+        """Register an async callback for a specific event type or topic string."""
         if event_type not in self._subscribers:
             self._subscribers[event_type] = []
 
@@ -148,9 +148,10 @@ class EventBus:
 
         if self._running:
             state.worker_task = asyncio.create_task(self._subscriber_worker(state))
-        logger.debug(
-            f"[EventBus] Subscribed {callback.__name__} to {event_type.__name__}"
-        )
+        
+        ev_name = event_type if isinstance(event_type, str) else getattr(event_type, "__name__", str(event_type))
+        cb_name = getattr(callback, "__name__", str(callback))
+        logger.debug(f"[EventBus] Subscribed {cb_name} to {ev_name}")
 
     async def publish(self, event: SystemEvent):
         """Publish an event to its respective tier queue."""
