@@ -3,7 +3,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 
 def setup_mocks():
-    mock_modules = ['firebase_admin', 'firebase_admin.credentials', 'firebase_admin.firestore', 'google.cloud.firestore', 'websockets', 'google.genai', 'pyaudio', 'watchdog', 'watchdog.observers', 'watchdog.events', 'webrtcvad']
+    mock_modules = [
+        'firebase_admin', 'firebase_admin.credentials', 'firebase_admin.firestore',
+        'google.cloud.firestore', 'websockets', 'google.genai', 'pyaudio',
+        'watchdog', 'watchdog.observers', 'watchdog.events', 'webrtcvad'
+    ]
     for module_name in mock_modules:
         if module_name not in sys.modules:
             sys.modules[module_name] = MagicMock()

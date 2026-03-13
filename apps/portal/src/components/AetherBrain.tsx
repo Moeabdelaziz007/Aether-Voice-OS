@@ -189,7 +189,7 @@ export default function AetherBrain() {
 
                 const renderFrame = () => {
                     reqId = requestAnimationFrame(renderFrame);
-                    analyser.getByteFrequencyData(dataArray);
+                    analyser.getByteFrequencyData(dataArray as any);
 
                     // Calculate volume (average of frequencies)
                     let sum = 0;

@@ -53,7 +53,9 @@ def check_forbidden_files():
     for root, dirs, files in os.walk(BASE_DIR):
         # Exclude common dirs
         path_parts = root.split(os.sep)
-        if any(d in path_parts for d in [".git", "node_modules", ".venv", "venv", ".cargo_home", "target", "vendor", "__pycache__", "archive", ".idx", ".qoder", ".npm-cache"]):
+        ignore_dirs = [".git", "node_modules", ".venv", "venv", ".cargo_home", "target",
+                       "vendor", "__pycache__", "archive", ".idx", ".qoder", ".npm-cache"]
+        if any(d in path_parts for d in ignore_dirs):
             continue
             
         for name in files + dirs:
@@ -83,7 +85,9 @@ def main():
     all_md = []
     for root, _, files in os.walk(BASE_DIR):
         path_parts = root.split(os.sep)
-        if any(d in path_parts for d in [".git", "node_modules", ".venv", "venv", ".cargo_home", "target", "vendor", "__pycache__", "archive", ".idx", ".qoder", ".npm-cache"]):
+        ignore_dirs = [".git", "node_modules", ".venv", "venv", ".cargo_home", "target",
+                       "vendor", "__pycache__", "archive", ".idx", ".qoder", ".npm-cache"]
+        if any(d in path_parts for d in ignore_dirs):
             continue
         for f in files:
             if f.endswith(".md"):

@@ -34,7 +34,7 @@ export default function CommunicationSanctum({
   const [lightningIntensity, setLightningIntensity] = useState(0);
 
   const gateway = useAetherGateway();
-  const transcriptTimeoutRef = useRef<NodeJS.Timeout>();
+  const transcriptTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Background color based on aura and state
   const getBackgroundGradient = () => {
@@ -73,14 +73,16 @@ export default function CommunicationSanctum({
       const newTranscript: TranscriptPulse = {
         id: Date.now().toString(),
         text,
-        role,
+        role: role === 'ai' ? 'agent' : role,
         timestamp: Date.now(),
       };
 
       setTranscripts((prev) => [...prev, newTranscript]);
 
       // Auto-fade after 4 seconds
-      clearTimeout(transcriptTimeoutRef.current);
+      if (transcriptTimeoutRef.current) {
+        clearTimeout(transcriptTimeoutRef.current);
+      }
       transcriptTimeoutRef.current = setTimeout(() => {
         setTranscripts((prev) => prev.filter((t) => t.id !== newTranscript.id));
       }, 4000);

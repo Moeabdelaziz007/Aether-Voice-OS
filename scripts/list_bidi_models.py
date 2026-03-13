@@ -1,5 +1,5 @@
 import os
-import json
+
 from google import genai
 
 client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"), http_options={"api_version": "v1beta"})

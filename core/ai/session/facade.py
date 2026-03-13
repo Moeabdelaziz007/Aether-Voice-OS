@@ -120,12 +120,12 @@ class GeminiLiveSession:
         if not self._db:
             return ""
         try:
-            from datetime import timedelta
+            from datetime import timedelta, timezone
 
             from google.cloud import firestore
 
-            # Look back 5 minutes
-            five_mins_ago = datetime.now() - timedelta(minutes=5)
+            # Look back 5 minutes (timezone-aware to match Firestore's UTC requirements)
+            five_mins_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
 
             # Basic query to get recent sessions
             query = self._db.collection("sessions").where(

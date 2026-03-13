@@ -35,6 +35,10 @@ const UnifiedScene = dynamic(() => import('@/components/UnifiedScene'), {
     loading: () => <div className="fixed inset-0 bg-black" />,
 });
 
+const CommunicationSanctum = dynamic(() => import('@/components/agent/CommunicationSanctum'), {
+    ssr: false
+});
+
 interface PortalViewProps {
     themeClass: string;
     activePanel: SidebarPanel;
@@ -154,7 +158,7 @@ export default function PortalView({
                                 >
                                     <HUDContainer>
                                         <div className="relative w-full h-full overflow-hidden">
-                                            <dynamic.CommunicationSanctum 
+                                            <CommunicationSanctum
                                                 agentName={avatarConfig?.name || "Aether Specialist"}
                                                 agentAura={avatarConfig?.aura || "cyan"}
                                                 emotionalState={avatarState === 'Listening' ? 'listening' : avatarState === 'Speaking' ? 'speaking' : 'thinking'}

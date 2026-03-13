@@ -54,7 +54,8 @@ async def run_simulation(generations: int = 10, pop_size: int = 5):
                 "avg_engagement"
             ]
             print(
-                f"Agent {i} DNA: Empathy={mutated.empathy:.2f}, Proactivity={mutated.proactivity:.2f} | Fitness={fitness:.2f}"
+                f"Agent {i} DNA: Empathy={mutated.empathy:.2f}, "
+                f"Proactivity={mutated.proactivity:.2f} | Fitness={fitness:.2f}"
             )
 
         population = new_population

@@ -102,6 +102,7 @@ export function useAgentForgeFSM() {
 
         // Real Firestore Write
         try {
+            if (!db) throw new Error("Firestore not initialized");
             // Using a top-level 'agents' collection
             const newAgentRef = await addDoc(collection(db, "agents"), {
                 ...forgeStore.dna,

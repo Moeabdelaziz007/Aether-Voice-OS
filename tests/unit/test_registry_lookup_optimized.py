@@ -1,8 +1,10 @@
 import json
-import pytest
 from pathlib import Path
+
+import pytest
+
 from core.services.registry import AetherRegistry
-from core.identity.package import AthPackage
+
 
 @pytest.fixture
 def registry(tmp_path):
@@ -32,8 +34,8 @@ def test_get_package_by_client_id_optimized(registry, tmp_path):
     packages_dir = Path(registry._dir)
 
     # Create two packages
-    pkg1_dir = create_package(packages_dir, "pkg1", client_id="client1", public_key="pub1")
-    pkg2_dir = create_package(packages_dir, "pkg2", client_id="client2", public_key="pub2")
+    create_package(packages_dir, "pkg1", client_id="client1", public_key="pub1")
+    create_package(packages_dir, "pkg2", client_id="client2", public_key="pub2")
 
     registry.scan()
     registry.get("pkg1") # Trigger lazy load

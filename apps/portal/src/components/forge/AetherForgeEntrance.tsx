@@ -24,7 +24,7 @@ export default function AetherForgeEntrance({
   const gateway = useAetherGateway();
   const store = useAetherStore();
   const micActiveRef = useRef(false);
-  const orbAnimationRef = useRef<NodeJS.Timeout>();
+  const orbAnimationRef = useRef<NodeJS.Timeout | null>(null);
 
   // Voice activity effect on orb
   useEffect(() => {
@@ -73,7 +73,9 @@ export default function AetherForgeEntrance({
     setTimeout(() => {
       setForgeState('creating');
       setStatusTag('FORGING AGENT DNA');
-      clearInterval(orbAnimationRef.current);
+      if (orbAnimationRef.current) {
+        clearInterval(orbAnimationRef.current);
+      }
     }, 6000);
 
     // Complete

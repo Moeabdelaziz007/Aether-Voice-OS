@@ -20,7 +20,7 @@ from core.tools.healing_tool import diagnose_and_repair
 
 try:
     from nacl.encoding import HexEncoder
-    from nacl.signing import SigningKey, VerifyKey
+    from nacl.signing import SigningKey
 
     HAS_NACL = True
 except ImportError:

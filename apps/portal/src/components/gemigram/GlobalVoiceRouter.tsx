@@ -93,56 +93,56 @@ export default function GlobalVoiceRouter({
 
       try {
         console.log(`[VoiceRouter] Executing command: ${intent}`, entities);
-        addTerminalLog('COMMAND', `[${timestamp}] Executing: ${intent}`);
+        addTerminalLog('SYS', `[${timestamp}] Executing: ${intent}`);
 
         switch (intent) {
           case 'open_agent': {
             const agentName = entities.agentName;
             console.log(`[VoiceRouter] Opening agent: ${agentName}`);
-            addTerminalLog('INFO', `Opening agent: ${agentName}`);
+            addTerminalLog('AGENT', `Opening agent: ${agentName}`);
             break;
           }
 
           case 'create_agent': {
             const agentName = entities.agentName;
             console.log(`[VoiceRouter] Creating agent: ${agentName}`);
-            addTerminalLog('INFO', `Creating agent: ${agentName}`);
+            addTerminalLog('AGENT', `Creating agent: ${agentName}`);
             break;
           }
 
           case 'deploy_agent': {
             const agentName = entities.agentName || 'current agent';
             console.log(`[VoiceRouter] Deploying agent: ${agentName}`);
-            addTerminalLog('INFO', `Deploying agent: ${agentName}`);
+            addTerminalLog('AGENT', `Deploying agent: ${agentName}`);
             break;
           }
 
           case 'show_widgets': {
             console.log('[VoiceRouter] Showing widgets');
-            addTerminalLog('INFO', 'Displaying widgets');
+            addTerminalLog('SYS', 'Displaying widgets');
             break;
           }
 
           case 'hide_widgets': {
             console.log('[VoiceRouter] Hiding widgets');
-            addTerminalLog('INFO', 'Hiding widgets');
+            addTerminalLog('SYS', 'Hiding widgets');
             break;
           }
 
           case 'show_help': {
             console.log('[VoiceRouter] Showing help');
-            addTerminalLog('INFO', 'Voice commands: open agent, create agent, deploy, show widgets');
+            addTerminalLog('SYS', 'Voice commands: open agent, create agent, deploy, show widgets');
             break;
           }
 
           case 'show_capabilities': {
             console.log('[VoiceRouter] Showing capabilities');
-            addTerminalLog('INFO', 'I can: create agents, deploy them, manage widgets, and control the interface with voice');
+            addTerminalLog('SYS', 'I can: create agents, deploy them, manage widgets, and control the interface with voice');
             break;
           }
 
           default:
-            addTerminalLog('WARN', `Unknown command: ${intent}`);
+            addTerminalLog('ERROR', `Unknown command: ${intent}`);
         }
 
         addTerminalLog('SUCCESS', `Command completed: ${intent}`);
@@ -171,7 +171,7 @@ export default function GlobalVoiceRouter({
       executeCommand(command.intent, command.entities);
     } else {
       console.log('[VoiceRouter] No matching command pattern for:', transcript);
-      addTerminalLog('DEBUG', `No command matched: ${transcript}`);
+      addTerminalLog('SYS', `No command matched: ${transcript}`);
     }
   }, [transcript, parseVoiceCommand, executeCommand, addTerminalLog]);
 

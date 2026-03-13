@@ -93,7 +93,8 @@ class Issue:
 
     def __str__(self):
         sev_icon = {"ERROR": "❌", "WARNING": "⚠️", "INFO": "ℹ️"}.get(self.severity, "?")
-        return f"  {sev_icon}  [{self.category}] {self.filepath}:{self.line}\n      └─ 🛑 Issue: {self.message}\n      └─ 💡 Fix: {self.solution}"
+        return (f"  {sev_icon}  [{self.category}] {self.filepath}:{self.line}\n"
+                f"      └─ 🛑 Issue: {self.message}\n      └─ 💡 Fix: {self.solution}")
 
 
 issues: list[Issue] = []
@@ -395,28 +396,34 @@ def generate_macro_improvements():
     missing_inits = len([i for i in issues if i.category == "MISSING_INIT"])
     if missing_inits > 0:
         improvements.append(
-            f"📦 [Module Resolution] Missing {missing_inits} '__init__.py' files. This can break absolute imports across the codebase."
+            f"📦 [Module Resolution] Missing {missing_inits} '__init__.py' files. "
+            f"This can break absolute imports across the codebase."
         )
 
     # 2. Complexity Density
     complex_files = [i.filepath for i in issues if i.category == "COMPLEXITY"]
     if len(complex_files) > 5:
         improvements.append(
-            "🧩 [Architecture] High number of 'God Objects' and oversized files detected. We need to adopt a cleaner Domain-Driven Design (DDD). We should start splitting components by Domain (e.g., `core/audio` -> split into `capture`, `pipeline`, `output`)."
+            "🧩 [Architecture] High number of 'God Objects' and oversized files detected. "
+            "We need to adopt a cleaner Domain-Driven Design (DDD). "
+            "We should start splitting components by Domain (e.g., `core/audio` -> split into "
+            "`capture`, `pipeline`, `output`)."
         )
 
     # 3. Suppressed Types & Console.Logs
     ts_debt = len([i for i in issues if i.category in ["ANY_TYPE", "TS_SUPPRESS"]])
     if ts_debt > 0:
         improvements.append(
-            f"🟦 [Type Safety] {ts_debt} TypeScript shortcuts ('any' or '@ts-ignore') detected. We should strictly enforce tsconfig.json `'strict': true` to prevent future runtime UI bugs."
+            f"🟦 [Type Safety] {ts_debt} TypeScript shortcuts ('any' or '@ts-ignore') detected. "
+            f"We should strictly enforce tsconfig.json `'strict': true` to prevent future runtime UI bugs."
         )
 
     # 4. Long Functions
     long_funcs = len([i for i in issues if i.category == "LONG_FUNCTION"])
     if long_funcs > 10:
         improvements.append(
-            f"📜 [Maintainability] {long_funcs} functions exceed 80 lines. Testability is severely impaired here. Recommendation: Apply the 'Extract Function' refactoring pattern heavily on the core handlers."
+            f"📜 [Maintainability] {long_funcs} functions exceed 80 lines. Testability is severely impaired here. "
+            f"Recommendation: Apply the 'Extract Function' refactoring pattern heavily on the core handlers."
         )
 
     return improvements

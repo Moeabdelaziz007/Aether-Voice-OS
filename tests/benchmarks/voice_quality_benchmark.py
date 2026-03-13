@@ -173,7 +173,8 @@ async def benchmark_round_trip_latency(
         try:
             config = types.LiveConnectConfig(
                 response_modalities=["AUDIO"],
-                system_instruction="You are a voice latency benchmarking agent. Respond with exactly one word: 'acknowledged'. Be as fast as possible.",
+                system_instruction="You are a voice latency benchmarking agent. "
+                "Respond with exactly one word: 'acknowledged'. Be as fast as possible.",
                 speech_config=types.SpeechConfig(
                     voice_config=types.VoiceConfig(
                         prebuilt_voice_config=types.PrebuiltVoiceConfig(

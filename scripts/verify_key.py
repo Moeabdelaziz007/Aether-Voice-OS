@@ -1,4 +1,5 @@
 import os
+
 from google import genai
 
 client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))

@@ -20,7 +20,8 @@ async def test_forge_synthesis_flow(tmp_path):
     session_facade.send_transcription = AsyncMock()
     
     mock_response = MagicMock()
-    mock_response.text = '{"name": "SecurityExpert", "description": "Security Agent", "instructions": "test", "expertise": {"sec": 1.0}}'
+    mock_response.text = ('{"name": "SecurityExpert", "description": "Security Agent", '
+                          '"instructions": "test", "expertise": {"sec": 1.0}}')
     session_facade._client.aio.models.generate_content.return_value = mock_response
     
     session_facade._agent_registry = MagicMock()

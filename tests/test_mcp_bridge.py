@@ -39,7 +39,9 @@ async def test_mcp_client_connection_flow():
             
             # Mock tools
             mock_tool = MagicMock()
-            mock_tool.model_dump.return_value = {"name": "list_files", "description": "List Drive files", "inputSchema": {}}
+            mock_tool.model_dump.return_value = {
+                "name": "list_files", "description": "List Drive files", "inputSchema": {}
+            }
             mock_result = MagicMock()
             mock_result.tools = [mock_tool]
             mock_session.list_tools = AsyncMock(return_value=mock_result)

@@ -58,7 +58,8 @@ def get_tools() -> list[dict[str, Any]]:
     return [
         {
             "name": "get_active_widgets",
-            "description": "Get the list of active UI widgets/tools currently visible on the user's dashboard. Use this to understand the visual context of the workspace.",
+            "description": "Get the list of active UI widgets/tools currently visible on the user's "
+                           "dashboard. Use this to understand the visual context of the workspace.",
             "parameters": {
                 "type": "object",
                 "properties": {},

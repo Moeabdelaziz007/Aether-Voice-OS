@@ -22,11 +22,11 @@ export default function TelemetryHUD() {
     // Color logic
     let statusColor = "bg-white/20"; // disconnected
     let textColor = "text-white/50";
-    if (status === "connected") {
+    if (status === "connected" || status === "listening" || status === "speaking") {
         if (latencyMs < 100) { statusColor = "bg-neon-cyan"; textColor = "text-neon-cyan"; }
         else if (latencyMs < 300) { statusColor = "bg-amber-400"; textColor = "text-amber-400"; }
         else { statusColor = "bg-red-500"; textColor = "text-red-500"; }
-    } else if (status === "connecting" || status === "reconnecting") {
+    } else if (status === "connecting") {
         statusColor = "bg-purple-500"; textColor = "text-purple-400";
     } else if (status === "error") {
         statusColor = "bg-red-600"; textColor = "text-red-500";

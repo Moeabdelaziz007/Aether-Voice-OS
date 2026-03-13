@@ -23,8 +23,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.infra.config import load_config
-from tests.gemini_live_interactive_benchmark import GeminiLiveInteractiveBenchmark
+if True:
+    from core.infra.config import load_config
+    from tests.gemini_live_interactive_benchmark import GeminiLiveInteractiveBenchmark
 
 
 async def run_comprehensive_test():
@@ -155,8 +156,10 @@ async def run_comprehensive_test():
         print(
             f"  Average Latency (P95): {summary_report['summary_statistics']['average_latency_p95_ms']:.1f}ms"
         )
+        min_lat = summary_report['summary_statistics']['min_latency_p95_ms']
+        max_lat = summary_report['summary_statistics']['max_latency_p95_ms']
         print(
-            f"  Latency Range: {summary_report['summary_statistics']['min_latency_p95_ms']:.1f}ms - {summary_report['summary_statistics']['max_latency_p95_ms']:.1f}ms"
+            f"  Latency Range: {min_lat:.1f}ms - {max_lat:.1f}ms"
         )
         print(
             f"  Average AEC Convergence: {summary_report['summary_statistics']['average_aec_convergence_percent']:.1f}%"

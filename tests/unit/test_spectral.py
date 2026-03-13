@@ -12,6 +12,7 @@ not to validate production-grade DSP performance.
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from core.audio.spectral import SpectralAnalyzer, erle, gcc_phat
 
@@ -23,9 +24,6 @@ def _sine(
 ) -> np.ndarray:
     t = np.arange(n, dtype=np.float64) / sr
     return amp * np.sin(2.0 * np.pi * freq_hz * t)
-
-
-import pytest
 
 
 @pytest.mark.skip(reason="Pre-existing bug: gcc_phat returns 0 instead of 200ms")

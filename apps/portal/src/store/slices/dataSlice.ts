@@ -64,7 +64,7 @@ export const createDataSlice: StateCreator<DataSlice> = (set, get) => ({
         { id: '1', label: 'Initial Refactor', type: 'code', color: '#00f3ff', metadata: {} },
         { id: '2', label: 'Gemini Integration', type: 'research', color: '#bc13fe', metadata: {} },
     ],
-    dragState: { isDragging: false, activeData: null, type: 'data' },
+    dragState: { isDragging: false, activeData: null as any, type: 'data' },
     animationTrigger: 'none',
 
     addTranscriptMessage: (msg) => set((state) => ({

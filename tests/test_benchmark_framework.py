@@ -15,12 +15,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.infra.config import AudioConfig
-from tests.dynamic_config_controller import DynamicParameterController
-from tests.gemini_live_interactive_benchmark import (
-    InteractiveDashboard,
-    ScenarioStats,
-)
+if True:
+    from core.infra.config import AudioConfig
+    from tests.dynamic_config_controller import DynamicParameterController
+    from tests.gemini_live_interactive_benchmark import (
+        InteractiveDashboard,
+        ScenarioStats,
+    )
 
 
 async def test_dashboard():

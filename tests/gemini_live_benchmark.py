@@ -21,12 +21,13 @@ try:
 except ImportError:
     pass
 
+if True:
+    from core.ai.session.facade import GeminiLiveSession
+    from core.infra.config import load_config
+
 # Ensure Pydantic validation doesn't fail if only GEMINI_API_KEY is defined
 if not os.getenv("GOOGLE_API_KEY") and os.getenv("GEMINI_API_KEY"):
     os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
-
-from core.ai.session.facade import GeminiLiveSession
-from core.infra.config import load_config
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("e2e_benchmark")

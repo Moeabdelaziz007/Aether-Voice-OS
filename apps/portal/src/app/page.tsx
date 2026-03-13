@@ -27,7 +27,7 @@ export default function AetherPortal() {
 
     // Local UI State
     const [viewMode, setViewMode] = useState<'landing' | 'portal'>('landing');
-    const [activePanel, setActivePanel] = useState<SidebarPanel>('dashboard');
+    const [activePanel, setActivePanel] = useState<SidebarPanel | null>('dashboard');
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [omnibarOpen, setOmnibarOpen] = useState(false);
     const [isSwapping, setIsSwapping] = useState(false);
@@ -77,8 +77,8 @@ export default function AetherPortal() {
                     ) : (
                         <PortalView
                             themeClass={themeClass}
-                            activePanel={activePanel}
-                            setActivePanel={setActivePanel}
+                            activePanel={activePanel as SidebarPanel}
+                            setActivePanel={(panel) => setActivePanel(panel)}
                             setViewMode={setViewMode}
                             avatarState={avatarState}
                             avatarConfig={avatarConfig}

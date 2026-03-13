@@ -49,6 +49,13 @@ import numpy as np
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+if True:
+    from core.audio.capture import AudioCapture
+    from core.audio.dynamic_aec import DynamicAEC
+    from core.audio.playback import AudioPlayback
+    from core.audio.processing import AdaptiveVAD
+    from core.infra.config import load_config
+
 try:
     from dotenv import load_dotenv
 
@@ -57,12 +64,6 @@ except ImportError:
     pass
 
 # Using existing session class instead of direct API calls
-
-from core.audio.capture import AudioCapture
-from core.audio.dynamic_aec import DynamicAEC
-from core.audio.playback import AudioPlayback
-from core.audio.processing import AdaptiveVAD
-from core.infra.config import load_config
 
 
 # ANSI Color Codes
@@ -198,8 +199,10 @@ class InteractiveDashboard:
         print(
             f"{Colors.BOLD}Current Scenario:{Colors.RESET} {Colors.GREEN}{self.stats.scenario_name}{Colors.RESET}"
         )
+        elapsed = time.time() - self.stats.start_time
+        duration = self._get_scenario_duration()
         print(
-            f"{Colors.BOLD}Duration:{Colors.RESET} {time.time() - self.stats.start_time:.1f}s / {self._get_scenario_duration()}s"
+            f"{Colors.BOLD}Duration:{Colors.RESET} {elapsed:.1f}s / {duration}s"
         )
         print()
 
@@ -222,9 +225,11 @@ class InteractiveDashboard:
             if self.stats.aec_convergence_rate > 50
             else Colors.RED
         )
+        erle_val = np.mean(self.stats.aec_erle_values) if self.stats.aec_erle_values else 0
+        erle_col = self._get_erle_color(erle_val)
         print(
             f"AEC Convergence: {aec_color}{self.stats.aec_convergence_rate:>5.1f}%{Colors.RESET} "
-            f"(ERLE: {self._get_erle_color(np.mean(self.stats.aec_erle_values) if self.stats.aec_erle_values else 0)}{np.mean(self.stats.aec_erle_values) if self.stats.aec_erle_values else 0:>5.1f}dB{Colors.RESET})"
+            f"(ERLE: {erle_col}{erle_val:>5.1f}dB{Colors.RESET})"
         )
 
         # VAD section
@@ -623,7 +628,7 @@ class GeminiLiveInteractiveBenchmark:
     def _update_statistics(self):
         """Update computed statistics from collected data."""
         # Filter out invalid measurements (negative or near-zero outliers)
-        valid_latencies = [l for l in self.latency_measurements if l > 0]
+        valid_latencies = [lat for lat in self.latency_measurements if lat > 0]
         if not valid_latencies:
             return
 

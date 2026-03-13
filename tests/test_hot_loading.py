@@ -27,7 +27,8 @@ async def test_aether_registry_hot_loading(tmp_path):
         pkg_dir.mkdir()
         manifest_file = pkg_dir / "manifest.json"
         
-        manifest_content = '{"name": "TestAgent", "client_id": "test_agent_v1", "version": "1.0.0", "description": "Test", "expertise": {"test": 1.0}, "persona": "Direct Tester"}'
+        manifest_content = ('{"name": "TestAgent", "client_id": "test_agent_v1", "version": "1.0.0", '
+                            '"description": "Test", "expertise": {"test": 1.0}, "persona": "Direct Tester"}')
         manifest_file.write_text(manifest_content)
         
         # Wait for watchdog and delay logic

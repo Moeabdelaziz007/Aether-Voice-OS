@@ -37,7 +37,7 @@ async def run_benchmark(iterations=10):
         print(f"DEBUG: Raw message received: {raw}")
         try:
             data = json.loads(raw)
-            challenge = data["challenge"]
+            _challenge = data["challenge"]
         except Exception as e:
             print(f"FAILED to parse challenge from: {raw}")
             raise e

@@ -40,7 +40,7 @@ def verify_signature(
             try:
                 return bytes.fromhex(val_str)
             except ValueError:
-                # If it's totally invalid hex, fallback to encoding the string (some old tests might just pass random strings)
+                # If invalid hex, fallback to string encoding
                 return val_str.encode()
 
         pk_bytes = (

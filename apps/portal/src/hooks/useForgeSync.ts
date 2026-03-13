@@ -9,7 +9,7 @@ export function useForgeSync(uid?: string) {
   const activeStep = useForgeStore((state) => state.activeStep);
 
   useEffect(() => {
-    if (!uid) return;
+    if (!uid || !db) return;
 
     // Listen to real-time DNA mutations from the Forge Engine
     const unsubscribe = onSnapshot(doc(db, 'user_dna', uid), (snapshot) => {

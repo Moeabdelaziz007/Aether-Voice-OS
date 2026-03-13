@@ -24,13 +24,14 @@ from typing import Optional
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from core.audio.capture import AudioCapture
-from core.audio.paralinguistics import ParalinguisticAnalyzer
-from core.audio.playback import AudioPlayback
-from core.audio.processing import AdaptiveVAD, SilentAnalyzer
-from core.audio.state import audio_state
-from core.audio.telemetry import AudioTelemetryLogger
-from core.infra.config import load_config
+if True:
+    from core.audio.capture import AudioCapture
+    from core.audio.paralinguistics import ParalinguisticAnalyzer
+    from core.audio.playback import AudioPlayback
+    from core.audio.processing import AdaptiveVAD, SilentAnalyzer
+    from core.audio.state import audio_state
+    from core.audio.telemetry import AudioTelemetryLogger
+    from core.infra.config import load_config
 
 logging.basicConfig(level=logging.WARNING, format="")
 

@@ -10,6 +10,8 @@ import os
 
 from dotenv import find_dotenv, load_dotenv
 
+from core.engine import AetherEngine
+
 print(f"DEBUG: CWD: {os.getcwd()}")
 dotenv_path = find_dotenv()
 print(f"DEBUG: find_dotenv() found: {dotenv_path}")
@@ -18,8 +20,6 @@ if dotenv_path:
     print(f"DEBUG: GOOGLE_API_KEY in os.environ: {'SET' if 'GOOGLE_API_KEY' in os.environ else 'MISSING'}")
 else:
     print("DEBUG: NO .env file found!")
-
-from core.engine import AetherEngine
 
 
 # Custom formatter for the preflight dashboard

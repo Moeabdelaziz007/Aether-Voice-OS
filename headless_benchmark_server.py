@@ -1,21 +1,22 @@
 import asyncio
+import logging
 import os
 import sys
 from pathlib import Path
+
+from core.infra.config import load_config
+from core.infra.event_bus import EventBus
+from core.infra.transport.gateway import AetherGateway
+from core.logic.managers.agents import AgentManager
+from core.tools.router import ToolRouter
 
 # Setup path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
-import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-from core.infra.config import load_config
-from core.infra.transport.gateway import AetherGateway
-from core.logic.managers.agents import AgentManager
-from core.infra.event_bus import EventBus
-from core.tools.router import ToolRouter
 
 async def run_stress_test_server():
     os.environ["AETHER_BENCHMARK_MODE"] = "true"
@@ -47,7 +48,7 @@ async def run_stress_test_server():
     )
     
     print("🚀 Starting Headless Gateway for Benchmarking...")
-    server_task = asyncio.create_task(gateway.start())
+    asyncio.create_task(gateway.start())
     
     # Wait for server to arm
     await asyncio.sleep(10)
