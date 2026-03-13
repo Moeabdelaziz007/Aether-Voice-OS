@@ -5,6 +5,7 @@ import { AnimatePresence } from "framer-motion";
 import ThemeProvider from "@/components/ThemeProvider";
 import { EmotionalAtmosphere } from "@/components/EmotionalAtmosphere";
 import SoulSwapAnimation from "@/components/SoulSwapAnimation";
+import TelemetryHUD from "@/components/HUD/TelemetryHUD";
 
 // Store & Hooks
 import { useAetherStore } from "@/store/useAetherStore";
@@ -87,6 +88,7 @@ export default function AetherPortal() {
                         />
                     )}
                 </AnimatePresence>
+                <TelemetryHUD />
             </EmotionalAtmosphere>
         </ThemeProvider>
     );

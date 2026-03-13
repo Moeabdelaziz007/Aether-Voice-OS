@@ -25,31 +25,6 @@ export default function NeuralBackground() {
 
         let animationFrameId: number;
         let w: number, h: number;
-        let particles: Particle[] = [];
-
-        const resize = () => {
-            w = canvas.width = window.innerWidth * window.devicePixelRatio;
-            h = canvas.height = window.innerHeight * window.devicePixelRatio;
-            canvas.style.width = window.innerWidth + "px";
-            canvas.style.height = window.innerHeight + "px";
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-            w = window.innerWidth;
-            h = window.innerHeight;
-            init();
-        };
-
-        const handleMouseMove = (e: MouseEvent) => {
-            mouseRef.current = { x: e.clientX, y: e.clientY, active: true };
-        };
-
-        const handleMouseLeave = () => {
-            mouseRef.current.active = false;
-        };
-
-        window.addEventListener("resize", resize);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseleave", handleMouseLeave);
-        resize();
 
         class Particle {
             x: number;
@@ -110,6 +85,8 @@ export default function NeuralBackground() {
             }
         }
 
+        let particles: Particle[] = [];
+
         function init() {
             particles = [];
             const count = Math.min(Math.floor((w * h) / 15000), 120);
@@ -117,6 +94,30 @@ export default function NeuralBackground() {
                 particles.push(new Particle());
             }
         }
+
+        const resize = () => {
+            w = canvas.width = window.innerWidth * window.devicePixelRatio;
+            h = canvas.height = window.innerHeight * window.devicePixelRatio;
+            canvas.style.width = window.innerWidth + "px";
+            canvas.style.height = window.innerHeight + "px";
+            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            w = window.innerWidth;
+            h = window.innerHeight;
+            init();
+        };
+
+        const handleMouseMove = (e: MouseEvent) => {
+            mouseRef.current = { x: e.clientX, y: e.clientY, active: true };
+        };
+
+        const handleMouseLeave = () => {
+            mouseRef.current.active = false;
+        };
+
+        window.addEventListener("resize", resize);
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseleave", handleMouseLeave);
+        resize();
 
         const draw = () => {
             ctx.clearRect(0, 0, w, h);

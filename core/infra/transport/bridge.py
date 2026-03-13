@@ -76,7 +76,18 @@ class NeuralBridge:
             self._warmed_souls.clear()
 
     def request_restart(self) -> None:
+        """Requests an immediate session restart (Soul Swap) with flush."""
+        logger.info("⚡ Soul Swap requested: Initiating fast cut...")
+        # Instantly mark the current session for termination
         self._session_restart_event.set()
+
+        # Immediate flush of any pending outputs to ensure zero clipping
+        current_session = self._state_manager.session
+        if current_session:
+            # Drain output queues and stop sensory loops to prevent trailing audio
+            current_session._drain_output()
+            if hasattr(current_session, "_sensory"):
+                current_session._sensory.stop()
 
     async def pre_warm_soul(self, soul_name: str) -> None:
         async with self._pre_warm_lock:
