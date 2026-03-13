@@ -56,7 +56,6 @@ class AetherRegistry:
     ) -> None:
         self._dir = Path(packages_dir)
         self._packages: dict[str, AthPackage] = {}
-        self._client_id_map: dict[str, AthPackage] = {}
         self._discovered_paths: dict[str, Path] = {}  # Lazy-loading map
         self._on_change = on_change
         self._observer: Optional[Observer] = None
@@ -83,7 +82,7 @@ class AetherRegistry:
                         data = json.load(f)
                         pkg_name = data.get("name")
                         if pkg_name:
-                            self._discovered_paths[pkg_name.lower()] = entry
+                            self._discovered_paths[pkg_name] = entry
                             discovered += 1
                             logger.debug(
                                 "[Registry] Discovered lazy package: %s", pkg_name
@@ -103,9 +102,8 @@ class AetherRegistry:
 
         try:
             package = AthPackage.load(path)
-            self._packages[package.manifest.name.lower()] = package
+            self._packages[package.manifest.name] = package
             self._index_package(package)
-            self._rebuild_client_id_map()
             return package
         except IdentityError as exc:
             logger.error("Failed to load package at %s: %s", path.name, exc)
@@ -167,17 +165,12 @@ class AetherRegistry:
 
     def get(self, name: str) -> AthPackage:
         """Get a package by name, loading it lazily if necessary."""
-        lookup_name = name.lower()
-        if lookup_name in self._packages:
-            return self._packages[lookup_name]
-        
-        # Check by actual manifest name as well (for exact matches)
         if name in self._packages:
             return self._packages[name]
 
-        if lookup_name in self._discovered_paths:
+        if name in self._discovered_paths:
             logger.info("⚡ Lazy-Loading expert: %s", name)
-            pkg = self.load_package(self._discovered_paths[lookup_name])
+            pkg = self.load_package(self._discovered_paths[name])
             if pkg:
                 return pkg
 
@@ -211,19 +204,8 @@ class AetherRegistry:
             # No event loop (e.g. during sync initialization)
             pass
 
-    def _rebuild_client_id_map(self) -> None:
-        """Repopulate the reverse map index from all loaded packages."""
-        self._client_id_map.clear()
-        for pkg in self._packages.values():
-            if pkg.manifest.client_id:
-                self._client_id_map[pkg.manifest.client_id] = pkg
-            if pkg.manifest.public_key:
-                self._client_id_map[pkg.manifest.public_key] = pkg
-
     def list_packages(self) -> list[str]:
-        """List all packages (both loaded and discovered/lazy)."""
-        all_names = set(self._packages.keys()) | set(self._discovered_paths.keys())
-        return sorted(list(all_names))
+        return list(self._packages.keys())
 
     async def find_expert(self, query: str) -> Optional[AthPackage]:
         """
@@ -278,6 +260,12 @@ class AetherRegistry:
     def get_package_by_client_id(self, client_id: str) -> Optional[AthPackage]:
         """
         Lookup a package by its client_id (manifest-specified identity).
-        Optimized via reverse map index.
+        TODO: Index this in a reverse map if registry grows large.
         """
-        return self._client_id_map.get(client_id)
+        for pkg in self._packages.values():
+            if hasattr(pkg.manifest, "client_id") and pkg.manifest.client_id == client_id:
+                return pkg
+            # Fallback: Check if client_id matches public_key
+            if hasattr(pkg.manifest, "public_key") and pkg.manifest.public_key == client_id:
+                return pkg
+        return None

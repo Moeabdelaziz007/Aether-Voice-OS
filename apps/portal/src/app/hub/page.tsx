@@ -61,7 +61,7 @@ export default function HubPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredAgents = AGENTS.filter((agent) => {
-    if (activeTab === 'active' && agent.status !== 'online') return false;
+    if (activeTab === 'online' && agent.status !== 'online') return false;
     if (activeTab === 'offline' && agent.status === 'online') return false;
     if (searchQuery && !agent.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     return true;

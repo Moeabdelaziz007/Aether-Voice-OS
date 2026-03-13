@@ -31,11 +31,9 @@ class CognitiveScheduler:
         self._echo_threshold = 1.2  # seconds
         self._echo_callback: Optional[callable] = None
 
-    async def initialize(self):
-        """Subscribe to proactive pulses and initialize memory protocols."""
-        if self._event_bus:
-            await self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
-            await self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
+        # Subscribe to proactive pulses
+        self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
+        self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
 
         # Proactive Neural OS protocols
         self._wal = WALProtocol(

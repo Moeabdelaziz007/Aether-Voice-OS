@@ -122,7 +122,9 @@ async def test_gateway_handshake_e2e():
             challenge_token = challenge_msg["challenge"]
 
             # 4. Sign Challenge & Respond
-            challenge_bytes = bytes.fromhex(challenge_token)
+            # Note: sign the plain challenge_token as bytes, not the hex-decoded
+            # version, since verify_signature will encode it.
+            challenge_bytes = challenge_token.encode("utf-8")
             signature = signing_key.sign(challenge_bytes)
 
             client_response = {

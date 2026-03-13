@@ -36,8 +36,7 @@ class DoubleTalkDetector:
         elif self.hangover_counter > 0:
             self.hangover_counter -= 1
             self.is_double_talk = self.hangover_counter > 0
-        else:
-            self.is_double_talk = False
+        else: self.is_double_talk = False
         self.far_end_history.append(far_end.copy())
         self.near_end_history.append(near_end.copy())
         return self.is_double_talk

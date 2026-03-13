@@ -78,10 +78,9 @@ class HiveCoordinator:
         self._pre_warm_callback: Optional[Callable[[str], Any]] = None
         self._enable_deep_handover = enable_deep_handover
 
-        # Deep Handover Protocol integration
-        self._handover_protocol = (
-            get_handover_protocol() if enable_deep_handover else None
-        )
+        # Legacy context bridge (for backward compatibility)
+        self._context_bridge: Dict[str, str] = {}
+
         # Deep Handover Protocol integration
         self._handover_protocol = (
             get_handover_protocol() if enable_deep_handover else None
@@ -107,16 +106,12 @@ class HiveCoordinator:
         )
         # Note: self._dna_pool has been removed. We now fetch/write to Firestore.
 
-    async def initialize(self) -> None:
-        """Reactive Kernel -> Affective Soul bridge - Formal Init."""
+        # Reactive Kernel -> Affective Soul bridge
         if self._event_bus:
             from core.infra.event_bus import AcousticTraitEvent
 
-            await self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
-            await self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
-        
-        # Trigger initial scan
-        self._registry.scan()
+            self._event_bus.subscribe(AcousticTraitEvent, self._on_acoustic_trait)
+            self._event_bus.subscribe(VisionPulseEvent, self._on_vision_pulse)
 
         self._inject_dna_callback: Optional[Callable[[AgentDNA, List[str]], Any]] = None
 
@@ -249,9 +244,11 @@ class HiveCoordinator:
             Tuple of (success, handover_context, message)
         """
         if not self._enable_deep_handover or not self._handover_protocol:
-            logger.warning("Deep Handover Protocol not enabled. Falling back to simple notification.")
+            # Fallback to legacy handoff
+            # The original request_handoff was replaced by a simpler async one.
+            # This call needs to be updated to reflect that.
             await self.request_handoff(target_name, task)
-            return True, None, "Simple notification used (Fallback)"
+            return True, None, "Legacy handoff used"
 
         try:
             source_name = (
@@ -400,7 +397,7 @@ class HiveCoordinator:
             Tuple of (success, message)
         """
         if not self._enable_deep_handover or not self._handover_protocol:
-            return True, "Deep Handover disabled - skipping completion"
+            return True, "Legacy handoff - no completion needed"
 
         context = self._active_handovers.get(handover_id)
         if not context:

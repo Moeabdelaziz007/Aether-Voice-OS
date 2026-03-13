@@ -155,23 +155,25 @@ class ConnectionLiaison:
             raise HandshakeError("Handshake timed out or malformed")
 
         client_id = resp.get("client_id")
+        token = resp.get("token")
         id_token = resp.get("id_token")
+        signature = resp.get("signature")
         capabilities = resp.get("capabilities", [])
 
-        if os.environ.get("AETHER_BENCHMARK_MODE") == "true":
-            logger.info("A2A [LIAISON] Bypassing authentication for benchmark mode")
-            client_id = client_id or "benchmark_client"
-        else:
-            # Strict fallback to Firebase JWT for the Frontend connection in production mode
-            if not id_token:
-                raise HandshakeError("Production mode requires Firebase ID Token (id_token)")
+        if id_token:
             decoded = self._auth.verify_firebase_token(id_token)
             if not decoded:
                 raise HandshakeError("Invalid Firebase ID Token")
             if not client_id:
                 client_id = decoded.get("uid")
-            if not client_id:
-                raise HandshakeError("Client ID could not be determined from Firebase Token")
+        elif token:
+            if not self._auth.verify_jwt(token):
+                raise HandshakeError("Invalid JWT")
+        elif signature:
+            if not self._auth.verify_signature(challenge_bytes.hex(), signature, client_id):
+                raise HandshakeError("Invalid Signature")
+        else:
+            raise HandshakeError("No authentication provided")
 
         session = ClientSession(client_id=client_id, ws=ws, capabilities=capabilities)
         async with self._lock:
@@ -187,14 +189,7 @@ class ConnectionLiaison:
 
     async def broadcast(self, msg_type: str, payload: dict) -> None:
         msg_dict = {"type": msg_type, "payload": payload}
-
-        try:
-            import msgpack
-            # Use MessagePack for all broadcasts to standardize binary payload routing
-            data = msgpack.packb(msg_dict, use_bin_type=True)
-        except ImportError:
-            # Fallback to JSON if msgpack is unavailable
-            data = json.dumps(msg_dict)
+        json_data = json.dumps(msg_dict)
 
         async with self._lock:
             active_sessions = list(self._clients.values())
@@ -204,7 +199,7 @@ class ConnectionLiaison:
 
         async def _send(session: ClientSession):
             try:
-                await session.ws.send(data)
+                await session.ws.send(json_data)
             except Exception:
                 return session.client_id
             return None

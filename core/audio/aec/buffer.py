@@ -15,8 +15,7 @@ class BoundedBuffer:
     def append(self, data: np.ndarray):
         with self._lock:
             n = len(data)
-            if n == 0:
-                return
+            if n == 0: return
             if n >= self.max_samples:
                 data = data[-self.max_samples:]
                 n = self.max_samples

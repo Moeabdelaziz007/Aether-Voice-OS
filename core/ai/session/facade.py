@@ -161,7 +161,6 @@ class GeminiLiveSession:
         recent_context = await self._fetch_recent_context()
         if recent_context:
             logger.info("✦ Injected recent 5-min context from Firestore.")
-            # Injecting into the soul memories or modifying the internal context state
             if self._soul:
                 if not hasattr(self._soul, "memories"):
                     self._soul.memories = []
@@ -172,17 +171,12 @@ class GeminiLiveSession:
 
         while self._retry_count < self._max_retries:
             try:
-                self._client = get_genai_client(
-                    api_key=self._config.api_key,
-                    api_version=self._config.api_version
-                )
-                from core.infra.config import GeminiModel
-                self._config.model = self._config.model or GeminiModel.LIVE_FLASH
+                self._client = get_genai_client(api_key=self._config.api_key)
+                self._config.model = self._config.model or types.GeminiModel.LIVE_FLASH
                 logger.info(
-                    "Connecting to Gemini Live (Attempt %d): model=%s version=%s",
+                    "Connecting to Gemini Live (Attempt %d): model=%s",
                     self._retry_count + 1,
                     self._config.model.value,
-                    self._config.api_version,
                 )
                 return
             except Exception as exc:
@@ -299,11 +293,10 @@ class GeminiLiveSession:
             asyncio.create_task(self._inject_frames(visual_frames))
         if self._db:
             try:
-                from datetime import timezone
                 self._db.collection("handover_traces").add({
                     "session_id": id(self),
                     "target_soul": context.target_soul,
-                    "timestamp": datetime.now(timezone.utc),
+                    "timestamp": datetime.now(),
                     "frame_count": len(visual_frames) if visual_frames else 0,
                     "tokens_used_at_handover": self._tokens_used
                 })

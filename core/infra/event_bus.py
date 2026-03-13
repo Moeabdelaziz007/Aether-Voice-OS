@@ -131,12 +131,12 @@ class EventBus:
         self._running = False
         self._tasks: List[asyncio.Task] = []
 
-    async def subscribe(
+    def subscribe(
         self,
-        event_type: Any,
-        callback: Callable[[Any], Awaitable[None]],
+        event_type: Type[SystemEvent],
+        callback: Callable[[SystemEvent], Awaitable[None]],
     ):
-        """Register an async callback for a specific event type or topic string."""
+        """Register an async callback for a specific event type."""
         if event_type not in self._subscribers:
             self._subscribers[event_type] = []
 
@@ -148,24 +148,12 @@ class EventBus:
 
         if self._running:
             state.worker_task = asyncio.create_task(self._subscriber_worker(state))
-        
-        ev_name = event_type if isinstance(event_type, str) else getattr(event_type, "__name__", str(event_type))
-        cb_name = getattr(callback, "__name__", str(callback))
-        logger.debug(f"[EventBus] Subscribed {cb_name} to {ev_name}")
+        logger.debug(
+            f"[EventBus] Subscribed {callback.__name__} to {event_type.__name__}"
+        )
 
-    async def publish(self, event_or_topic: Any, payload: Optional[Any] = None):
-        """Publish an event object or a (topic, payload) pair."""
-        if isinstance(event_or_topic, str):
-            # Hybrid mode: treat as a topic and route
-            subscribers = self._subscribers.get(event_or_topic, [])
-            for state in subscribers:
-                try:
-                    state.queue.put_nowait(payload)
-                except asyncio.QueueFull:
-                    state.dropped += 1
-            return
-
-        event = event_or_topic
+    async def publish(self, event: SystemEvent):
+        """Publish an event to its respective tier queue."""
         if isinstance(event, AudioFrameEvent):
             await self.audio_queue.put(event)
         elif isinstance(event, (ControlEvent, AcousticTraitEvent)):
@@ -361,23 +349,3 @@ class EventBus:
                     "avg_service_time_ms": round(avg_ms, 3),
                 }
         return telemetry
-
-    async def set_state(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
-        """Local shim for GlobalBus set_state."""
-        if not hasattr(self, "_local_state"):
-            self._local_state = {}
-        self._local_state[key] = value
-        return True
-
-    async def get_state(self, key: str) -> Optional[Any]:
-        """Local shim for GlobalBus get_state."""
-        if not hasattr(self, "_local_state"):
-            return None
-        return self._local_state.get(key)
-
-    async def delete_state(self, key: str) -> bool:
-        """Local shim for GlobalBus delete_state."""
-        if hasattr(self, "_local_state") and key in self._local_state:
-            del self._local_state[key]
-            return True
-        return False

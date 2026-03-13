@@ -2,6 +2,7 @@
 
 from core.ai.handover.dtos import HandoffRequest, HandoverPacket
 from core.ai.handover.manager import (
+    AgentHandoverManager,
     HandoverContext,
     MultiAgentOrchestrator,
     SpecialistHandoverManager,
@@ -19,6 +20,7 @@ from core.ai.handover.telemetry import (
 )
 
 __all__ = [
+    "AgentHandoverManager",
     "FailureCategory",
     "HandoffProtocol",
     "HandoffRequest",

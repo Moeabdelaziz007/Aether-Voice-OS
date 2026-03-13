@@ -44,30 +44,11 @@ async def handle_tool_call(session_facade, session, tool_call) -> None:
             )
         )
 
-        # Proactive voice response to cover tool execution latency
-        proactive_messages = {
-            "search_tool": "جاري البحث...",
-            "discovery_tool": "لحظة، أبحث في السجلات...",
-            "vision_tool": "جاري تحليل الصورة...",
-            "camera_tool": "جاري التقاط الصورة...",
-            "hive_tool": "جاري التواصل مع الخلية...",
-            "forge_autonomous_agent": "جاري بناء العميل الذكي..."
-        }
-        proactive_text = proactive_messages.get(fc.name, "جاري المعالجة...")
-
-        asyncio.create_task(
-            session_facade.send_text(
-                text=f"[SYSTEM: Start speaking this proactive text immediately "
-                     f"while tool runs: '{proactive_text}']"
-            )
-        )
-
         # Strict JSONSchema & Pydantic Validation against Soul Manifest
         if not session_facade._tool_registry.validate(fc.name, fc.args or {}):
             return {
                 "status": "validation_failed",
-                "error": f"Tool '{fc.name}' failed structural validation. "
-                         f"Hallucinated or malformed arguments detected.",
+                "error": f"Tool '{fc.name}' failed structural validation. Hallucinated or malformed arguments detected.",
                 "retry_hint": "re-examine_tool_definition_and_fix_argument_structure"
             }
 

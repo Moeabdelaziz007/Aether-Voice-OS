@@ -141,8 +141,7 @@ class GeminiModel(str, Enum):
     """Model IDs for Gemini 2.5 specialized intelligence matrix."""
 
     # Real-time Voice & Audio Reasoning
-    LIVE_FLASH = "gemini-2.0-flash"
-    FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
+    LIVE_FLASH = "gemini-2.5-flash-native-audio-latest"
     FLASH_TTS = "gemini-2.5-flash-tts-preview"
 
     # Multi-step Reasoning & Coding
@@ -181,14 +180,14 @@ class AIConfig(BaseSettings):
     GOOGLE_API_KEY and related fields from a .env file by default.
     """
 
-    api_key: str = Field(
-        ...,
+    api_key: Optional[str] = Field(
+        None, 
         validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY", "api_key")
     )
     model: GeminiModel = GeminiModel.LIVE_FLASH
-    api_version: str = "v1alpha"
-    enable_affective_dialog: bool = False
-    proactive_audio: bool = False
+    api_version: str = "v1"
+    enable_affective_dialog: bool = True
+    proactive_audio: bool = True
     enable_search_grounding: bool = True
     enable_proactive_vision: bool = True
     thinking_budget: Optional[int] = None
@@ -268,14 +267,30 @@ def load_config() -> AetherConfig:
                     if k not in os.environ:
                         os.environ[k] = str(v)
         except Exception as e:
-            logger.warning(f"Failed to load {json_path}: {e}")
+            print(f"Warning: Failed to load {json_path}: {e}")
 
     # EMERGENCY: If GOOGLE_API_KEY is missing, providing a mock ONLY IF benchmarking is explicit
     if not os.getenv("GOOGLE_API_KEY") and not os.getenv("GEMINI_API_KEY"):
         if os.getenv("AETHER_BENCHMARK_MODE", "false").lower() == "true":
             os.environ["GOOGLE_API_KEY"] = "AIza_MOCK_KEY_FOR_BENCHMARK"
 
-    return AetherConfig()
+    try:
+        # Try standard loading first
+        return AetherConfig()
+    except Exception as e:
+        # If any error occurs (PermissionError on .env, etc), fallback to NO .env
+        print(f"Note: Standard config loading failed ({e}). Retrying without .env...")
+        try:
+            return AetherConfig(_env_file=None)
+        except Exception:
+            # Fallback for critical missing AI key
+            if not getattr(config.ai, "api_key", None):
+                print("WARNING: No GOOGLE_API_KEY found in environment or .env!")
+            return config
+        except Exception as e2:
+            print(f"Critical: Config loading failed even without .env: {e2}")
+            # Final fallback: manually construct it if possible
+            return AetherConfig()
 
 
 def get_firebase_cert(config: AetherConfig) -> Optional[dict]:

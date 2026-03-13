@@ -25,7 +25,7 @@ export default function NeuralBackground() {
 
         let animationFrameId: number;
         let w: number, h: number;
-        let particles: Particle[] = [];
+        let particles: any[] = [];
 
         class Particle {
             x: number;
@@ -36,9 +36,9 @@ export default function NeuralBackground() {
             baseSize: number;
             color: string;
 
-            constructor() {
-                this.x = Math.random() * (canvas?.width || 0);
-                this.y = Math.random() * (canvas?.height || 0);
+            constructor(currentW: number, currentH: number) {
+                this.x = Math.random() * currentW;
+                this.y = Math.random() * currentH;
                 this.vx = (Math.random() - 0.5) * 0.3;
                 this.vy = (Math.random() - 0.5) * 0.3;
                 this.baseSize = Math.random() * 1.2 + 0.3;
@@ -46,7 +46,7 @@ export default function NeuralBackground() {
                 this.color = Math.random() > 0.95 ? "#22d3ee" : "#ffffff";
             }
 
-            update(audio: number, width: number, height: number) {
+            update(audio: number, currentW: number, currentH: number) {
                 const speedMult = 1 + audio * 5;
                 this.x += this.vx * speedMult;
                 this.y += this.vy * speedMult;
@@ -56,7 +56,6 @@ export default function NeuralBackground() {
                     const dy = this.y - mouseRef.current.y;
                     const dist = Math.sqrt(dx * dx + dy * dy);
                     const maxDist = 200;
-                    
                     if (dist < maxDist) {
                         const force = (maxDist - dist) / maxDist;
                         this.x += dx * force * 0.02;
@@ -69,13 +68,13 @@ export default function NeuralBackground() {
                     this.size = this.baseSize * (1 + audio * 2);
                 }
 
-                if (this.x < 0) this.x = width;
-                if (this.x > width) this.x = 0;
-                if (this.y < 0) this.y = height;
-                if (this.y > height) this.y = 0;
+                if (this.x < 0) this.x = currentW;
+                if (this.x > currentW) this.x = 0;
+                if (this.y < 0) this.y = currentH;
+                if (this.y > currentH) this.y = 0;
             }
 
-            drawPoints() {
+            draw() {
                 if (!ctx) return;
                 ctx.beginPath();
                 ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
@@ -83,14 +82,6 @@ export default function NeuralBackground() {
                 ctx.fill();
             }
         }
-
-        const init = () => {
-            particles = [];
-            const count = Math.min(Math.floor((w * h) / 15000), 120);
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle());
-            }
-        };
 
         const resize = () => {
             w = canvas.width = window.innerWidth * window.devicePixelRatio;
@@ -103,6 +94,14 @@ export default function NeuralBackground() {
             init();
         };
 
+        const init = () => {
+            particles = [];
+            const count = Math.min(Math.floor((w * h) / 15000), 120);
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle(w, h));
+            }
+        };
+
         const handleMouseMove = (e: MouseEvent) => {
             mouseRef.current = { x: e.clientX, y: e.clientY, active: true };
         };
@@ -111,16 +110,20 @@ export default function NeuralBackground() {
             mouseRef.current.active = false;
         };
 
+        window.addEventListener("resize", resize);
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseleave", handleMouseLeave);
+        resize();
+
         const drawLoop = () => {
             ctx.clearRect(0, 0, w, h);
-
             const r = getComputedStyle(document.documentElement).getPropertyValue("--accent-r").trim() || "34";
             const g = getComputedStyle(document.documentElement).getPropertyValue("--accent-g").trim() || "211";
             const b = getComputedStyle(document.documentElement).getPropertyValue("--accent-b").trim() || "238";
 
             particles.forEach((p, i) => {
                 p.update(totalAudio, w, h);
-                p.drawPoints();
+                p.draw();
 
                 for (let j = i + 1; j < particles.length; j++) {
                     const p2 = particles[j];
@@ -128,37 +131,22 @@ export default function NeuralBackground() {
                     const dy = p.y - p2.y;
                     const distSq = dx * dx + dy * dy;
                     const maxDist = 150;
-
                     if (distSq < maxDist * maxDist) {
                         const dist = Math.sqrt(distSq);
                         const alpha = (1 - dist / maxDist) * (0.05 + totalAudio * 0.3);
                         const isFiring = Math.random() > (0.9992 - totalAudio * 0.01);
-                        
                         ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${isFiring ? alpha * 4 : alpha})`;
                         ctx.lineWidth = isFiring ? 1.5 : 0.4;
                         ctx.beginPath();
                         ctx.moveTo(p.x, p.y);
                         ctx.lineTo(p2.x, p2.y);
                         ctx.stroke();
-
-                        if (isFiring && totalAudio > 0.1) {
-                            ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 2})`;
-                            ctx.beginPath();
-                            ctx.arc((p.x + p2.x) / 2, (p.y + p2.y) / 2, 1, 0, Math.PI * 2);
-                            ctx.fill();
-                        }
                     }
                 }
             });
-
             animationFrameId = requestAnimationFrame(drawLoop);
         };
 
-        window.addEventListener("resize", resize);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseleave", handleMouseLeave);
-        
-        resize();
         drawLoop();
 
         return () => {
@@ -167,15 +155,7 @@ export default function NeuralBackground() {
             window.removeEventListener("mouseleave", handleMouseLeave);
             cancelAnimationFrame(animationFrameId);
         };
-    }, [totalAudio]);
-
-        return () => {
-            window.removeEventListener("resize", resize);
-            window.removeEventListener("mousemove", handleMouseMove);
-            window.removeEventListener("mouseleave", handleMouseLeave);
-            cancelAnimationFrame(animationFrameId);
-        };
-    }, [totalAudio]); // Re-bind effect on audio change to maintain reactive feel
+    }, [totalAudio, voiceMode]);
 
     return (
         <canvas

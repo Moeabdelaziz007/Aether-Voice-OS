@@ -10,13 +10,15 @@ import subprocess
 class GWSConnectorV1:
     def __init__(self):
         self.cli_path = "gws" # Assumes gws CLI is in PATH
-
+        
     def execute_skill(self, skill_name: str, params: dict):
         """
         Executes a GWS skill via the underlying CLI.
         """
         try:
-            cmd = [self.cli_path] + skill_name.split('-')[1:]
+            # Example: translate agent skill call to CLI command
+            # gws drive list --format=json
+            cmd = [self.cli_path] + skill_name.split('-')[1:] 
             for key, val in params.items():
                 cmd.extend([f"--{key}", str(val)])
                 

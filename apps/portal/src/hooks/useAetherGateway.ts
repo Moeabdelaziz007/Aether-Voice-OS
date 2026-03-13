@@ -65,33 +65,18 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
                 let m;
                 if (e.data instanceof ArrayBuffer) {
                     try {
-                        const decodedObj = decode(new Uint8Array(e.data));
+                        m = decode(new Uint8Array(e.data));
                         // If it successfully decodes and has a type, it's a msgpack event, not raw audio
-                        if (!decodedObj || typeof decodedObj !== 'object' || !("type" in (decodedObj as any))) {
+                        if (!m || typeof m !== 'object' || !("type" in m)) {
                             return onAudioResponse.current?.(e.data);
                         }
-                        m = decodedObj;
                     } catch (err) {
                         // Decoding failed, so it must be raw audio
                         return onAudioResponse.current?.(e.data);
                     }
-                } else if (typeof e.data === 'string') {
+                } else {
                     m = JSON.parse(e.data);
-                } else if (e.data instanceof Blob) {
-                    // Just in case it's a blob, convert and decode
-                    const buffer = await e.data.arrayBuffer();
-                    try {
-                        const decodedObj = decode(new Uint8Array(buffer));
-                        if (!decodedObj || typeof decodedObj !== 'object' || !("type" in (decodedObj as any))) {
-                            return onAudioResponse.current?.(buffer);
-                        }
-                        m = decodedObj;
-                    } catch (err) {
-                        return onAudioResponse.current?.(buffer);
-                    }
                 }
-
-                if (!m) return;
 
                 if (m.type === "connect.challenge") {
                     const auth = hk.generateResponse(m.challenge);

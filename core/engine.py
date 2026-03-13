@@ -15,7 +15,19 @@ from core.logic.managers.agents import AgentManager
 from core.logic.managers.audio import AudioManager
 from core.logic.managers.infra import InfraManager
 from core.logic.managers.pulse import PulseManager
-from core.services.admin_api import AdminAPIServer
+from core.services.admin_api import SHARED_STATE, AdminAPIServer
+from core.services.registry import AetherRegistry
+from core.tools import (
+    aix_tool,
+    hive_memory,
+    memory_tool,
+    system_tool,
+    tasks_tool,
+    vision_tool,
+    voyager_tool,
+    widget_awareness_tool,
+    workspace_tool,
+)
 from core.tools.router import ToolRouter
 
 # Ensure core logs are captured with proper formatting
@@ -96,11 +108,11 @@ class AetherEngine:
 
         # 5. External Gateway (WebSocket Bridge)
         self._gateway = AetherGateway(
-            config=self._config.gateway,
+            gateway_config=self._config.gateway,
             ai_config=self._config.ai,
-            hive=self._agents._hive,
-            bus=self._event_bus,
+            audio_config=self._config.audio,
             tool_router=self._router,
+            hive=self._agents._hive,
         )
 
         self._running = False
@@ -177,7 +189,7 @@ class AetherEngine:
                 self._infra.start_watchdog()
 
                 # 4. Run External Gateway
-                tg.create_task(self._gateway.start(), name="aether-gateway")
+                tg.create_task(self._gateway.run(), name="aether-gateway")
 
                 # 5. Wait for shutdown signal
                 await self._shutdown_event.wait()

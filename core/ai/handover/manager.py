@@ -34,11 +34,49 @@ logger = logging.getLogger(__name__)
 # Re-export HandoverContext for backward compatibility
 # The new HandoverContext is a Pydantic model with richer capabilities
 __all__ = [
+    "AgentHandoverManager",
     "HandoverPacket",
     "HandoverContext",
     "MultiAgentOrchestrator",
     "SpecialistHandoverManager",
 ]
+
+
+class AgentHandoverManager:
+    """Legacy simple handover manager retained in canonical package."""
+
+    def __init__(self):
+        self._last_handover: Optional[HandoverPacket] = None
+
+    async def execute_handover(
+        self,
+        source: AgentMetadata,
+        target: AgentMetadata,
+        task: str,
+        summary: str,
+        memory: Dict[str, Any],
+    ) -> HandoverPacket:
+        packet = HandoverPacket(
+            timestamp=time.time(),
+            source_agent_id=source.id,
+            target_agent_id=target.id,
+            task_goal=task,
+            conversation_summary=summary,
+            working_memory=memory,
+        )
+
+        logger.info(
+            "🎯 [Handover] Handing over from %s -> %s for task: '%s...'",
+            source.name,
+            target.name,
+            task[:50],
+        )
+
+        self._last_handover = packet
+        return packet
+
+    def get_last_packet(self) -> Optional[HandoverPacket]:
+        return self._last_handover
 
 
 class SpecialistHandoverManager:
