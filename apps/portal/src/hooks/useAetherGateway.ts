@@ -1,3 +1,7 @@
+import { useState, useRef, useCallback, useEffect } from "react";
+import { encode, decode } from "@msgpack/msgpack";
+import { useAetherStore } from "../store/useAetherStore";
+import { useForgeStore } from "../store/useForgeStore";
 import { BackpressureController, ReconnectionManager } from "../lib/gateway/controllers";
 import { HandshakeManager } from "../lib/gateway/security";
 import { PCMStreamBatcher } from "../lib/gateway/stream";
@@ -61,18 +65,33 @@ export function useAetherGateway(url = process.env.NEXT_PUBLIC_AETHER_GATEWAY_UR
                 let m;
                 if (e.data instanceof ArrayBuffer) {
                     try {
-                        m = decode(new Uint8Array(e.data));
+                        const decodedObj = decode(new Uint8Array(e.data));
                         // If it successfully decodes and has a type, it's a msgpack event, not raw audio
-                        if (!m || typeof m !== 'object' || !("type" in m)) {
+                        if (!decodedObj || typeof decodedObj !== 'object' || !("type" in (decodedObj as any))) {
                             return onAudioResponse.current?.(e.data);
                         }
+                        m = decodedObj;
                     } catch (err) {
                         // Decoding failed, so it must be raw audio
                         return onAudioResponse.current?.(e.data);
                     }
-                } else {
+                } else if (typeof e.data === 'string') {
                     m = JSON.parse(e.data);
+                } else if (e.data instanceof Blob) {
+                    // Just in case it's a blob, convert and decode
+                    const buffer = await e.data.arrayBuffer();
+                    try {
+                        const decodedObj = decode(new Uint8Array(buffer));
+                        if (!decodedObj || typeof decodedObj !== 'object' || !("type" in (decodedObj as any))) {
+                            return onAudioResponse.current?.(buffer);
+                        }
+                        m = decodedObj;
+                    } catch (err) {
+                        return onAudioResponse.current?.(buffer);
+                    }
                 }
+
+                if (!m) return;
 
                 if (m.type === "connect.challenge") {
                     const auth = hk.generateResponse(m.challenge);
