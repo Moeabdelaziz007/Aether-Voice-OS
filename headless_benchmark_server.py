@@ -20,7 +20,7 @@ from core.tools.router import ToolRouter
 async def run_stress_test_server():
     os.environ["AETHER_BENCHMARK_MODE"] = "true"
     config = load_config()
-    config.gateway.port = 18888
+    config.gateway.port = 18889
     bus = EventBus()
     router = ToolRouter()
     

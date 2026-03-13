@@ -8,7 +8,7 @@ import websockets
 # AetherOS Latency Benchmark Tool
 # Measures E2E latency: Mic Capture -> Gateway -> GenAI -> Audio Output
 
-GATEWAY_URL = os.environ.get("AETHER_GATEWAY_URL", "ws://localhost:18888")
+GATEWAY_URL = os.environ.get("AETHER_GATEWAY_URL", "ws://localhost:18889")
 
 async def run_benchmark(iterations=10):
     print(f"🚀 Starting AetherOS Latency Benchmark (Target: {GATEWAY_URL})")

@@ -131,7 +131,7 @@ class EventBus:
         self._running = False
         self._tasks: List[asyncio.Task] = []
 
-    def subscribe(
+    async def subscribe(
         self,
         event_type: Any,
         callback: Callable[[Any], Awaitable[None]],
@@ -153,8 +153,19 @@ class EventBus:
         cb_name = getattr(callback, "__name__", str(callback))
         logger.debug(f"[EventBus] Subscribed {cb_name} to {ev_name}")
 
-    async def publish(self, event: SystemEvent):
-        """Publish an event to its respective tier queue."""
+    async def publish(self, event_or_topic: Any, payload: Optional[Any] = None):
+        """Publish an event object or a (topic, payload) pair."""
+        if isinstance(event_or_topic, str):
+            # Hybrid mode: treat as a topic and route
+            subscribers = self._subscribers.get(event_or_topic, [])
+            for state in subscribers:
+                try:
+                    state.queue.put_nowait(payload)
+                except asyncio.QueueFull:
+                    state.dropped += 1
+            return
+
+        event = event_or_topic
         if isinstance(event, AudioFrameEvent):
             await self.audio_queue.put(event)
         elif isinstance(event, (ControlEvent, AcousticTraitEvent)):
@@ -350,3 +361,23 @@ class EventBus:
                     "avg_service_time_ms": round(avg_ms, 3),
                 }
         return telemetry
+
+    async def set_state(self, key: str, value: Any, ex: Optional[int] = None) -> bool:
+        """Local shim for GlobalBus set_state."""
+        if not hasattr(self, "_local_state"):
+            self._local_state = {}
+        self._local_state[key] = value
+        return True
+
+    async def get_state(self, key: str) -> Optional[Any]:
+        """Local shim for GlobalBus get_state."""
+        if not hasattr(self, "_local_state"):
+            return None
+        return self._local_state.get(key)
+
+    async def delete_state(self, key: str) -> bool:
+        """Local shim for GlobalBus delete_state."""
+        if hasattr(self, "_local_state") and key in self._local_state:
+            del self._local_state[key]
+            return True
+        return False

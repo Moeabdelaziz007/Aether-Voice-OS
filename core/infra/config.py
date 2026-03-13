@@ -141,7 +141,7 @@ class GeminiModel(str, Enum):
     """Model IDs for Gemini 2.5 specialized intelligence matrix."""
 
     # Real-time Voice & Audio Reasoning
-    LIVE_FLASH = "gemini-live-2.5-flash-preview"
+    LIVE_FLASH = "gemini-2.0-flash-exp"
     FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
     FLASH_TTS = "gemini-2.5-flash-tts-preview"
 
