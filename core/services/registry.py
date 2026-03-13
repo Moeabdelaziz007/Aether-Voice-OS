@@ -83,7 +83,7 @@ class AetherRegistry:
                         data = json.load(f)
                         pkg_name = data.get("name")
                         if pkg_name:
-                            self._discovered_paths[pkg_name] = entry
+                            self._discovered_paths[pkg_name.lower()] = entry
                             discovered += 1
                             logger.debug(
                                 "[Registry] Discovered lazy package: %s", pkg_name
@@ -103,7 +103,7 @@ class AetherRegistry:
 
         try:
             package = AthPackage.load(path)
-            self._packages[package.manifest.name] = package
+            self._packages[package.manifest.name.lower()] = package
             self._index_package(package)
             self._rebuild_client_id_map()
             return package
@@ -167,12 +167,17 @@ class AetherRegistry:
 
     def get(self, name: str) -> AthPackage:
         """Get a package by name, loading it lazily if necessary."""
+        lookup_name = name.lower()
+        if lookup_name in self._packages:
+            return self._packages[lookup_name]
+        
+        # Check by actual manifest name as well (for exact matches)
         if name in self._packages:
             return self._packages[name]
 
-        if name in self._discovered_paths:
+        if lookup_name in self._discovered_paths:
             logger.info("⚡ Lazy-Loading expert: %s", name)
-            pkg = self.load_package(self._discovered_paths[name])
+            pkg = self.load_package(self._discovered_paths[lookup_name])
             if pkg:
                 return pkg
 
@@ -216,7 +221,9 @@ class AetherRegistry:
                 self._client_id_map[pkg.manifest.public_key] = pkg
 
     def list_packages(self) -> list[str]:
-        return list(self._packages.keys())
+        """List all packages (both loaded and discovered/lazy)."""
+        all_names = set(self._packages.keys()) | set(self._discovered_paths.keys())
+        return sorted(list(all_names))
 
     async def find_expert(self, query: str) -> Optional[AthPackage]:
         """

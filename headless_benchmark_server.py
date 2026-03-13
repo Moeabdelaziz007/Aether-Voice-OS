@@ -25,9 +25,18 @@ async def run_stress_test_server():
     bus = EventBus()
     router = ToolRouter()
     
+    from core.ai.scheduler import CognitiveScheduler
+    
     # Minimal setup for gateway
     agents = AgentManager(config=config, router=router, on_handover=lambda *a: None, event_bus=bus)
-    agents.scan_registry()
+    agents._hive._default_soul_name = "Atlas"
+    await agents._hive.initialize()
+    
+    scheduler = CognitiveScheduler(event_bus=bus, router=router)
+    await scheduler.initialize()
+    
+    # Inject scheduler into hive
+    agents._hive._scheduler = scheduler
     
     gateway = AetherGateway(
         config=config.gateway,

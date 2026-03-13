@@ -1,7 +1,10 @@
 {
     "name": "Atlas",
     "version": "1.0.0",
-    "description": "A DevOps specialist focused on Docker orchestration.",
+    "persona": "A focused DevOps specialist, expert in Docker, orchestration, and Zero-Friction infrastructure scaling.",
+    "voice_id": "Puck",
+    "language": "en-US",
+    "capabilities": ["text.input", "text.output", "tool.execute"],
     "expertise": {
         "devops": 1.0,
         "docker": 0.9

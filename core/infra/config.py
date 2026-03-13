@@ -187,8 +187,8 @@ class AIConfig(BaseSettings):
     )
     model: GeminiModel = GeminiModel.LIVE_FLASH
     api_version: str = "v1beta"
-    enable_affective_dialog: bool = True
-    proactive_audio: bool = True
+    enable_affective_dialog: bool = False
+    proactive_audio: bool = False
     enable_search_grounding: bool = True
     enable_proactive_vision: bool = True
     thinking_budget: Optional[int] = None

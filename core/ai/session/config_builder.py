@@ -52,10 +52,11 @@ def build_session_config(session) -> types.LiveConnectConfig:
         # When using cached_content, the system_instruction in config is usually ignored or merged.
         logger.info("A2A [SESSION] Applying Context Cache: %s", config.cached_content)
 
-    if session._config.enable_affective_dialog:
-        config.enable_affective_dialog = True
-    if session._config.proactive_audio:
-        config.proactivity = {"proactive_audio": True}
+    # Supported in higher tier models/versions only
+    # if session._config.enable_affective_dialog:
+    #     config.enable_affective_dialog = True
+    # if session._config.proactive_audio:
+    #     config.proactivity = {"proactive_audio": True}
     if session._config.thinking_budget is not None:
         config.thinking_config = types.ThinkingConfig(
             thinking_budget=session._config.thinking_budget,
