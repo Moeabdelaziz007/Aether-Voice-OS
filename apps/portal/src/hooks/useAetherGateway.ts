@@ -1,3 +1,7 @@
+import { useState, useCallback, useEffect, useRef } from "react";
+import { decode, encode } from "@msgpack/msgpack";
+import { useAetherStore } from "@/store/useAetherStore";
+import { useForgeStore } from "@/store/useForgeStore";
 import { BackpressureController, ReconnectionManager } from "../lib/gateway/controllers";
 import { HandshakeManager } from "../lib/gateway/security";
 import { PCMStreamBatcher } from "../lib/gateway/stream";

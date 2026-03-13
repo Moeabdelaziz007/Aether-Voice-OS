@@ -27,6 +27,71 @@ export default function NeuralBackground() {
         let w: number, h: number;
         let particles: Particle[] = [];
 
+        class Particle {
+            x: number;
+            y: number;
+            vx: number;
+            vy: number;
+            size: number;
+            baseSize: number;
+            color: string;
+
+            constructor() {
+                this.x = Math.random() * (canvas?.width || 0);
+                this.y = Math.random() * (canvas?.height || 0);
+                this.vx = (Math.random() - 0.5) * 0.3;
+                this.vy = (Math.random() - 0.5) * 0.3;
+                this.baseSize = Math.random() * 1.2 + 0.3;
+                this.size = this.baseSize;
+                this.color = Math.random() > 0.95 ? "#22d3ee" : "#ffffff";
+            }
+
+            update(audio: number, width: number, height: number) {
+                const speedMult = 1 + audio * 5;
+                this.x += this.vx * speedMult;
+                this.y += this.vy * speedMult;
+
+                if (mouseRef.current.active) {
+                    const dx = this.x - mouseRef.current.x;
+                    const dy = this.y - mouseRef.current.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const maxDist = 200;
+                    
+                    if (dist < maxDist) {
+                        const force = (maxDist - dist) / maxDist;
+                        this.x += dx * force * 0.02;
+                        this.y += dy * force * 0.02;
+                        this.size = this.baseSize * (1 + force * 1.5 + audio * 3);
+                    } else {
+                        this.size = this.baseSize * (1 + audio * 2);
+                    }
+                } else {
+                    this.size = this.baseSize * (1 + audio * 2);
+                }
+
+                if (this.x < 0) this.x = width;
+                if (this.x > width) this.x = 0;
+                if (this.y < 0) this.y = height;
+                if (this.y > height) this.y = 0;
+            }
+
+            drawPoints() {
+                if (!ctx) return;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fillStyle = this.color === "#ffffff" ? `rgba(255,255,255,${0.1 + totalAudio * 0.4})` : `rgba(34,211,238,${0.3 + totalAudio})`;
+                ctx.fill();
+            }
+        }
+
+        const init = () => {
+            particles = [];
+            const count = Math.min(Math.floor((w * h) / 15000), 120);
+            for (let i = 0; i < count; i++) {
+                particles.push(new Particle());
+            }
+        };
+
         const resize = () => {
             w = canvas.width = window.innerWidth * window.devicePixelRatio;
             h = canvas.height = window.innerHeight * window.devicePixelRatio;
@@ -46,89 +111,16 @@ export default function NeuralBackground() {
             mouseRef.current.active = false;
         };
 
-        window.addEventListener("resize", resize);
-        window.addEventListener("mousemove", handleMouseMove);
-        window.addEventListener("mouseleave", handleMouseLeave);
-        resize();
-
-        class Particle {
-            x: number;
-            y: number;
-            vx: number;
-            vy: number;
-            size: number;
-            baseSize: number;
-            color: string;
-
-            constructor() {
-                this.x = Math.random() * w;
-                this.y = Math.random() * h;
-                this.vx = (Math.random() - 0.5) * 0.3;
-                this.vy = (Math.random() - 0.5) * 0.3;
-                this.baseSize = Math.random() * 1.2 + 0.3;
-                this.size = this.baseSize;
-                this.color = Math.random() > 0.95 ? "#22d3ee" : "#ffffff";
-            }
-
-            update(audio: number) {
-                // Boost velocity based on audio
-                const speedMult = 1 + audio * 5;
-                this.x += this.vx * speedMult;
-                this.y += this.vy * speedMult;
-
-                // Mouse interaction (Repulsion / Attraction)
-                if (mouseRef.current.active) {
-                    const dx = this.x - mouseRef.current.x;
-                    const dy = this.y - mouseRef.current.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const maxDist = 200;
-                    
-                    if (dist < maxDist) {
-                        const force = (maxDist - dist) / maxDist;
-                        this.x += dx * force * 0.02;
-                        this.y += dy * force * 0.02;
-                        this.size = this.baseSize * (1 + force * 1.5 + audio * 3);
-                    } else {
-                        this.size = this.baseSize * (1 + audio * 2);
-                    }
-                } else {
-                    this.size = this.baseSize * (1 + audio * 2);
-                }
-
-                if (this.x < 0) this.x = w;
-                if (this.x > w) this.x = 0;
-                if (this.y < 0) this.y = h;
-                if (this.y > h) this.y = 0;
-            }
-
-            draw() {
-                if (!ctx) return;
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-                ctx.fillStyle = this.color === "#ffffff" ? `rgba(255,255,255,${0.1 + totalAudio * 0.4})` : `rgba(34,211,238,${0.3 + totalAudio})`;
-                ctx.fill();
-            }
-        }
-
-        function init() {
-            particles = [];
-            const count = Math.min(Math.floor((w * h) / 15000), 120);
-            for (let i = 0; i < count; i++) {
-                particles.push(new Particle());
-            }
-        }
-
-        const draw = () => {
+        const drawLoop = () => {
             ctx.clearRect(0, 0, w, h);
 
-            // Fetch dynamic colors from theme
             const r = getComputedStyle(document.documentElement).getPropertyValue("--accent-r").trim() || "34";
             const g = getComputedStyle(document.documentElement).getPropertyValue("--accent-g").trim() || "211";
             const b = getComputedStyle(document.documentElement).getPropertyValue("--accent-b").trim() || "238";
 
             particles.forEach((p, i) => {
-                p.update(totalAudio);
-                p.draw();
+                p.update(totalAudio, w, h);
+                p.drawPoints();
 
                 for (let j = i + 1; j < particles.length; j++) {
                     const p2 = particles[j];
@@ -140,8 +132,6 @@ export default function NeuralBackground() {
                     if (distSq < maxDist * maxDist) {
                         const dist = Math.sqrt(distSq);
                         const alpha = (1 - dist / maxDist) * (0.05 + totalAudio * 0.3);
-                        
-                        // "Synapse Pulse" Effect
                         const isFiring = Math.random() > (0.9992 - totalAudio * 0.01);
                         
                         ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${isFiring ? alpha * 4 : alpha})`;
@@ -151,7 +141,6 @@ export default function NeuralBackground() {
                         ctx.lineTo(p2.x, p2.y);
                         ctx.stroke();
 
-                        // Occasional glowing node at junction
                         if (isFiring && totalAudio > 0.1) {
                             ctx.fillStyle = `rgba(${r}, ${g}, ${b}, ${alpha * 2})`;
                             ctx.beginPath();
@@ -162,10 +151,23 @@ export default function NeuralBackground() {
                 }
             });
 
-            animationFrameId = requestAnimationFrame(draw);
+            animationFrameId = requestAnimationFrame(drawLoop);
         };
 
-        draw();
+        window.addEventListener("resize", resize);
+        window.addEventListener("mousemove", handleMouseMove);
+        window.addEventListener("mouseleave", handleMouseLeave);
+        
+        resize();
+        drawLoop();
+
+        return () => {
+            window.removeEventListener("resize", resize);
+            window.removeEventListener("mousemove", handleMouseMove);
+            window.removeEventListener("mouseleave", handleMouseLeave);
+            cancelAnimationFrame(animationFrameId);
+        };
+    }, [totalAudio]);
 
         return () => {
             window.removeEventListener("resize", resize);
