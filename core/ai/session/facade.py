@@ -120,12 +120,12 @@ class GeminiLiveSession:
         if not self._db:
             return ""
         try:
-            from datetime import timedelta
+            from datetime import timedelta, timezone
 
             from google.cloud import firestore
 
-            # Look back 5 minutes
-            five_mins_ago = datetime.now() - timedelta(minutes=5)
+            # Look back 5 minutes with UTC awareness
+            five_mins_ago = datetime.now(timezone.utc) - timedelta(minutes=5)
 
             # Basic query to get recent sessions
             query = self._db.collection("sessions").where(
@@ -299,10 +299,11 @@ class GeminiLiveSession:
             asyncio.create_task(self._inject_frames(visual_frames))
         if self._db:
             try:
+                from datetime import timezone
                 self._db.collection("handover_traces").add({
                     "session_id": id(self),
                     "target_soul": context.target_soul,
-                    "timestamp": datetime.now(),
+                    "timestamp": datetime.now(timezone.utc),
                     "frame_count": len(visual_frames) if visual_frames else 0,
                     "tokens_used_at_handover": self._tokens_used
                 })
