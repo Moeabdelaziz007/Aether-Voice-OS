@@ -167,7 +167,64 @@ export default function AetherBrain() {
         }
     }, [vision.latestFrame, gateway]);
 
-    // ─── 7. Real-time audio levels → store ─────────────────────────
+    // ─── 7. Real-time Voice-Reactive UI via Web Audio API ──────────────
+    useEffect(() => {
+        let audioContext: AudioContext;
+        let analyser: AnalyserNode;
+        let microphone: MediaStreamAudioSourceNode;
+        let dataArray: Uint8Array;
+        let reqId: number;
+
+        const startAnalyser = async () => {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                microphone = audioContext.createMediaStreamSource(stream);
+                microphone.connect(analyser);
+
+                analyser.fftSize = 256;
+                const bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                const renderFrame = () => {
+                    reqId = requestAnimationFrame(renderFrame);
+                    analyser.getByteFrequencyData(dataArray);
+
+                    // Calculate volume (average of frequencies)
+                    let sum = 0;
+                    for (let i = 0; i < bufferLength; i++) {
+                        sum += dataArray[i];
+                    }
+                    const volume = sum / bufferLength; // 0-255
+
+                    // Normalize volume to 0.0 - 1.0 and scale it for the CSS property
+                    const normalizedVol = volume / 255;
+                    const glowIntensity = Math.min(1.0, 0.2 + (normalizedVol * 2.5));
+
+                    document.documentElement.style.setProperty('--neon-glow-intensity', glowIntensity.toString());
+                    document.documentElement.style.setProperty('--neon-glow-pulse', `${glowIntensity * 20}px`);
+                };
+
+                renderFrame();
+            } catch (err) {
+                console.error("Audio analyser failed:", err);
+            }
+        };
+
+        if (pipeline.state === "active") {
+            startAnalyser();
+        }
+
+        return () => {
+            if (reqId) cancelAnimationFrame(reqId);
+            if (audioContext && audioContext.state !== "closed") {
+                audioContext.close();
+            }
+        };
+    }, [pipeline.state]);
+
+    // ─── 7.5 Store Audio Levels & Emotion Trigger ──────────────────────
     useEffect(() => {
         if (pipeline.state !== "active") return;
 

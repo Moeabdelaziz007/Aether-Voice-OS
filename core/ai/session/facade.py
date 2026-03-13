@@ -115,7 +115,61 @@ class GeminiLiveSession:
     def _build_session_config(self) -> types.LiveConnectConfig:
         return build_session_config(self)
 
+    async def _fetch_recent_context(self) -> str:
+        """Fetches the last 5 minutes of transcripts and metadata from Firestore."""
+        if not self._db:
+            return ""
+        try:
+            from datetime import timedelta
+
+            from google.cloud import firestore
+
+            # Look back 5 minutes
+            five_mins_ago = datetime.now() - timedelta(minutes=5)
+
+            # Basic query to get recent sessions
+            query = self._db.collection("sessions").where(
+                filter=firestore.FieldFilter("updated_at", ">=", five_mins_ago)
+            ).order_by("updated_at", direction=firestore.Query.DESCENDING).limit(1)
+
+            docs = query.stream()
+            context_lines = []
+
+            for doc in docs:
+                data = doc.to_dict()
+                transcripts = data.get("transcripts", [])
+                metadata = data.get("neural_metadata", {})
+
+                if metadata:
+                    emotion = metadata.get("emotion", "neutral")
+                    intent = metadata.get("intent", "unknown")
+                    context_lines.append(f"[Recent State: Emotion={emotion}, Intent={intent}]")
+
+                for t in transcripts:
+                    role = t.get("role", "unknown")
+                    text = t.get("text", "")
+                    context_lines.append(f"{role.upper()}: {text}")
+
+            if context_lines:
+                return "\n".join(context_lines)
+        except Exception as e:
+            logger.warning("Failed to fetch recent context from Firestore: %s", e)
+        return ""
+
     async def connect(self) -> None:
+        # Pre-fetch recent context while establishing connection
+        recent_context = await self._fetch_recent_context()
+        if recent_context:
+            logger.info("✦ Injected recent 5-min context from Firestore.")
+            # Injecting into the soul memories or modifying the internal context state
+            if self._soul:
+                if not hasattr(self._soul, "memories"):
+                    self._soul.memories = []
+                self._soul.memories.append({
+                    "type": "recent_history",
+                    "content": f"Recent conversation context:\n{recent_context}"
+                })
+
         while self._retry_count < self._max_retries:
             try:
                 self._client = get_genai_client(
