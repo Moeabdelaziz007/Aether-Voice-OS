@@ -11,18 +11,20 @@ def build_session_config(session) -> types.LiveConnectConfig:
     """Build the Gemini Live session config from facade state."""
     tools = []
 
-    if session._tool_router and session._tool_router.count > 0:
-        declarations = session._tool_router.get_declarations()
-        tools.append(types.Tool(function_declarations=declarations))
-        logger.info(
-            "Session configured with %d tools: %s",
-            len(declarations),
-            session._tool_router.names,
-        )
+    # Temporarily disabled for stability during benchmarking
+    # if session._tool_router and session._tool_router.count > 0:
+    #     declarations = session._tool_router.get_declarations()
+    #     tools.append(types.Tool(function_declarations=declarations))
+    #     logger.info(
+    #         "Session configured with %d tools: %s",
+    #         len(declarations),
+    #         session._tool_router.names,
+    #     )
 
-    if session._config.enable_search_grounding:
-        tools.append(types.Tool(google_search=types.GoogleSearch()))
-        logger.info("Google Search grounding enabled")
+    # Temporarily disabled for stability during benchmarking
+    # if session._config.enable_search_grounding:
+    #     tools.append(types.Tool(google_search=types.GoogleSearch()))
+    #     logger.info("Google Search grounding enabled")
 
     system_instruction = session._build_system_instruction()
 

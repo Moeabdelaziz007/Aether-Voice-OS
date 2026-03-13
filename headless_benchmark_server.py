@@ -50,7 +50,7 @@ async def run_stress_test_server():
     await gateway.start()
     
     # Run for a while or until benchmark finishes
-    await asyncio.sleep(60)
+    await asyncio.sleep(300)
     await gateway.stop()
 
 if __name__ == "__main__":

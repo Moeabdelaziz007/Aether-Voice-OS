@@ -141,7 +141,7 @@ class GeminiModel(str, Enum):
     """Model IDs for Gemini 2.5 specialized intelligence matrix."""
 
     # Real-time Voice & Audio Reasoning
-    LIVE_FLASH = "gemini-2.0-flash-exp"
+    LIVE_FLASH = "gemini-2.0-flash"
     FLASH_NATIVE_AUDIO = "gemini-2.5-flash-native-audio-preview-12-2025"
     FLASH_TTS = "gemini-2.5-flash-tts-preview"
 
@@ -186,7 +186,7 @@ class AIConfig(BaseSettings):
         validation_alias=AliasChoices("GOOGLE_API_KEY", "GEMINI_API_KEY", "api_key")
     )
     model: GeminiModel = GeminiModel.LIVE_FLASH
-    api_version: str = "v1beta"
+    api_version: str = "v1alpha"
     enable_affective_dialog: bool = False
     proactive_audio: bool = False
     enable_search_grounding: bool = True
